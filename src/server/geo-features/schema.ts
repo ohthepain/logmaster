@@ -5,7 +5,6 @@ export type GeoFeatureCategory =
   | 'town'
   | 'country'
   | 'region'
-  | 'airport'
   | 'water'
   | 'landmark'
   | 'other'
@@ -24,11 +23,18 @@ export type GeoFeatureProperties = {
 }
 
 export type GeoFeature = Feature<Geometry, GeoFeatureProperties>
-export type GeoFeatureCollection = FeatureCollection<Geometry, GeoFeatureProperties>
+export type GeoFeatureCollection = FeatureCollection<
+  Geometry,
+  GeoFeatureProperties
+>
 
-export function importanceFromPopulation(population: number | undefined): number {
+export function importanceFromPopulation(
+  population: number | undefined,
+): number {
   if (!population || population <= 0) return 25
-  return Math.round(Math.min(100, Math.max(30, 18 + Math.log10(population) * 12)))
+  return Math.round(
+    Math.min(100, Math.max(30, 18 + Math.log10(population) * 12)),
+  )
 }
 
 function normalizedName(name: string): string {
@@ -52,8 +58,12 @@ function pointMergeKey(feature: GeoFeature): string | null {
 }
 
 export function geoFeatureMergeKey(feature: GeoFeature): string {
-  if (feature.properties.wikidataId) return `wikidata:${feature.properties.wikidataId}`
-  return pointMergeKey(feature) ?? `${feature.properties.category}:${normalizedName(feature.properties.name)}`
+  if (feature.properties.wikidataId)
+    return `wikidata:${feature.properties.wikidataId}`
+  return (
+    pointMergeKey(feature) ??
+    `${feature.properties.category}:${normalizedName(feature.properties.name)}`
+  )
 }
 
 export function mergeGeoFeatures(features: GeoFeature[]): GeoFeature[] {
@@ -74,7 +84,8 @@ export function mergeGeoFeatures(features: GeoFeature[]): GeoFeature[] {
     const keepIncomingGeometry =
       feature.properties.importance > existing.properties.importance ||
       (feature.properties.importance === existing.properties.importance &&
-        (feature.properties.population ?? 0) > (existing.properties.population ?? 0))
+        (feature.properties.population ?? 0) >
+          (existing.properties.population ?? 0))
 
     merged.set(key, {
       type: 'Feature',
@@ -87,13 +98,25 @@ export function mergeGeoFeatures(features: GeoFeature[]): GeoFeature[] {
           : feature.properties.wikidataId
             ? feature.properties.id
             : existing.properties.id,
-        importance: Math.max(existing.properties.importance, feature.properties.importance),
+        importance: Math.max(
+          existing.properties.importance,
+          feature.properties.importance,
+        ),
         population: population > 0 ? population : undefined,
-        sources: Array.from(new Set([...existing.properties.sources, ...feature.properties.sources])).sort(),
-        sourceIds: Array.from(
-          new Set([...existing.properties.sourceIds, ...feature.properties.sourceIds]),
+        sources: Array.from(
+          new Set([
+            ...existing.properties.sources,
+            ...feature.properties.sources,
+          ]),
         ).sort(),
-        wikidataId: existing.properties.wikidataId ?? feature.properties.wikidataId,
+        sourceIds: Array.from(
+          new Set([
+            ...existing.properties.sourceIds,
+            ...feature.properties.sourceIds,
+          ]),
+        ).sort(),
+        wikidataId:
+          existing.properties.wikidataId ?? feature.properties.wikidataId,
       },
     })
   }
@@ -105,7 +128,9 @@ export function mergeGeoFeatures(features: GeoFeature[]): GeoFeature[] {
   })
 }
 
-export function featureCollection(features: GeoFeature[]): GeoFeatureCollection {
+export function featureCollection(
+  features: GeoFeature[],
+): GeoFeatureCollection {
   return {
     type: 'FeatureCollection',
     features,

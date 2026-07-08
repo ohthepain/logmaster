@@ -1,18 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { auth, getTrustedOrigins } from './auth'
-import { adminRoutes } from './routes/admin'
-import {
-  airlineRoutes,
-  airportRoutes,
-  cityRoutes,
-  flightScheduleRoutes,
-} from './routes/airlabs'
-import { flightRoutes } from './routes/flights'
-import { geoFeatureRoutes } from './routes/geo-features'
-import { mapStyleVectorRoutes } from './routes/map-style-vector'
-import { maptileCdnRoutes } from './routes/maptile-cdn'
-import { mapTileRoutes } from './routes/map-tiles'
+import { logbookRoutes } from './routes/logbook'
 
 const corsOrigins = getTrustedOrigins()
 
@@ -31,16 +20,7 @@ app.use(
 app.on(['GET', 'POST'], '/auth/*', (c) => auth.handler(c.req.raw))
 
 app.get('/health', (c) =>
-  c.json({ ok: true, service: 'travelmode', ts: new Date().toISOString() }),
+  c.json({ ok: true, service: 'logmaster', ts: new Date().toISOString() }),
 )
 
-app.route('/flights', flightRoutes)
-app.route('/flight-schedule', flightScheduleRoutes)
-app.route('/airports', airportRoutes)
-app.route('/airlines', airlineRoutes)
-app.route('/cities', cityRoutes)
-app.route('/map-tiles', mapTileRoutes)
-app.route('/maptiler-cdn', maptileCdnRoutes)
-app.route('/map-style-vector', mapStyleVectorRoutes)
-app.route('/geo-features', geoFeatureRoutes)
-app.route('/admin', adminRoutes)
+app.route('/logbook', logbookRoutes)

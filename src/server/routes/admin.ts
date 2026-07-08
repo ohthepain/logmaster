@@ -1,27 +1,17 @@
 import { Hono } from 'hono'
-import type { Prisma } from '../../../generated/prisma/client'
-import { prisma } from '../db'
 import { getBoss } from '../jobs/boss'
 import { BUILD_GEO_FEATURES_QUEUE } from '../jobs/geo-features'
 import type { BuildGeoFeaturesPayload } from '../jobs/geo-features'
 import { enqueueEuropeGeoFeatures } from '../jobs/queue'
-import type { SyncFlightPayload } from '../jobs/sync-flight'
 
 export const adminRoutes = new Hono()
 
 const MAX_JOBS = 500
-const MAX_TRACKS = 200
 const OUTPUT_MESSAGE_MAX = 280
-const SUPPORTED_JOB_QUEUES = ['sync_flight', BUILD_GEO_FEATURES_QUEUE] as const
+const SUPPORTED_JOB_QUEUES = [BUILD_GEO_FEATURES_QUEUE] as const
 
 type SupportedJobQueue = (typeof SUPPORTED_JOB_QUEUES)[number]
-type AdminJobPayload = SyncFlightPayload | BuildGeoFeaturesPayload
-
-function parseYmd(s: string | undefined): Date | null {
-  if (!s) return null
-  const d = new Date(s + 'T00:00:00.000Z')
-  return Number.isNaN(d.getTime()) ? null : d
-}
+type AdminJobPayload = BuildGeoFeaturesPayload
 
 function truncateMessage(s: string, max: number): string {
   const t = s.trim()
@@ -58,76 +48,6 @@ function shortJobOutputMessage(output: object | null): string | null {
   }
 }
 
-adminRoutes.get('/tracks', async (c) => {
-  const flightNumber = c.req.query('flightNumber')?.trim().toUpperCase() ?? ''
-  const dateFrom = parseYmd(c.req.query('dateFrom') ?? undefined)
-  const dateTo = parseYmd(c.req.query('dateTo') ?? undefined)
-  if (c.req.query('dateFrom') && !dateFrom) {
-    return c.json({ error: 'invalid dateFrom (use YYYY-MM-DD)' }, 400)
-  }
-  if (c.req.query('dateTo') && !dateTo) {
-    return c.json({ error: 'invalid dateTo (use YYYY-MM-DD)' }, 400)
-  }
-
-  const where: Prisma.TrackWhereInput = {}
-  if (flightNumber) {
-    where.flightNumber = {
-      contains: flightNumber,
-      mode: 'insensitive' as const,
-    }
-  }
-  if (dateFrom || dateTo) {
-    where.travelDate = {}
-    if (dateFrom) where.travelDate.gte = dateFrom
-    if (dateTo) where.travelDate.lte = dateTo
-  }
-
-  const rows = await prisma.track.findMany({
-    where,
-    orderBy: [
-      { travelDate: 'desc' },
-      { flightNumber: 'asc' },
-      { fetchedAt: 'desc' },
-    ],
-    take: MAX_TRACKS,
-    select: {
-      id: true,
-      flightNumber: true,
-      travelDate: true,
-      fr24FlightId: true,
-      fetchedAt: true,
-      firstTimestampMs: true,
-      lastTimestampMs: true,
-      originIata: true,
-      destIata: true,
-      takeoffAt: true,
-      landedAt: true,
-      scheduledDeparture: true,
-      scheduledArrival: true,
-    },
-  })
-
-  return c.json({
-    tracks: rows.map((t) => ({
-      id: t.id,
-      flightNumber: t.flightNumber,
-      fr24FlightId: t.fr24FlightId,
-      travelDate: t.travelDate.toISOString().slice(0, 10),
-      fetchedAt: t.fetchedAt.toISOString(),
-      firstTimestampMs:
-        t.firstTimestampMs == null ? null : Number(t.firstTimestampMs),
-      lastTimestampMs:
-        t.lastTimestampMs == null ? null : Number(t.lastTimestampMs),
-      originIata: t.originIata,
-      destIata: t.destIata,
-      takeoffAt: t.takeoffAt?.toISOString() ?? null,
-      landedAt: t.landedAt?.toISOString() ?? null,
-      scheduledDeparture: t.scheduledDeparture?.toISOString() ?? null,
-      scheduledArrival: t.scheduledArrival?.toISOString() ?? null,
-    })),
-  })
-})
-
 adminRoutes.get('/pgboss/jobs', async (c) => {
   const boss = await getBoss()
   const requestedQueue = c.req.query('queue')?.trim()
@@ -135,7 +55,7 @@ adminRoutes.get('/pgboss/jobs', async (c) => {
     requestedQueue as SupportedJobQueue,
   )
     ? (requestedQueue as SupportedJobQueue)
-    : 'sync_flight'
+    : BUILD_GEO_FEATURES_QUEUE
   const [stats, jobs] = await Promise.all([
     boss.getQueueStats(queueName),
     boss.findJobs<AdminJobPayload>(queueName, {}),

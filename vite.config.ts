@@ -23,11 +23,11 @@ export default defineConfig({
         'logo512.png',
       ],
       manifest: {
-        name: 'travelmode.live',
-        short_name: 'travelmode',
-        description: 'See what is outside the window when you fly — offline.',
-        theme_color: '#c2410c',
-        background_color: '#0c0a09',
+        name: 'logmaster',
+        short_name: 'logmaster',
+        description: 'Offline-first sailing logbook for trips, events, notes, and media.',
+        theme_color: '#0d3b4a',
+        background_color: '#07131a',
         display: 'standalone',
         start_url: '/',
         icons: [

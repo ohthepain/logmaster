@@ -8,7 +8,7 @@ function getClient(): SESClient {
   return client
 }
 
-const appName = () => process.env.EMAIL_APP_NAME || 'travelmode.live'
+const appName = () => process.env.EMAIL_APP_NAME || 'logmaster'
 
 export function sendTransactionalEmail(args: {
   to: string

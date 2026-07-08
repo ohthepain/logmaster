@@ -10,70 +10,70 @@
 }
 
 :root {
-  --sea-ink: #173a40;
-  --sea-ink-soft: #416166;
-  --lagoon: #4fb8b2;
-  --lagoon-deep: #328f97;
-  --palm: #2f6a4a;
-  --sand: #e7f0e8;
-  --foam: #f3faf5;
-  --surface: rgba(255, 255, 255, 0.74);
-  --surface-strong: rgba(255, 255, 255, 0.9);
-  --line: rgba(23, 58, 64, 0.14);
-  --inset-glint: rgba(255, 255, 255, 0.82);
-  --kicker: rgba(47, 106, 74, 0.9);
-  --bg-base: #e7f3ec;
+  --sea-ink: #0b2530;
+  --sea-ink-soft: #4f6b77;
+  --lagoon: #55c4c0;
+  --lagoon-deep: #1d8fa0;
+  --palm: #2f6f57;
+  --sand: #dbeaf0;
+  --foam: #f4fbfc;
+  --surface: rgba(255, 255, 255, 0.72);
+  --surface-strong: rgba(255, 255, 255, 0.88);
+  --line: rgba(11, 37, 48, 0.12);
+  --inset-glint: rgba(255, 255, 255, 0.8);
+  --kicker: rgba(29, 143, 160, 0.92);
+  --bg-base: #d8e8ee;
   --header-bg: var(--bg-base);
   --chip-bg: rgba(255, 255, 255, 0.8);
-  --chip-line: rgba(47, 106, 74, 0.18);
+  --chip-line: rgba(29, 143, 160, 0.16);
   --link-bg-hover: rgba(255, 255, 255, 0.9);
-  --hero-a: rgba(79, 184, 178, 0.36);
-  --hero-b: rgba(47, 106, 74, 0.2);
+  --hero-a: rgba(85, 196, 192, 0.28);
+  --hero-b: rgba(29, 143, 160, 0.16);
 }
 
 :root[data-theme="dark"] {
-  --sea-ink: #d7ece8;
-  --sea-ink-soft: #afcdc8;
-  --lagoon: #60d7cf;
-  --lagoon-deep: #8de5db;
-  --palm: #6ec89a;
-  --sand: #0f1a1e;
-  --foam: #101d22;
-  --surface: rgba(16, 30, 34, 0.8);
-  --surface-strong: rgba(15, 27, 31, 0.92);
-  --line: rgba(141, 229, 219, 0.18);
-  --inset-glint: rgba(194, 247, 238, 0.14);
-  --kicker: #b8efe5;
-  --bg-base: #0a1418;
+  --sea-ink: #dbf2f2;
+  --sea-ink-soft: #99bbc5;
+  --lagoon: #76e3db;
+  --lagoon-deep: #99edf0;
+  --palm: #7ed3a8;
+  --sand: #0c1620;
+  --foam: #101c26;
+  --surface: rgba(12, 23, 31, 0.82);
+  --surface-strong: rgba(8, 18, 25, 0.94);
+  --line: rgba(153, 237, 240, 0.15);
+  --inset-glint: rgba(194, 247, 238, 0.12);
+  --kicker: #9ef6ee;
+  --bg-base: #06131a;
   --header-bg: var(--bg-base);
   --chip-bg: rgba(13, 28, 32, 0.9);
-  --chip-line: rgba(141, 229, 219, 0.24);
+  --chip-line: rgba(153, 237, 240, 0.2);
   --link-bg-hover: rgba(24, 44, 49, 0.8);
-  --hero-a: rgba(96, 215, 207, 0.18);
-  --hero-b: rgba(110, 200, 154, 0.12);
+  --hero-a: rgba(118, 227, 219, 0.16);
+  --hero-b: rgba(126, 211, 168, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --sea-ink: #d7ece8;
-    --sea-ink-soft: #afcdc8;
-    --lagoon: #60d7cf;
-    --lagoon-deep: #8de5db;
-    --palm: #6ec89a;
-    --sand: #0f1a1e;
-    --foam: #101d22;
-    --surface: rgba(16, 30, 34, 0.8);
-    --surface-strong: rgba(15, 27, 31, 0.92);
-    --line: rgba(141, 229, 219, 0.18);
-    --inset-glint: rgba(194, 247, 238, 0.14);
-    --kicker: #b8efe5;
-    --bg-base: #0a1418;
+    --sea-ink: #dbf2f2;
+    --sea-ink-soft: #99bbc5;
+    --lagoon: #76e3db;
+    --lagoon-deep: #99edf0;
+    --palm: #7ed3a8;
+    --sand: #0c1620;
+    --foam: #101c26;
+    --surface: rgba(12, 23, 31, 0.82);
+    --surface-strong: rgba(8, 18, 25, 0.94);
+    --line: rgba(153, 237, 240, 0.15);
+    --inset-glint: rgba(194, 247, 238, 0.12);
+    --kicker: #9ef6ee;
+    --bg-base: #06131a;
     --header-bg: var(--bg-base);
     --chip-bg: rgba(13, 28, 32, 0.9);
-    --chip-line: rgba(141, 229, 219, 0.24);
+    --chip-line: rgba(153, 237, 240, 0.2);
     --link-bg-hover: rgba(24, 44, 49, 0.8);
-    --hero-a: rgba(96, 215, 207, 0.18);
-    --hero-b: rgba(110, 200, 154, 0.12);
+    --hero-a: rgba(118, 227, 219, 0.16);
+    --hero-b: rgba(126, 211, 168, 0.12);
   }
 }
 
@@ -92,6 +92,10 @@ body {
   color: var(--sea-ink);
   font-family: var(--font-sans);
   background-color: var(--bg-base);
+  background-image:
+    radial-gradient(circle at top left, rgba(85, 196, 192, 0.14), transparent 28%),
+    radial-gradient(circle at top right, rgba(125, 211, 168, 0.12), transparent 24%),
+    linear-gradient(180deg, color-mix(in oklab, var(--bg-base) 84%, white 16%), var(--bg-base));
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -223,4 +227,3 @@ a {
     transform: translateY(0);
   }
 }
-

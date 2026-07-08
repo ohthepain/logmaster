@@ -62,13 +62,3 @@ export function isAllowedRasterMapId(id: string): id is RasterMapId {
   return custom != null && id === custom
 }
 
-/** Preset-only options; UI may prepend an env custom map row (see Flight page). */
-export const MAP_STYLE_DROPDOWN: { value: MapPresetId; label: string }[] = [
-  { value: MapStyle.Base, label: 'Base' },
-  { value: MapStyle.Streets, label: 'Streets' },
-  { value: MapStyle.Satellite, label: 'Satellite' },
-  { value: MapStyle.Hybrid, label: 'Hybrid' },
-  { value: MapStyle.Outdoor, label: 'Outdoor' },
-  { value: MapStyle.Topo, label: 'Topo' },
-  { value: MapStyle.Dataviz, label: 'Dataviz' },
-]

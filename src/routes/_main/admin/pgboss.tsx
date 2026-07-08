@@ -1,17 +1,14 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 
-const QUEUE_OPTIONS = ['sync_flight', 'build_geo_features'] as const
+const QUEUE_OPTIONS = ['build_geo_features'] as const
 type QueueName = (typeof QUEUE_OPTIONS)[number]
 
-/** Legacy jobs may include `data.travelDate`; new jobs only send `flightNumber`. */
 type JobRow = {
   id: string
   name: string
   state: string
   data: {
-    flightNumber?: string
-    travelDate?: string
     dryRun?: boolean
     bbox?: { west: number; south: number; east: number; north: number }
   }
@@ -66,7 +63,6 @@ function formatBbox(data: JobRow['data']): string | null {
 }
 
 function formatPayload(data: JobRow['data']): string {
-  if (data.flightNumber) return data.flightNumber
   const bbox = formatBbox(data)
   if (bbox) return `GeoNames Europe bbox ${bbox}`
   return '—'
@@ -76,7 +72,7 @@ function PgBossPage() {
   const [data, setData] = useState<JobsPayload | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [queue, setQueue] = useState<QueueName>('sync_flight')
+  const [queue, setQueue] = useState<QueueName>('build_geo_features')
   const [enqueueing, setEnqueueing] = useState(false)
   const [enqueueMsg, setEnqueueMsg] = useState<string | null>(null)
 

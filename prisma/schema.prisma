@@ -1,6 +1,3 @@
-// travelmode — Better Auth + flight tracks
-// https://www.prisma.io/docs/orm
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -10,7 +7,34 @@ datasource db {
   provider = "postgresql"
 }
 
-/// Better Auth — table name `user`
+enum TripStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum LogEntryType {
+  START_TRIP
+  SAILS_UP
+  ENGINE_ON
+  ENGINE_OFF
+  SAILS_DOWN
+  ANCHOR_DROPPED
+  ANCHOR_WEIGHED
+  MOORED
+  CAST_OFF
+  END_TRIP
+  NOTE
+  PHOTO
+  VOICE_NOTE
+}
+
+enum MediaType {
+  photo
+  voice
+  attachment
+}
+
 model User {
   id            String    @id
   name          String
@@ -21,31 +45,9 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
-  savedFlights  UserSavedFlight[]
 
   @@unique([email])
   @@map("user")
-}
-
-/// Flights the signed-in user saved from search (for “My flights”).
-model UserSavedFlight {
-  id                 String    @id @default(cuid())
-  userId             String
-  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  flightNumber       String
-  /// Calendar date in UTC (time component ignored), same as Track.travelDate
-  travelDate         DateTime  @db.Date
-  fr24FlightId       String?
-  originIata         String?
-  destIata           String?
-  scheduledDeparture DateTime?
-  scheduledArrival   DateTime?
-  takeoffAt          DateTime?
-  createdAt          DateTime  @default(now())
-
-  @@unique([userId, flightNumber, travelDate])
-  @@index([userId])
-  @@map("user_saved_flight")
 }
 
 model Session {
@@ -92,95 +94,64 @@ model Verification {
   @@map("verification")
 }
 
-/// One stored track per FR24 flight id (historical)
-model Track {
-  id              String   @id @default(cuid())
-  /// IATA-style e.g. UA123
-  flightNumber    String
-  /// Calendar date in UTC (time component ignored)
-  travelDate      DateTime @db.Date
-  /// FR24 flight id from summary
-  fr24FlightId    String   @unique
-  routeGeojson    Json
-  corridorGeojson Json?
-  /// [minLon, minLat, maxLon, maxLat] in WGS84
-  bbox            Json?
-  /// First / last point epoch ms from track (for interpolation; BIGINT — ms exceeds 32-bit int)
-  firstTimestampMs BigInt?
-  lastTimestampMs  BigInt?
-  rawSummaryJson  Json?
-  /// IATA (from flight-summary full, when present)
-  originIata      String?
-  destIata        String?
-  originIcao      String?
-  destIcao        String?
-  takeoffAt       DateTime?
-  landedAt        DateTime?
-  scheduledDeparture DateTime?
-  scheduledArrival   DateTime?
-  /// Takeoff-to-landing duration (seconds) when provided by API
-  flightTimeSec   Int?
-  /// Extra fields from full summary (runway, reg, etc.)
-  scheduleJson    Json?
-  fetchedAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+model Trip {
+  id             String      @id @default(cuid())
+  boatName       String
+  registration   String?
+  skipper        String?
+  startedAt      DateTime
+  completedAt    DateTime?
+  startLatitude  Float?
+  startLongitude Float?
+  startCountry   String?
+  status         TripStatus  @default(IN_PROGRESS)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 
-  @@index([flightNumber, travelDate])
-  @@map("track")
+  logEntries     LogEntry[]
+
+  @@index([status, startedAt])
+  @@map("trip")
 }
 
-// --- AirLabs reference + schedule cache (on-demand) ---
+model LogEntry {
+  id         String         @id @default(cuid())
+  tripId     String
+  trip       Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  type       LogEntryType
+  timestamp  DateTime
+  latitude   Float?
+  longitude  Float?
+  accuracy   Float?
+  heading    Float?
+  createdBy  String?
+  notes      String?
+  data       Json?
+  weather    Json?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  synced     Boolean        @default(false)
+  deleted    Boolean        @default(false)
+  media      Media[]
 
-model AirlabsAirport {
-  iataCode    String   @id
-  icaoCode    String?
-  name        String
-  cityCode    String
-  countryCode String
-  lat         Float
-  lon         Float
-  rawJson     Json?
-  fetchedAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("airlabs_airport")
+  @@index([tripId, timestamp])
+  @@index([synced, updatedAt])
+  @@map("log_entry")
 }
 
-model AirlabsAirline {
-  iataCode     String   @id
-  icaoCode     String?
-  name         String
-  countryCode  String
-  rawJson      Json?
-  fetchedAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+model Media {
+  id           String      @id @default(cuid())
+  logEntryId   String
+  logEntry     LogEntry    @relation(fields: [logEntryId], references: [id], onDelete: Cascade)
+  type         MediaType
+  localPath    String?
+  remoteUrl    String?
+  thumbnailUrl String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  synced       Boolean     @default(false)
 
-  @@map("airlabs_airline")
-}
-
-model AirlabsCity {
-  cityCode    String   @id
-  name        String
-  countryCode String
-  lat         Float
-  lon         Float
-  rawJson     Json?
-  fetchedAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("airlabs_city")
-}
-
-/// Cached `GET /flight-schedule` responses (JSON payload is FlightSchedule[]).
-model AirlabsScheduleCache {
-  id         String   @id @default(cuid())
-  flightIata String
-  /// `YYYY-MM-DD` or the literal `nodate` when the client omits `date`.
-  dateKey    String
-  payload    Json
-  fetchedAt  DateTime @default(now())
-
-  @@unique([flightIata, dateKey])
-  @@index([fetchedAt])
-  @@map("airlabs_schedule_cache")
+  @@index([logEntryId, createdAt])
+  @@index([synced, updatedAt])
+  @@map("media")
 }

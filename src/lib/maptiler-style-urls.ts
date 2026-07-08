@@ -3,7 +3,8 @@
  * the full URL: the path may contain `{fontstack}` / `{range}` for glyph URLs,
  * and the URL serializer encodes `{` → `%7B`, which breaks MapLibre’s glyphs check.
  */
-function stripKeyFromMapTilerUrlString(s: string): string {
+/** Same as internal strip; used when downloading sprite PNG/JSON by URL. */
+export function stripKeyFromMapTilerUrlString(s: string): string {
   if (
     !s.startsWith('https://api.maptiler.com/') &&
     !s.startsWith('http://api.maptiler.com/')

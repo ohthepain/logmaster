@@ -18,7 +18,8 @@ collections.
 
 The app fetches the versioned tile files through `/api/geo-features/...`, then
 stores the parsed GeoJSON in IndexedDB by one-degree tile and resolution.
-Flight-path cells use `highres`; other cells in the saved map bbox use `lowres`.
+Navigation map cells that need more label detail use `highres`; wider coverage
+areas use `lowres`.
 
 Normalized feature properties look like:
 

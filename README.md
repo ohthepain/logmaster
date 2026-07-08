@@ -1,7 +1,7 @@
 # travelmode.live
 
-Offline-first PWA: enter a flight + date, sync track data (Flightradar24), download MapTiler raster
-tiles (zoom 3–8) into IndexedDB, then estimate position from time + manual corrections (no GPS).
+Offline-first sailing logbook PWA: start a trip, capture notes and media offline,
+and sync the log when connectivity returns.
 
 **Stack:** TanStack Start, Hono (`/api/*`), Prisma + Postgres, pg-boss, Better Auth, MapLibre, Zustand.
 
@@ -9,22 +9,22 @@ tiles (zoom 3–8) into IndexedDB, then estimate position from time + manual cor
 
 ```bash
 pnpm install
-docker compose up -d
+# Ensure the shared octacard Postgres server is running on localhost:5432
+# and the `logmaster` database exists (see .env.example).
 pnpm db:migrate
 pnpm dev
 ```
 
-Copy `.env.example` to `.env`, set `DATABASE_URL` (e.g. local Postgres on port 5432) and
-`FLIGHTRADAR24_API_TOKEN` from the [FR24 API portal](https://fr24api.flightradar24.com). For
-development without FR24, set `ALLOW_MOCK_FR24=1` and omit the token. Set `VITE_MAPTILER_API_KEY`
-for the server tile proxy at `/api/map-tiles/...` (avoids MapTiler 403s from browser referrer rules).
+Copy `.env.example` to `.env`, set `DATABASE_URL` (octacard user, `logmaster` database on port 5432), and set
+`VITE_MAPTILER_API_KEY` for the server tile proxy at `/api/map-tiles/...` (avoids MapTiler 403s from
+browser referrer rules).
 Set `BETTER_AUTH_URL` to the same origin you use in the browser (e.g. `http://localhost:3020` for
 `pnpm dev`) so OAuth state cookies validate. Optional: `pnpm worker` in another terminal to process
-`sync_flight` jobs if the API process does not run the worker.
+background map data jobs if the API process does not run the worker.
 
 ---
 
-Welcome to your new TanStack Start app! 
+Welcome to your new TanStack Start app!
 
 # Getting Started
 
@@ -66,16 +66,13 @@ If you prefer not to use Tailwind CSS:
 
 ## Linting & Formatting
 
-
-This project uses [eslint](https://eslint.org/) and [prettier](https://prettier.io/) for linting and formatting. Eslint is configured using [tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The following scripts are available:
+This project uses [ESLint](https://eslint.org/) for linting and [Biome](https://biomejs.dev/) for formatting. ESLint is configured using [tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The following scripts are available:
 
 ```bash
 pnpm lint
 pnpm format
 pnpm check
 ```
-
-
 
 ## Routing
 
@@ -114,14 +111,14 @@ In the File Based Routing setup the layout is located in `src/routes/__root.tsx`
 Here is an example layout that includes a header:
 
 ```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 
 export const Route = createRootRoute({
   head: () => ({
     meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
+      { charSet: "utf-8" },
+      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { title: "My App" },
     ],
   }),
   shellComponent: ({ children }) => (
@@ -141,7 +138,7 @@ export const Route = createRootRoute({
       </body>
     </html>
   ),
-})
+});
 ```
 
 More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
@@ -151,23 +148,23 @@ More information on layouts can be found in the [Layouts documentation](https://
 TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
 
 ```tsx
-import { createServerFn } from '@tanstack/react-start'
+import { createServerFn } from "@tanstack/react-start";
 
 const getServerTime = createServerFn({
-  method: 'GET',
+  method: "GET",
 }).handler(async () => {
-  return new Date().toISOString()
-})
+  return new Date().toISOString();
+});
 
 // Use in a component
 function MyComponent() {
-  const [time, setTime] = useState('')
-  
+  const [time, setTime] = useState("");
+
   useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
+    getServerTime().then(setTime);
+  }, []);
+
+  return <div>Server time: {time}</div>;
 }
 ```
 
@@ -176,16 +173,16 @@ function MyComponent() {
 You can create API routes by using the `server` property in your route definitions:
 
 ```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
+import { createFileRoute } from "@tanstack/react-router";
+import { json } from "@tanstack/react-start";
 
-export const Route = createFileRoute('/api/hello')({
+export const Route = createFileRoute("/api/hello")({
   server: {
     handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
+      GET: () => json({ message: "Hello, World!" }),
     },
   },
-})
+});
 ```
 
 ## Data Fetching
@@ -195,25 +192,25 @@ There are multiple ways to fetch data in your application. You can use TanStack 
 For example:
 
 ```tsx
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/people')({
+export const Route = createFileRoute("/people")({
   loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
+    const response = await fetch("https://swapi.dev/api/people");
+    return response.json();
   },
   component: PeopleComponent,
-})
+});
 
 function PeopleComponent() {
-  const data = Route.useLoaderData()
+  const data = Route.useLoaderData();
   return (
     <ul>
       {data.results.map((person) => (
         <li key={person.name}>{person.name}</li>
       ))}
     </ul>
-  )
+  );
 }
 ```
 

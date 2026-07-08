@@ -88,3 +88,14 @@ export function appMapVectorStyleUrl(rasterMapId: RasterMapId): string {
       : window.location.origin
   return `${base}/api/map-style-vector?map=${encodeURIComponent(rasterMapId)}`
 }
+
+/**
+ * Same-origin proxy for arbitrary `https://api.maptiler.com/...` fetches (`transformRequest`-compatible).
+ */
+export function appMaptileCdnQuery(unencodedUpstreamUrl: string): string {
+  const base =
+    typeof window === 'undefined'
+      ? 'http://localhost:3020'
+      : window.location.origin
+  return `${base}/api/maptiler-cdn?u=${encodeURIComponent(unencodedUpstreamUrl)}`
+}

@@ -3,17 +3,10 @@ import {
   BUILD_GEO_FEATURES_QUEUE,
   handleBuildGeoFeaturesBatches,
 } from './geo-features'
-import { handleSyncFlightBatches } from './sync-flight'
 
 let boss: PgBoss | null = null
 let startPromise: Promise<PgBoss> | null = null
 let registered = false
-
-function syncFlightLocalConcurrency(): number {
-  const n = Number(process.env.FR24_PGBOSS_LOCAL_CONCURRENCY)
-  if (Number.isFinite(n) && n >= 1 && n <= 8) return Math.floor(n)
-  return 1
-}
 
 export async function getBoss(): Promise<PgBoss> {
   if (boss) return boss
@@ -26,18 +19,8 @@ export async function getBoss(): Promise<PgBoss> {
     const b = new PgBoss({ connectionString: url })
     await b.start()
     if (!registered) {
-      await b.createQueue('sync_flight')
       await b.createQueue(BUILD_GEO_FEATURES_QUEUE)
       // pg-boss v10+: `work(name, options, handler)` — not (name, handler, options).
-      await b.work(
-        'sync_flight',
-        {
-          localConcurrency: syncFlightLocalConcurrency(),
-          batchSize: 1,
-          pollingIntervalSeconds: 2,
-        },
-        handleSyncFlightBatches,
-      )
       await b.work(
         BUILD_GEO_FEATURES_QUEUE,
         {

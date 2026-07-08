@@ -1,7 +1,7 @@
 {
-  "name": "travelmode.live",
-  "short_name": "travelmode",
-  "description": "See what is outside the window when you fly — offline.",
+  "name": "logmaster",
+  "short_name": "logmaster",
+  "description": "Offline-first sailing logbook for trips, events, notes, and media.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -29,6 +29,6 @@
   ],
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#c2410c",
-  "background_color": "#0c0a09"
+  "theme_color": "#0d3b4a",
+  "background_color": "#07131a"
 }

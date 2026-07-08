@@ -6,7 +6,7 @@ import { authClient, signIn, signUp } from '../../lib/auth-client'
 import ThemeToggle from '../../components/ThemeToggle'
 
 const INTRO =
-  'See the ground from your window when you fly: sync flight tracks, and go offline. Sign in to sync preferences across devices later.'
+  'Logmaster keeps sailing trips, notes, and media local first. Sign in later if you want the same logbook synced across devices.'
 
 function safeRedirectPath(raw: string | undefined): string {
   if (!raw || typeof raw !== 'string') return '/'
@@ -212,7 +212,7 @@ function SignInPage() {
         <div className="absolute -bottom-32 -right-16 size-[28rem] rounded-full opacity-5 bg-white" />
 
         <Link
-          to="/my-flights"
+          to="/"
           className="text-sm text-slate-500 hover:text-slate-300 relative z-10"
         >
           <div className="flex items-center gap-3">
@@ -224,7 +224,7 @@ function SignInPage() {
               height={40}
             />
             <span className="text-white font-semibold text-lg tracking-wide">
-              travelmode.live
+              logmaster
             </span>
           </div>
         </Link>
@@ -236,7 +236,7 @@ function SignInPage() {
           >
             {mode === 'sign-in' ? 'Welcome back to' : 'Get started with'}
             <br />
-            <span className="text-slate-400">Travelmode</span>
+            <span className="text-slate-400">logmaster</span>
           </h1>
           <p className="text-slate-400 max-w-xs" style={{ lineHeight: 1.6 }}>
             {INTRO}
@@ -266,7 +266,7 @@ function SignInPage() {
                   height={36}
                 />
                 <span className="font-semibold text-lg text-[var(--sea-ink)]">
-                  travelmode
+                  logmaster
                 </span>
               </div>
               <ThemeToggle />
@@ -496,10 +496,10 @@ function SignInPage() {
 
             <p className="text-center mt-4">
               <Link
-                to="/my-flights"
+                to="/"
                 className="text-sm text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]"
               >
-                ← My flights
+                ← Trips
               </Link>
             </p>
 

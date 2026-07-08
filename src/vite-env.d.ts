@@ -1,10 +1,5 @@
 /// <reference types="vite/client" />
 
-declare module '@flightradar24/fr24sdk' {
-  const SDK: { Client: new (opts: { apiToken?: string; apiVersion?: string }) => unknown }
-  export default SDK
-}
-
 interface ImportMetaEnv {
   /** MapTiler Cloud API key; used by the server tile proxy only (`/api/map-tiles/...`). */
   readonly VITE_MAPTILER_API_KEY?: string
