@@ -124,7 +124,7 @@ Deploy jobs authenticate via GitHub OIDC, write `backend.hcl`, init Terraform, b
 ## Container image
 
 - Root **Dockerfile**: multi-stage build, **linux/arm64**, Node 22, pnpm 9.15.4.
-- Serves TanStack Start via `dist/server/server.js` on port **3000**.
+- Serves TanStack Start via `server-production.mjs` on port **3000**.
 - Task definition uses image `{ecr_url}:staging` or `:production` matching the workspace.
 - ALB health check: **`/api/health`** (HTTP 200).
 - Public traffic: ALB **HTTP 80 → HTTPS 443** redirect, TLS via ACM.

@@ -12,6 +12,7 @@ RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 COPY pnpm-lock.yaml package.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts tsconfig.json vite.config.ts eslint.config.js ./
+COPY server-production.mjs ./
 COPY src ./src
 COPY public ./public
 
@@ -43,4 +44,4 @@ RUN chmod +x /app/scripts/docker-entrypoint.sh
 
 EXPOSE 3000
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
-CMD ["node", "dist/server/server.js"]
+CMD ["node", "server-production.mjs"]
