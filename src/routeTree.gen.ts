@@ -15,7 +15,10 @@ import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as MainSignInRouteImport } from './routes/_main/sign-in'
 import { Route as MainResetPasswordRouteImport } from './routes/_main/reset-password'
 import { Route as MainAboutRouteImport } from './routes/_main/about'
+import { Route as MainBoatsIndexRouteImport } from './routes/_main/boats/index'
 import { Route as MainAdminIndexRouteImport } from './routes/_main/admin/index'
+import { Route as MainBoatsNewRouteImport } from './routes/_main/boats/new'
+import { Route as MainBoatsBoatIdRouteImport } from './routes/_main/boats/$boatId'
 import { Route as MainAdminPgbossRouteImport } from './routes/_main/admin/pgboss'
 import { Route as MainAdminCountriesRouteImport } from './routes/_main/admin/countries'
 
@@ -48,9 +51,24 @@ const MainAboutRoute = MainAboutRouteImport.update({
   path: '/about',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainBoatsIndexRoute = MainBoatsIndexRouteImport.update({
+  id: '/boats/',
+  path: '/boats/',
+  getParentRoute: () => MainRouteRoute,
+} as any)
 const MainAdminIndexRoute = MainAdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
+  getParentRoute: () => MainRouteRoute,
+} as any)
+const MainBoatsNewRoute = MainBoatsNewRouteImport.update({
+  id: '/boats/new',
+  path: '/boats/new',
+  getParentRoute: () => MainRouteRoute,
+} as any)
+const MainBoatsBoatIdRoute = MainBoatsBoatIdRouteImport.update({
+  id: '/boats/$boatId',
+  path: '/boats/$boatId',
   getParentRoute: () => MainRouteRoute,
 } as any)
 const MainAdminPgbossRoute = MainAdminPgbossRouteImport.update({
@@ -72,7 +90,10 @@ export interface FileRoutesByFullPath {
   '/api/$': typeof ApiSplatRoute
   '/admin/countries': typeof MainAdminCountriesRoute
   '/admin/pgboss': typeof MainAdminPgbossRoute
+  '/boats/$boatId': typeof MainBoatsBoatIdRoute
+  '/boats/new': typeof MainBoatsNewRoute
   '/admin/': typeof MainAdminIndexRoute
+  '/boats/': typeof MainBoatsIndexRoute
 }
 export interface FileRoutesByTo {
   '/about': typeof MainAboutRoute
@@ -82,7 +103,10 @@ export interface FileRoutesByTo {
   '/': typeof MainIndexRoute
   '/admin/countries': typeof MainAdminCountriesRoute
   '/admin/pgboss': typeof MainAdminPgbossRoute
+  '/boats/$boatId': typeof MainBoatsBoatIdRoute
+  '/boats/new': typeof MainBoatsNewRoute
   '/admin': typeof MainAdminIndexRoute
+  '/boats': typeof MainBoatsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,7 +118,10 @@ export interface FileRoutesById {
   '/_main/': typeof MainIndexRoute
   '/_main/admin/countries': typeof MainAdminCountriesRoute
   '/_main/admin/pgboss': typeof MainAdminPgbossRoute
+  '/_main/boats/$boatId': typeof MainBoatsBoatIdRoute
+  '/_main/boats/new': typeof MainBoatsNewRoute
   '/_main/admin/': typeof MainAdminIndexRoute
+  '/_main/boats/': typeof MainBoatsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,7 +133,10 @@ export interface FileRouteTypes {
     | '/api/$'
     | '/admin/countries'
     | '/admin/pgboss'
+    | '/boats/$boatId'
+    | '/boats/new'
     | '/admin/'
+    | '/boats/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/about'
@@ -116,7 +146,10 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/countries'
     | '/admin/pgboss'
+    | '/boats/$boatId'
+    | '/boats/new'
     | '/admin'
+    | '/boats'
   id:
     | '__root__'
     | '/_main'
@@ -127,7 +160,10 @@ export interface FileRouteTypes {
     | '/_main/'
     | '/_main/admin/countries'
     | '/_main/admin/pgboss'
+    | '/_main/boats/$boatId'
+    | '/_main/boats/new'
     | '/_main/admin/'
+    | '/_main/boats/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -179,11 +215,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAboutRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/boats/': {
+      id: '/_main/boats/'
+      path: '/boats'
+      fullPath: '/boats/'
+      preLoaderRoute: typeof MainBoatsIndexRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/admin/': {
       id: '/_main/admin/'
       path: '/admin'
       fullPath: '/admin/'
       preLoaderRoute: typeof MainAdminIndexRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
+    '/_main/boats/new': {
+      id: '/_main/boats/new'
+      path: '/boats/new'
+      fullPath: '/boats/new'
+      preLoaderRoute: typeof MainBoatsNewRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
+    '/_main/boats/$boatId': {
+      id: '/_main/boats/$boatId'
+      path: '/boats/$boatId'
+      fullPath: '/boats/$boatId'
+      preLoaderRoute: typeof MainBoatsBoatIdRouteImport
       parentRoute: typeof MainRouteRoute
     }
     '/_main/admin/pgboss': {
@@ -210,7 +267,10 @@ interface MainRouteRouteChildren {
   MainIndexRoute: typeof MainIndexRoute
   MainAdminCountriesRoute: typeof MainAdminCountriesRoute
   MainAdminPgbossRoute: typeof MainAdminPgbossRoute
+  MainBoatsBoatIdRoute: typeof MainBoatsBoatIdRoute
+  MainBoatsNewRoute: typeof MainBoatsNewRoute
   MainAdminIndexRoute: typeof MainAdminIndexRoute
+  MainBoatsIndexRoute: typeof MainBoatsIndexRoute
 }
 
 const MainRouteRouteChildren: MainRouteRouteChildren = {
@@ -220,7 +280,10 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainIndexRoute: MainIndexRoute,
   MainAdminCountriesRoute: MainAdminCountriesRoute,
   MainAdminPgbossRoute: MainAdminPgbossRoute,
+  MainBoatsBoatIdRoute: MainBoatsBoatIdRoute,
+  MainBoatsNewRoute: MainBoatsNewRoute,
   MainAdminIndexRoute: MainAdminIndexRoute,
+  MainBoatsIndexRoute: MainBoatsIndexRoute,
 }
 
 const MainRouteRouteWithChildren = MainRouteRoute._addFileChildren(

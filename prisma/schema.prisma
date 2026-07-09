@@ -45,6 +45,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  boats         Boat[]
 
   @@unique([email])
   @@map("user")
@@ -154,4 +155,33 @@ model Media {
   @@index([logEntryId, createdAt])
   @@index([synced, updatedAt])
   @@map("media")
+}
+
+model Boat {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  photos    BoatPhoto[]
+
+  @@index([userId, updatedAt])
+  @@map("boat")
+}
+
+model BoatPhoto {
+  id        String   @id @default(cuid())
+  boatId    String
+  boat      Boat     @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  s3Key     String
+  mimeType  String   @default("image/jpeg")
+  caption   String?
+  isDefault Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([boatId, sortOrder])
+  @@map("boat_photo")
 }

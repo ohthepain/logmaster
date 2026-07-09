@@ -86,7 +86,7 @@ export default function ThemeToggle({ className }: { className?: string }) {
               'transition-[color,background-color,box-shadow] duration-150',
               'text-[var(--sea-ink-soft)]',
               'hover:bg-[var(--link-bg-hover)]/90 hover:text-[var(--sea-ink)]',
-              'focus-visible:ring-2 focus-visible:ring-[var(--lagoon)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--header-bg)]',
+              'focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--header-bg)]',
               selected &&
                 'bg-[var(--chip-bg)] text-[var(--sea-ink)] shadow-sm ring-1 ring-[var(--line)]/80',
             )}

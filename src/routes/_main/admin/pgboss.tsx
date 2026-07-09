@@ -149,7 +149,7 @@ function PgBossPage() {
               onClick={() => setQueue(option)}
               className={`rounded-lg border px-3 py-2 text-sm font-medium ${
                 queue === option
-                  ? 'border-[var(--sea-accent)] bg-[var(--sea-accent)] text-white'
+                  ? 'border-[var(--btn-bg)] bg-[var(--btn-bg)] text-[var(--btn-text)]'
                   : 'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)]'
               }`}
             >
@@ -167,7 +167,7 @@ function PgBossPage() {
             type="button"
             disabled={enqueueing}
             onClick={() => void enqueueEuropeGeoFeatures(false)}
-            className="rounded-lg border border-[var(--sea-accent)] bg-[var(--sea-accent)] px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+            className="rounded-lg border border-[var(--btn-bg)] bg-[var(--btn-bg)] px-3 py-2 text-sm font-medium text-[var(--btn-text)] disabled:opacity-60"
           >
             Queue Europe GeoNames
           </button>
@@ -182,7 +182,7 @@ function PgBossPage() {
         </div>
 
         {loading && <p className="text-[var(--sea-ink-soft)]">Loading…</p>}
-        {err && <p className="text-amber-700 dark:text-amber-200">{err}</p>}
+        {err && <p className="text-red-700 dark:text-red-300">{err}</p>}
         {enqueueMsg && (
           <p className="text-[var(--sea-ink-soft)]">{enqueueMsg}</p>
         )}

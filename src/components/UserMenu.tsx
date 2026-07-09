@@ -36,9 +36,9 @@ export function UserMenu() {
         className={cn(
           'flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)]',
           'text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]',
-          'focus-visible:ring-2 focus-visible:ring-[var(--lagoon)]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--header-bg)]',
+          'focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--header-bg)]',
           'outline-none',
-          open && 'ring-2 ring-[var(--lagoon)]/30',
+          open && 'ring-2 ring-[var(--line)]',
         )}
         aria-label={user ? `Account: ${user.name || user.email}` : 'Account menu'}
         aria-haspopup="menu"
@@ -93,13 +93,22 @@ export function UserMenu() {
             </div>
           )}
 
+          <Link
+            to="/boats"
+            role="menuitem"
+            className="block rounded-xl px-3 py-2 text-sm font-semibold text-[var(--brand)] no-underline outline-none hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20"
+            onClick={() => setOpen(false)}
+          >
+            Boats
+          </Link>
+
           {user ? (
             <button
               type="button"
               role="menuitem"
               className={cn(
                 'w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-[var(--sea-ink)]',
-                'outline-none hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--lagoon)]/40',
+                'outline-none hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20',
               )}
               onClick={() => {
                 setOpen(false)
@@ -112,7 +121,7 @@ export function UserMenu() {
             <Link
               to="/sign-in"
               role="menuitem"
-              className="block rounded-xl px-3 py-2 text-sm font-medium text-[var(--lagoon-deep)] no-underline outline-none hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--lagoon)]/40"
+              className="block rounded-xl px-3 py-2 text-sm font-medium text-[var(--sea-ink)] no-underline outline-none hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20"
               onClick={() => setOpen(false)}
             >
               Sign in

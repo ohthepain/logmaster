@@ -15,4 +15,10 @@ dist-ssr
 __unconfig*
 todos.json
 
+terraform/backend.hcl
+terraform/network/backend.hcl
+terraform/**/.terraform/
+terraform/bootstrap/terraform.tfstate
+terraform/bootstrap/terraform.tfstate.backup
+
 /generated/prisma

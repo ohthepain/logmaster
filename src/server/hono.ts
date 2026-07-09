@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { auth, getTrustedOrigins } from './auth'
 import { logbookRoutes } from './routes/logbook'
+import { boatsRoutes } from './routes/boats'
 
 const corsOrigins = getTrustedOrigins()
 
@@ -24,3 +25,4 @@ app.get('/health', (c) =>
 )
 
 app.route('/logbook', logbookRoutes)
+app.route('/boats', boatsRoutes)

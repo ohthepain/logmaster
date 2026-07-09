@@ -207,23 +207,23 @@ function SignInPage() {
 
   return (
     <div className="min-h-screen w-full flex">
-      <div className="hidden lg:flex lg:w-1/3 flex-col justify-between p-12 relative overflow-hidden bg-slate-950">
-        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full opacity-5 bg-white" />
-        <div className="absolute -bottom-32 -right-16 size-[28rem] rounded-full opacity-5 bg-white" />
+      <div className="hidden lg:flex lg:w-1/3 flex-col justify-between p-12 relative overflow-hidden bg-[var(--btn-bg)] text-[var(--btn-text)]">
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full opacity-5 bg-current" />
+        <div className="absolute -bottom-32 -right-16 size-[28rem] rounded-full opacity-5 bg-current" />
 
         <Link
           to="/"
-          className="text-sm text-slate-500 hover:text-slate-300 relative z-10"
+          className="text-sm opacity-60 hover:opacity-100 relative z-10 no-underline text-[var(--btn-text)]"
         >
           <div className="flex items-center gap-3">
             <img
-              src="/favicon.ico"
+              src="/logmaster_logo_transparent.png"
               alt=""
               className="w-10 h-10 rounded-xl"
               width={40}
               height={40}
             />
-            <span className="text-white font-semibold text-lg tracking-wide">
+            <span className="font-semibold text-lg tracking-wide">
               logmaster
             </span>
           </div>
@@ -231,14 +231,14 @@ function SignInPage() {
 
         <div className="relative z-10">
           <h1
-            className="text-white mb-4"
+            className="mb-4 text-[var(--btn-text)]"
             style={{ fontSize: '2.5rem', fontWeight: 700, lineHeight: 1.2 }}
           >
             {mode === 'sign-in' ? 'Welcome back to' : 'Get started with'}
             <br />
-            <span className="text-slate-400">logmaster</span>
+            <span className="opacity-60">logmaster</span>
           </h1>
-          <p className="text-slate-400 max-w-xs" style={{ lineHeight: 1.6 }}>
+          <p className="max-w-xs opacity-70" style={{ lineHeight: 1.6 }}>
             {INTRO}
           </p>
         </div>
@@ -246,7 +246,7 @@ function SignInPage() {
         <div className="relative z-10 flex gap-4 text-sm">
           <Link
             to="/about"
-            className="text-slate-500 hover:text-slate-300 transition-colors underline underline-offset-2"
+            className="opacity-60 hover:opacity-100 transition-opacity underline underline-offset-2 text-[var(--btn-text)] no-underline hover:underline"
           >
             About
           </Link>
@@ -259,7 +259,7 @@ function SignInPage() {
             <div className="flex lg:hidden items-center justify-between gap-3 mb-10">
               <div className="flex items-center gap-3">
                 <img
-                  src="/favicon.ico"
+                  src="/logmaster_logo_transparent.png"
                   alt=""
                   className="w-9 h-9 rounded-xl"
                   width={36}
@@ -322,7 +322,7 @@ function SignInPage() {
                     onClick={() => setTab('password')}
                     className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-all ${
                       tab === 'password'
-                        ? 'bg-cyan-600 text-slate-950'
+                        ? 'bg-[var(--btn-bg)] text-[var(--btn-text)]'
                         : 'text-[var(--sea-ink-soft)]'
                     }`}
                   >
@@ -333,7 +333,7 @@ function SignInPage() {
                     onClick={() => setTab('magic')}
                     className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-all ${
                       tab === 'magic'
-                        ? 'bg-cyan-600 text-slate-950'
+                        ? 'bg-[var(--btn-bg)] text-[var(--btn-text)]'
                         : 'text-[var(--sea-ink-soft)]'
                     }`}
                   >
@@ -359,7 +359,7 @@ function SignInPage() {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Your name"
                     autoComplete="name"
-                    className="w-full px-4 py-3 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] text-sm outline-none focus:ring-2 focus:ring-cyan-500/50 focus:ring-offset-2"
+                    className="w-full px-4 py-3 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] text-sm outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20 focus:ring-offset-2"
                   />
                 </div>
               )}
@@ -384,7 +384,7 @@ function SignInPage() {
                     placeholder="you@example.com"
                     required
                     autoComplete="email"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] text-sm outline-none focus:ring-2 focus:ring-cyan-500/50"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] text-sm outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
                   />
                 </div>
               </div>
@@ -425,7 +425,7 @@ function SignInPage() {
                         mode === 'sign-in' ? 'current-password' : 'new-password'
                       }
                       minLength={mode === 'sign-up' ? 8 : undefined}
-                      className="w-full pl-10 pr-11 py-3 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] text-sm outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      className="w-full pl-10 pr-11 py-3 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] text-sm outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
                     />
                     <button
                       type="button"
@@ -441,10 +441,10 @@ function SignInPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm text-slate-950 bg-cyan-600 transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm text-[var(--btn-text)] bg-[var(--btn-bg)] transition hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
               >
                 {loading ? (
-                  <span className="inline-block size-4 animate-spin rounded-full border-2 border-slate-950/30 border-t-slate-950" />
+                  <span className="inline-block size-4 animate-spin rounded-full border-2 border-[var(--btn-text)]/30 border-t-[var(--btn-text)]" />
                 ) : mode === 'sign-in' && tab === 'magic' ? (
                   <>
                     <span>Send magic link</span>
@@ -505,7 +505,7 @@ function SignInPage() {
 
             {forgotOpen && (
               <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay)] p-4"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="forgot-title"
@@ -556,12 +556,12 @@ function SignInPage() {
                           placeholder="you@example.com"
                           required
                           autoComplete="email"
-                          className="w-full px-4 py-3 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] text-sm outline-none focus:ring-2 focus:ring-cyan-500/50"
+                          className="w-full px-4 py-3 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] text-sm outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
                         />
                       </div>
                       <button
                         type="submit"
-                        className="w-full py-3 rounded-xl font-semibold text-sm text-slate-950 bg-cyan-600 disabled:opacity-60"
+                        className="w-full py-3 rounded-xl font-semibold text-sm text-[var(--btn-text)] bg-[var(--btn-bg)] disabled:opacity-60"
                         disabled={forgotPasswordLoading}
                       >
                         {forgotPasswordLoading ? 'Sending…' : 'Send reset link'}

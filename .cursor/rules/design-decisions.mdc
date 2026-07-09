@@ -1,0 +1,88 @@
+---
+description: Core product and engineering design decisions for logmaster
+alwaysApply: false
+---
+# logmaster — design decisions
+
+## PWA and App structure
+
+We want both PWA and (future) app versions. This way we can add crew members without their having to install the app.
+
+## Product
+
+- **Sailing logbook PWA.** Users start trips, log events/notes/media locally, then sync when online.
+- **Auth is optional for core use.** Sign-in enables cross-device sync; the app should work without connectivity or an account.
+- **Scope is sailing/navigation logging only.** Do not reintroduce flight tracking, airline/airport catalogs, FR24, AirLabs, or similar.
+
+## Stack
+
+| Layer | Choice |
+|-------|--------|
+| App | TanStack Start + React 19, file routes in `src/routes/` |
+| API | Hono at `/api/*` (`src/server/hono.ts`) |
+| Auth | Better Auth (`/api/auth/*`), Prisma adapter |
+| DB | Postgres via Prisma (`prisma/schema.prisma`), shared **octacard** server, database **`logmaster`** |
+| Jobs | pg-boss — currently `build_geo_features` only (`pnpm worker`) |
+| Client state | Zustand (`src/stores/logbook.ts`) |
+| Maps | MapLibre + server-side MapTiler proxy (`/api/map-tiles/…`) |
+| PWA | vite-plugin-pwa, IndexedDB for offline tiles/geo (`src/lib/tile-idb.ts`) |
+
+Dev server runs on **port 3020** (`pnpm dev`).
+
+## Data model
+
+Core entities: **Trip** → **LogEntry** → **Media**, plus Better Auth user tables and **Boat** → **BoatPhoto** (user-owned, photos in `S3_BUCKET_PHOTOS`).
+
+- Log entries use typed events (`SAILS_UP`, `ANCHOR_DROPPED`, `NOTE`, `PHOTO`, etc.) — see `src/domain/logbook.ts`.
+- Entries carry `synced` and soft-delete (`deleted`) flags for offline sync.
+- Domain types live in `src/domain/`; keep UI and API aligned with these types.
+
+## Offline-first behaviour
+
+1. **Write locally first** (Zustand + IndexedDB/local storage patterns in the logbook store).
+2. **Sync in background** when `online` — do not block UI on network calls.
+3. **Surface sync state** in the UI (unsynced counts, badges) without modal noise.
+
+## API conventions
+
+- Logbook routes: `/api/logbook/…` (`src/server/routes/logbook.ts`).
+- Boats routes: `/api/boats/…` (`src/server/routes/boats.ts`) — auth required; photo bytes at `/api/boats/photos/:id/content`.
+- Admin routes: `/api/admin/…` (pg-boss, countries/geo imports).
+- Health check: `/api/health`.
+- Use Hono sub-routers; mount new domains on `src/server/hono.ts`.
+
+## UI & theming
+
+- **Apple News–inspired editorial layout:** clean white/black surfaces, large imagery, section titles in brand red.
+- **Brand red** from the sail logo (`--brand`, `--brand-hover`, `--brand-muted`) — use for section titles (`.brand-title`), menu emphasis, and the wordmark; keep body text monochrome.
+- Logo asset: `/logmaster_logo_transparent.png` in header and auth screens.
+- Theme tokens in `src/styles.css`:
+
+  - Brand: `--brand`, `--brand-hover`, `--brand-muted`
+  - Text: `--sea-ink`, `--sea-ink-soft`
+  - Surfaces: `--bg-base`, `--panel`, `--surface-strong`, `--chip-bg`
+  - Primary actions: `--btn-bg`, `--btn-text`
+  - Borders: `--line`, `--panel-border`
+
+- Boats list (`/boats`): large cover image per boat, name underneath (Apple News carousel/card pattern).
+- Theme toggle supports light / dark / system via `data-theme` + `.dark` class.
+- Display headings: Fraunces (`display-title`); body: Manrope.
+
+## Tooling
+
+- **Biome** for formatting (`pnpm format`), **ESLint** for linting (`pnpm lint`).
+- **Vitest** for tests.
+- Prisma migrations in `prisma/migrations/` — use `pnpm db:migrate`, not ad-hoc SQL.
+- Path alias: `#/*` → `./src/*`.
+
+## Code style (agents)
+
+- Minimize scope; match existing patterns in neighbouring files.
+- No over-abstraction; comments only for non-obvious business logic.
+- Do not commit secrets (`.env`); keep `.env.example` in sync when adding env vars.
+
+## Environment
+
+- `DATABASE_URL` → octacard Postgres on `localhost:5432`, database `logmaster`.
+- `BETTER_AUTH_URL` must match the browser origin (including port).
+- MapTiler key via `VITE_MAPTILER_API_KEY` (server reads env at runtime for tile proxy).

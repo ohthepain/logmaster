@@ -58,7 +58,7 @@ function ResetPassword() {
           </p>
           <Link
             to="/sign-in"
-            className="text-cyan-600 font-medium underline decoration-cyan-600/50 underline-offset-2"
+            className="font-medium text-[var(--sea-ink)] underline decoration-[var(--sea-ink)]/40 underline-offset-2"
           >
             Back to sign in
           </Link>
@@ -77,7 +77,7 @@ function ResetPassword() {
           </p>
           <Link
             to="/sign-in"
-            className="text-cyan-600 font-medium underline decoration-cyan-600/50 underline-offset-2"
+            className="font-medium text-[var(--sea-ink)] underline decoration-[var(--sea-ink)]/40 underline-offset-2"
           >
             Back to sign in
           </Link>
@@ -96,7 +96,7 @@ function ResetPassword() {
           </p>
           <Link
             to="/sign-in"
-            className="inline-flex items-center justify-center rounded-xl bg-cyan-600 px-4 py-3 text-sm font-semibold text-slate-950 no-underline hover:opacity-90"
+            className="inline-flex items-center justify-center rounded-xl bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] no-underline hover:opacity-90"
           >
             Sign in
           </Link>
@@ -131,13 +131,13 @@ function ResetPassword() {
                 required
                 minLength={8}
                 autoComplete="new-password"
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] text-sm outline-none focus:ring-2 focus:ring-cyan-500/50 focus:ring-offset-2 focus:ring-offset-[var(--bg-base)]"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] text-sm outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20 focus:ring-offset-2 focus:ring-offset-[var(--bg-base)]"
               />
             </div>
           </div>
           <button
             type="submit"
-            className="w-full py-3.5 rounded-xl font-semibold text-sm text-slate-950 bg-cyan-600 transition hover:opacity-90 disabled:opacity-60"
+            className="w-full py-3.5 rounded-xl font-semibold text-sm text-[var(--btn-text)] bg-[var(--btn-bg)] transition hover:opacity-90 disabled:opacity-60"
             disabled={loading}
           >
             {loading ? 'Resetting…' : 'Reset password'}
