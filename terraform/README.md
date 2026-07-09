@@ -159,6 +159,18 @@ Terraform creates per-environment secrets:
 
 Optional third-party values can be pulled from existing account-level Secrets Manager ARNs via tfvars (`google_client_id_secret_arn`, etc.).
 
+**Google sign-in on deploy:** ECS reads `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` from the `logmaster-{env}-app` secret. If those keys are empty, sign-in returns `PROVIDER_NOT_FOUND`. After creating the OAuth client in Google Cloud, either:
+
+1. Set `google_client_id_secret_arn` and `google_client_secret_secret_arn` in `environments/{env}/terraform.tfvars` and `terraform apply`, or
+2. Run `./scripts/set-google-oauth-secrets.sh staging` (reads from local `.env`, updates the app secret, forces ECS redeploy).
+
+In Google Cloud, add redirect URIs for each environment:
+
+- `https://staging.logmaster.live/api/auth/callback/google`
+- `https://logmaster.live/api/auth/callback/google`
+
+Verify with `curl https://staging.logmaster.live/api/health` — `googleSignIn` should be `true` after redeploy.
+
 ECS task role grants S3 access to the uploads bucket and SES send permissions. No static AWS access keys are injected — the SDK uses the task role.
 
 ## S3 uploads

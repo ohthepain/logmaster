@@ -64,10 +64,14 @@ const google =
       }
     : undefined
 
-if (process.env.NODE_ENV !== 'production' && !google) {
+if (!google) {
   console.warn(
-    '[auth] Google sign-in is disabled: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env. Without them, /api/auth/sign-in/social returns 404 for provider "google".',
+    `[auth] Google sign-in is disabled: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET (e.g. logmaster-${process.env.NODE_ENV === 'production' ? 'staging|production' : 'local'}-app secret in AWS). /api/auth/sign-in/social returns PROVIDER_NOT_FOUND for provider "google".`,
   )
+}
+
+export function isGoogleSignInEnabled() {
+  return google != null
 }
 
 export const auth = betterAuth({

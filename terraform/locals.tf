@@ -17,6 +17,15 @@ check "workspace_matches_environment" {
   }
 }
 
+check "google_auth_configured" {
+  assert {
+    condition = !var.google_auth_enabled || (
+      var.google_client_id_secret_arn != "" && var.google_client_secret_secret_arn != ""
+    )
+    error_message = "google_auth_enabled is true but google_client_id_secret_arn and google_client_secret_secret_arn are unset. Add ARNs to environments/${var.environment}/terraform.tfvars, or run scripts/set-google-oauth-secrets.sh ${var.environment} after deploy."
+  }
+}
+
 # Network stack is not workspace-scoped; app uses staging/production workspaces.
 data "terraform_remote_state" "network" {
   backend   = "s3"
