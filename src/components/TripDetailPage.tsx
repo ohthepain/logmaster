@@ -230,20 +230,7 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
     <>
       <main className="page-wrap px-3 pb-24 pt-4 sm:px-4 sm:pb-28">
         <div className="mx-auto max-w-3xl space-y-5">
-          <div className="flex items-center justify-between gap-3">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-sm font-semibold text-[var(--sea-ink)] no-underline transition hover:bg-[var(--link-bg-hover)]"
-            >
-              <ArrowLeft className="size-4" />
-              Trips
-            </Link>
-            <p className="m-0 truncate text-sm font-semibold text-[var(--sea-ink-soft)]">
-              {trip.status.replace('_', ' ')}
-            </p>
-          </div>
-
-          {trip.status === 'PLANNED' && (
+          {trip.status === 'PLANNED' ? (
             <button
               type="button"
               disabled={busy}
@@ -253,16 +240,16 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
               <Sailboat className="size-5" />
               Start trip
             </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setComposerOpen(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-[var(--btn-bg)] px-4 py-3.5 text-base font-bold text-[var(--btn-text)] shadow-sm transition hover:-translate-y-px"
+            >
+              <FileText className="size-5" />
+              Log entry
+            </button>
           )}
-
-          <div>
-            <h1 className="m-0 text-xl font-bold text-[var(--sea-ink)]">
-              Log entries
-            </h1>
-            <p className="m-0 mt-1 text-sm text-[var(--sea-ink-soft)]">
-              {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
-            </p>
-          </div>
 
           {entries.length === 0 ? (
             <div className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] px-5 py-10 text-center">
@@ -271,16 +258,6 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
                   ? 'Start the trip or log your first entry.'
                   : 'No log entries yet. Add the first note or event.'}
               </p>
-              {trip.status !== 'PLANNED' && (
-                <button
-                  type="button"
-                  onClick={() => setComposerOpen(true)}
-                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)]"
-                >
-                  <FileText className="size-4" />
-                  Log entry
-                </button>
-              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -417,16 +394,8 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setComposerOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)]"
-                >
-                  <FileText className="size-4" />
-                  Log entry
-                </button>
-                {trip.status === 'IN_PROGRESS' && (
+              {trip.status === 'IN_PROGRESS' && (
+                <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     disabled={busy}
@@ -436,8 +405,8 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
                     <Check className="size-4" />
                     End trip
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
