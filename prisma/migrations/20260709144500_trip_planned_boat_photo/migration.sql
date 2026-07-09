@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "trip" ADD COLUMN "boatId" TEXT,
+ADD COLUMN "boatPhotoUrl" TEXT;
+
+ALTER TABLE "trip" ALTER COLUMN "status" SET DEFAULT 'PLANNED';

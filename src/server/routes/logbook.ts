@@ -18,12 +18,21 @@ function toTrip(data: Record<string, unknown>) {
     boatName: String(data.boatName ?? 'Unknown boat'),
     registration: (data.registration as string | null | undefined) ?? null,
     skipper: (data.skipper as string | null | undefined) ?? null,
+    skipperKey: (data.skipperKey as string | null | undefined) ?? null,
+    crewMemberIds: Array.isArray(data.crewMemberIds)
+      ? (data.crewMemberIds as string[])
+      : null,
+    title: (data.title as string | null | undefined) ?? null,
+    coverPhotoDataUrl:
+      (data.coverPhotoDataUrl as string | null | undefined) ?? null,
+    boatId: (data.boatId as string | null | undefined) ?? null,
+    boatPhotoUrl: (data.boatPhotoUrl as string | null | undefined) ?? null,
     startedAt,
     completedAt: parseDate(data.completedAt),
     startLatitude: (data.startLatitude as number | null | undefined) ?? null,
     startLongitude: (data.startLongitude as number | null | undefined) ?? null,
     startCountry: (data.startCountry as string | null | undefined) ?? null,
-    status: String(data.status ?? 'IN_PROGRESS'),
+    status: String(data.status ?? 'PLANNED'),
     createdAt,
     updatedAt,
   }
@@ -82,49 +91,68 @@ logbookRoutes.get('/bootstrap', async (c) => {
 })
 
 logbookRoutes.post('/sync', async (c) => {
-  const body = (await c.req.json().catch(() => ({}))) as {
-    trips?: Record<string, unknown>[]
-    logEntries?: Record<string, unknown>[]
-    media?: Record<string, unknown>[]
+  try {
+    const body = (await c.req.json().catch(() => ({}))) as {
+      trips?: Record<string, unknown>[]
+      logEntries?: Record<string, unknown>[]
+      media?: Record<string, unknown>[]
+      deletedTripIds?: string[]
+    }
+
+    const trips = body.trips ?? []
+    const logEntries = body.logEntries ?? []
+    const media = body.media ?? []
+    const deletedTripIds = (body.deletedTripIds ?? []).filter(
+      (id): id is string => typeof id === 'string' && id.length > 0,
+    )
+
+    if (deletedTripIds.length > 0) {
+      await db.trip.deleteMany({
+        where: { id: { in: deletedTripIds } },
+      })
+    }
+
+    if (trips.length > 0 || logEntries.length > 0 || media.length > 0) {
+      await prisma.$transaction([
+      ...trips.map((trip) =>
+        db.trip.upsert({
+          where: { id: String(trip.id) },
+          create: toTrip(trip) as any,
+          update: toTrip(trip) as any,
+        }),
+      ),
+      ...logEntries.map((entry) =>
+        db.logEntry.upsert({
+          where: { id: String(entry.id) },
+          create: toLogEntry(entry) as any,
+          update: toLogEntry(entry) as any,
+        }),
+      ),
+      ...media.map((item) =>
+        db.media.upsert({
+          where: { id: String(item.id) },
+          create: toMedia(item) as any,
+          update: toMedia(item) as any,
+        }),
+      ),
+      ])
+    }
+
+    const [savedTrips, savedEntries, savedMedia] = await Promise.all([
+      db.trip.findMany({ orderBy: [{ updatedAt: 'desc' }] }),
+      db.logEntry.findMany({ orderBy: [{ timestamp: 'asc' }] }),
+      db.media.findMany({ orderBy: [{ createdAt: 'asc' }] }),
+    ])
+
+    return c.json({
+      trips: savedTrips,
+      logEntries: savedEntries,
+      media: savedMedia,
+    })
+  } catch (error) {
+    console.error('[logbook/sync]', error)
+    const message =
+      error instanceof Error ? error.message : 'Failed to sync logbook'
+    return c.json({ error: message }, 500)
   }
-
-  const trips = body.trips ?? []
-  const logEntries = body.logEntries ?? []
-  const media = body.media ?? []
-
-  await prisma.$transaction([
-    ...trips.map((trip) =>
-      db.trip.upsert({
-        where: { id: String(trip.id) },
-        create: toTrip(trip) as any,
-        update: toTrip(trip) as any,
-      }),
-    ),
-    ...logEntries.map((entry) =>
-      db.logEntry.upsert({
-        where: { id: String(entry.id) },
-        create: toLogEntry(entry) as any,
-        update: toLogEntry(entry) as any,
-      }),
-    ),
-    ...media.map((item) =>
-      db.media.upsert({
-        where: { id: String(item.id) },
-        create: toMedia(item) as any,
-        update: toMedia(item) as any,
-      }),
-    ),
-  ])
-
-  const [savedTrips, savedEntries, savedMedia] = await Promise.all([
-    db.trip.findMany({ orderBy: [{ updatedAt: 'desc' }] }),
-    db.logEntry.findMany({ orderBy: [{ timestamp: 'asc' }] }),
-    db.media.findMany({ orderBy: [{ createdAt: 'asc' }] }),
-  ])
-
-  return c.json({
-    trips: savedTrips,
-    logEntries: savedEntries,
-    media: savedMedia,
-  })
 })

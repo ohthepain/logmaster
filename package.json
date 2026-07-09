@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "vite dev --port 3020",
+    "predev": "prisma generate",
     "build": "prisma generate && vite build",
     "start": "node server-production.mjs",
     "preview": "vite preview",

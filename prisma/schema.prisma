@@ -106,12 +106,18 @@ model Trip {
   boatName       String
   registration   String?
   skipper        String?
+  skipperKey     String?
+  crewMemberIds  Json?
+  title          String?
+  coverPhotoDataUrl String? @db.Text
+  boatId            String?
+  boatPhotoUrl      String?
   startedAt      DateTime
   completedAt    DateTime?
   startLatitude  Float?
   startLongitude Float?
   startCountry   String?
-  status         TripStatus  @default(IN_PROGRESS)
+  status         TripStatus  @default(PLANNED)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 

@@ -6,10 +6,12 @@ type ModalProps = {
   title: string
   onClose: () => void
   children: ReactNode
+  layer?: 'base' | 'overlay'
 }
 
-export function Modal({ title, onClose, children }: ModalProps) {
+export function Modal({ title, onClose, children, layer = 'base' }: ModalProps) {
   const titleId = useId()
+  const zClass = layer === 'overlay' ? 'z-[100]' : 'z-[90]'
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -23,7 +25,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-[var(--overlay)] p-3 backdrop-blur-sm"
+      className={`fixed inset-0 ${zClass} flex items-center justify-center bg-[var(--overlay)] p-3 backdrop-blur-sm`}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}

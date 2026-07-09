@@ -35,6 +35,12 @@ export type Trip = {
   boatName: string
   registration?: string | null
   skipper?: string | null
+  skipperKey?: string | null
+  crewMemberIds?: string[] | null
+  title?: string | null
+  coverPhotoDataUrl?: string | null
+  boatId?: string | null
+  boatPhotoUrl?: string | null
   startedAt: string
   completedAt?: string | null
   startLatitude?: number | null

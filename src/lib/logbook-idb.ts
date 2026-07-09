@@ -24,6 +24,40 @@ interface LogbookDB extends DBSchema {
 const DB_NAME = 'logmaster'
 const DB_VERSION = 1
 
+const PENDING_DELETED_TRIPS_KEY = 'logmaster-pending-trip-deletes'
+
+export function getPendingDeletedTripIds(): string[] {
+  if (typeof localStorage === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(PENDING_DELETED_TRIPS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed)
+      ? parsed.filter((id): id is string => typeof id === 'string')
+      : []
+  } catch {
+    return []
+  }
+}
+
+export function addPendingDeletedTripId(id: string) {
+  if (typeof localStorage === 'undefined') return
+  const ids = new Set(getPendingDeletedTripIds())
+  ids.add(id)
+  localStorage.setItem(PENDING_DELETED_TRIPS_KEY, JSON.stringify([...ids]))
+}
+
+export function removePendingDeletedTripIds(ids: string[]) {
+  if (typeof localStorage === 'undefined' || ids.length === 0) return
+  const remove = new Set(ids)
+  const remaining = getPendingDeletedTripIds().filter((id) => !remove.has(id))
+  if (remaining.length === 0) {
+    localStorage.removeItem(PENDING_DELETED_TRIPS_KEY)
+    return
+  }
+  localStorage.setItem(PENDING_DELETED_TRIPS_KEY, JSON.stringify(remaining))
+}
+
 export async function getLogbookDb() {
   return openDB<LogbookDB>(DB_NAME, DB_VERSION, {
     upgrade(db) {

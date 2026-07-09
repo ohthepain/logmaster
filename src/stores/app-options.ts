@@ -6,6 +6,8 @@ import type { MapBasemapLayerToggles } from '../lib/maplibre-basemap-layer-toggl
 type AppOptions = {
   devMode: boolean
   setDevMode: (v: boolean) => void
+  lastTripBoatId: string | null
+  setLastTripBoatId: (boatId: string | null) => void
   /** Basemap: POI/building/transit/landuse visibility (heuristic layer ids). */
   mapBasemapLayerToggles: MapBasemapLayerToggles
   setMapBasemapLayerToggles: (next: Partial<MapBasemapLayerToggles>) => void
@@ -16,6 +18,8 @@ export const useAppOptionsStore = create<AppOptions>()(
     (set) => ({
       devMode: false,
       setDevMode: (v) => set({ devMode: v }),
+      lastTripBoatId: null,
+      setLastTripBoatId: (boatId) => set({ lastTripBoatId: boatId }),
       mapBasemapLayerToggles: defaultMapBasemapLayerToggles(),
       setMapBasemapLayerToggles: (next: Partial<MapBasemapLayerToggles>) =>
         set((s) => ({

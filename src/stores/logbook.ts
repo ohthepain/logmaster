@@ -7,13 +7,32 @@ import type {
   TripStatus,
 } from '../domain/logbook'
 import { captureLogbookContext } from '../lib/logbook-context'
-import { bootstrapLogbook, syncLogbook } from '../lib/logbook-sync'
-import { putLogEntry, putMedia, putTrip } from '../lib/logbook-idb'
+import { defaultTripTitle } from '../lib/trip-display'
+import {
+  bootstrapLogbook,
+  hasPendingSync,
+  type LogbookSnapshot,
+  syncLogbook,
+} from '../lib/logbook-sync'
+import {
+  addPendingDeletedTripId,
+  deleteLogEntry,
+  deleteMedia,
+  deleteTrip as deleteTripFromIdb,
+  loadLogbookSnapshot,
+  putLogEntry,
+  putMedia,
+  putTrip,
+} from '../lib/logbook-idb'
 
 type NewTripInput = {
   boatName: string
+  boatId?: string | null
+  boatPhotoUrl?: string | null
   registration?: string
   skipper?: string
+  skipperKey?: string | null
+  crewMemberIds?: string[]
 }
 
 type NewEntryInput = {
@@ -28,6 +47,18 @@ type UpdateEntryInput = Partial<
   Pick<LogEntry, 'notes' | 'data' | 'heading' | 'type' | 'deleted'>
 >
 
+type UpdateTripInput = Partial<
+  Pick<
+    Trip,
+    | 'title'
+    | 'coverPhotoDataUrl'
+    | 'boatName'
+    | 'registration'
+    | 'skipper'
+    | 'crewMemberIds'
+  >
+>
+
 type LogbookState = {
   trips: Trip[]
   entries: LogEntry[]
@@ -36,12 +67,15 @@ type LogbookState = {
   selectedTripId: string | null
   booted: boolean
   syncing: boolean
+  syncQueued: boolean
   online: boolean
   syncMessage: string | null
   load: () => Promise<void>
   setOnline: (online: boolean) => void
   selectTrip: (tripId: string | null) => void
   startTrip: (input: NewTripInput) => Promise<Trip | null>
+  updateTrip: (tripId: string, patch: UpdateTripInput) => Promise<void>
+  deleteTrip: (tripId: string) => Promise<void>
   addEntry: (input: NewEntryInput) => Promise<LogEntry | null>
   updateEntry: (entryId: string, patch: UpdateEntryInput) => Promise<void>
   deleteEntry: (entryId: string) => Promise<void>
@@ -50,7 +84,7 @@ type LogbookState = {
     entryId: string,
     media: Omit<Media, 'id' | 'createdAt' | 'updatedAt' | 'synced'>,
   ) => Promise<Media | null>
-  syncNow: () => Promise<void>
+  syncNow: () => Promise<boolean>
 }
 
 function nowIso() {
@@ -67,6 +101,62 @@ function sortEntries(entries: LogEntry[]) {
   )
 }
 
+function sortTrips(trips: Trip[]) {
+  return [...trips].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+  )
+}
+
+function resolveActiveTripId(trips: Trip[], current: string | null) {
+  const activeTrip = trips.find((trip) => trip.status === 'IN_PROGRESS')
+  if (activeTrip) return activeTrip.id
+  if (current && trips.some((trip) => trip.id === current)) return current
+  return null
+}
+
+function applySnapshot(set: (partial: Partial<LogbookState>) => void, snapshot: LogbookSnapshot, selectedTripId: string | null) {
+  const sortedTrips = sortTrips(snapshot.trips)
+  const sortedEntries = sortEntries(snapshot.logEntries)
+  const activeTripId = resolveActiveTripId(sortedTrips, null)
+  const nextSelected =
+    selectedTripId && sortedTrips.some((trip) => trip.id === selectedTripId)
+      ? selectedTripId
+      : (activeTripId ?? sortedTrips[0]?.id ?? null)
+
+  set({
+    trips: sortedTrips,
+    entries: sortedEntries,
+    media: snapshot.media,
+    activeTripId,
+    selectedTripId: nextSelected,
+  })
+}
+
+function syncStatusMessage(snapshot: LogbookSnapshot, online: boolean) {
+  if (!online) return 'Offline — will sync when back online'
+  if (hasPendingSync(snapshot)) return 'Pending sync'
+  return 'Synced'
+}
+
+async function flushLogbookSync(get: () => LogbookState) {
+  let attempts = 0
+  while (attempts < 8) {
+    await get().syncNow()
+    while (get().syncing) {
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    }
+    if (!get().syncQueued) break
+    attempts += 1
+  }
+}
+
+async function assertSyncedWhenOnline(get: () => LogbookState) {
+  if (!get().online) return
+  const snapshot = await loadLogbookSnapshot()
+  if (!hasPendingSync(snapshot)) return
+  throw new Error(get().syncMessage ?? 'Could not sync to server')
+}
+
 export const useLogbookStore = create<LogbookState>((set, get) => ({
   trips: [],
   entries: [],
@@ -75,76 +165,125 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
   selectedTripId: null,
   booted: false,
   syncing: false,
+  syncQueued: false,
   online: typeof navigator === 'undefined' ? true : navigator.onLine,
   syncMessage: null,
 
   load: async () => {
     const snapshot = await bootstrapLogbook()
-    const sortedTrips = [...snapshot.trips].sort(
-      (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-    )
-    const sortedEntries = sortEntries(snapshot.logEntries)
-    const activeTrip = sortedTrips.find((trip) => trip.status === 'IN_PROGRESS')
-    const firstTripId = sortedTrips.length > 0 ? sortedTrips[0].id : null
+    applySnapshot(set, snapshot, get().selectedTripId)
     set({
-      trips: sortedTrips,
-      entries: sortedEntries,
-      media: snapshot.media,
-      activeTripId: activeTrip?.id ?? null,
-      selectedTripId: activeTrip?.id ?? firstTripId,
       booted: true,
+      syncMessage: syncStatusMessage(snapshot, get().online),
     })
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
+    if (get().online) {
       void get().syncNow()
     }
   },
 
-  setOnline: (online) => set({ online }),
+  setOnline: (online) => {
+    set({ online })
+    if (online) {
+      void get().syncNow()
+    }
+  },
 
   selectTrip: (tripId) => set({ selectedTripId: tripId }),
 
   startTrip: async (input) => {
     const context = await captureLogbookContext()
+    const now = nowIso()
+    const startedDate = new Date(context.timestamp)
     const trip: Trip = {
       id: makeId(),
       boatName: input.boatName.trim(),
+      boatId: input.boatId ?? null,
+      boatPhotoUrl: input.boatPhotoUrl ?? null,
       registration: input.registration?.trim() || null,
       skipper: input.skipper?.trim() || null,
+      skipperKey: input.skipperKey ?? null,
+      crewMemberIds: input.crewMemberIds?.length ? input.crewMemberIds : null,
+      title: defaultTripTitle(input.boatName, startedDate),
       startedAt: context.timestamp,
       completedAt: null,
       startLatitude: context.latitude,
       startLongitude: context.longitude,
       startCountry: context.country,
-      status: 'IN_PROGRESS',
-      createdAt: nowIso(),
-      updatedAt: nowIso(),
+      status: 'PLANNED',
+      createdAt: now,
+      updatedAt: now,
     }
 
     await putTrip(trip)
+    set((state) => ({
+      trips: sortTrips([trip, ...state.trips]),
+      selectedTripId: trip.id,
+      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+    }))
+
+    await flushLogbookSync(get)
+    await assertSyncedWhenOnline(get)
+    return trip
+  },
+
+  updateTrip: async (tripId, patch) => {
+    const current = get().trips.find((trip) => trip.id === tripId)
+    if (!current) return
+    const next: Trip = {
+      ...current,
+      ...patch,
+      title:
+        patch.title !== undefined
+          ? patch.title?.trim() || null
+          : current.title ?? null,
+      crewMemberIds:
+        patch.crewMemberIds !== undefined
+          ? patch.crewMemberIds?.length
+            ? patch.crewMemberIds
+            : null
+          : current.crewMemberIds ?? null,
+      updatedAt: nowIso(),
+    }
+    await putTrip(next)
+    set((state) => ({
+      trips: state.trips.map((trip) => (trip.id === tripId ? next : trip)),
+      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+    }))
+    void get().syncNow()
+  },
+
+  deleteTrip: async (tripId) => {
+    const entries = get().entries.filter((entry) => entry.tripId === tripId)
+    const entryIds = new Set(entries.map((entry) => entry.id))
+    const media = get().media.filter((item) => entryIds.has(item.logEntryId))
+
+    addPendingDeletedTripId(tripId)
+    await deleteTripFromIdb(tripId)
+    await Promise.all([
+      ...entries.map((entry) => deleteLogEntry(entry.id)),
+      ...media.map((item) => deleteMedia(item.id)),
+    ])
+
     set((state) => {
-      const trips = [trip, ...state.trips].sort(
-        (a, b) =>
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-      )
+      const trips = state.trips.filter((trip) => trip.id !== tripId)
+      const nextSelected =
+        state.selectedTripId === tripId
+          ? (trips.find((trip) => trip.status === 'IN_PROGRESS')?.id ??
+            trips[0]?.id ??
+            null)
+          : state.selectedTripId
       return {
         trips,
-        selectedTripId: trip.id,
-        activeTripId: trip.id,
+        entries: state.entries.filter((entry) => entry.tripId !== tripId),
+        media: state.media.filter((item) => !entryIds.has(item.logEntryId)),
+        selectedTripId: nextSelected,
+        activeTripId:
+          state.activeTripId === tripId ? null : state.activeTripId,
+        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
       }
     })
 
-    await get().addEntry({
-      tripId: trip.id,
-      type: 'START_TRIP',
-      notes: `${trip.boatName} started`,
-      data: {
-        registration: trip.registration,
-        skipper: trip.skipper,
-        startCountry: context.country,
-      },
-    })
-    return trip
+    void get().syncNow()
   },
 
   addEntry: async (input) => {
@@ -157,7 +296,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       latitude: context.latitude,
       longitude: context.longitude,
       accuracy: context.accuracy,
-      heading: input.heading ?? null,
+      heading: input.heading ?? context.heading ?? null,
       createdBy: 'captain',
       notes: input.notes?.trim() || null,
       data: input.data ?? null,
@@ -171,7 +310,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     await putLogEntry(entry)
     set((state) => ({
       entries: sortEntries([...state.entries, entry]),
-      syncMessage: 'Saved locally',
+      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
 
     if (input.type === 'END_TRIP') {
@@ -195,20 +334,34 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     } else {
       const trip = get().trips.find((t) => t.id === input.tripId)
       if (trip) {
-        const updated = { ...trip, updatedAt: nowIso() }
+        const starting =
+          trip.status === 'PLANNED'
+            ? {
+                status: 'IN_PROGRESS' as TripStatus,
+                startedAt: entry.timestamp,
+                startLatitude: context.latitude,
+                startLongitude: context.longitude,
+                startCountry: context.country,
+              }
+            : {}
+        const updated = {
+          ...trip,
+          ...starting,
+          updatedAt: nowIso(),
+        }
         await putTrip(updated)
         set((state) => ({
           trips: state.trips.map((item) =>
             item.id === updated.id ? updated : item,
           ),
+          activeTripId:
+            trip.status === 'PLANNED' ? updated.id : state.activeTripId,
         }))
       }
     }
 
-    if (typeof navigator !== 'undefined' && navigator.onLine) {
-      void get().syncNow()
-    }
-
+    await flushLogbookSync(get)
+    await assertSyncedWhenOnline(get)
     return entry
   },
 
@@ -226,8 +379,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       entries: sortEntries(
         state.entries.map((entry) => (entry.id === entryId ? next : entry)),
       ),
-      syncMessage: 'Saved locally',
+      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
+    void get().syncNow()
   },
 
   deleteEntry: async (entryId) => {
@@ -244,8 +398,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       entries: state.entries.map((entry) =>
         entry.id === entryId ? next : entry,
       ),
-      syncMessage: 'Saved locally',
+      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
+    void get().syncNow()
   },
 
   nudgeEntryTime: async (entryId, deltaMinutes) => {
@@ -264,7 +419,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       entries: sortEntries(
         state.entries.map((entry) => (entry.id === entryId ? next : entry)),
       ),
+      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
+    void get().syncNow()
   },
 
   attachMedia: async (entryId, mediaInput) => {
@@ -284,25 +441,59 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     await putMedia(media)
     set((state) => ({
       media: [...state.media, media],
+      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
+    void get().syncNow()
     return media
   },
 
   syncNow: async () => {
-    if (get().syncing) return
+    if (get().syncing) {
+      set({ syncQueued: true })
+      return false
+    }
     set({ syncing: true, syncMessage: 'Syncing…' })
+    let success = true
     try {
       const result = await syncLogbook()
-      set({
-        syncing: false,
-        syncMessage: result.ok ? 'Synced' : 'Saved locally',
-      })
+      if (result.ok && 'snapshot' in result && result.snapshot) {
+        applySnapshot(set, result.snapshot, get().selectedTripId)
+        set({
+          syncMessage: syncStatusMessage(result.snapshot, get().online),
+        })
+      } else if (result.ok) {
+        const snapshot = await loadLogbookSnapshot()
+        set({
+          syncMessage: syncStatusMessage(snapshot, get().online),
+        })
+      } else {
+        const snapshot = await loadLogbookSnapshot()
+        set({
+          syncMessage: syncStatusMessage(snapshot, get().online),
+        })
+        success = false
+      }
     } catch (error) {
+      const snapshot = await loadLogbookSnapshot()
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Sync failed'
       set({
-        syncing: false,
-        syncMessage:
-          error instanceof Error ? error.message : 'Sync failed, saved locally',
+        syncMessage: get().online ? message : syncStatusMessage(snapshot, get().online),
       })
+      success = false
+    } finally {
+      const queued = get().syncQueued
+      set({ syncing: false, syncQueued: false })
+      if (queued) {
+        void get().syncNow()
+      }
     }
+    return success && !hasPendingSync(await loadLogbookSnapshot())
   },
 }))
+
+export function triggerLogbookSyncRetry() {
+  void useLogbookStore.getState().syncNow()
+}

@@ -1,34 +1,27 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  Anchor,
-  ArrowDown,
-  ArrowUp,
-  Check,
-  ChevronRight,
-  Edit3,
-  FileText,
-  ImagePlus,
-  Mic,
-  Plus,
-  Sailboat,
-  Send,
-  Trash2,
-  Waves,
-} from "lucide-react";
+import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
+import { ChevronRight, Loader2, Plus, Sailboat, Waves } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType, FormEvent, ReactNode } from "react";
 import { toast } from "sonner";
 import { AddBoatModal } from "../../components/AddBoatModal";
+import { LogEntryComposerModal } from "../../components/LogEntryComposerModal";
 import { Modal } from "../../components/Modal";
-import { LOG_ENTRY_TYPES, entryIcon, entryTitle } from "../../domain/logbook";
-import type { LogEntry, LogEntryType, Media, Trip, WeatherSnapshot } from "../../domain/logbook";
+import { SkipperSelect } from "../../components/SkipperSelect";
+import { TripCrewPickerModal, TripCrewSection } from "../../components/TripCrewPickerModal";
+import type { LogEntryType, Trip } from "../../domain/logbook";
+import type { CrewMember } from "../../domain/crew";
 import { cn } from "../../lib/cn";
 import { useSession } from "../../lib/auth-client";
 import { fetchBoats } from "../../lib/boats-api";
+import { fetchCrew } from "../../lib/crew-api";
 import type { Boat } from "../../domain/boat";
+import { defaultBoatPhoto } from "../../domain/boat";
+import { buildSkipperOptions, resolveTripPersonOption, userTripPersonKey } from "../../lib/trip-people";
+import { formatDateTime } from "../../lib/logbook-format";
+import { tripCoverPhotoUrl, tripDisplayName, resolveDefaultBoatIdForNewTrip } from "../../lib/trip-display";
 import { isDevModeAvailable } from "../../lib/dev-mode";
 import { useAppOptionsStore } from "../../stores/app-options";
-import { useLogbookStore } from "../../stores/logbook";
+import { useLogbookStore, triggerLogbookSyncRetry } from "../../stores/logbook";
 
 type HomeSearch = { startTrip?: boolean };
 
@@ -55,42 +48,46 @@ function resolveSelectedTrip(trips: Trip[], selectedTripId: string | null): Trip
 function LogbookHome() {
   const store = useLogbookStore();
   const devMode = useAppOptionsStore((state) => state.devMode);
+  const setLastTripBoatId = useAppOptionsStore((state) => state.setLastTripBoatId);
   const devModeActive = devMode && isDevModeAvailable();
   const session = useSession();
   const navigate = useNavigate();
+  const location = useLocation();
   const { startTrip: startTripSearch } = Route.useSearch();
   const [startOpen, setStartOpen] = useState(false);
   const [addBoatOpen, setAddBoatOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
-  const [selectedType, setSelectedType] = useState<LogEntryType>("NOTE");
+  const [composerInitialType, setComposerInitialType] = useState<LogEntryType>("NOTE");
   const [startForm, setStartForm] = useState({
     boatName: "",
     registration: "",
-    skipper: "",
+    skipperKey: "",
   });
+  const [tripCrewMemberIds, setTripCrewMemberIds] = useState<string[]>([]);
+  const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
+  const [crewLoading, setCrewLoading] = useState(false);
+  const [crewPickerOpen, setCrewPickerOpen] = useState(false);
+  const [creatingTrip, setCreatingTrip] = useState(false);
   const [selectedBoatId, setSelectedBoatId] = useState("");
   const [boats, setBoats] = useState<Boat[]>([]);
   const [boatsLoading, setBoatsLoading] = useState(false);
-  const [draftNote, setDraftNote] = useState("");
-  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
-  const [editingNote, setEditingNote] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const startFormInitializedRef = useRef(false);
 
   const selectedTrip = resolveSelectedTrip(store.trips, store.selectedTripId);
-  const selectedTripEntries = useMemo(
-    () => (selectedTrip ? store.entries.filter((entry) => entry.tripId === selectedTrip.id && !entry.deleted) : []),
-    [selectedTrip, store.entries],
-  );
-  const selectedTripMedia = useMemo(() => {
-    const mediaByEntry = new Map<string, Media[]>();
-    for (const media of store.media) {
-      const existing = mediaByEntry.get(media.logEntryId) ?? [];
-      existing.push(media);
-      mediaByEntry.set(media.logEntryId, existing);
-    }
-    return mediaByEntry;
-  }, [store.media]);
   const activeTrip = store.trips.find((trip) => trip.status === "IN_PROGRESS") ?? null;
+  const user = session.data?.user;
+  const skipperOptions = useMemo(
+    () =>
+      user
+        ? buildSkipperOptions({
+            userId: user.id,
+            userName: user.name,
+            userImage: user.image,
+            crewMembers,
+          })
+        : [],
+    [user, crewMembers],
+  );
 
   useEffect(() => {
     void useLogbookStore.getState().load();
@@ -113,29 +110,91 @@ function LogbookHome() {
     }
   }, [store.booted, store.online]);
 
-  useEffect(() => {
-    if (selectedType !== "PHOTO") {
-      fileInputRef.current?.value && (fileInputRef.current.value = "");
+  const applyDefaultBoatSelection = (items: Boat[]) => {
+    const defaultBoatId = resolveDefaultBoatIdForNewTrip(
+      useLogbookStore.getState().trips,
+      items,
+      useAppOptionsStore.getState().lastTripBoatId,
+    );
+    if (defaultBoatId) {
+      const boat = items.find((item) => item.id === defaultBoatId);
+      setSelectedBoatId(defaultBoatId);
+      setStartForm((current) => ({
+        ...current,
+        boatName: boat?.name ?? current.boatName,
+      }));
+      return;
     }
-  }, [selectedType]);
+    setSelectedBoatId("");
+    setStartForm((current) => ({ ...current, boatName: "" }));
+  };
 
   useEffect(() => {
     if (!startOpen || !session.data?.user) {
+      startFormInitializedRef.current = false;
       setBoats([]);
       return;
     }
+
+    let cancelled = false;
     setBoatsLoading(true);
     void fetchBoats()
-      .then((items) => setBoats(items))
+      .then((items) => {
+        if (cancelled) return;
+        setBoats(items);
+        if (!startFormInitializedRef.current) {
+          startFormInitializedRef.current = true;
+          applyDefaultBoatSelection(items);
+        }
+        triggerLogbookSyncRetry();
+      })
       .catch(() => toast.error("Could not load your boats"))
-      .finally(() => setBoatsLoading(false));
+      .finally(() => {
+        if (!cancelled) setBoatsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [startOpen, session.data?.user]);
+
+  useEffect(() => {
+    if (!startOpen || !store.booted || boats.length === 0 || selectedBoatId) return;
+    applyDefaultBoatSelection(boats);
+  }, [startOpen, store.booted, store.trips, boats, selectedBoatId]);
+
+  useEffect(() => {
+    if (!user) {
+      setCrewMembers([]);
+      return;
+    }
+    setCrewLoading(true);
+    void fetchCrew()
+      .then((payload) => {
+        setCrewMembers(payload.members);
+        triggerLogbookSyncRetry();
+      })
+      .catch(() => toast.error("Could not load your crew"))
+      .finally(() => setCrewLoading(false));
+  }, [user]);
+
+  useEffect(() => {
+    if (!startOpen || !user) return;
+    setStartForm((current) => ({
+      ...current,
+      skipperKey: userTripPersonKey(user.id),
+    }));
+    setTripCrewMemberIds([]);
+  }, [startOpen, user?.id]);
 
   useEffect(() => {
     if (!startTripSearch || !session.data?.user) return;
     setStartOpen(true);
     void navigate({ to: "/", search: {}, replace: true });
   }, [startTripSearch, session.data?.user, navigate]);
+
+  const defaultSkipperKey = user ? userTripPersonKey(user.id) : "";
+  const effectiveSkipperKey = startForm.skipperKey || defaultSkipperKey;
 
   const openStartTrip = () => {
     if (!session.data?.user) {
@@ -161,84 +220,55 @@ function LogbookHome() {
       toast.error("Select a boat");
       return;
     }
-    const trip = await store.startTrip(startForm);
-    if (trip) {
-      toast.success(`${trip.boatName} is now sailing`);
-      setStartOpen(false);
-      setStartForm({ boatName: "", registration: "", skipper: "" });
-      setSelectedBoatId("");
+    const selectedBoat = boats.find((boat) => boat.id === selectedBoatId);
+    const boatPhoto = selectedBoat ? defaultBoatPhoto(selectedBoat.photos) : null;
+    const skipper = resolveTripPersonOption(effectiveSkipperKey, skipperOptions);
+    setCreatingTrip(true);
+    try {
+      const trip = await store.startTrip({
+        boatName: startForm.boatName,
+        boatId: selectedBoatId,
+        boatPhotoUrl: boatPhoto?.imageUrl ?? null,
+        registration: startForm.registration,
+        skipper: skipper?.name,
+        skipperKey: effectiveSkipperKey || null,
+        crewMemberIds: tripCrewMemberIds,
+      });
+      if (trip) {
+        setLastTripBoatId(selectedBoatId);
+        toast.success(`${tripDisplayName(trip)} created`);
+        setStartOpen(false);
+        setStartForm({ boatName: "", registration: "", skipperKey: "" });
+        setTripCrewMemberIds([]);
+        setSelectedBoatId("");
+        void navigate({ to: "/trips/$tripId", params: { tripId: trip.id } });
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create trip");
+    } finally {
+      setCreatingTrip(false);
     }
   };
 
-  const handleAddEntry = async () => {
-    if (!selectedTrip) return;
-    const entry = await store.addEntry({
-      tripId: selectedTrip.id,
-      type: selectedType,
-      notes: draftNote,
-    });
-    if (!entry) return;
-    toast.success("Saved locally");
-    setComposerOpen(false);
-    setDraftNote("");
-    setSelectedType("NOTE");
+  const openTrip = (tripId: string) => {
+    store.selectTrip(tripId);
+    void navigate({ to: "/trips/$tripId", params: { tripId } });
   };
 
-  const handleEventQuickAdd = async (type: LogEntryType) => {
-    if (!selectedTrip) return;
-    await store.addEntry({ tripId: selectedTrip.id, type });
-    toast.success(entryTitle(type));
+  const openComposer = (type: LogEntryType = "NOTE") => {
+    setComposerInitialType(type);
+    setComposerOpen(true);
   };
 
-  const handlePhotoPick = async () => {
-    if (!selectedTrip) return;
-    const file = fileInputRef.current?.files?.[0];
-    if (!file) {
-      toast.error("Choose a photo first");
-      return;
+  const ensureTripForComposer = () => {
+    const trip = resolveSelectedTrip(store.trips, store.selectedTripId);
+    if (trip) return trip;
+    if (activeTrip) {
+      store.selectTrip(activeTrip.id);
+      return activeTrip;
     }
-    const entry = await store.addEntry({
-      tripId: selectedTrip.id,
-      type: "PHOTO",
-      notes: draftNote,
-      data: { fileName: file.name, size: file.size, mimeType: file.type },
-    });
-    if (!entry) return;
-    await store.attachMedia(entry.id, {
-      logEntryId: entry.id,
-      type: "photo",
-      localPath: file.name,
-      remoteUrl: null,
-      thumbnailUrl: URL.createObjectURL(file),
-    });
-    toast.success("Photo saved locally");
-    setComposerOpen(false);
-    setDraftNote("");
-  };
-
-  const handleVoicePlaceholder = async () => {
-    if (!selectedTrip) return;
-    await store.addEntry({
-      tripId: selectedTrip.id,
-      type: "VOICE_NOTE",
-      notes: draftNote || "Voice note placeholder",
-      data: { placeholder: true },
-    });
-    toast.success("Voice note placeholder saved locally");
-    setComposerOpen(false);
-    setDraftNote("");
-  };
-
-  const openEdit = (entry: LogEntry) => {
-    setEditingEntryId(entry.id);
-    setEditingNote(entry.notes ?? "");
-  };
-
-  const saveEdit = async () => {
-    if (!editingEntryId) return;
-    await store.updateEntry(editingEntryId, { notes: editingNote });
-    setEditingEntryId(null);
-    setEditingNote("");
+    toast.error("Create or open a trip first");
+    return null;
   };
 
   return (
@@ -271,13 +301,19 @@ function LogbookHome() {
             </button>
 
             <div className="grid grid-cols-2 gap-3">
-              <QuickAction label="Log Entry" icon={Plus} onClick={() => setComposerOpen(true)} />
+              <QuickAction
+                label="Log Entry"
+                icon={Plus}
+                onClick={() => {
+                  if (ensureTripForComposer()) openComposer();
+                }}
+              />
               <QuickAction
                 label="Event"
                 icon={Waves}
                 onClick={() => {
-                  setSelectedType("SAILS_UP");
-                  setComposerOpen(true);
+                  if (!ensureTripForComposer()) return;
+                  openComposer("SAILS_UP");
                 }}
               />
             </div>
@@ -285,12 +321,12 @@ function LogbookHome() {
         </div>
       </section>
 
-      <section className="mt-5 grid gap-4 lg:grid-cols-[0.96fr_1.04fr]">
+      <section className="mt-5">
         <div className="space-y-4">
           <PanelTitle
             kicker="Trips"
-            title={activeTrip ? "Trip in progress" : "All trips"}
-            subtitle="Tap a trip to review the timeline and clean up notes after the sail."
+            title={activeTrip ? "Trip in progress" : "Your trips"}
+            subtitle="New trips are planned until you log the first entry. Tap a trip to open it."
           />
 
           {store.trips.length === 0 ? (
@@ -308,105 +344,11 @@ function LogbookHome() {
                   key={trip.id}
                   trip={trip}
                   entryCount={store.entries.filter((entry) => entry.tripId === trip.id && !entry.deleted).length}
-                  active={trip.id === selectedTrip?.id}
-                  onSelect={() => store.selectTrip(trip.id)}
+                  active={location.pathname === `/trips/${trip.id}`}
+                  onSelect={() => openTrip(trip.id)}
                 />
               ))}
             </div>
-          )}
-        </div>
-
-        <div className="space-y-4">
-          <PanelTitle
-            kicker={selectedTrip?.status === "COMPLETED" ? "Completed trip" : selectedTrip ? "Timeline" : "Timeline"}
-            title={selectedTrip?.boatName ?? "Select a trip"}
-            subtitle={
-              selectedTrip
-                ? `${selectedTrip.status.replace("_", " ").toLowerCase()} • ${selectedTripEntries.length} entries`
-                : "Pick a trip from the left to view the logbook timeline."
-            }
-          />
-
-          {selectedTrip ? (
-            <>
-              <div className="grid gap-3 rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-                <TripDetail trip={selectedTrip} />
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedType("NOTE");
-                      setComposerOpen(true);
-                    }}
-                    className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] transition hover:translate-y-[-1px]"
-                  >
-                    <FileText className="size-4" />
-                    Log Entry
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setComposerOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]"
-                  >
-                    <Send className="size-4" />
-                    Event
-                  </button>
-                  {selectedTrip.status !== "COMPLETED" && (
-                    <button
-                      type="button"
-                      onClick={() => handleEventQuickAdd("END_TRIP")}
-                      className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] transition hover:bg-[var(--panel-hover)]"
-                    >
-                      <Check className="size-4" />
-                      End Trip
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {selectedTripEntries.length === 0 ? (
-                  <EmptyState
-                    title="No log entries yet"
-                    description="Add the first note or event to start the timeline."
-                    actionLabel="Log Entry"
-                    onAction={() => setComposerOpen(true)}
-                    icon={Anchor}
-                    compact
-                  />
-                ) : (
-                  selectedTripEntries.map((entry, index) => (
-                    <EntryCard
-                      key={entry.id}
-                      entry={entry}
-                      media={selectedTripMedia.get(entry.id) ?? []}
-                      first={index === 0}
-                      last={index === selectedTripEntries.length - 1}
-                      onEdit={() => openEdit(entry)}
-                      onDelete={() => void store.deleteEntry(entry.id)}
-                      onMoveUp={() => void store.nudgeEntryTime(entry.id, -5)}
-                      onMoveDown={() => void store.nudgeEntryTime(entry.id, 5)}
-                      editing={editingEntryId === entry.id}
-                      editingNote={editingNote}
-                      onEditingNoteChange={setEditingNote}
-                      onSaveEdit={saveEdit}
-                      onCancelEdit={() => {
-                        setEditingEntryId(null);
-                        setEditingNote("");
-                      }}
-                    />
-                  ))
-                )}
-              </div>
-            </>
-          ) : (
-            <EmptyState
-              title="Choose a trip"
-              description="The timeline lives here. Start a sailing session to see log entries appear immediately."
-              actionLabel="Start Sailing"
-              onAction={openStartTrip}
-              icon={Waves}
-            />
           )}
         </div>
       </section>
@@ -418,85 +360,12 @@ function LogbookHome() {
       )}
 
       {composerOpen && selectedTrip && (
-        <Modal title="Log Entry" onClose={() => setComposerOpen(false)}>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {LOG_ENTRY_TYPES.map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setSelectedType(type)}
-                  className={cn(
-                    "rounded-2xl border px-3 py-3 text-left text-sm font-semibold transition",
-                    selectedType === type
-                      ? "border-[var(--sea-ink)] bg-[var(--active-panel)] text-[var(--sea-ink)]"
-                      : "border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] hover:bg-[var(--link-bg-hover)]",
-                  )}
-                >
-                  <span className="block text-lg">{entryIcon(type)}</span>
-                  <span className="mt-1 block">{entryTitle(type)}</span>
-                </button>
-              ))}
-            </div>
-
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">Note</span>
-              <textarea
-                value={draftNote}
-                onChange={(e) => setDraftNote(e.target.value)}
-                rows={4}
-                placeholder="Short note, observation, or reminder"
-                className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
-              />
-            </label>
-
-            {selectedType === "PHOTO" && (
-              <div className="space-y-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="block w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-sm text-[var(--sea-ink)]"
-                />
-                <p className="m-0 text-xs leading-6 text-[var(--sea-ink-soft)]">
-                  Photos are stored locally in the Media table for later sync and thumbnail handling.
-                </p>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => void handleAddEntry()}
-                className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)]"
-              >
-                <Check className="size-4" />
-                Save locally
-              </button>
-              {selectedType === "PHOTO" && (
-                <button
-                  type="button"
-                  onClick={() => void handlePhotoPick()}
-                  className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)]"
-                >
-                  <ImagePlus className="size-4" />
-                  Save photo
-                </button>
-              )}
-              {selectedType === "VOICE_NOTE" && (
-                <button
-                  type="button"
-                  onClick={() => void handleVoicePlaceholder()}
-                  className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)]"
-                >
-                  <Mic className="size-4" />
-                  Save voice placeholder
-                </button>
-              )}
-            </div>
-          </div>
-        </Modal>
+        <LogEntryComposerModal
+          open={composerOpen}
+          tripId={selectedTrip.id}
+          initialType={composerInitialType}
+          onClose={() => setComposerOpen(false)}
+        />
       )}
 
       {startOpen && session.data?.user && (
@@ -522,7 +391,7 @@ function LogbookHome() {
                 }}
                 className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
               >
-                <option value="">{boatsLoading ? "Loading boats…" : "Select a boat…"}</option>
+                <option value="">{boatsLoading ? "Loading boats…" : "Select boat…"}</option>
                 {boats.map((boat) => (
                   <option key={boat.id} value={boat.id}>
                     {boat.name}
@@ -532,20 +401,26 @@ function LogbookHome() {
               </select>
             </label>
 
-            <label className="block">
+            <div className="block">
               <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">Skipper</span>
-              <input
-                value={startForm.skipper}
-                onChange={(e) =>
+              <SkipperSelect
+                value={effectiveSkipperKey}
+                options={skipperOptions}
+                onChange={(skipperKey) =>
                   setStartForm((current) => ({
                     ...current,
-                    skipper: e.target.value,
+                    skipperKey,
                   }))
                 }
-                placeholder="Optional skipper"
-                className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
               />
-            </label>
+            </div>
+
+            <TripCrewSection
+              crewMembers={crewMembers}
+              selectedIds={tripCrewMemberIds}
+              onAddClick={() => setCrewPickerOpen(true)}
+            />
+            {crewLoading && <p className="m-0 text-xs text-[var(--sea-ink-soft)]">Refreshing crew list…</p>}
 
             <p className="m-0 text-xs leading-6 text-[var(--sea-ink-soft)]">
               Location, timestamp, weather, and country are captured automatically when the trip starts.
@@ -554,15 +429,17 @@ function LogbookHome() {
             <div className="flex flex-wrap gap-2">
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)]"
+                disabled={creatingTrip}
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
               >
-                <Sailboat className="size-4" />
-                Create trip
+                {creatingTrip ? <Loader2 className="size-4 animate-spin" /> : <Sailboat className="size-4" />}
+                {creatingTrip ? "Creating trip…" : "Create trip"}
               </button>
               <button
                 type="button"
                 onClick={() => setStartOpen(false)}
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)]"
+                disabled={creatingTrip}
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] disabled:opacity-60"
               >
                 Cancel
               </button>
@@ -570,6 +447,14 @@ function LogbookHome() {
           </form>
         </Modal>
       )}
+
+      <TripCrewPickerModal
+        open={crewPickerOpen}
+        crewMembers={crewMembers}
+        selectedIds={tripCrewMemberIds}
+        onClose={() => setCrewPickerOpen(false)}
+        onChange={setTripCrewMemberIds}
+      />
 
       <AddBoatModal
         open={addBoatOpen}
@@ -633,200 +518,58 @@ function TripCard({
   active: boolean;
   onSelect: () => void;
 }) {
+  const coverPhoto = tripCoverPhotoUrl(trip);
+  const name = tripDisplayName(trip);
+
   return (
     <button
       type="button"
       onClick={onSelect}
       className={cn(
-        "w-full rounded-[1.4rem] border p-4 text-left transition hover:-translate-y-[1px]",
+        "w-full overflow-hidden rounded-[1.4rem] border text-left transition hover:-translate-y-[1px]",
         active
           ? "border-[var(--active-border)] bg-[var(--active-panel)] shadow-sm"
           : "border-[var(--panel-border)] bg-[var(--panel)]",
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--kicker)]">
-            {trip.status.replace("_", " ")}
-          </p>
-          <h3 className="m-0 mt-1 truncate text-lg font-bold text-[var(--sea-ink)]">{trip.boatName}</h3>
-          <p className="m-0 mt-1 text-sm text-[var(--sea-ink-soft)]">
-            {formatDateTime(trip.startedAt)}
-            {trip.completedAt ? ` · completed ${formatDateTime(trip.completedAt)}` : ""}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--surface)] px-3 py-2 text-right">
-          <p className="m-0 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--sea-ink-soft)]">Entries</p>
-          <p className="m-0 text-xl font-bold text-[var(--sea-ink)]">{entryCount}</p>
-        </div>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--sea-ink-soft)]">
-        {trip.startCountry && <Badge>{trip.startCountry}</Badge>}
-        {trip.registration && <Badge>{trip.registration}</Badge>}
-        {trip.skipper && <Badge>{trip.skipper}</Badge>}
-      </div>
-    </button>
-  );
-}
-
-function TripDetail({ trip }: { trip: Trip }) {
-  return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      <DetailLine label="Started" value={formatDateTime(trip.startedAt)} />
-      <DetailLine label="Status" value={trip.status.replace("_", " ")} />
-      <DetailLine label="Position" value={formatPosition(trip.startLatitude, trip.startLongitude)} />
-      <DetailLine label="Country" value={trip.startCountry ?? "Unknown"} />
-    </div>
-  );
-}
-
-function DetailLine({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-2.5">
-      <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--sea-ink-soft)]">{label}</p>
-      <p className="m-0 mt-1 text-sm font-medium text-[var(--sea-ink)]">{value}</p>
-    </div>
-  );
-}
-
-function EntryCard({
-  entry,
-  media,
-  first,
-  last,
-  onEdit,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
-  editing,
-  editingNote,
-  onEditingNoteChange,
-  onSaveEdit,
-  onCancelEdit,
-}: {
-  entry: LogEntry;
-  media: Media[];
-  first: boolean;
-  last: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  editing: boolean;
-  editingNote: string;
-  onEditingNoteChange: (next: string) => void;
-  onSaveEdit: () => void;
-  onCancelEdit: () => void;
-}) {
-  return (
-    <article
-      className={cn(
-        "rounded-[1.5rem] border p-4 shadow-sm",
-        entry.deleted ? "border-red-500/30 bg-red-500/5" : "border-[var(--panel-border)] bg-[var(--surface-strong)]",
-      )}
-    >
-      <div className="flex gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] text-xl">
-          {entryIcon(entry.type)}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">{entryTitle(entry.type)}</p>
-              <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">
-                {formatDateTime(entry.timestamp)}
-                {entry.accuracy != null ? ` · ±${Math.round(entry.accuracy)}m` : ""}
-              </p>
-            </div>
-            <SyncBadge synced={entry.synced} deleted={entry.deleted} />
-          </div>
-
-          <div className="mt-2 space-y-2 text-sm text-[var(--sea-ink)]">
-            <p className="m-0">{formatPosition(entry.latitude, entry.longitude)}</p>
-            {entry.heading != null && <p className="m-0">Heading {Math.round(entry.heading)}°</p>}
-            {entry.notes && !editing && <p className="m-0">{entry.notes}</p>}
-            {entry.weather && (
-              <p className="m-0 text-xs text-[var(--sea-ink-soft)]">Weather: {formatWeather(entry.weather)}</p>
-            )}
-            {media.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {media.map((item) => (
-                  <Badge key={item.id}>
-                    {item.type}
-                    {item.localPath ? ` · ${item.localPath}` : ""}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {editing ? (
-            <div className="mt-3 space-y-2">
-              <textarea
-                value={editingNote}
-                onChange={(e) => onEditingNoteChange(e.target.value)}
-                rows={3}
-                className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
-              />
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={onSaveEdit}
-                  className="rounded-full bg-[var(--btn-bg)] px-3 py-2 text-xs font-semibold text-[var(--btn-text)]"
-                >
-                  Save note
-                </button>
-                <button
-                  type="button"
-                  onClick={onCancelEdit}
-                  className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-xs font-semibold text-[var(--sea-ink)]"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
+      <div className="flex gap-4 p-4">
+        <div className="size-16 shrink-0 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)]">
+          {coverPhoto ? (
+            <img src={coverPhoto} alt="" className="size-full object-cover" />
           ) : (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <IconButton icon={Edit3} label="Edit" onClick={onEdit} />
-              <IconButton icon={ArrowUp} label="Earlier" onClick={onMoveUp} disabled={first} />
-              <IconButton icon={ArrowDown} label="Later" onClick={onMoveDown} disabled={last} />
-              <IconButton icon={Trash2} label="Delete" onClick={onDelete} danger />
+            <div className="flex size-full items-center justify-center text-[var(--sea-ink-soft)]">
+              <Sailboat className="size-7" strokeWidth={1.5} />
             </div>
           )}
         </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--kicker)]">
+                {trip.status.replace("_", " ")}
+              </p>
+              <h3 className="m-0 mt-1 truncate text-lg font-bold text-[var(--sea-ink)]">{name}</h3>
+              <p className="m-0 mt-1 text-sm text-[var(--sea-ink-soft)]">
+                {trip.status === "PLANNED"
+                  ? `Created ${formatDateTime(trip.createdAt)}`
+                  : formatDateTime(trip.startedAt)}
+                {trip.completedAt ? ` · completed ${formatDateTime(trip.completedAt)}` : ""}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--surface)] px-3 py-2 text-right">
+              <p className="m-0 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--sea-ink-soft)]">
+                Entries
+              </p>
+              <p className="m-0 text-xl font-bold text-[var(--sea-ink)]">{entryCount}</p>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--sea-ink-soft)]">
+            {trip.boatName !== name && <Badge>{trip.boatName}</Badge>}
+            {trip.startCountry && <Badge>{trip.startCountry}</Badge>}
+            {trip.skipper && <Badge>{trip.skipper}</Badge>}
+          </div>
+        </div>
       </div>
-    </article>
-  );
-}
-
-function IconButton({
-  icon: Icon,
-  label,
-  onClick,
-  disabled,
-  danger,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition",
-        danger
-          ? "border-red-500/30 bg-red-500/5 text-red-700 dark:text-red-300 hover:bg-red-500/10"
-          : "border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] hover:bg-[var(--link-bg-hover)]",
-        disabled && "cursor-not-allowed opacity-40",
-      )}
-    >
-      <Icon className="size-3.5" />
-      {label}
     </button>
   );
 }
@@ -892,55 +635,10 @@ function EmptyState({
   );
 }
 
-function SyncBadge({ synced, deleted }: { synced: boolean; deleted: boolean }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em]",
-        deleted
-          ? "bg-red-500/10 text-red-700 dark:text-red-300"
-          : synced
-            ? "border border-[var(--line)] bg-[var(--panel)] text-[var(--sea-ink-soft)]"
-            : "border border-[var(--line)] bg-[var(--panel)] text-[var(--sea-ink)]",
-      )}
-    >
-      {deleted ? "Deleted" : synced ? "Synced" : "Saved locally"}
-    </span>
-  );
-}
-
 function Badge({ children }: { children: ReactNode }) {
   return (
     <span className="inline-flex items-center rounded-full border border-[var(--panel-border)] bg-[var(--panel)] px-2.5 py-1 text-xs font-medium text-[var(--sea-ink-soft)]">
       {children}
     </span>
   );
-}
-
-function formatDateTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
-function formatPosition(latitude?: number | null, longitude?: number | null) {
-  if (latitude == null || longitude == null) return "Position unavailable";
-  return `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-}
-
-function formatWeather(weather: WeatherSnapshot) {
-  const parts: string[] = [];
-  if (typeof weather.temperatureC === "number") {
-    parts.push(`${Math.round(weather.temperatureC)}°C`);
-  }
-  if (typeof weather.windKph === "number") {
-    parts.push(`${Math.round(weather.windKph)} km/h wind`);
-  }
-  if (typeof weather.cloudCoverPct === "number") {
-    parts.push(`${Math.round(weather.cloudCoverPct)}% cloud`);
-  }
-  return parts.length > 0 ? parts.join(" · ") : "Weather available";
 }

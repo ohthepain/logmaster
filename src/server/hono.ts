@@ -5,6 +5,7 @@ import { logbookRoutes } from './routes/logbook'
 import { boatsRoutes } from './routes/boats'
 import { profileRoutes } from './routes/profile'
 import { crewRoutes } from './routes/crew'
+import { locationRoutes } from './routes/location'
 
 const corsOrigins = getTrustedOrigins()
 
@@ -35,3 +36,4 @@ app.route('/logbook', logbookRoutes)
 app.route('/boats', boatsRoutes)
 app.route('/profile', profileRoutes)
 app.route('/crew', crewRoutes)
+app.route('/location', locationRoutes)

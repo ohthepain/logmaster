@@ -20,6 +20,7 @@ import { Route as MainResetPasswordIndexRouteImport } from './routes/_main/reset
 import { Route as MainCrewIndexRouteImport } from './routes/_main/crew/index'
 import { Route as MainBoatsIndexRouteImport } from './routes/_main/boats/index'
 import { Route as MainAdminIndexRouteImport } from './routes/_main/admin/index'
+import { Route as MainTripsTripIdRouteImport } from './routes/_main/trips/$tripId'
 import { Route as MainResetPasswordTokenRouteImport } from './routes/_main/reset-password/$token'
 import { Route as MainBoatsNewRouteImport } from './routes/_main/boats/new'
 import { Route as MainBoatsBoatIdRouteImport } from './routes/_main/boats/$boatId'
@@ -81,6 +82,11 @@ const MainAdminIndexRoute = MainAdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainTripsTripIdRoute = MainTripsTripIdRouteImport.update({
+  id: '/trips/$tripId',
+  path: '/trips/$tripId',
+  getParentRoute: () => MainRouteRoute,
+} as any)
 const MainResetPasswordTokenRoute = MainResetPasswordTokenRouteImport.update({
   id: '/reset-password/$token',
   path: '/reset-password/$token',
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/boats/new': typeof MainBoatsNewRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
+  '/trips/$tripId': typeof MainTripsTripIdRoute
   '/admin/': typeof MainAdminIndexRoute
   '/boats/': typeof MainBoatsIndexRoute
   '/crew/': typeof MainCrewIndexRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/boats/new': typeof MainBoatsNewRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
+  '/trips/$tripId': typeof MainTripsTripIdRoute
   '/admin': typeof MainAdminIndexRoute
   '/boats': typeof MainBoatsIndexRoute
   '/crew': typeof MainCrewIndexRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/_main/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/_main/boats/new': typeof MainBoatsNewRoute
   '/_main/reset-password/$token': typeof MainResetPasswordTokenRoute
+  '/_main/trips/$tripId': typeof MainTripsTripIdRoute
   '/_main/admin/': typeof MainAdminIndexRoute
   '/_main/boats/': typeof MainBoatsIndexRoute
   '/_main/crew/': typeof MainCrewIndexRoute
@@ -182,6 +191,7 @@ export interface FileRouteTypes {
     | '/boats/$boatId'
     | '/boats/new'
     | '/reset-password/$token'
+    | '/trips/$tripId'
     | '/admin/'
     | '/boats/'
     | '/crew/'
@@ -200,6 +210,7 @@ export interface FileRouteTypes {
     | '/boats/$boatId'
     | '/boats/new'
     | '/reset-password/$token'
+    | '/trips/$tripId'
     | '/admin'
     | '/boats'
     | '/crew'
@@ -219,6 +230,7 @@ export interface FileRouteTypes {
     | '/_main/boats/$boatId'
     | '/_main/boats/new'
     | '/_main/reset-password/$token'
+    | '/_main/trips/$tripId'
     | '/_main/admin/'
     | '/_main/boats/'
     | '/_main/crew/'
@@ -310,6 +322,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAdminIndexRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/trips/$tripId': {
+      id: '/_main/trips/$tripId'
+      path: '/trips/$tripId'
+      fullPath: '/trips/$tripId'
+      preLoaderRoute: typeof MainTripsTripIdRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/reset-password/$token': {
       id: '/_main/reset-password/$token'
       path: '/reset-password/$token'
@@ -366,6 +385,7 @@ interface MainRouteRouteChildren {
   MainBoatsBoatIdRoute: typeof MainBoatsBoatIdRoute
   MainBoatsNewRoute: typeof MainBoatsNewRoute
   MainResetPasswordTokenRoute: typeof MainResetPasswordTokenRoute
+  MainTripsTripIdRoute: typeof MainTripsTripIdRoute
   MainAdminIndexRoute: typeof MainAdminIndexRoute
   MainBoatsIndexRoute: typeof MainBoatsIndexRoute
   MainCrewIndexRoute: typeof MainCrewIndexRoute
@@ -384,6 +404,7 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainBoatsBoatIdRoute: MainBoatsBoatIdRoute,
   MainBoatsNewRoute: MainBoatsNewRoute,
   MainResetPasswordTokenRoute: MainResetPasswordTokenRoute,
+  MainTripsTripIdRoute: MainTripsTripIdRoute,
   MainAdminIndexRoute: MainAdminIndexRoute,
   MainBoatsIndexRoute: MainBoatsIndexRoute,
   MainCrewIndexRoute: MainCrewIndexRoute,
