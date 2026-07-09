@@ -85,7 +85,6 @@ type LogbookState = {
   addEntry: (input: NewEntryInput) => Promise<LogEntry | null>
   updateEntry: (entryId: string, patch: UpdateEntryInput) => Promise<void>
   deleteEntry: (entryId: string) => Promise<void>
-  nudgeEntryTime: (entryId: string, deltaMinutes: number) => Promise<void>
   attachMedia: (
     entryId: string,
     media: Omit<Media, 'id' | 'createdAt' | 'updatedAt' | 'synced'>,
@@ -138,10 +137,10 @@ function applySnapshot(set: (partial: Partial<LogbookState>) => void, snapshot: 
   })
 }
 
-function syncStatusMessage(snapshot: LogbookSnapshot, online: boolean) {
+function syncStatusMessage(snapshot: LogbookSnapshot, online: boolean): string | null {
   if (!online) return 'Offline — will sync when back online'
-  if (hasPendingSync(snapshot)) return 'Pending sync'
-  return 'Synced'
+  if (hasPendingSync(snapshot)) return 'Not synced'
+  return null
 }
 
 async function flushLogbookSync(get: () => LogbookState) {
@@ -414,27 +413,6 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     set((state) => ({
       entries: state.entries.map((entry) =>
         entry.id === entryId ? next : entry,
-      ),
-      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
-    }))
-    void get().syncNow()
-  },
-
-  nudgeEntryTime: async (entryId, deltaMinutes) => {
-    const current = get().entries.find((entry) => entry.id === entryId)
-    if (!current) return
-    const timestamp = new Date(current.timestamp)
-    timestamp.setMinutes(timestamp.getMinutes() + deltaMinutes)
-    const next = {
-      ...current,
-      timestamp: timestamp.toISOString(),
-      updatedAt: nowIso(),
-      synced: false,
-    }
-    await putLogEntry(next)
-    set((state) => ({
-      entries: sortEntries(
-        state.entries.map((entry) => (entry.id === entryId ? next : entry)),
       ),
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))

@@ -22,6 +22,15 @@ Set `BETTER_AUTH_URL` to the same origin you use in the browser (e.g. `http://lo
 `pnpm dev`) so OAuth state cookies validate. Optional: `pnpm worker` in another terminal to process
 background map data jobs if the API process does not run the worker.
 
+### Google sign-in
+
+Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to `.env` (see `.env.example`). In Google Cloud Console, configure:
+
+- **Authorized redirect URI:** `{BETTER_AUTH_URL}/api/auth/callback/google` (local: `http://localhost:3020/api/auth/callback/google`)
+- **Authorized JavaScript origin:** the same origin as `BETTER_AUTH_URL` (scheme + host + port)
+
+Then open `/sign-in` and use **Continue with Google**. Restart `pnpm dev` after changing `.env`.
+
 ### Email (Amazon SES)
 
 Auth emails (sign-up verification, password reset, magic link) go through SES when `AWS_SES_FROM_EMAIL`

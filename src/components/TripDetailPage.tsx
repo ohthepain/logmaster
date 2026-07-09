@@ -241,7 +241,7 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
               <Sailboat className="size-5" />
               Start trip
             </button>
-          ) : (
+          ) : trip.status === 'IN_PROGRESS' ? (
             <button
               type="button"
               onClick={() => setComposerOpen(true)}
@@ -250,7 +250,7 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
               <FileText className="size-5" />
               Log entry
             </button>
-          )}
+          ) : null}
 
           <TripLogMap trip={trip} entries={entries} />
 
@@ -264,17 +264,13 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {entries.map((entry, index) => (
+              {entries.map((entry) => (
                 <LogEntryCard
                   key={entry.id}
                   entry={entry}
                   media={mediaByEntry.get(entry.id) ?? []}
-                  first={index === entries.length - 1}
-                  last={index === 0}
                   onEdit={() => openEdit(entry)}
                   onDelete={() => void store.deleteEntry(entry.id)}
-                  onMoveUp={() => void store.nudgeEntryTime(entry.id, -5)}
-                  onMoveDown={() => void store.nudgeEntryTime(entry.id, 5)}
                   editing={editingEntryId === entry.id}
                   editingNote={editingNote}
                   onEditingNoteChange={setEditingNote}

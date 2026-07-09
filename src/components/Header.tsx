@@ -1,24 +1,24 @@
-import { Link } from '@tanstack/react-router'
-import { BookOpenText } from 'lucide-react'
-import { cn } from '../lib/cn'
-import DevModeToggle from './DevModeToggle'
-import ThemeToggle from './ThemeToggle'
-import { UserMenu } from './UserMenu'
+import { Link } from "@tanstack/react-router";
+import { BookOpenText } from "lucide-react";
+import { cn } from "../lib/cn";
+import DevModeToggle from "./DevModeToggle";
+import ThemeToggle from "./ThemeToggle";
+import { UserMenu } from "./UserMenu";
 
 export function AppHeaderBrand({ className }: { className?: string }) {
   return (
     <Link
       to="/"
       className={cn(
-        'group flex shrink-0 items-center gap-2.5 rounded-md text-[var(--sea-ink)] no-underline outline-none',
-        'focus-visible:ring-2 focus-visible:ring-[var(--brand)]/30 focus-visible:ring-offset-2',
-        'focus-visible:ring-offset-[var(--bg-base)]',
+        "group flex shrink-0 items-center rounded-md text-[var(--sea-ink)] no-underline outline-none",
+        "focus-visible:ring-2 focus-visible:ring-[var(--brand)]/30 focus-visible:ring-offset-2",
+        "focus-visible:ring-offset-[var(--bg-base)]",
         className,
       )}
       aria-label="logmaster home"
     >
       <img
-        src="/logmaster_logo_transparent.png"
+        src="/logmaster_logo_trans_crop.png"
         alt=""
         width={36}
         height={36}
@@ -26,15 +26,10 @@ export function AppHeaderBrand({ className }: { className?: string }) {
         decoding="async"
       />
       <span className="leading-none">
-        <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.32em] text-[var(--kicker)]">
-          Sailing logbook
-        </span>
-        <span className="brand-title block text-lg tracking-tight sm:text-xl">
-          logmaster
-        </span>
+        <span className="brand-title block text-lg tracking-tight sm:text-xl">logmaster</span>
       </span>
     </Link>
-  )
+  );
 }
 
 export default function Header() {
@@ -56,5 +51,5 @@ export default function Header() {
         </div>
       </div>
     </header>
-  )
+  );
 }

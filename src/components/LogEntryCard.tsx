@@ -1,6 +1,4 @@
 import {
-  ArrowDown,
-  ArrowUp,
   Camera,
   Edit3,
   Trash2,
@@ -19,12 +17,8 @@ import { cn } from '../lib/cn'
 type LogEntryCardProps = {
   entry: LogEntry
   media: Media[]
-  first: boolean
-  last: boolean
   onEdit: () => void
   onDelete: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
   editing: boolean
   editingNote: string
   onEditingNoteChange: (next: string) => void
@@ -36,12 +30,8 @@ type LogEntryCardProps = {
 export function LogEntryCard({
   entry,
   media,
-  first,
-  last,
   onEdit,
   onDelete,
-  onMoveUp,
-  onMoveDown,
   editing,
   editingNote,
   onEditingNoteChange,
@@ -170,18 +160,6 @@ export function LogEntryCard({
                   />
                 </>
               )}
-              <IconButton
-                icon={ArrowUp}
-                label="Earlier"
-                onClick={onMoveUp}
-                disabled={first}
-              />
-              <IconButton
-                icon={ArrowDown}
-                label="Later"
-                onClick={onMoveDown}
-                disabled={last}
-              />
               <IconButton icon={Trash2} label="Delete" onClick={onDelete} danger />
             </div>
           )}
@@ -224,18 +202,18 @@ function IconButton({
 }
 
 function SyncBadge({ synced, deleted }: { synced: boolean; deleted: boolean }) {
+  if (!deleted && synced) return null
+
   return (
     <span
       className={cn(
         'inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em]',
         deleted
           ? 'bg-red-500/10 text-red-700 dark:text-red-300'
-          : synced
-            ? 'border border-[var(--line)] bg-[var(--panel)] text-[var(--sea-ink-soft)]'
-            : 'border border-[var(--line)] bg-[var(--panel)] text-[var(--sea-ink)]',
+          : 'border border-[var(--line)] bg-[var(--panel)] text-[var(--sea-ink)]',
       )}
     >
-      {deleted ? 'Deleted' : synced ? 'Synced' : 'Pending sync'}
+      {deleted ? 'Deleted' : 'Not synced'}
     </span>
   )
 }
