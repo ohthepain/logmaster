@@ -17,6 +17,7 @@ import { Route as MainSignInRouteImport } from './routes/_main/sign-in'
 import { Route as MainPrivacyRouteImport } from './routes/_main/privacy'
 import { Route as MainAboutRouteImport } from './routes/_main/about'
 import { Route as MainResetPasswordIndexRouteImport } from './routes/_main/reset-password/index'
+import { Route as MainCrewIndexRouteImport } from './routes/_main/crew/index'
 import { Route as MainBoatsIndexRouteImport } from './routes/_main/boats/index'
 import { Route as MainAdminIndexRouteImport } from './routes/_main/admin/index'
 import { Route as MainResetPasswordTokenRouteImport } from './routes/_main/reset-password/$token'
@@ -24,6 +25,7 @@ import { Route as MainBoatsNewRouteImport } from './routes/_main/boats/new'
 import { Route as MainBoatsBoatIdRouteImport } from './routes/_main/boats/$boatId'
 import { Route as MainAdminPgbossRouteImport } from './routes/_main/admin/pgboss'
 import { Route as MainAdminCountriesRouteImport } from './routes/_main/admin/countries'
+import { Route as MainCrewInviteTokenRouteImport } from './routes/_main/crew/invite/$token'
 
 const MainRouteRoute = MainRouteRouteImport.update({
   id: '/_main',
@@ -64,6 +66,11 @@ const MainResetPasswordIndexRoute = MainResetPasswordIndexRouteImport.update({
   path: '/reset-password/',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainCrewIndexRoute = MainCrewIndexRouteImport.update({
+  id: '/crew/',
+  path: '/crew/',
+  getParentRoute: () => MainRouteRoute,
+} as any)
 const MainBoatsIndexRoute = MainBoatsIndexRouteImport.update({
   id: '/boats/',
   path: '/boats/',
@@ -99,6 +106,11 @@ const MainAdminCountriesRoute = MainAdminCountriesRouteImport.update({
   path: '/admin/countries',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainCrewInviteTokenRoute = MainCrewInviteTokenRouteImport.update({
+  id: '/crew/invite/$token',
+  path: '/crew/invite/$token',
+  getParentRoute: () => MainRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof MainIndexRoute
@@ -114,7 +126,9 @@ export interface FileRoutesByFullPath {
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/admin/': typeof MainAdminIndexRoute
   '/boats/': typeof MainBoatsIndexRoute
+  '/crew/': typeof MainCrewIndexRoute
   '/reset-password/': typeof MainResetPasswordIndexRoute
+  '/crew/invite/$token': typeof MainCrewInviteTokenRoute
 }
 export interface FileRoutesByTo {
   '/about': typeof MainAboutRoute
@@ -130,7 +144,9 @@ export interface FileRoutesByTo {
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/admin': typeof MainAdminIndexRoute
   '/boats': typeof MainBoatsIndexRoute
+  '/crew': typeof MainCrewIndexRoute
   '/reset-password': typeof MainResetPasswordIndexRoute
+  '/crew/invite/$token': typeof MainCrewInviteTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -148,7 +164,9 @@ export interface FileRoutesById {
   '/_main/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/_main/admin/': typeof MainAdminIndexRoute
   '/_main/boats/': typeof MainBoatsIndexRoute
+  '/_main/crew/': typeof MainCrewIndexRoute
   '/_main/reset-password/': typeof MainResetPasswordIndexRoute
+  '/_main/crew/invite/$token': typeof MainCrewInviteTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -166,7 +184,9 @@ export interface FileRouteTypes {
     | '/reset-password/$token'
     | '/admin/'
     | '/boats/'
+    | '/crew/'
     | '/reset-password/'
+    | '/crew/invite/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/about'
@@ -182,7 +202,9 @@ export interface FileRouteTypes {
     | '/reset-password/$token'
     | '/admin'
     | '/boats'
+    | '/crew'
     | '/reset-password'
+    | '/crew/invite/$token'
   id:
     | '__root__'
     | '/_main'
@@ -199,7 +221,9 @@ export interface FileRouteTypes {
     | '/_main/reset-password/$token'
     | '/_main/admin/'
     | '/_main/boats/'
+    | '/_main/crew/'
     | '/_main/reset-password/'
+    | '/_main/crew/invite/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -265,6 +289,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainResetPasswordIndexRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/crew/': {
+      id: '/_main/crew/'
+      path: '/crew'
+      fullPath: '/crew/'
+      preLoaderRoute: typeof MainCrewIndexRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/boats/': {
       id: '/_main/boats/'
       path: '/boats'
@@ -314,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAdminCountriesRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/crew/invite/$token': {
+      id: '/_main/crew/invite/$token'
+      path: '/crew/invite/$token'
+      fullPath: '/crew/invite/$token'
+      preLoaderRoute: typeof MainCrewInviteTokenRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
   }
 }
 
@@ -330,7 +368,9 @@ interface MainRouteRouteChildren {
   MainResetPasswordTokenRoute: typeof MainResetPasswordTokenRoute
   MainAdminIndexRoute: typeof MainAdminIndexRoute
   MainBoatsIndexRoute: typeof MainBoatsIndexRoute
+  MainCrewIndexRoute: typeof MainCrewIndexRoute
   MainResetPasswordIndexRoute: typeof MainResetPasswordIndexRoute
+  MainCrewInviteTokenRoute: typeof MainCrewInviteTokenRoute
 }
 
 const MainRouteRouteChildren: MainRouteRouteChildren = {
@@ -346,7 +386,9 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainResetPasswordTokenRoute: MainResetPasswordTokenRoute,
   MainAdminIndexRoute: MainAdminIndexRoute,
   MainBoatsIndexRoute: MainBoatsIndexRoute,
+  MainCrewIndexRoute: MainCrewIndexRoute,
   MainResetPasswordIndexRoute: MainResetPasswordIndexRoute,
+  MainCrewInviteTokenRoute: MainCrewInviteTokenRoute,
 }
 
 const MainRouteRouteWithChildren = MainRouteRoute._addFileChildren(

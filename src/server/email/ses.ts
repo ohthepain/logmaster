@@ -98,3 +98,18 @@ export async function sendVerifyEmailEmail(to: string, url: string) {
   )
   await sendTransactionalEmail({ to, subject, text, html })
 }
+
+export async function sendCrewInviteEmail(args: {
+  to: string
+  url: string
+  inviterName: string
+}) {
+  const name = appName()
+  const inviter = args.inviterName.trim() || 'Someone'
+  const subject = `${inviter} invited you to join their crew on ${name}`
+  const text = `${inviter} added you as crew on ${name}. Open the link to connect your account:\n\n${args.url}\n\nIf you were not expecting this, you can ignore this email.`
+  const html = emailWrap(
+    `<strong>${inviter}</strong> invited you to join their crew on <strong>${name}</strong>. <a href="${args.url}">Accept the invite</a> after signing in. If you were not expecting this, ignore this email.`,
+  )
+  await sendTransactionalEmail({ to: args.to, subject, text, html })
+}

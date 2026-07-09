@@ -46,6 +46,12 @@ model User {
   sessions      Session[]
   accounts      Account[]
   boats         Boat[]
+  ownedCrewMembers       CrewMember[]   @relation("OwnedCrewMembers")
+  linkedAsCrewMember     CrewMember[]   @relation("LinkedCrewMembers")
+  sentCrewInvites        CrewInvite[]   @relation("SentCrewInvites")
+  acceptedCrewInvites    CrewInvite[]   @relation("AcceptedCrewInvites")
+  sentFriendRequests     FriendRequest[] @relation("SentFriendRequests")
+  receivedFriendRequests FriendRequest[] @relation("ReceivedFriendRequests")
 
   @@unique([email])
   @@map("user")
@@ -184,4 +190,73 @@ model BoatPhoto {
 
   @@index([boatId, sortOrder])
   @@map("boat_photo")
+}
+
+enum CrewInviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model CrewMember {
+  id            String       @id @default(cuid())
+  ownerUserId   String
+  owner         User         @relation("OwnedCrewMembers", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  linkedUserId  String?
+  linkedUser    User?        @relation("LinkedCrewMembers", fields: [linkedUserId], references: [id], onDelete: SetNull)
+  displayName   String?
+  photoS3Key    String?
+  photoMimeType String?      @default("image/jpeg")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  invites       CrewInvite[]
+
+  @@unique([ownerUserId, linkedUserId])
+  @@index([ownerUserId])
+  @@map("crew_member")
+}
+
+model CrewInvite {
+  id               String           @id @default(cuid())
+  crewMemberId     String
+  crewMember       CrewMember       @relation(fields: [crewMemberId], references: [id], onDelete: Cascade)
+  inviterUserId    String
+  inviter          User             @relation("SentCrewInvites", fields: [inviterUserId], references: [id], onDelete: Cascade)
+  inviteeEmail     String
+  token            String           @unique
+  status           CrewInviteStatus @default(PENDING)
+  acceptedByUserId String?
+  acceptedBy       User?            @relation("AcceptedCrewInvites", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+  expiresAt        DateTime
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  friendRequest    FriendRequest?
+
+  @@index([inviterUserId, status])
+  @@index([inviteeEmail, status])
+  @@map("crew_invite")
+}
+
+model FriendRequest {
+  id                 String              @id @default(cuid())
+  requesterUserId    String
+  requester          User                @relation("SentFriendRequests", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  addresseeUserId    String
+  addressee          User                @relation("ReceivedFriendRequests", fields: [addresseeUserId], references: [id], onDelete: Cascade)
+  status             FriendRequestStatus @default(PENDING)
+  sourceCrewInviteId String?             @unique
+  sourceCrewInvite   CrewInvite?         @relation(fields: [sourceCrewInviteId], references: [id], onDelete: SetNull)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@unique([requesterUserId, addresseeUserId])
+  @@index([addresseeUserId, status])
+  @@map("friend_request")
 }

@@ -4,10 +4,11 @@ import { auth, getTrustedOrigins } from './auth'
 import { logbookRoutes } from './routes/logbook'
 import { boatsRoutes } from './routes/boats'
 import { profileRoutes } from './routes/profile'
+import { crewRoutes } from './routes/crew'
 
 const corsOrigins = getTrustedOrigins()
 
-export const app = new Hono().basePath('/api')
+export const app = new Hono({ strict: false }).basePath('/api')
 
 app.use(
   '*',
@@ -33,3 +34,4 @@ app.get('/health', (c) =>
 app.route('/logbook', logbookRoutes)
 app.route('/boats', boatsRoutes)
 app.route('/profile', profileRoutes)
+app.route('/crew', crewRoutes)

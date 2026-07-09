@@ -78,6 +78,14 @@ export function profilePhotoS3Key(userId: string, ext: string): string {
   return `users/${userId}/profile/avatar.${ext}`
 }
 
+export function crewMemberPhotoS3Key(
+  ownerUserId: string,
+  crewMemberId: string,
+  ext: string,
+): string {
+  return `users/${ownerUserId}/crew/${crewMemberId}.${ext}`
+}
+
 export function extensionForMime(mimeType: string): string {
   if (mimeType === 'image/png') return 'png'
   if (mimeType === 'image/webp') return 'webp'
