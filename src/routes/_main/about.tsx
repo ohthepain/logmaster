@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { LegalFooter } from '../../components/LegalFooter'
 
 export const Route = createFileRoute('/_main/about')({
   component: About,
@@ -26,6 +27,7 @@ function About() {
             Back to trips
           </Link>
         </p>
+        <LegalFooter className="mt-8" />
       </section>
     </main>
   )

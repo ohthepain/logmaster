@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { sendTransactionalEmail } from '../src/server/email/ses'
 
 const to = process.argv[2]

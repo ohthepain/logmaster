@@ -7,6 +7,7 @@ import {
   sendPasswordResetEmail,
   sendVerifyEmailEmail,
 } from './email/ses'
+import { passwordResetEmailUrl } from '../lib/password-reset-url'
 
 const baseURL = process.env.BETTER_AUTH_URL ?? 'http://localhost:3020'
 const secret =
@@ -83,7 +84,8 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification,
-    sendResetPassword: async ({ user, url }) => {
+    sendResetPassword: async ({ user, token }) => {
+      const url = passwordResetEmailUrl({ origin: baseURL, token })
       await sendPasswordResetEmail(user.email, url)
     },
   },

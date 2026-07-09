@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { authClient, signIn, signUp } from '../../lib/auth-client'
+import { passwordResetCallbackUrl } from '../../lib/password-reset-url'
 import ThemeToggle from '../../components/ThemeToggle'
 
 const INTRO =
@@ -21,15 +22,19 @@ function safeRedirectPath(raw: string | undefined): string {
   }
 }
 
-type SignInSearch = { redirect?: string }
+type SignInSearch = { redirect?: string; forgot?: string }
 
 export const Route = createFileRoute('/_main/sign-in')({
   validateSearch: (search: Record<string, unknown>): SignInSearch => {
     const r = search.redirect
-    if (typeof r !== 'string' || !r.trim()) return {}
-    const t = r.trim()
-    if (!t.startsWith('/') || t.startsWith('//')) return {}
-    return { redirect: t }
+    const forgot = search.forgot
+    const out: SignInSearch = {}
+    if (typeof r === 'string' && r.trim()) {
+      const t = r.trim()
+      if (t.startsWith('/') && !t.startsWith('//')) out.redirect = t
+    }
+    if (forgot === '1' || forgot === 'true') out.forgot = '1'
+    return out
   },
   component: SignInPage,
 })
@@ -37,7 +42,7 @@ export const Route = createFileRoute('/_main/sign-in')({
 type Tab = 'password' | 'magic'
 
 function SignInPage() {
-  const { redirect: redirectParam } = Route.useSearch()
+  const { redirect: redirectParam, forgot: forgotParam } = Route.useSearch()
   const afterAuthPath = useMemo(
     () => safeRedirectPath(redirectParam),
     [redirectParam],
@@ -88,6 +93,26 @@ function SignInPage() {
       setLoading(false)
     }
   }, [afterAuthPath])
+
+  useEffect(() => {
+    if (forgotParam === '1') {
+      setMode('sign-in')
+      setTab('password')
+      setForgotOpen(true)
+    }
+  }, [forgotParam])
+
+  const openForgotPassword = () => {
+    setForgotPasswordEmail(email.trim())
+    setForgotPasswordSent(false)
+    setForgotOpen(true)
+  }
+
+  const closeForgotPassword = () => {
+    setForgotOpen(false)
+    setForgotPasswordEmail('')
+    setForgotPasswordSent(false)
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -166,7 +191,7 @@ function SignInPage() {
     }
     setForgotPasswordLoading(true)
     try {
-      const redirectTo = `${window.location.origin}/reset-password`
+      const redirectTo = passwordResetCallbackUrl(window.location.origin)
       const result = await authClient.requestPasswordReset({
         email: forgotPasswordEmail.trim(),
         redirectTo,
@@ -241,12 +266,24 @@ function SignInPage() {
           </p>
         </div>
 
-        <div className="relative z-10 flex gap-4 text-sm">
+        <div className="relative z-10 flex flex-wrap gap-4 text-sm">
           <Link
             to="/about"
             className="opacity-60 hover:opacity-100 transition-opacity underline underline-offset-2 text-[var(--btn-text)] no-underline hover:underline"
           >
             About
+          </Link>
+          <Link
+            to="/terms"
+            className="opacity-60 hover:opacity-100 transition-opacity underline underline-offset-2 text-[var(--btn-text)] no-underline hover:underline"
+          >
+            Terms
+          </Link>
+          <Link
+            to="/privacy"
+            className="opacity-60 hover:opacity-100 transition-opacity underline underline-offset-2 text-[var(--btn-text)] no-underline hover:underline"
+          >
+            Privacy
           </Link>
         </div>
       </div>
@@ -399,7 +436,7 @@ function SignInPage() {
                     {mode === 'sign-in' && tab === 'password' && (
                       <button
                         type="button"
-                        onClick={() => setForgotOpen(true)}
+                        onClick={openForgotPassword}
                         className="text-sm text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)] underline underline-offset-2"
                       >
                         Forgot password?
@@ -484,11 +521,21 @@ function SignInPage() {
             )}
 
             <p className="text-center text-xs text-[var(--sea-ink-soft)] mt-8">
-              By continuing, you agree to use this service responsibly. Use
-              https in production; set{' '}
-              <code className="text-[var(--sea-ink)]">BETTER_AUTH_URL</code>,{' '}
-              <code className="text-[var(--sea-ink)]">TRUSTED_ORIGINS</code>,
-              and Google redirect URIs accordingly.
+              By continuing, you agree to our{' '}
+              <Link
+                to="/terms"
+                className="underline underline-offset-2 hover:text-[var(--sea-ink)]"
+              >
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link
+                to="/privacy"
+                className="underline underline-offset-2 hover:text-[var(--sea-ink)]"
+              >
+                Privacy Policy
+              </Link>
+              .
             </p>
 
             <p className="text-center mt-4">
@@ -507,17 +554,9 @@ function SignInPage() {
                 aria-modal="true"
                 aria-labelledby="forgot-title"
                 onKeyDown={(ev) => {
-                  if (ev.key === 'Escape') {
-                    setForgotOpen(false)
-                    setForgotPasswordEmail('')
-                    setForgotPasswordSent(false)
-                  }
+                  if (ev.key === 'Escape') closeForgotPassword()
                 }}
-                onClick={() => {
-                  setForgotOpen(false)
-                  setForgotPasswordEmail('')
-                  setForgotPasswordSent(false)
-                }}
+                onClick={closeForgotPassword}
               >
                 <div
                   className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--surface-strong)] p-6 shadow-xl"
@@ -568,11 +607,7 @@ function SignInPage() {
                     <button
                       type="button"
                       className="w-full py-3 rounded-xl border border-[var(--line)] font-medium text-[var(--sea-ink)]"
-                      onClick={() => {
-                        setForgotOpen(false)
-                        setForgotPasswordEmail('')
-                        setForgotPasswordSent(false)
-                      }}
+                      onClick={closeForgotPassword}
                     >
                       Close
                     </button>

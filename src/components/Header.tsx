@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { BookOpenText } from 'lucide-react'
 import { cn } from '../lib/cn'
+import DevModeToggle from './DevModeToggle'
 import ThemeToggle from './ThemeToggle'
 import { UserMenu } from './UserMenu'
 
@@ -49,6 +50,7 @@ export default function Header() {
             <BookOpenText className="size-4" />
             Trips
           </Link>
+          <DevModeToggle />
           <ThemeToggle />
           <UserMenu />
         </div>

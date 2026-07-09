@@ -1,22 +1,35 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Plus, Sailboat, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { AddBoatModal } from '../../../components/AddBoatModal'
 import { defaultBoatPhoto } from '../../../domain/boat'
 import type { Boat } from '../../../domain/boat'
 import { useSession } from '../../../lib/auth-client'
 import { deleteBoat, fetchBoats } from '../../../lib/boats-api'
 
+type BoatsSearch = { addBoat?: boolean }
+
 export const Route = createFileRoute('/_main/boats/')({
+  validateSearch: (search: Record<string, unknown>): BoatsSearch => {
+    const value = search.addBoat
+    if (value === true || value === 'true' || value === '1' || value === 1) {
+      return { addBoat: true }
+    }
+    return {}
+  },
   component: BoatsPage,
 })
 
 function BoatsPage() {
   const session = useSession()
+  const navigate = useNavigate()
+  const { addBoat: addBoatSearch } = Route.useSearch()
   const user = session.data?.user
   const [boats, setBoats] = useState<Boat[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [addBoatOpen, setAddBoatOpen] = useState(false)
 
   const load = useCallback(async () => {
     if (!user) {
@@ -40,6 +53,12 @@ function BoatsPage() {
     void load()
   }, [load])
 
+  useEffect(() => {
+    if (!addBoatSearch || !user) return
+    setAddBoatOpen(true)
+    void navigate({ to: '/boats', search: {}, replace: true })
+  }, [addBoatSearch, user, navigate])
+
   const handleDelete = async (boat: Boat) => {
     if (!window.confirm(`Delete "${boat.name}" and all its photos?`)) return
     try {
@@ -51,6 +70,8 @@ function BoatsPage() {
     }
   }
 
+  const openAddBoat = () => setAddBoatOpen(true)
+
   return (
     <main className="pb-24 pt-2">
       <div className="page-wrap px-3 sm:px-4">
@@ -59,13 +80,14 @@ function BoatsPage() {
             Boats
           </h1>
           {user && (
-            <Link
-              to="/boats/new"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] no-underline hover:text-[var(--brand-hover)]"
+            <button
+              type="button"
+              onClick={openAddBoat}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] transition hover:text-[var(--brand-hover)]"
             >
               <Plus className="size-4" strokeWidth={2.5} />
               Add
-            </Link>
+            </button>
           )}
         </div>
       </div>
@@ -105,13 +127,14 @@ function BoatsPage() {
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[var(--sea-ink-soft)]">
               Add your first boat with a name and photos.
             </p>
-            <Link
-              to="/boats/new"
-              className="brand-emphasis mt-5 inline-flex items-center gap-1.5 text-sm font-semibold no-underline hover:text-[var(--brand-hover)]"
+            <button
+              type="button"
+              onClick={openAddBoat}
+              className="brand-emphasis mt-5 inline-flex items-center gap-1.5 text-sm font-semibold hover:text-[var(--brand-hover)]"
             >
               <Plus className="size-4" />
               Add boat
-            </Link>
+            </button>
           </section>
         </div>
       ) : (
@@ -166,6 +189,15 @@ function BoatsPage() {
           })}
         </div>
       )}
+
+      <AddBoatModal
+        open={addBoatOpen}
+        onClose={() => setAddBoatOpen(false)}
+        onCreated={(boat) => {
+          setBoats((current) => [...current, boat])
+          void navigate({ to: '/boats/$boatId', params: { boatId: boat.id } })
+        }}
+      />
     </main>
   )
 }

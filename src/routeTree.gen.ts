@@ -12,11 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as MainRouteRouteImport } from './routes/_main/route'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
+import { Route as MainTermsRouteImport } from './routes/_main/terms'
 import { Route as MainSignInRouteImport } from './routes/_main/sign-in'
-import { Route as MainResetPasswordRouteImport } from './routes/_main/reset-password'
+import { Route as MainPrivacyRouteImport } from './routes/_main/privacy'
 import { Route as MainAboutRouteImport } from './routes/_main/about'
+import { Route as MainResetPasswordIndexRouteImport } from './routes/_main/reset-password/index'
 import { Route as MainBoatsIndexRouteImport } from './routes/_main/boats/index'
 import { Route as MainAdminIndexRouteImport } from './routes/_main/admin/index'
+import { Route as MainResetPasswordTokenRouteImport } from './routes/_main/reset-password/$token'
 import { Route as MainBoatsNewRouteImport } from './routes/_main/boats/new'
 import { Route as MainBoatsBoatIdRouteImport } from './routes/_main/boats/$boatId'
 import { Route as MainAdminPgbossRouteImport } from './routes/_main/admin/pgboss'
@@ -36,19 +39,29 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
   path: '/api/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MainTermsRoute = MainTermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => MainRouteRoute,
+} as any)
 const MainSignInRoute = MainSignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
   getParentRoute: () => MainRouteRoute,
 } as any)
-const MainResetPasswordRoute = MainResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+const MainPrivacyRoute = MainPrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => MainRouteRoute,
 } as any)
 const MainAboutRoute = MainAboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => MainRouteRoute,
+} as any)
+const MainResetPasswordIndexRoute = MainResetPasswordIndexRouteImport.update({
+  id: '/reset-password/',
+  path: '/reset-password/',
   getParentRoute: () => MainRouteRoute,
 } as any)
 const MainBoatsIndexRoute = MainBoatsIndexRouteImport.update({
@@ -59,6 +72,11 @@ const MainBoatsIndexRoute = MainBoatsIndexRouteImport.update({
 const MainAdminIndexRoute = MainAdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
+  getParentRoute: () => MainRouteRoute,
+} as any)
+const MainResetPasswordTokenRoute = MainResetPasswordTokenRouteImport.update({
+  id: '/reset-password/$token',
+  path: '/reset-password/$token',
   getParentRoute: () => MainRouteRoute,
 } as any)
 const MainBoatsNewRoute = MainBoatsNewRouteImport.update({
@@ -85,85 +103,103 @@ const MainAdminCountriesRoute = MainAdminCountriesRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof MainIndexRoute
   '/about': typeof MainAboutRoute
-  '/reset-password': typeof MainResetPasswordRoute
+  '/privacy': typeof MainPrivacyRoute
   '/sign-in': typeof MainSignInRoute
+  '/terms': typeof MainTermsRoute
   '/api/$': typeof ApiSplatRoute
   '/admin/countries': typeof MainAdminCountriesRoute
   '/admin/pgboss': typeof MainAdminPgbossRoute
   '/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/boats/new': typeof MainBoatsNewRoute
+  '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/admin/': typeof MainAdminIndexRoute
   '/boats/': typeof MainBoatsIndexRoute
+  '/reset-password/': typeof MainResetPasswordIndexRoute
 }
 export interface FileRoutesByTo {
   '/about': typeof MainAboutRoute
-  '/reset-password': typeof MainResetPasswordRoute
+  '/privacy': typeof MainPrivacyRoute
   '/sign-in': typeof MainSignInRoute
+  '/terms': typeof MainTermsRoute
   '/api/$': typeof ApiSplatRoute
   '/': typeof MainIndexRoute
   '/admin/countries': typeof MainAdminCountriesRoute
   '/admin/pgboss': typeof MainAdminPgbossRoute
   '/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/boats/new': typeof MainBoatsNewRoute
+  '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/admin': typeof MainAdminIndexRoute
   '/boats': typeof MainBoatsIndexRoute
+  '/reset-password': typeof MainResetPasswordIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_main': typeof MainRouteRouteWithChildren
   '/_main/about': typeof MainAboutRoute
-  '/_main/reset-password': typeof MainResetPasswordRoute
+  '/_main/privacy': typeof MainPrivacyRoute
   '/_main/sign-in': typeof MainSignInRoute
+  '/_main/terms': typeof MainTermsRoute
   '/api/$': typeof ApiSplatRoute
   '/_main/': typeof MainIndexRoute
   '/_main/admin/countries': typeof MainAdminCountriesRoute
   '/_main/admin/pgboss': typeof MainAdminPgbossRoute
   '/_main/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/_main/boats/new': typeof MainBoatsNewRoute
+  '/_main/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/_main/admin/': typeof MainAdminIndexRoute
   '/_main/boats/': typeof MainBoatsIndexRoute
+  '/_main/reset-password/': typeof MainResetPasswordIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/about'
-    | '/reset-password'
+    | '/privacy'
     | '/sign-in'
+    | '/terms'
     | '/api/$'
     | '/admin/countries'
     | '/admin/pgboss'
     | '/boats/$boatId'
     | '/boats/new'
+    | '/reset-password/$token'
     | '/admin/'
     | '/boats/'
+    | '/reset-password/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/about'
-    | '/reset-password'
+    | '/privacy'
     | '/sign-in'
+    | '/terms'
     | '/api/$'
     | '/'
     | '/admin/countries'
     | '/admin/pgboss'
     | '/boats/$boatId'
     | '/boats/new'
+    | '/reset-password/$token'
     | '/admin'
     | '/boats'
+    | '/reset-password'
   id:
     | '__root__'
     | '/_main'
     | '/_main/about'
-    | '/_main/reset-password'
+    | '/_main/privacy'
     | '/_main/sign-in'
+    | '/_main/terms'
     | '/api/$'
     | '/_main/'
     | '/_main/admin/countries'
     | '/_main/admin/pgboss'
     | '/_main/boats/$boatId'
     | '/_main/boats/new'
+    | '/_main/reset-password/$token'
     | '/_main/admin/'
     | '/_main/boats/'
+    | '/_main/reset-password/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -194,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_main/terms': {
+      id: '/_main/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof MainTermsRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/sign-in': {
       id: '/_main/sign-in'
       path: '/sign-in'
@@ -201,11 +244,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainSignInRouteImport
       parentRoute: typeof MainRouteRoute
     }
-    '/_main/reset-password': {
-      id: '/_main/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof MainResetPasswordRouteImport
+    '/_main/privacy': {
+      id: '/_main/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof MainPrivacyRouteImport
       parentRoute: typeof MainRouteRoute
     }
     '/_main/about': {
@@ -213,6 +256,13 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof MainAboutRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
+    '/_main/reset-password/': {
+      id: '/_main/reset-password/'
+      path: '/reset-password'
+      fullPath: '/reset-password/'
+      preLoaderRoute: typeof MainResetPasswordIndexRouteImport
       parentRoute: typeof MainRouteRoute
     }
     '/_main/boats/': {
@@ -227,6 +277,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin/'
       preLoaderRoute: typeof MainAdminIndexRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
+    '/_main/reset-password/$token': {
+      id: '/_main/reset-password/$token'
+      path: '/reset-password/$token'
+      fullPath: '/reset-password/$token'
+      preLoaderRoute: typeof MainResetPasswordTokenRouteImport
       parentRoute: typeof MainRouteRoute
     }
     '/_main/boats/new': {
@@ -262,28 +319,34 @@ declare module '@tanstack/react-router' {
 
 interface MainRouteRouteChildren {
   MainAboutRoute: typeof MainAboutRoute
-  MainResetPasswordRoute: typeof MainResetPasswordRoute
+  MainPrivacyRoute: typeof MainPrivacyRoute
   MainSignInRoute: typeof MainSignInRoute
+  MainTermsRoute: typeof MainTermsRoute
   MainIndexRoute: typeof MainIndexRoute
   MainAdminCountriesRoute: typeof MainAdminCountriesRoute
   MainAdminPgbossRoute: typeof MainAdminPgbossRoute
   MainBoatsBoatIdRoute: typeof MainBoatsBoatIdRoute
   MainBoatsNewRoute: typeof MainBoatsNewRoute
+  MainResetPasswordTokenRoute: typeof MainResetPasswordTokenRoute
   MainAdminIndexRoute: typeof MainAdminIndexRoute
   MainBoatsIndexRoute: typeof MainBoatsIndexRoute
+  MainResetPasswordIndexRoute: typeof MainResetPasswordIndexRoute
 }
 
 const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainAboutRoute: MainAboutRoute,
-  MainResetPasswordRoute: MainResetPasswordRoute,
+  MainPrivacyRoute: MainPrivacyRoute,
   MainSignInRoute: MainSignInRoute,
+  MainTermsRoute: MainTermsRoute,
   MainIndexRoute: MainIndexRoute,
   MainAdminCountriesRoute: MainAdminCountriesRoute,
   MainAdminPgbossRoute: MainAdminPgbossRoute,
   MainBoatsBoatIdRoute: MainBoatsBoatIdRoute,
   MainBoatsNewRoute: MainBoatsNewRoute,
+  MainResetPasswordTokenRoute: MainResetPasswordTokenRoute,
   MainAdminIndexRoute: MainAdminIndexRoute,
   MainBoatsIndexRoute: MainBoatsIndexRoute,
+  MainResetPasswordIndexRoute: MainResetPasswordIndexRoute,
 }
 
 const MainRouteRouteWithChildren = MainRouteRoute._addFileChildren(
