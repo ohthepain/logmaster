@@ -14,6 +14,7 @@ import { LogEntryCard } from './LogEntryCard'
 import { LogEntryComposerModal } from './LogEntryComposerModal'
 import { Modal } from './Modal'
 import { TripCrewPickerModal, TripCrewSection } from './TripCrewPickerModal'
+import { TripLogMap } from './TripLogMap'
 import type { LogEntry, Media } from '../domain/logbook'
 import type { CrewMember } from '../domain/crew'
 import { fetchCrew } from '../lib/crew-api'
@@ -250,6 +251,8 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
               Log entry
             </button>
           )}
+
+          <TripLogMap trip={trip} entries={entries} />
 
           {entries.length === 0 ? (
             <div className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] px-5 py-10 text-center">

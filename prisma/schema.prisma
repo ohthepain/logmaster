@@ -25,6 +25,7 @@ enum LogEntryType {
   CAST_OFF
   END_TRIP
   NOTE
+  HOURLY_LOG
   PHOTO
   VOICE_NOTE
 }

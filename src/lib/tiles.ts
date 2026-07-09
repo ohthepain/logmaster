@@ -99,3 +99,14 @@ export function appMaptileCdnQuery(unencodedUpstreamUrl: string): string {
       : window.location.origin
   return `${base}/api/maptiler-cdn?u=${encodeURIComponent(unencodedUpstreamUrl)}`
 }
+
+/** Route MapLibre tile/glyph/sprite fetches through the server so the API key stays off the client. */
+export function mapTilerTransformRequest(url: string) {
+  if (
+    url.startsWith('https://api.maptiler.com/') ||
+    url.startsWith('http://api.maptiler.com/')
+  ) {
+    return { url: appMaptileCdnQuery(url) }
+  }
+  return { url }
+}

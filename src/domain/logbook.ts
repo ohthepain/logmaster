@@ -13,6 +13,7 @@ export const LOG_ENTRY_TYPES = [
   'CAST_OFF',
   'END_TRIP',
   'NOTE',
+  'HOURLY_LOG',
   'PHOTO',
   'VOICE_NOTE',
 ] as const
@@ -102,6 +103,7 @@ export const EVENT_TYPES: Array<{
   { type: 'CAST_OFF', label: 'Cast Off', icon: '🌊' },
   { type: 'END_TRIP', label: 'End Trip', icon: '🏁' },
   { type: 'NOTE', label: 'Note', icon: '📝' },
+  { type: 'HOURLY_LOG', label: 'Hourly Log', icon: '🕐' },
   { type: 'PHOTO', label: 'Photo', icon: '📷' },
   { type: 'VOICE_NOTE', label: 'Voice Note', icon: '🎙️' },
 ]

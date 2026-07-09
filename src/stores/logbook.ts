@@ -41,10 +41,16 @@ type NewEntryInput = {
   notes?: string
   data?: Record<string, unknown>
   heading?: number | null
+  latitude?: number | null
+  longitude?: number | null
+  accuracy?: number | null
 }
 
 type UpdateEntryInput = Partial<
-  Pick<LogEntry, 'notes' | 'data' | 'heading' | 'type' | 'deleted'>
+  Pick<
+    LogEntry,
+    'notes' | 'data' | 'heading' | 'type' | 'deleted' | 'latitude' | 'longitude' | 'accuracy'
+  >
 >
 
 type UpdateTripInput = Partial<
@@ -287,7 +293,18 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
   },
 
   addEntry: async (input) => {
-    const context = await captureLogbookContext()
+    const hasPositionOverride =
+      input.latitude != null && input.longitude != null
+    const context = await captureLogbookContext(
+      hasPositionOverride
+        ? {
+            latitude: input.latitude as number,
+            longitude: input.longitude as number,
+            accuracy: input.accuracy ?? null,
+            heading: input.heading ?? null,
+          }
+        : undefined,
+    )
     const entry: LogEntry = {
       id: makeId(),
       tripId: input.tripId,

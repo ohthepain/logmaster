@@ -6,6 +6,9 @@ import { boatsRoutes } from './routes/boats'
 import { profileRoutes } from './routes/profile'
 import { crewRoutes } from './routes/crew'
 import { locationRoutes } from './routes/location'
+import { mapTileRoutes } from './routes/map-tiles'
+import { mapStyleVectorRoutes } from './routes/map-style-vector'
+import { maptileCdnRoutes } from './routes/maptile-cdn'
 
 const corsOrigins = getTrustedOrigins()
 
@@ -37,3 +40,6 @@ app.route('/boats', boatsRoutes)
 app.route('/profile', profileRoutes)
 app.route('/crew', crewRoutes)
 app.route('/location', locationRoutes)
+app.route('/map-tiles', mapTileRoutes)
+app.route('/map-style-vector', mapStyleVectorRoutes)
+app.route('/maptiler-cdn', maptileCdnRoutes)
