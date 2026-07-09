@@ -11,9 +11,9 @@ import { defaultTripTitle } from '../lib/trip-display'
 import {
   bootstrapLogbook,
   hasPendingSync,
-  type LogbookSnapshot,
   syncLogbook,
 } from '../lib/logbook-sync'
+import type { LogbookSnapshot } from '../lib/logbook-sync'
 import {
   addPendingDeletedTripId,
   deleteLogEntry,
@@ -127,7 +127,7 @@ function applySnapshot(set: (partial: Partial<LogbookState>) => void, snapshot: 
   const nextSelected =
     selectedTripId && sortedTrips.some((trip) => trip.id === selectedTripId)
       ? selectedTripId
-      : (activeTripId ?? sortedTrips[0]?.id ?? null)
+      : (activeTripId ?? sortedTrips.at(0)?.id ?? null)
 
   set({
     trips: sortedTrips,
@@ -275,7 +275,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       const nextSelected =
         state.selectedTripId === tripId
           ? (trips.find((trip) => trip.status === 'IN_PROGRESS')?.id ??
-            trips[0]?.id ??
+            trips.at(0)?.id ??
             null)
           : state.selectedTripId
       return {
@@ -473,15 +473,10 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     let success = true
     try {
       const result = await syncLogbook()
-      if (result.ok && 'snapshot' in result && result.snapshot) {
+      if (result.ok) {
         applySnapshot(set, result.snapshot, get().selectedTripId)
         set({
           syncMessage: syncStatusMessage(result.snapshot, get().online),
-        })
-      } else if (result.ok) {
-        const snapshot = await loadLogbookSnapshot()
-        set({
-          syncMessage: syncStatusMessage(snapshot, get().online),
         })
       } else {
         const snapshot = await loadLogbookSnapshot()

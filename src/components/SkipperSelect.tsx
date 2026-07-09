@@ -14,7 +14,8 @@ export function SkipperSelect({ value, options, onChange }: SkipperSelectProps) 
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const listId = useId()
-  const selected = options.find((option) => option.key === value) ?? options[0]
+  const selected =
+    options.find((option) => option.key === value) ?? options.at(0) ?? null
 
   useEffect(() => {
     if (!open) return

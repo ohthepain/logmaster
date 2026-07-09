@@ -7,12 +7,13 @@ import {
   logEntryMapPoints,
   mapBrandColor,
   mapPointsToBounds,
-  type MapLngLat,
   tripStartMapPoint,
 } from '../lib/logbook-map-geo'
+import type { MapLngLat } from '../lib/logbook-map-geo'
 import { hideBasemapTextSymbolLayers } from '../lib/maplibre-hide-basemap-labels'
 import { defaultRasterMapId } from '../lib/map-styles'
 import { appMapVectorStyleUrl, mapTilerTransformRequest } from '../lib/tiles'
+import { getGeoJsonSource } from '../lib/maplibre-source'
 
 type LogEntryPositionMapProps = {
   trip: Trip
@@ -143,8 +144,8 @@ export function LogEntryPositionMap({
     const map = mapRef.current
     if (!map || !mapReady) return
 
-    const trackSource = map.getSource(TRACK_SOURCE) as maplibregl.GeoJSONSource | undefined
-    const entrySource = map.getSource(ENTRY_SOURCE) as maplibregl.GeoJSONSource | undefined
+    const trackSource = getGeoJsonSource(map, TRACK_SOURCE)
+    const entrySource = getGeoJsonSource(map, ENTRY_SOURCE)
     if (!trackSource || !entrySource) return
 
     trackSource.setData(

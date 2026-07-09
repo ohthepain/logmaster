@@ -10,6 +10,7 @@ import {
   tripStartMapPoint,
 } from '../lib/logbook-map-geo'
 import { hideBasemapTextSymbolLayers } from '../lib/maplibre-hide-basemap-labels'
+import { getGeoJsonSource } from '../lib/maplibre-source'
 import { defaultRasterMapId } from '../lib/map-styles'
 import { appMapVectorStyleUrl, mapTilerTransformRequest } from '../lib/tiles'
 
@@ -155,9 +156,9 @@ export function TripLogMap({ trip, entries }: TripLogMapProps) {
     const map = mapRef.current
     if (!map || !mapReady) return
 
-    const trackSource = map.getSource(TRACK_SOURCE) as maplibregl.GeoJSONSource | undefined
-    const entrySource = map.getSource(ENTRY_SOURCE) as maplibregl.GeoJSONSource | undefined
-    const currentSource = map.getSource(CURRENT_SOURCE) as maplibregl.GeoJSONSource | undefined
+    const trackSource = getGeoJsonSource(map, TRACK_SOURCE)
+    const entrySource = getGeoJsonSource(map, ENTRY_SOURCE)
+    const currentSource = getGeoJsonSource(map, CURRENT_SOURCE)
     if (!trackSource || !entrySource || !currentSource) return
 
     trackSource.setData(

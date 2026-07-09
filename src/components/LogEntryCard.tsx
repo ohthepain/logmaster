@@ -5,7 +5,8 @@ import {
   Edit3,
   Trash2,
 } from 'lucide-react'
-import { useId, useRef, type ComponentType } from 'react'
+import { useId, useRef } from 'react'
+import type { ComponentType } from 'react'
 import { entryIcon, entryTitle } from '../domain/logbook'
 import type { LogEntry, Media } from '../domain/logbook'
 import {
