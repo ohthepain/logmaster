@@ -109,13 +109,25 @@ variable "ses_from_email" {
 variable "ses_configuration_set" {
   type        = string
   default     = ""
-  description = "Non-empty creates aws_sesv2_configuration_set and sets ECS env SES_CONFIGURATION_SET. Leave empty to skip."
+  description = "Configuration set name passed to ECS as SES_CONFIGURATION_SET. Set ses_create_configuration_set to create it in Terraform."
+}
+
+variable "ses_create_configuration_set" {
+  type        = bool
+  default     = false
+  description = "When true and ses_configuration_set is set, Terraform creates aws_sesv2_configuration_set."
 }
 
 variable "ses_domain_name" {
   type        = string
   default     = ""
-  description = "e.g. logmaster.live or staging.logmaster.live — non-empty creates aws_sesv2_email_identity with Easy DKIM."
+  description = "e.g. logmaster.live — when ses_create_domain_identity is true, creates aws_sesv2_email_identity with Easy DKIM."
+}
+
+variable "ses_create_domain_identity" {
+  type        = bool
+  default     = false
+  description = "When true and ses_domain_name is set, Terraform creates aws_sesv2_email_identity."
 }
 
 variable "auth_require_email_verification" {

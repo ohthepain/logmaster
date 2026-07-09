@@ -20,9 +20,8 @@ uploads_cors_allowed_origins = ["https://logmaster.live"]
 
 ses_from_email = "no-reply@logmaster.live"
 
-# Optional: enable SES domain identity and configuration set
-# ses_configuration_set = "logmaster-production"
-# ses_domain_name       = "logmaster.live"
+# Domain identity verified manually in SES console; reuse its configuration set.
+ses_configuration_set = "logmaster-live"
 
 # Optional: existing Secrets Manager ARNs for third-party credentials
 # google_client_id_secret_arn     = "arn:aws:secretsmanager:eu-central-1:ACCOUNT_ID:secret:..."

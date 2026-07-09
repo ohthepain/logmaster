@@ -22,6 +22,30 @@ Set `BETTER_AUTH_URL` to the same origin you use in the browser (e.g. `http://lo
 `pnpm dev`) so OAuth state cookies validate. Optional: `pnpm worker` in another terminal to process
 background map data jobs if the API process does not run the worker.
 
+### Email (Amazon SES)
+
+Auth emails (sign-up verification, password reset, magic link) go through SES when `AWS_SES_FROM_EMAIL`
+is set. In deployed environments the ECS task role sends mail in **eu-central-1** — no static AWS keys.
+
+For local dev, add to `.env`:
+
+```bash
+AWS_REGION=eu-central-1
+AWS_SES_FROM_EMAIL=no-reply@logmaster.live
+SES_CONFIGURATION_SET=logmaster-live
+```
+
+Use an address on a verified SES identity in that region (`logmaster.live` is verified and covers
+`@staging.logmaster.live` senders). If `AWS_SES_FROM_EMAIL` is unset, the app logs email bodies to
+the console instead of sending.
+
+Test a send with your AWS CLI profile:
+
+```bash
+AWS_REGION=eu-central-1 AWS_SES_FROM_EMAIL=no-reply@logmaster.live \
+  pnpm exec tsx scripts/send-test-email.ts you@example.com
+```
+
 ## Deployment
 
 ./scripts/tf-plan.sh production

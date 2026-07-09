@@ -43,4 +43,4 @@ RUN chmod +x /app/scripts/docker-entrypoint.sh
 
 EXPOSE 3000
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
-CMD ["node", "server-production.mjs"]
+CMD ["node", "dist/server/server.js"]

@@ -21,9 +21,8 @@ uploads_cors_allowed_origins = ["https://staging.logmaster.live"]
 
 ses_from_email = "no-reply@staging.logmaster.live"
 
-# Optional: enable SES domain identity and configuration set
-# ses_configuration_set = "logmaster-staging"
-# ses_domain_name       = "staging.logmaster.live"
+# Parent domain logmaster.live is verified in SES (covers *.logmaster.live senders).
+ses_configuration_set = "logmaster-live"
 
 # Optional: existing Secrets Manager ARNs for third-party credentials
 # google_client_id_secret_arn     = "arn:aws:secretsmanager:eu-central-1:ACCOUNT_ID:secret:..."

@@ -77,14 +77,14 @@ export const auth = betterAuth({
   emailVerification: {
     sendOnSignUp: true,
     sendVerificationEmail: async ({ user, url }) => {
-      void sendVerifyEmailEmail(user.email, url)
+      await sendVerifyEmailEmail(user.email, url)
     },
   },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification,
     sendResetPassword: async ({ user, url }) => {
-      void sendPasswordResetEmail(user.email, url)
+      await sendPasswordResetEmail(user.email, url)
     },
   },
   socialProviders: {
@@ -93,7 +93,7 @@ export const auth = betterAuth({
   plugins: [
     magicLink({
       sendMagicLink: async ({ email, url }) => {
-        void sendMagicLinkEmail(email, url)
+        await sendMagicLinkEmail(email, url)
       },
     }),
   ],

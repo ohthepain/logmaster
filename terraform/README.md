@@ -124,7 +124,7 @@ Deploy jobs authenticate via GitHub OIDC, write `backend.hcl`, init Terraform, b
 ## Container image
 
 - Root **Dockerfile**: multi-stage build, **linux/arm64**, Node 22, pnpm 9.15.4.
-- Serves TanStack Start via `server-production.mjs` on port **3000**.
+- Serves TanStack Start via `dist/server/server.js` on port **3000**.
 - Task definition uses image `{ecr_url}:staging` or `:production` matching the workspace.
 - ALB health check: **`/api/health`** (HTTP 200).
 - Public traffic: ALB **HTTP 80 → HTTPS 443** redirect, TLS via ACM.
@@ -191,8 +191,10 @@ The app sends verification, password reset, and magic-link email via SES when `A
 | Variable | Purpose |
 |----------|---------|
 | `ses_from_email` | Stored in app secret; must be on a verified SES identity in **eu-central-1**. |
-| `ses_configuration_set` | Non-empty creates `aws_sesv2_configuration_set` and sets ECS env `SES_CONFIGURATION_SET`. |
-| `ses_domain_name` | Non-empty creates `aws_sesv2_email_identity` with Easy DKIM — add DKIM CNAMEs to DNS. |
+| `ses_configuration_set` | Passed to ECS as `SES_CONFIGURATION_SET` (e.g. an existing console-managed set like `logmaster-live`). |
+| `ses_create_configuration_set` | When `true`, Terraform creates the configuration set named in `ses_configuration_set`. |
+| `ses_domain_name` | Domain for optional Terraform-managed identity. |
+| `ses_create_domain_identity` | When `true`, Terraform creates `aws_sesv2_email_identity` with Easy DKIM — add DKIM CNAMEs to DNS. |
 
 Without a verified sender, the app logs email content instead of sending (except in development).
 

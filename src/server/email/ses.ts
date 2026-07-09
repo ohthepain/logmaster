@@ -1,6 +1,7 @@
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses'
 
-const region = process.env.AWS_REGION || 'us-east-1'
+/** Must match the region where SES identities are verified (see terraform `aws_region`). */
+const region = process.env.AWS_REGION || 'eu-central-1'
 let client: SESClient | null = null
 
 function getClient(): SESClient {
@@ -10,12 +11,17 @@ function getClient(): SESClient {
 
 const appName = () => process.env.EMAIL_APP_NAME || 'logmaster'
 
-export function sendTransactionalEmail(args: {
+function configurationSetName(): string | undefined {
+  const name = process.env.SES_CONFIGURATION_SET?.trim()
+  return name || undefined
+}
+
+export async function sendTransactionalEmail(args: {
   to: string
   subject: string
   text: string
   html: string
-}): void {
+}): Promise<void> {
   const from = process.env.AWS_SES_FROM_EMAIL
   if (!from) {
     if (process.env.NODE_ENV === 'development') {
@@ -33,25 +39,27 @@ export function sendTransactionalEmail(args: {
     }
     return
   }
-  void (async () => {
-    try {
-      await getClient().send(
-        new SendEmailCommand({
-          Source: from,
-          Destination: { ToAddresses: [args.to] },
-          Message: {
-            Subject: { Data: args.subject, Charset: 'UTF-8' },
-            Body: {
-              Text: { Data: args.text, Charset: 'UTF-8' },
-              Html: { Data: args.html, Charset: 'UTF-8' },
-            },
+  try {
+    await getClient().send(
+      new SendEmailCommand({
+        Source: from,
+        Destination: { ToAddresses: [args.to] },
+        ...(configurationSetName()
+          ? { ConfigurationSetName: configurationSetName() }
+          : {}),
+        Message: {
+          Subject: { Data: args.subject, Charset: 'UTF-8' },
+          Body: {
+            Text: { Data: args.text, Charset: 'UTF-8' },
+            Html: { Data: args.html, Charset: 'UTF-8' },
           },
-        }),
-      )
-    } catch (e) {
-      console.error('[email] SES send failed', e)
-    }
-  })()
+        },
+      }),
+    )
+  } catch (e) {
+    console.error('[email] SES send failed', e)
+    throw e
+  }
 }
 
 export function emailWrap(bodyHtml: string) {
@@ -61,32 +69,32 @@ export function emailWrap(bodyHtml: string) {
   </body></html>`
 }
 
-export function sendMagicLinkEmail(to: string, url: string) {
+export async function sendMagicLinkEmail(to: string, url: string) {
   const name = appName()
   const subject = `Sign in to ${name}`
   const text = `Click the link to sign in: ${url}\n\nThis link expires in a few minutes.`
   const html = emailWrap(
     `Sign in to <strong>${name}</strong> — <a href="${url}">click here</a>. This link expires in a few minutes.`,
   )
-  sendTransactionalEmail({ to, subject, text, html })
+  await sendTransactionalEmail({ to, subject, text, html })
 }
 
-export function sendPasswordResetEmail(to: string, url: string) {
+export async function sendPasswordResetEmail(to: string, url: string) {
   const name = appName()
   const subject = `Reset your ${name} password`
   const text = `Click the link to set a new password: ${url}\n\nIf you did not request this, you can ignore this email.`
   const html = emailWrap(
     `Reset your <strong>${name}</strong> password — <a href="${url}">set a new password</a>. If you did not request this, ignore this email.`,
   )
-  sendTransactionalEmail({ to, subject, text, html })
+  await sendTransactionalEmail({ to, subject, text, html })
 }
 
-export function sendVerifyEmailEmail(to: string, url: string) {
+export async function sendVerifyEmailEmail(to: string, url: string) {
   const name = appName()
   const subject = `Verify your email for ${name}`
   const text = `Verify your address: ${url}\n\nIf you did not create an account, you can ignore this email.`
   const html = emailWrap(
     `Please verify your email for <strong>${name}</strong> — <a href="${url}">verify</a>.`,
   )
-  sendTransactionalEmail({ to, subject, text, html })
+  await sendTransactionalEmail({ to, subject, text, html })
 }

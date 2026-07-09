@@ -1,7 +1,7 @@
-# Optional SES resources — enable by setting non-empty `ses_configuration_set` and/or `ses_domain_name` in tfvars.
+# Optional SES resources — create only when ses_create_* is true (identities may already exist in the console).
 
 resource "aws_sesv2_configuration_set" "app" {
-  count = var.ses_configuration_set != "" ? 1 : 0
+  count = var.ses_create_configuration_set && var.ses_configuration_set != "" ? 1 : 0
 
   configuration_set_name = var.ses_configuration_set
 
@@ -15,7 +15,7 @@ resource "aws_sesv2_configuration_set" "app" {
 }
 
 resource "aws_sesv2_email_identity" "domain" {
-  count = var.ses_domain_name != "" ? 1 : 0
+  count = var.ses_create_domain_identity && var.ses_domain_name != "" ? 1 : 0
 
   email_identity         = var.ses_domain_name
   configuration_set_name = var.ses_configuration_set != "" ? var.ses_configuration_set : null
