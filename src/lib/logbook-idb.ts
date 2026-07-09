@@ -1,4 +1,5 @@
-import { openDB, type DBSchema } from 'idb'
+import { openDB } from 'idb'
+import type { DBSchema } from 'idb'
 import type { LogEntry, Media, Trip } from '../domain/logbook'
 
 interface LogbookDB extends DBSchema {

@@ -125,7 +125,9 @@ function BoatDetailPage() {
         current
           ? {
               ...current,
-              photos: current.photos.filter((photo) => photo.id !== activePhoto.id),
+              photos: current.photos.filter(
+                (photo) => photo.id !== activePhoto.id,
+              ),
             }
           : current,
       )
@@ -147,8 +149,13 @@ function BoatDetailPage() {
   if (error || !boat) {
     return (
       <main className="page-wrap px-3 py-8 sm:px-4">
-        <p className="text-sm text-red-700 dark:text-red-300">{error ?? 'Boat not found'}</p>
-        <Link to="/boats" className="mt-4 inline-block text-sm text-[var(--sea-ink)]">
+        <p className="text-sm text-red-700 dark:text-red-300">
+          {error ?? 'Boat not found'}
+        </p>
+        <Link
+          to="/boats"
+          className="mt-4 inline-block text-sm text-[var(--sea-ink)]"
+        >
           ← Back to boats
         </Link>
       </main>
@@ -158,7 +165,10 @@ function BoatDetailPage() {
   return (
     <main className="page-wrap px-3 pb-24 pt-4 sm:px-4">
       <p className="mb-2 text-sm">
-        <Link to="/boats" className="text-[var(--sea-ink-soft)] no-underline hover:text-[var(--sea-ink)]">
+        <Link
+          to="/boats"
+          className="text-[var(--sea-ink-soft)] no-underline hover:text-[var(--sea-ink)]"
+        >
           ← Boats
         </Link>
       </p>

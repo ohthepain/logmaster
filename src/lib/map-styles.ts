@@ -38,10 +38,7 @@ export function getConfiguredCustomMapId(): string | undefined {
       : ''
   const fromProcess =
     typeof process !== 'undefined' && typeof process.env !== 'undefined'
-      ? (
-          process.env.VITE_MAPTILER_RASTER_MAP_ID ??
-          ''
-        ).trim()
+      ? (process.env.VITE_MAPTILER_RASTER_MAP_ID ?? '').trim()
       : ''
   const raw = fromImport || fromProcess
   return raw.length > 0 ? raw : undefined
@@ -61,4 +58,3 @@ export function isAllowedRasterMapId(id: string): id is RasterMapId {
   const custom = getConfiguredCustomMapId()
   return custom != null && id === custom
 }
-

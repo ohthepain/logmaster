@@ -25,8 +25,8 @@ export function applyMapBasemapLayerToggles(
   m: maplibregl.Map,
   t: MapBasemapLayerToggles,
 ): void {
-  const style = m.getStyle?.()
-  const layers = style?.layers as { id?: string }[] | undefined
+  const style = m.getStyle()
+  const layers = style.layers as { id?: string }[] | undefined
   if (!layers) return
 
   for (const lyr of layers) {
@@ -34,7 +34,7 @@ export function applyMapBasemapLayerToggles(
     if (typeof id !== 'string' || isSkippableAppLayer(id)) continue
 
     try {
-      if (!m.getLayer?.(id)) continue
+      if (!m.getLayer(id)) continue
       const lid = id.toLowerCase()
 
       let vis: 'visible' | 'none' | null = null

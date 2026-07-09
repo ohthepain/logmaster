@@ -25,7 +25,8 @@ export default defineConfig({
       manifest: {
         name: 'logmaster',
         short_name: 'logmaster',
-        description: 'Offline-first sailing logbook for trips, events, notes, and media.',
+        description:
+          'Offline-first sailing logbook for trips, events, notes, and media.',
         theme_color: '#0d3b4a',
         background_color: '#07131a',
         display: 'standalone',

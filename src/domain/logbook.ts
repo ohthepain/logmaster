@@ -80,7 +80,11 @@ export type TripWithEntries = Trip & {
   entries: Array<LogEntry & { media: Media[] }>
 }
 
-export const EVENT_TYPES: Array<{ type: LogEntryType; label: string; icon: string }> = [
+export const EVENT_TYPES: Array<{
+  type: LogEntryType
+  label: string
+  icon: string
+}> = [
   { type: 'START_TRIP', label: 'Start Trip', icon: '⛵' },
   { type: 'SAILS_UP', label: 'Sails Up', icon: '🪢' },
   { type: 'ENGINE_ON', label: 'Engine On', icon: '⚙️' },
@@ -97,7 +101,18 @@ export const EVENT_TYPES: Array<{ type: LogEntryType; label: string; icon: strin
 ]
 
 export const NAVIGATION_EVENT_TYPES = EVENT_TYPES.filter((event) =>
-  ['START_TRIP', 'SAILS_UP', 'ENGINE_ON', 'ENGINE_OFF', 'SAILS_DOWN', 'ANCHOR_DROPPED', 'ANCHOR_WEIGHED', 'MOORED', 'CAST_OFF', 'END_TRIP'].includes(event.type),
+  [
+    'START_TRIP',
+    'SAILS_UP',
+    'ENGINE_ON',
+    'ENGINE_OFF',
+    'SAILS_DOWN',
+    'ANCHOR_DROPPED',
+    'ANCHOR_WEIGHED',
+    'MOORED',
+    'CAST_OFF',
+    'END_TRIP',
+  ].includes(event.type),
 )
 
 export function entryTitle(type: LogEntryType) {
@@ -107,4 +122,3 @@ export function entryTitle(type: LogEntryType) {
 export function entryIcon(type: LogEntryType) {
   return EVENT_TYPES.find((event) => event.type === type)?.icon ?? '•'
 }
-

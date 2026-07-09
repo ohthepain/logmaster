@@ -12,7 +12,12 @@ app.use(
   '*',
   cors({
     origin: corsOrigins,
-    allowHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Client-Version'],
+    allowHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Cookie',
+      'X-Client-Version',
+    ],
     exposeHeaders: ['Set-Cookie'],
     credentials: true,
   }),

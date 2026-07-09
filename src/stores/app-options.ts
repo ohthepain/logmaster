@@ -1,10 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import {
-  defaultMapBasemapLayerToggles
-  
-} from '../lib/maplibre-basemap-layer-toggles'
-import type {MapBasemapLayerToggles} from '../lib/maplibre-basemap-layer-toggles';
+import { defaultMapBasemapLayerToggles } from '../lib/maplibre-basemap-layer-toggles'
+import type { MapBasemapLayerToggles } from '../lib/maplibre-basemap-layer-toggles'
 
 type AppOptions = {
   devMode: boolean

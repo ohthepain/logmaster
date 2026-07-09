@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { prisma } from '../db'
+
 const db = prisma as any
 
 function parseDate(value: unknown) {
@@ -44,7 +45,8 @@ function toLogEntry(data: Record<string, unknown>) {
     createdBy: (data.createdBy as string | null | undefined) ?? null,
     notes: (data.notes as string | null | undefined) ?? null,
     data: (data.data as Record<string, unknown> | null | undefined) ?? null,
-    weather: (data.weather as Record<string, unknown> | null | undefined) ?? null,
+    weather:
+      (data.weather as Record<string, unknown> | null | undefined) ?? null,
     createdAt,
     updatedAt,
     synced: Boolean(data.synced),

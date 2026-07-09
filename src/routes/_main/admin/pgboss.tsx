@@ -147,11 +147,7 @@ function PgBossPage() {
               key={option}
               type="button"
               onClick={() => setQueue(option)}
-              className={`rounded-lg border px-3 py-2 text-sm font-medium ${
-                queue === option
-                  ? 'border-[var(--btn-bg)] bg-[var(--btn-bg)] text-[var(--btn-text)]'
-                  : 'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)]'
-              }`}
+              className="rounded-lg border border-[var(--btn-bg)] bg-[var(--btn-bg)] px-3 py-2 text-sm font-medium text-[var(--btn-text)]"
             >
               {option}
             </button>

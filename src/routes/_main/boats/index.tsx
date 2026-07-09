@@ -2,6 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { Plus, Sailboat, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { defaultBoatPhoto } from '../../../domain/boat'
 import type { Boat } from '../../../domain/boat'
 import { useSession } from '../../../lib/auth-client'
 import { deleteBoat, fetchBoats } from '../../../lib/boats-api'
@@ -98,7 +99,9 @@ function BoatsPage() {
             <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-[var(--brand-muted)]">
               <Sailboat className="size-6 text-[var(--brand)]" />
             </div>
-            <h2 className="m-0 text-xl font-semibold text-[var(--sea-ink)]">No boats yet</h2>
+            <h2 className="m-0 text-xl font-semibold text-[var(--sea-ink)]">
+              No boats yet
+            </h2>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[var(--sea-ink-soft)]">
               Add your first boat with a name and photos.
             </p>
@@ -114,8 +117,7 @@ function BoatsPage() {
       ) : (
         <div className="space-y-8">
           {boats.map((boat) => {
-            const cover =
-              boat.photos.find((p) => p.isDefault) ?? boat.photos[0] ?? null
+            const cover = defaultBoatPhoto(boat.photos)
             return (
               <article key={boat.id} className="group">
                 <div className="page-wrap px-3 sm:px-4">

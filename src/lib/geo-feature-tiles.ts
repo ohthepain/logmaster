@@ -23,17 +23,26 @@ export type GeoFeatureProperties = {
   adminCode?: string
 }
 
-export type GeoFeatureCollection = FeatureCollection<Geometry, GeoFeatureProperties>
+export type GeoFeatureCollection = FeatureCollection<
+  Geometry,
+  GeoFeatureProperties
+>
 
 function clampFloor(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Math.floor(value)))
 }
 
 export function degreeTileForLonLat(lon: number, lat: number): DegreeTile {
-  return degreeTileFromFloors(clampFloor(lat, -90, 89), clampFloor(lon, -180, 179))
+  return degreeTileFromFloors(
+    clampFloor(lat, -90, 89),
+    clampFloor(lon, -180, 179),
+  )
 }
 
-export function degreeTileFromFloors(latTile: number, lonTile: number): DegreeTile {
+export function degreeTileFromFloors(
+  latTile: number,
+  lonTile: number,
+): DegreeTile {
   if (!Number.isInteger(latTile) || latTile < -90 || latTile > 89) {
     throw new Error(`Invalid latitude tile ${latTile}; expected -90..89`)
   }
@@ -55,7 +64,9 @@ export function degreeTileFromFloors(latTile: number, lonTile: number): DegreeTi
 export function parseDegreeTilePrefix(input: string): DegreeTile {
   const match = /^([NS])(\d{1,2})\/([EW])(\d{1,3})$/.exec(input.trim())
   if (!match) {
-    throw new Error(`Invalid tile "${input}". Use a prefix like N59/E18 or S34/W58.`)
+    throw new Error(
+      `Invalid tile "${input}". Use a prefix like N59/E18 or S34/W58.`,
+    )
   }
 
   const latAbs = Number(match[2])
@@ -86,7 +97,9 @@ export function degreeTilesForBbox([west, south, east, north]: [
   return tiles
 }
 
-export function degreeTilesForLineString(line: Feature<LineString> | null): DegreeTile[] {
+export function degreeTilesForLineString(
+  line: Feature<LineString> | null,
+): DegreeTile[] {
   if (!line) return []
   const coords = line.geometry.coordinates as [number, number][]
   const byId = new Map<string, DegreeTile>()
@@ -94,13 +107,16 @@ export function degreeTilesForLineString(line: Feature<LineString> | null): Degr
   for (let index = 0; index < coords.length; index++) {
     const current = coords[index]
     const next = coords[index + 1]
-    if (!next) {
+    if (index + 1 >= coords.length) {
       const tile = degreeTileForLonLat(current[0], current[1])
       byId.set(tile.tileId, tile)
       continue
     }
 
-    const maxDelta = Math.max(Math.abs(next[0] - current[0]), Math.abs(next[1] - current[1]))
+    const maxDelta = Math.max(
+      Math.abs(next[0] - current[0]),
+      Math.abs(next[1] - current[1]),
+    )
     const steps = Math.max(1, Math.ceil(maxDelta * 4))
     for (let step = 0; step <= steps; step++) {
       const t = step / steps
@@ -114,7 +130,10 @@ export function degreeTilesForLineString(line: Feature<LineString> | null): Degr
   return Array.from(byId.values())
 }
 
-export function appGeoFeatureTileUrl(tile: DegreeTile, resolution: GeoFeatureResolution): string {
+export function appGeoFeatureTileUrl(
+  tile: DegreeTile,
+  resolution: GeoFeatureResolution,
+): string {
   const base =
     typeof window === 'undefined'
       ? 'http://localhost:3020'
@@ -129,7 +148,7 @@ export function mergeGeoFeatureCollections(
 
   for (const collection of collections) {
     for (const feature of collection.features) {
-      const id = feature.properties?.id
+      const id = feature.properties.id
       if (!id) continue
       byId.set(id, feature)
     }
@@ -138,13 +157,17 @@ export function mergeGeoFeatureCollections(
   return {
     type: 'FeatureCollection',
     features: Array.from(byId.values()).sort(
-      (a, b) => (b.properties.importance ?? 0) - (a.properties.importance ?? 0),
+      (a, b) => b.properties.importance - a.properties.importance,
     ),
   }
 }
 
-export function isGeoFeatureCollection(value: unknown): value is GeoFeatureCollection {
+export function isGeoFeatureCollection(
+  value: unknown,
+): value is GeoFeatureCollection {
   if (!value || typeof value !== 'object') return false
   const candidate = value as { type?: unknown; features?: unknown }
-  return candidate.type === 'FeatureCollection' && Array.isArray(candidate.features)
+  return (
+    candidate.type === 'FeatureCollection' && Array.isArray(candidate.features)
+  )
 }

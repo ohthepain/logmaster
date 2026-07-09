@@ -56,9 +56,7 @@ function SignInPage() {
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false)
 
   const handleGoogleSignIn = useCallback(async () => {
-    const publicAppUrl = import.meta.env.VITE_PUBLIC_APP_URL as
-      | string
-      | undefined
+    const publicAppUrl = import.meta.env.VITE_PUBLIC_APP_URL
     const isLocalhost =
       typeof window !== 'undefined' &&
       (window.location.hostname === 'localhost' ||
@@ -85,7 +83,7 @@ function SignInPage() {
         toast.error(result.error.message ?? 'Google sign in failed')
       }
     } catch (err) {
-      toast.error((err as Error)?.message ?? 'Google sign in failed')
+      toast.error(err instanceof Error ? err.message : 'Google sign in failed')
     } finally {
       setLoading(false)
     }
@@ -389,8 +387,7 @@ function SignInPage() {
                 </div>
               </div>
 
-              {(mode === 'sign-up' ||
-                (mode === 'sign-in' && tab === 'password')) && (
+              {(mode === 'sign-up' || tab === 'password') && (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label

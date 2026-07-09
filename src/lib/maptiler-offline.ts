@@ -78,8 +78,8 @@ async function vectorTilesTemplateFromSource(
   const id =
     typeof source.id === 'string'
       ? source.id
-      : typeof (source as { _id?: unknown }).id === 'string'
-        ? String((source as { _id: string }).id)
+      : typeof (source as { id?: unknown }).id === 'string'
+        ? (source as { id: string }).id
         : ''
   const type = source.type as string | undefined
   if (type !== 'vector' || !id) return undefined

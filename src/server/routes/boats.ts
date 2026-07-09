@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { defaultBoatPhoto } from '../../domain/boat'
 import { prisma } from '../db'
 import { getSessionUserId } from '../session'
 import {
@@ -76,7 +77,7 @@ function serializeBoat(boat: {
     createdAt: boat.createdAt.toISOString(),
     updatedAt: boat.updatedAt.toISOString(),
     photos,
-    defaultPhoto: photos.find((p) => p.isDefault) ?? photos[0] ?? null,
+    defaultPhoto: defaultBoatPhoto(photos),
   }
 }
 
@@ -179,7 +180,10 @@ boatsRoutes.post('/:boatId/photos', async (c) => {
   const s3Key = photoS3Key(userId, boat.id, photoId, ext)
   const buffer = Buffer.from(await file.arrayBuffer())
   const maxSort =
-    boat.photos.reduce((max: number, p: { sortOrder: number }) => Math.max(max, p.sortOrder), -1) + 1
+    boat.photos.reduce(
+      (max: number, p: { sortOrder: number }) => Math.max(max, p.sortOrder),
+      -1,
+    ) + 1
   const isFirst = boat.photos.length === 0
 
   await uploadPhotoObject(s3Key, buffer, file.type)
@@ -225,7 +229,9 @@ boatsRoutes.patch('/photos/:photoId', async (c) => {
   const photo = await db.boatPhoto.update({
     where: { id: existing.id },
     data: {
-      ...(body.caption !== undefined ? { caption: body.caption?.trim() || null } : {}),
+      ...(body.caption !== undefined
+        ? { caption: body.caption?.trim() || null }
+        : {}),
       ...(body.isDefault !== undefined ? { isDefault: body.isDefault } : {}),
       updatedAt: new Date(),
     },

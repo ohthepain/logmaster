@@ -8,7 +8,7 @@ type PositionSnapshot = {
 }
 
 async function getCurrentPosition(): Promise<PositionSnapshot> {
-  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+  if (typeof navigator === 'undefined') {
     return {
       latitude: null,
       longitude: null,
@@ -74,7 +74,10 @@ async function getWeatherSnapshot(
     const url = new URL('https://api.open-meteo.com/v1/forecast')
     url.searchParams.set('latitude', String(latitude))
     url.searchParams.set('longitude', String(longitude))
-    url.searchParams.set('current', 'temperature_2m,wind_speed_10m,pressure_msl,cloud_cover')
+    url.searchParams.set(
+      'current',
+      'temperature_2m,wind_speed_10m,pressure_msl,cloud_cover',
+    )
     url.searchParams.set('wind_speed_unit', 'kmh')
     const response = await fetch(url.toString())
     if (!response.ok) return null
@@ -116,5 +119,6 @@ export async function captureLogbookContext() {
   }
 }
 
-export type CapturedLogbookContext = Awaited<ReturnType<typeof captureLogbookContext>>
-
+export type CapturedLogbookContext = Awaited<
+  ReturnType<typeof captureLogbookContext>
+>

@@ -20,7 +20,15 @@ export type Boat = {
   photos: BoatPhoto[]
 }
 
-export type BoatSummary = Pick<Boat, 'id' | 'name' | 'createdAt' | 'updatedAt'> & {
+export type BoatSummary = Pick<
+  Boat,
+  'id' | 'name' | 'createdAt' | 'updatedAt'
+> & {
   photos: BoatPhoto[]
   defaultPhoto: BoatPhoto | null
+}
+
+export function defaultBoatPhoto(photos: BoatPhoto[]): BoatPhoto | null {
+  if (photos.length === 0) return null
+  return photos.find((p) => p.isDefault) ?? photos[0]
 }

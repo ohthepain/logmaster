@@ -1,12 +1,9 @@
 import type { Feature, LineString } from 'geojson'
 
 /** Lon/lat bounding box [west, south, east, north] from a LineString, or null if empty. */
-export function bboxFromLineString(line: Feature<LineString> | null): [
-  number,
-  number,
-  number,
-  number,
-] | null {
+export function bboxFromLineString(
+  line: Feature<LineString> | null,
+): [number, number, number, number] | null {
   if (!line) return null
   const c = line.geometry.coordinates
   if (!c.length) return null

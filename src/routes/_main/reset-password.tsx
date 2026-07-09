@@ -4,7 +4,9 @@ import { toast } from 'sonner'
 import { Lock } from 'lucide-react'
 import { authClient } from '../../lib/auth-client'
 
-export const Route = createFileRoute('/_main/reset-password')({ component: ResetPassword })
+export const Route = createFileRoute('/_main/reset-password')({
+  component: ResetPassword,
+})
 
 function ResetPassword() {
   const [token, setToken] = useState<string | null>(null)
@@ -52,9 +54,12 @@ function ResetPassword() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-base)] p-4">
         <div className="w-full max-w-sm space-y-6 text-center">
-          <h1 className="text-2xl font-bold text-[var(--sea-ink)]">Reset password</h1>
+          <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
+            Reset password
+          </h1>
           <p className="text-[var(--sea-ink-soft)] text-sm">
-            Use the link from your email to reset your password. Links expire after a short time.
+            Use the link from your email to reset your password. Links expire
+            after a short time.
           </p>
           <Link
             to="/sign-in"
@@ -71,9 +76,12 @@ function ResetPassword() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-base)] p-4">
         <div className="w-full max-w-sm space-y-6 text-center">
-          <h1 className="text-2xl font-bold text-[var(--sea-ink)]">Invalid or expired link</h1>
+          <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
+            Invalid or expired link
+          </h1>
           <p className="text-[var(--sea-ink-soft)] text-sm">
-            This password reset link is invalid or has expired. Request a new one from the sign-in page.
+            This password reset link is invalid or has expired. Request a new
+            one from the sign-in page.
           </p>
           <Link
             to="/sign-in"
@@ -90,7 +98,9 @@ function ResetPassword() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-base)] p-4">
         <div className="w-full max-w-sm space-y-6 text-center">
-          <h1 className="text-2xl font-bold text-[var(--sea-ink)]">Password reset</h1>
+          <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
+            Password reset
+          </h1>
           <p className="text-[var(--sea-ink-soft)] text-sm">
             Your password has been updated. You can now sign in.
           </p>
@@ -109,12 +119,19 @@ function ResetPassword() {
     <div className="min-h-screen flex items-center justify-center bg-[var(--bg-base)] p-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-[var(--sea-ink)]">Set new password</h1>
-          <p className="text-[var(--sea-ink-soft)] text-sm mt-1">Enter your new password below.</p>
+          <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
+            Set new password
+          </h1>
+          <p className="text-[var(--sea-ink-soft)] text-sm mt-1">
+            Enter your new password below.
+          </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="newPassword" className="block text-sm font-medium text-[var(--sea-ink)] mb-1.5">
+            <label
+              htmlFor="newPassword"
+              className="block text-sm font-medium text-[var(--sea-ink)] mb-1.5"
+            >
               New password
             </label>
             <div className="relative">

@@ -7,10 +7,7 @@ import type {
   TripStatus,
 } from '../domain/logbook'
 import { captureLogbookContext } from '../lib/logbook-context'
-import {
-  bootstrapLogbook,
-  syncLogbook,
-} from '../lib/logbook-sync'
+import { bootstrapLogbook, syncLogbook } from '../lib/logbook-sync'
 import { putLogEntry, putMedia, putTrip } from '../lib/logbook-idb'
 
 type NewTripInput = {
@@ -27,7 +24,9 @@ type NewEntryInput = {
   heading?: number | null
 }
 
-type UpdateEntryInput = Partial<Pick<LogEntry, 'notes' | 'data' | 'heading' | 'type' | 'deleted'>>
+type UpdateEntryInput = Partial<
+  Pick<LogEntry, 'notes' | 'data' | 'heading' | 'type' | 'deleted'>
+>
 
 type LogbookState = {
   trips: Trip[]
@@ -47,7 +46,10 @@ type LogbookState = {
   updateEntry: (entryId: string, patch: UpdateEntryInput) => Promise<void>
   deleteEntry: (entryId: string) => Promise<void>
   nudgeEntryTime: (entryId: string, deltaMinutes: number) => Promise<void>
-  attachMedia: (entryId: string, media: Omit<Media, 'id' | 'createdAt' | 'updatedAt' | 'synced'>) => Promise<Media | null>
+  attachMedia: (
+    entryId: string,
+    media: Omit<Media, 'id' | 'createdAt' | 'updatedAt' | 'synced'>,
+  ) => Promise<Media | null>
   syncNow: () => Promise<void>
 }
 
@@ -84,12 +86,13 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     )
     const sortedEntries = sortEntries(snapshot.logEntries)
     const activeTrip = sortedTrips.find((trip) => trip.status === 'IN_PROGRESS')
+    const firstTripId = sortedTrips.length > 0 ? sortedTrips[0].id : null
     set({
       trips: sortedTrips,
       entries: sortedEntries,
       media: snapshot.media,
       activeTripId: activeTrip?.id ?? null,
-      selectedTripId: activeTrip?.id ?? sortedTrips[0]?.id ?? null,
+      selectedTripId: activeTrip?.id ?? firstTripId,
       booted: true,
     })
     if (typeof navigator !== 'undefined' && navigator.onLine) {
@@ -121,7 +124,8 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     await putTrip(trip)
     set((state) => {
       const trips = [trip, ...state.trips].sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       )
       return {
         trips,
@@ -181,8 +185,11 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
         }
         await putTrip(completed)
         set((state) => ({
-          trips: state.trips.map((item) => (item.id === completed.id ? completed : item)),
-          activeTripId: state.activeTripId === completed.id ? null : state.activeTripId,
+          trips: state.trips.map((item) =>
+            item.id === completed.id ? completed : item,
+          ),
+          activeTripId:
+            state.activeTripId === completed.id ? null : state.activeTripId,
         }))
       }
     } else {
@@ -191,7 +198,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
         const updated = { ...trip, updatedAt: nowIso() }
         await putTrip(updated)
         set((state) => ({
-          trips: state.trips.map((item) => (item.id === updated.id ? updated : item)),
+          trips: state.trips.map((item) =>
+            item.id === updated.id ? updated : item,
+          ),
         }))
       }
     }
@@ -214,7 +223,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     }
     await putLogEntry(next)
     set((state) => ({
-      entries: sortEntries(state.entries.map((entry) => (entry.id === entryId ? next : entry))),
+      entries: sortEntries(
+        state.entries.map((entry) => (entry.id === entryId ? next : entry)),
+      ),
       syncMessage: 'Saved locally',
     }))
   },
@@ -222,10 +233,17 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
   deleteEntry: async (entryId) => {
     const current = get().entries.find((entry) => entry.id === entryId)
     if (!current) return
-    const next = { ...current, deleted: true, updatedAt: nowIso(), synced: false }
+    const next = {
+      ...current,
+      deleted: true,
+      updatedAt: nowIso(),
+      synced: false,
+    }
     await putLogEntry(next)
     set((state) => ({
-      entries: state.entries.map((entry) => (entry.id === entryId ? next : entry)),
+      entries: state.entries.map((entry) =>
+        entry.id === entryId ? next : entry,
+      ),
       syncMessage: 'Saved locally',
     }))
   },
@@ -243,7 +261,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     }
     await putLogEntry(next)
     set((state) => ({
-      entries: sortEntries(state.entries.map((entry) => (entry.id === entryId ? next : entry))),
+      entries: sortEntries(
+        state.entries.map((entry) => (entry.id === entryId ? next : entry)),
+      ),
     }))
   },
 

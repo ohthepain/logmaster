@@ -40,7 +40,9 @@ export function UserMenu() {
           'outline-none',
           open && 'ring-2 ring-[var(--line)]',
         )}
-        aria-label={user ? `Account: ${user.name || user.email}` : 'Account menu'}
+        aria-label={
+          user ? `Account: ${user.name || user.email}` : 'Account menu'
+        }
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
@@ -72,7 +74,10 @@ export function UserMenu() {
           )}
         >
           {user ? (
-            <div className="border-b border-[var(--line)] px-3 py-2.5" role="none">
+            <div
+              className="border-b border-[var(--line)] px-3 py-2.5"
+              role="none"
+            >
               <p className="m-0 max-w-[16rem] truncate text-sm font-semibold text-[var(--sea-ink)]">
                 {user.name || user.email}
               </p>
@@ -83,7 +88,10 @@ export function UserMenu() {
               )}
             </div>
           ) : (
-            <div className="border-b border-[var(--line)] px-3 py-2.5" role="none">
+            <div
+              className="border-b border-[var(--line)] px-3 py-2.5"
+              role="none"
+            >
               <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
                 Offline mode ready
               </p>

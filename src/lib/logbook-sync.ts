@@ -24,7 +24,9 @@ export async function syncLogbook() {
   }
 
   const snapshot = await loadLogbookSnapshot()
-  const pendingTrips = snapshot.trips.filter((trip) => trip.status !== 'PLANNED')
+  const pendingTrips = snapshot.trips.filter(
+    (trip) => trip.status !== 'PLANNED',
+  )
   const pendingEntries = snapshot.logEntries.filter((entry) => !entry.synced)
   const pendingMedia = snapshot.media.filter((item) => !item.synced)
 
@@ -57,7 +59,9 @@ export async function syncLogbook() {
   await clearLogbook()
   await Promise.all([
     ...payload.trips.map((trip) => putTrip(trip)),
-    ...payload.logEntries.map((entry) => putLogEntry({ ...entry, synced: true })),
+    ...payload.logEntries.map((entry) =>
+      putLogEntry({ ...entry, synced: true }),
+    ),
     ...payload.media.map((item) => putMedia({ ...item, synced: true })),
   ])
   await db.close()
@@ -68,4 +72,3 @@ export async function syncLogbook() {
       payload.trips.length + payload.logEntries.length + payload.media.length,
   }
 }
-

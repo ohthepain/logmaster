@@ -16,7 +16,9 @@ function trimField(s: string): string {
 
 function isHeaderLineAfterHash(payload: string): boolean {
   const cols = payload.split('\t')
-  return trimField(cols[0] ?? '') === 'ISO' && trimField(cols[1] ?? '') === 'ISO3'
+  return (
+    trimField(cols[0] ?? '') === 'ISO' && trimField(cols[1] ?? '') === 'ISO3'
+  )
 }
 
 function normalizePhone(raw: string): string {

@@ -52,7 +52,10 @@ export function clampCenterToContainBBox(
 /**
  * Most zoomed-out level (smallest numeric zoom) allowed so that at bbox center the viewport fits in `bbox`.
  */
-export function minZoomToContainViewportInBBox(map: Map, bbox: LonLatBBox): number {
+export function minZoomToContainViewportInBBox(
+  map: Map,
+  bbox: LonLatBBox,
+): number {
   const [west, south, east, north] = bbox
   const cx = (west + east) / 2
   const cy = (south + north) / 2

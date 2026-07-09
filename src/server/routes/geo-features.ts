@@ -5,7 +5,8 @@ import { Hono } from 'hono'
 export const geoFeatureRoutes = new Hono()
 
 const s3 = new S3Client({
-  region: process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'us-east-1',
+  region:
+    process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'us-east-1',
 })
 
 function isTilePart(value: string, hemisphere: 'lat' | 'lon'): boolean {
@@ -14,7 +15,9 @@ function isTilePart(value: string, hemisphere: 'lat' | 'lon'): boolean {
     : /^[EW]\d{1,3}$/.test(value)
 }
 
-function isResolutionFile(value: string): value is 'highres.json.gz' | 'lowres.json.gz' {
+function isResolutionFile(
+  value: string,
+): value is 'highres.json.gz' | 'lowres.json.gz' {
   return value === 'highres.json.gz' || value === 'lowres.json.gz'
 }
 
@@ -25,13 +28,19 @@ geoFeatureRoutes.get('/:lat/:lon/v1/tiles/:file', async (c) => {
   const lat = c.req.param('lat')
   const lon = c.req.param('lon')
   const file = c.req.param('file')
-  if (!isTilePart(lat, 'lat') || !isTilePart(lon, 'lon') || !isResolutionFile(file)) {
+  if (
+    !isTilePart(lat, 'lat') ||
+    !isTilePart(lon, 'lon') ||
+    !isResolutionFile(file)
+  ) {
     return c.text('Invalid geo feature tile', 400)
   }
 
   const key = `${lat}/${lon}/v1/tiles/${file}`
   try {
-    const response = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }))
+    const response = await s3.send(
+      new GetObjectCommand({ Bucket: bucket, Key: key }),
+    )
     const bytes = await response.Body?.transformToByteArray()
     if (!bytes) return c.text('Missing geo feature tile body', 502)
 

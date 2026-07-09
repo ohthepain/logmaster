@@ -27,7 +27,9 @@ export function sendTransactionalEmail(args: {
       )
       console.info(args.text)
     } else {
-      console.error('[email] AWS_SES_FROM_EMAIL is required to send email in production')
+      console.error(
+        '[email] AWS_SES_FROM_EMAIL is required to send email in production',
+      )
     }
     return
   }

@@ -35,7 +35,7 @@ export function pickGeoLabelFeaturesForMapView(
   const bestScore: number[] = Array(CELLS).fill(-Infinity)
 
   for (const f of collection.features) {
-    if (f.geometry?.type !== 'Point') continue
+    if (f.geometry.type !== 'Point') continue
     const coords = f.geometry.coordinates as [number, number]
     const p = m.project(coords)
     if (p.x < 0 || p.x > w || p.y < 0 || p.y > h) continue

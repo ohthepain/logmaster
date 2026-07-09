@@ -1,14 +1,13 @@
 import type { Boat } from '../domain/boat'
 
-async function api<T>(
-  path: string,
-  init?: RequestInit,
-): Promise<T> {
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     credentials: 'include',
     ...init,
     headers: {
-      ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+      ...(init?.body instanceof FormData
+        ? {}
+        : { 'Content-Type': 'application/json' }),
       ...init?.headers,
     },
   })
