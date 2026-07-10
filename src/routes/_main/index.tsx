@@ -40,20 +40,14 @@ export const Route = createFileRoute("/_main/")({
 });
 
 function resolveCurrentTrip(trips: Trip[]): Trip | null {
-  return (
-    trips.find((trip) => trip.status === "IN_PROGRESS") ??
-    trips.find((trip) => trip.status === "PLANNED") ??
-    null
-  );
+  return trips.find((trip) => trip.status === "IN_PROGRESS") ?? trips.find((trip) => trip.status === "PLANNED") ?? null;
 }
 
 function resolveLatestCompletedTrip(trips: Trip[]): Trip | null {
   const completed = trips.filter((trip) => trip.status === "COMPLETED");
   if (completed.length === 0) return null;
   return [...completed].sort(
-    (a, b) =>
-      new Date(b.completedAt ?? b.updatedAt).getTime() -
-      new Date(a.completedAt ?? a.updatedAt).getTime(),
+    (a, b) => new Date(b.completedAt ?? b.updatedAt).getTime() - new Date(a.completedAt ?? a.updatedAt).getTime(),
   )[0];
 }
 
@@ -304,12 +298,7 @@ function LogbookHome() {
 
       <div className="space-y-10">
         <section className="space-y-4">
-          <HomeSectionHeader
-            title="Trip"
-            to="/trips"
-            addLabel="Add trip"
-            onAdd={openStartTrip}
-          />
+          <HomeSectionHeader title="Trips" to="/trips" addLabel="Add trip" onAdd={openStartTrip} />
 
           {featuredTrip && featuredTripLabel ? (
             <div className="space-y-3">
@@ -318,11 +307,7 @@ function LogbookHome() {
               </p>
               <TripCard
                 trip={featuredTrip}
-                entryCount={
-                  store.entries.filter(
-                    (entry) => entry.tripId === featuredTrip.id && !entry.deleted,
-                  ).length
-                }
+                entryCount={store.entries.filter((entry) => entry.tripId === featuredTrip.id && !entry.deleted).length}
                 active={location.pathname === `/trips/${featuredTrip.id}`}
                 onSelect={() => openTrip(featuredTrip.id)}
               />
@@ -340,12 +325,7 @@ function LogbookHome() {
         </section>
 
         <section className="space-y-4">
-          <HomeSectionHeader
-            title="Crew"
-            to="/crew"
-            addLabel="Add crew member"
-            onAdd={openAddCrew}
-          />
+          <HomeSectionHeader title="Crew" to="/crew" addLabel="Add crew member" onAdd={openAddCrew} />
 
           {!user ? (
             <SignInPrompt redirect="/crew" message="Sign in to build your crew and connect with sailing friends." />
@@ -366,12 +346,7 @@ function LogbookHome() {
         </section>
 
         <section className="space-y-4">
-          <HomeSectionHeader
-            title="Boats"
-            to="/boats"
-            addLabel="Add boat"
-            onAdd={openAddBoat}
-          />
+          <HomeSectionHeader title="Boats" to="/boats" addLabel="Add boat" onAdd={openAddBoat} />
 
           {!user ? (
             <SignInPrompt redirect="/boats" message="Sign in to create and manage your boats." />
@@ -614,32 +589,28 @@ function TripCard({
         )}
       </div>
       <div className="min-w-0 flex-1 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--kicker)]">
-                {trip.status.replace("_", " ")}
-              </p>
-              <h3 className="m-0 mt-1 truncate text-lg font-bold text-[var(--sea-ink)]">{name}</h3>
-              <p className="m-0 mt-1 text-sm text-[var(--sea-ink-soft)]">
-                {trip.status === "PLANNED"
-                  ? `Created ${formatDateTime(trip.createdAt)}`
-                  : formatDateTime(trip.startedAt)}
-                {trip.completedAt ? ` · completed ${formatDateTime(trip.completedAt)}` : ""}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--surface)] px-3 py-2 text-right">
-              <p className="m-0 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--sea-ink-soft)]">
-                Entries
-              </p>
-              <p className="m-0 text-xl font-bold text-[var(--sea-ink)]">{entryCount}</p>
-            </div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--kicker)]">
+              {trip.status.replace("_", " ")}
+            </p>
+            <h3 className="m-0 mt-1 truncate text-lg font-bold text-[var(--sea-ink)]">{name}</h3>
+            <p className="m-0 mt-1 text-sm text-[var(--sea-ink-soft)]">
+              {trip.status === "PLANNED" ? `Created ${formatDateTime(trip.createdAt)}` : formatDateTime(trip.startedAt)}
+              {trip.completedAt ? ` · completed ${formatDateTime(trip.completedAt)}` : ""}
+            </p>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--sea-ink-soft)]">
-            {trip.boatName !== name && <Badge>{trip.boatName}</Badge>}
-            {trip.startCountry && <Badge>{trip.startCountry}</Badge>}
-            {trip.skipper && <Badge>{trip.skipper}</Badge>}
+          <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--surface)] px-3 py-2 text-right">
+            <p className="m-0 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--sea-ink-soft)]">Entries</p>
+            <p className="m-0 text-xl font-bold text-[var(--sea-ink)]">{entryCount}</p>
           </div>
         </div>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--sea-ink-soft)]">
+          {trip.boatName !== name && <Badge>{trip.boatName}</Badge>}
+          {trip.startCountry && <Badge>{trip.startCountry}</Badge>}
+          {trip.skipper && <Badge>{trip.skipper}</Badge>}
+        </div>
+      </div>
     </button>
   );
 }
