@@ -273,3 +273,118 @@ a {
     transform: translateY(0);
   }
 }
+
+.ftue-shell {
+  --ftue-bg: #f3f6fa;
+  --ftue-surface: #ffffff;
+  --ftue-ink: #0a0a0a;
+  --ftue-ink-soft: #525252;
+  --ftue-topo-stroke: rgba(59, 130, 246, 0.14);
+  --ftue-grid: rgba(59, 130, 246, 0.06);
+  --sea-ink: #0a0a0a;
+  --sea-ink-soft: #525252;
+  --bg-base: #f3f6fa;
+  --chip-bg: #f5f5f5;
+  --chip-line: rgba(0, 0, 0, 0.1);
+  --line: rgba(0, 0, 0, 0.12);
+  --btn-bg: #0a0a0a;
+  --btn-text: #ffffff;
+  --link-bg-hover: #ebebeb;
+  --surface-strong: #ffffff;
+  --overlay: rgba(0, 0, 0, 0.45);
+  background: var(--ftue-bg);
+  color: var(--ftue-ink);
+}
+
+.ftue-headline {
+  font-family: var(--font-sans);
+  font-size: clamp(1.75rem, 5.5vw, 2.35rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--ftue-ink);
+}
+
+.ftue-feature-copy {
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--ftue-ink);
+}
+
+.ftue-icon-badge {
+  display: inline-flex;
+  shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  background: var(--brand);
+  color: #ffffff;
+}
+
+.ftue-cta {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  border-radius: 9999px;
+  background: var(--brand);
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  box-shadow: 0 10px 28px rgba(235, 69, 57, 0.28);
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease,
+    background-color 180ms ease;
+}
+
+.ftue-cta:hover {
+  background: var(--brand-hover);
+}
+
+.ftue-cta:active {
+  transform: scale(0.99);
+}
+
+.ftue-cta:disabled {
+  opacity: 0.6;
+}
+
+.ftue-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--ftue-surface);
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ftue-ink);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.ftue-stats-pill {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--ftue-surface);
+  padding: 0.625rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ftue-ink);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.ftue-auth-card {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--ftue-surface);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
+}

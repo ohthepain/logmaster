@@ -1,7 +1,7 @@
 {
   "name": "logmaster",
   "short_name": "logmaster",
-  "description": "Offline-first sailing logbook for trips, events, notes, and media.",
+  "description": "Sailing logbook for trips, events, notes, and media.",
   "icons": [
     {
       "src": "favicon.ico",

@@ -39,7 +39,7 @@ export default function Header() {
         <AppHeaderBrand />
         <div className="flex items-center gap-2">
           <Link
-            to="/"
+            to="/trips"
             className="hidden items-center gap-1.5 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-xs font-semibold text-[var(--sea-ink)] no-underline transition hover:bg-[var(--link-bg-hover)] sm:inline-flex"
           >
             <BookOpenText className="size-4" />

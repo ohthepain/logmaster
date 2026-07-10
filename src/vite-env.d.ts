@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="vite-plugin-pwa/react" />
 
 interface ImportMetaEnv {
   /** MapTiler Cloud API key; used by the server tile proxy only (`/api/map-tiles/...`). */

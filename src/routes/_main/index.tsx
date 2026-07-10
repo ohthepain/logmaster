@@ -1,14 +1,17 @@
-import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Loader2, Plus, Sailboat, Waves } from "lucide-react";
+import { Link, createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
+import { ChevronRight, Loader2, Sailboat, Users } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType, FormEvent, ReactNode } from "react";
 import { toast } from "sonner";
 import { AddBoatModal } from "../../components/AddBoatModal";
-import { LogEntryComposerModal } from "../../components/LogEntryComposerModal";
+import { AddButton } from "../../components/AddButton";
+import { BoatsGrid } from "../../components/BoatsGrid";
+import { AddCrewMemberModal } from "../../components/AddCrewMemberModal";
+import { CrewMembersGrid } from "../../components/CrewMembersGrid";
 import { Modal } from "../../components/Modal";
 import { SkipperSelect } from "../../components/SkipperSelect";
 import { TripCrewPickerModal, TripCrewSection } from "../../components/TripCrewPickerModal";
-import type { LogEntryType, Trip } from "../../domain/logbook";
+import type { Trip } from "../../domain/logbook";
 import type { CrewMember } from "../../domain/crew";
 import { cn } from "../../lib/cn";
 import { useSession } from "../../lib/auth-client";
@@ -36,13 +39,22 @@ export const Route = createFileRoute("/_main/")({
   component: LogbookHome,
 });
 
-function resolveSelectedTrip(trips: Trip[], selectedTripId: string | null): Trip | null {
-  if (trips.length === 0) return null;
-  if (selectedTripId) {
-    const selected = trips.find((trip) => trip.id === selectedTripId);
-    if (selected) return selected;
-  }
-  return trips[0];
+function resolveCurrentTrip(trips: Trip[]): Trip | null {
+  return (
+    trips.find((trip) => trip.status === "IN_PROGRESS") ??
+    trips.find((trip) => trip.status === "PLANNED") ??
+    null
+  );
+}
+
+function resolveLatestCompletedTrip(trips: Trip[]): Trip | null {
+  const completed = trips.filter((trip) => trip.status === "COMPLETED");
+  if (completed.length === 0) return null;
+  return [...completed].sort(
+    (a, b) =>
+      new Date(b.completedAt ?? b.updatedAt).getTime() -
+      new Date(a.completedAt ?? a.updatedAt).getTime(),
+  )[0];
 }
 
 function LogbookHome() {
@@ -56,8 +68,7 @@ function LogbookHome() {
   const { startTrip: startTripSearch } = Route.useSearch();
   const [startOpen, setStartOpen] = useState(false);
   const [addBoatOpen, setAddBoatOpen] = useState(false);
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [composerInitialType, setComposerInitialType] = useState<LogEntryType>("NOTE");
+  const [addCrewOpen, setAddCrewOpen] = useState(false);
   const [startForm, setStartForm] = useState({
     boatName: "",
     registration: "",
@@ -73,8 +84,10 @@ function LogbookHome() {
   const [boatsLoading, setBoatsLoading] = useState(false);
   const startFormInitializedRef = useRef(false);
 
-  const selectedTrip = resolveSelectedTrip(store.trips, store.selectedTripId);
-  const activeTrip = store.trips.find((trip) => trip.status === "IN_PROGRESS") ?? null;
+  const currentTrip = resolveCurrentTrip(store.trips);
+  const latestCompletedTrip = resolveLatestCompletedTrip(store.trips);
+  const featuredTrip = currentTrip ?? latestCompletedTrip;
+  const featuredTripLabel = currentTrip ? "Current trip" : latestCompletedTrip ? "Latest trip" : null;
   const user = session.data?.user;
   const skipperOptions = useMemo(
     () =>
@@ -130,8 +143,7 @@ function LogbookHome() {
   };
 
   useEffect(() => {
-    if (!startOpen || !session.data?.user) {
-      startFormInitializedRef.current = false;
+    if (!user) {
       setBoats([]);
       return;
     }
@@ -142,10 +154,6 @@ function LogbookHome() {
       .then((items) => {
         if (cancelled) return;
         setBoats(items);
-        if (!startFormInitializedRef.current) {
-          startFormInitializedRef.current = true;
-          applyDefaultBoatSelection(items);
-        }
         triggerLogbookSyncRetry();
       })
       .catch(() => toast.error("Could not load your boats"))
@@ -156,7 +164,19 @@ function LogbookHome() {
     return () => {
       cancelled = true;
     };
-  }, [startOpen, session.data?.user]);
+  }, [user]);
+
+  useEffect(() => {
+    if (!startOpen || !session.data?.user) {
+      startFormInitializedRef.current = false;
+      return;
+    }
+
+    if (!startFormInitializedRef.current && boats.length > 0) {
+      startFormInitializedRef.current = true;
+      applyDefaultBoatSelection(boats);
+    }
+  }, [startOpen, session.data?.user, boats]);
 
   useEffect(() => {
     if (!startOpen || !store.booted || boats.length === 0 || selectedBoatId) return;
@@ -255,103 +275,122 @@ function LogbookHome() {
     void navigate({ to: "/trips/$tripId", params: { tripId } });
   };
 
-  const openComposer = (type: LogEntryType = "NOTE") => {
-    setComposerInitialType(type);
-    setComposerOpen(true);
+  const openAddCrew = () => {
+    if (!session.data?.user) {
+      void navigate({ to: "/sign-in", search: { redirect: "/crew?addCrew=1" } });
+      return;
+    }
+    setAddCrewOpen(true);
   };
 
-  const ensureTripForComposer = () => {
-    const trip = resolveSelectedTrip(store.trips, store.selectedTripId);
-    if (trip) return trip;
-    if (activeTrip) {
-      store.selectTrip(activeTrip.id);
-      return activeTrip;
+  const openAddBoat = () => {
+    if (!session.data?.user) {
+      void navigate({ to: "/sign-in", search: { redirect: "/boats?addBoat=1" } });
+      return;
     }
-    toast.error("Create or open a trip first");
-    return null;
+    setAddBoatOpen(true);
   };
 
   return (
     <main className="page-wrap px-3 pb-24 pt-4 sm:px-4 sm:pb-28">
-      <section className="relative overflow-hidden rounded-[2rem] border border-[var(--panel-border)] bg-[var(--surface-strong)] p-5 shadow-[0_16px_48px_var(--hero-a)] sm:p-7">
-        <div className="relative grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-4">
-            <p className="island-kicker">Offline-first sail logbook</p>
-
-            {devModeActive && (
-              <div className="flex flex-wrap gap-2">
-                <StatPill label="Trips" value={tripCount} />
-                <StatPill label="Entries" value={entryCount} />
-                <StatPill label="Unsynced" value={unsyncedCount} muted={!unsyncedCount} />
-                <StatPill label="Sync" value={store.syncMessage ?? (store.online ? "Ready" : "Offline")} wide />
-              </div>
-            )}
-          </div>
-
-          <div className="grid gap-3 rounded-3xl border border-[var(--panel-border)] bg-[var(--panel)] p-4">
-            <button
-              type="button"
-              onClick={openStartTrip}
-              className="flex items-center justify-between rounded-2xl bg-[var(--btn-bg)] px-4 py-4 text-left text-[var(--btn-text)] shadow-sm transition hover:translate-y-[-1px]"
-            >
-              <span>
-                <span className="mt-1 block text-lg font-bold">Add Trip ...</span>
-              </span>
-              <ChevronRight className="size-6" />
-            </button>
-
-            <div className="grid grid-cols-2 gap-3">
-              <QuickAction
-                label="Log Entry"
-                icon={Plus}
-                onClick={() => {
-                  if (ensureTripForComposer()) openComposer();
-                }}
-              />
-              <QuickAction
-                label="Event"
-                icon={Waves}
-                onClick={() => {
-                  if (!ensureTripForComposer()) return;
-                  openComposer("SAILS_UP");
-                }}
-              />
-            </div>
-          </div>
+      {devModeActive && (
+        <div className="mb-5 flex flex-wrap gap-2">
+          <StatPill label="Trips" value={tripCount} />
+          <StatPill label="Entries" value={entryCount} />
+          <StatPill label="Unsynced" value={unsyncedCount} muted={!unsyncedCount} />
+          <StatPill label="Sync" value={store.syncMessage ?? (store.online ? "Ready" : "Offline")} wide />
         </div>
-      </section>
+      )}
 
-      <section className="mt-5">
-        <div className="space-y-4">
-          <PanelTitle
-            kicker="Trips"
-            title={activeTrip ? "Trip in progress" : "Your trips"}
-            subtitle="New trips are planned until you log the first entry. Tap a trip to open it."
+      <div className="space-y-10">
+        <section className="space-y-4">
+          <HomeSectionHeader
+            title="Trip"
+            to="/trips"
+            addLabel="Add trip"
+            onAdd={openStartTrip}
           />
 
-          {store.trips.length === 0 ? (
+          {featuredTrip && featuredTripLabel ? (
+            <div className="space-y-3">
+              <p className="m-0 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--kicker)]">
+                {featuredTripLabel}
+              </p>
+              <TripCard
+                trip={featuredTrip}
+                entryCount={
+                  store.entries.filter(
+                    (entry) => entry.tripId === featuredTrip.id && !entry.deleted,
+                  ).length
+                }
+                active={location.pathname === `/trips/${featuredTrip.id}`}
+                onSelect={() => openTrip(featuredTrip.id)}
+              />
+            </div>
+          ) : (
             <EmptyState
-              title="No trips yet"
-              description="Start a sailing session to create the first trip and begin logging locally."
-              actionLabel="Start Sailing"
+              title="Add trip"
+              description="Start a sailing session to create your first trip and begin logging."
+              actionLabel="Add trip"
               onAction={openStartTrip}
               icon={Sailboat}
+              compact
+            />
+          )}
+        </section>
+
+        <section className="space-y-4">
+          <HomeSectionHeader
+            title="Crew"
+            to="/crew"
+            addLabel="Add crew member"
+            onAdd={openAddCrew}
+          />
+
+          {!user ? (
+            <SignInPrompt redirect="/crew" message="Sign in to build your crew and connect with sailing friends." />
+          ) : crewLoading ? (
+            <p className="m-0 text-sm text-[var(--sea-ink-soft)]">Loading crew…</p>
+          ) : crewMembers.length === 0 ? (
+            <EmptyState
+              title="Add crew member"
+              description="Add crew by name and photo. Include an email to send an invite."
+              actionLabel="Add crew member"
+              onAction={openAddCrew}
+              icon={Users}
+              compact
             />
           ) : (
-            <div className="space-y-3">
-              {store.trips.map((trip) => (
-                <TripCard
-                  key={trip.id}
-                  trip={trip}
-                  entryCount={store.entries.filter((entry) => entry.tripId === trip.id && !entry.deleted).length}
-                  active={location.pathname === `/trips/${trip.id}`}
-                  onSelect={() => openTrip(trip.id)}
-                />
-              ))}
-            </div>
+            <CrewMembersGrid members={crewMembers} />
           )}
-        </div>
-      </section>
+        </section>
+
+        <section className="space-y-4">
+          <HomeSectionHeader
+            title="Boats"
+            to="/boats"
+            addLabel="Add boat"
+            onAdd={openAddBoat}
+          />
+
+          {!user ? (
+            <SignInPrompt redirect="/boats" message="Sign in to create and manage your boats." />
+          ) : boatsLoading ? (
+            <p className="m-0 text-sm text-[var(--sea-ink-soft)]">Loading boats…</p>
+          ) : boats.length === 0 ? (
+            <EmptyState
+              title="Add boat"
+              description="Add your first boat with a name and photos."
+              actionLabel="Add boat"
+              onAction={openAddBoat}
+              icon={Sailboat}
+              compact
+            />
+          ) : (
+            <BoatsGrid boats={boats} />
+          )}
+        </section>
+      </div>
 
       {store.booted && !store.online && (
         <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full border border-[var(--line)] bg-[var(--surface-strong)] px-4 py-2 text-sm font-semibold text-[var(--sea-ink)] shadow-lg">
@@ -359,14 +398,13 @@ function LogbookHome() {
         </div>
       )}
 
-      {composerOpen && selectedTrip && (
-        <LogEntryComposerModal
-          open={composerOpen}
-          tripId={selectedTrip.id}
-          initialType={composerInitialType}
-          onClose={() => setComposerOpen(false)}
-        />
-      )}
+      <AddCrewMemberModal
+        open={addCrewOpen}
+        onClose={() => setAddCrewOpen(false)}
+        onCreated={(member) => {
+          setCrewMembers((current) => [...current, member]);
+        }}
+      />
 
       {startOpen && session.data?.user && (
         <Modal title="Create Trip" onClose={() => setStartOpen(false)}>
@@ -473,6 +511,50 @@ function LogbookHome() {
   );
 }
 
+function HomeSectionHeader({
+  title,
+  to,
+  addLabel,
+  onAdd,
+}: {
+  title: string;
+  to: string;
+  addLabel: string;
+  onAdd: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <Link
+        to={to}
+        className="group inline-flex min-w-0 items-center gap-1 no-underline outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)]"
+      >
+        <h2 className="brand-title m-0 text-[1.75rem] leading-none sm:text-[2rem]">{title}</h2>
+        <ChevronRight
+          className="size-6 shrink-0 text-[var(--brand)] transition group-hover:translate-x-0.5"
+          strokeWidth={2.5}
+          aria-hidden
+        />
+      </Link>
+      <AddButton onClick={onAdd} aria-label={addLabel} />
+    </div>
+  );
+}
+
+function SignInPrompt({ redirect, message }: { redirect: string; message: string }) {
+  return (
+    <div className="rounded-[1.4rem] border border-[var(--panel-border)] bg-[var(--panel)] px-5 py-6 text-center">
+      <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">{message}</p>
+      <Link
+        to="/sign-in"
+        search={{ redirect }}
+        className="brand-emphasis mt-3 inline-flex text-sm font-semibold no-underline hover:text-[var(--brand-hover)]"
+      >
+        Sign in
+      </Link>
+    </div>
+  );
+}
+
 function StatPill({
   label,
   value,
@@ -497,16 +579,6 @@ function StatPill({
   );
 }
 
-function PanelTitle({ kicker, title, subtitle }: { kicker: string; title: string; subtitle: string }) {
-  return (
-    <div className="space-y-1">
-      <p className="island-kicker">{kicker}</p>
-      <h2 className="m-0 text-2xl font-bold tracking-tight text-[var(--sea-ink)]">{title}</h2>
-      <p className="m-0 max-w-2xl text-sm leading-7 text-[var(--sea-ink-soft)]">{subtitle}</p>
-    </div>
-  );
-}
-
 function TripCard({
   trip,
   entryCount,
@@ -526,23 +598,22 @@ function TripCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        "w-full overflow-hidden rounded-[1.4rem] border text-left transition hover:-translate-y-[1px]",
+        "flex w-full overflow-hidden rounded-[1.4rem] border text-left transition hover:-translate-y-px",
         active
           ? "border-[var(--active-border)] bg-[var(--active-panel)] shadow-sm"
           : "border-[var(--panel-border)] bg-[var(--panel)]",
       )}
     >
-      <div className="flex gap-4 p-4">
-        <div className="size-16 shrink-0 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)]">
-          {coverPhoto ? (
-            <img src={coverPhoto} alt="" className="size-full object-cover" />
-          ) : (
-            <div className="flex size-full items-center justify-center text-[var(--sea-ink-soft)]">
-              <Sailboat className="size-7" strokeWidth={1.5} />
-            </div>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
+      <div className="w-32 shrink-0 overflow-hidden bg-[var(--chip-bg)]">
+        {coverPhoto ? (
+          <img src={coverPhoto} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center text-[var(--sea-ink-soft)]">
+            <Sailboat className="size-10" strokeWidth={1.5} />
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1 p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--kicker)]">
@@ -569,30 +640,6 @@ function TripCard({
             {trip.skipper && <Badge>{trip.skipper}</Badge>}
           </div>
         </div>
-      </div>
-    </button>
-  );
-}
-
-function QuickAction({
-  label,
-  icon: Icon,
-  onClick,
-}: {
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex items-center gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-4 text-left text-[var(--sea-ink)] transition hover:bg-[var(--panel-hover)]"
-    >
-      <span className="flex size-9 items-center justify-center rounded-xl border border-[var(--panel-border)] bg-[var(--surface)]">
-        <Icon className="size-4" />
-      </span>
-      <span className="text-sm font-semibold">{label}</span>
     </button>
   );
 }

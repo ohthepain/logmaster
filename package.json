@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite dev --port 3020",
     "predev": "prisma generate",
-    "build": "prisma generate && vite build",
+    "build": "prisma generate && vite build && node scripts/generate-sw.mjs",
     "start": "node server-production.mjs",
     "preview": "vite preview",
     "postinstall": "prisma generate",
@@ -35,6 +35,7 @@
     "@aws-sdk/client-s3": "^3.1037.0",
     "@aws-sdk/client-ses": "^3.1034.0",
     "@better-auth/prisma-adapter": "^1.6.6",
+    "@hono/node-server": "^1.19.11",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
     "@tailwindcss/vite": "^4.1.18",
@@ -48,7 +49,6 @@
     "better-auth": "^1.6.6",
     "better-auth-offline": "^0.0.2",
     "dotenv": "^17.4.2",
-    "@hono/node-server": "^1.19.11",
     "hono": "^4.12.14",
     "idb": "^8.0.3",
     "jszip": "^3.10.1",
@@ -60,6 +60,7 @@
     "react-dom": "^19.2.0",
     "sonner": "^2.0.7",
     "tailwindcss": "^4.1.18",
+    "workbox-window": "^7.4.1",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
@@ -82,7 +83,8 @@
     "typescript": "^5.7.2",
     "vite": "^8.0.0",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^3.0.5"
+    "vitest": "^3.0.5",
+    "workbox-build": "^7.4.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

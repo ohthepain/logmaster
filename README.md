@@ -1,6 +1,6 @@
 # travelmode.live
 
-Offline-first sailing logbook PWA: start a trip, capture notes and media offline,
+Sailing logbook PWA: start a trip, capture notes and media offline,
 and sync the log when connectivity returns.
 
 **Stack:** TanStack Start, Hono (`/api/*`), Prisma + Postgres, pg-boss, Better Auth, MapLibre, Zustand.

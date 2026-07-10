@@ -3,6 +3,7 @@ export type ProfileUser = {
   name: string
   email: string
   image: string | null
+  tutorialCompleted: boolean
 }
 
 const PROFILE_IMAGE_PATH = '/api/profile/photo'
@@ -66,6 +67,20 @@ export async function uploadProfilePhoto(file: File): Promise<ProfileUser> {
 export async function deleteProfilePhoto(): Promise<ProfileUser> {
   const data = await api<{ user: ProfileUser }>('/api/profile/photo', {
     method: 'DELETE',
+  })
+  return data.user
+}
+
+export async function completeTutorial(): Promise<ProfileUser> {
+  const data = await api<{ user: ProfileUser }>('/api/profile/tutorial/complete', {
+    method: 'POST',
+  })
+  return data.user
+}
+
+export async function resetTutorial(): Promise<ProfileUser> {
+  const data = await api<{ user: ProfileUser }>('/api/profile/tutorial/reset', {
+    method: 'POST',
   })
   return data.user
 }

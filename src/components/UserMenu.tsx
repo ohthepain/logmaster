@@ -1,14 +1,17 @@
 import { Link } from '@tanstack/react-router'
 import { User } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { signOut, useSession } from '../lib/auth-client'
 import { profilePhotoUrl } from '../lib/profile-api'
 import { cn } from '../lib/cn'
 import { ProfileModal } from './ProfileModal'
+import { useFtue } from './FtueGate'
 
 export function UserMenu() {
   const session = useSession()
   const user = session.data?.user
+  const { resetTutorial } = useFtue()
   const [open, setOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [photoVersion, setPhotoVersion] = useState(0)
@@ -132,6 +135,23 @@ export function UserMenu() {
             >
               Crew
             </Link>
+
+            <button
+              type="button"
+              role="menuitem"
+              className={cn(
+                'w-full rounded-xl px-3 py-2 text-left text-sm font-medium text-[var(--sea-ink)]',
+                'outline-none hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20',
+              )}
+              onClick={() => {
+                setOpen(false)
+                void resetTutorial().then(() => {
+                  toast.message('Tutorial reset')
+                })
+              }}
+            >
+              Reset tutorial
+            </button>
 
             {user ? (
               <>

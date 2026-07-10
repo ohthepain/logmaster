@@ -25,12 +25,14 @@ function serializeUser(user: {
   name: string
   email: string
   image: string | null
+  tutorialCompletedAt: Date | null
 }) {
   return {
     id: user.id,
     name: user.name,
     email: user.email,
     image: user.image,
+    tutorialCompleted: user.tutorialCompletedAt != null,
   }
 }
 
@@ -170,4 +172,28 @@ profileRoutes.get('/photo', async (c) => {
       'Cache-Control': 'private, max-age=3600',
     },
   })
+})
+
+profileRoutes.post('/tutorial/complete', async (c) => {
+  const userId = await requireUserId(c)
+  if (!userId) return unauthorized()
+
+  const user = await db.user.update({
+    where: { id: userId },
+    data: { tutorialCompletedAt: new Date(), updatedAt: new Date() },
+  })
+
+  return c.json({ user: serializeUser(user) })
+})
+
+profileRoutes.post('/tutorial/reset', async (c) => {
+  const userId = await requireUserId(c)
+  if (!userId) return unauthorized()
+
+  const user = await db.user.update({
+    where: { id: userId },
+    data: { tutorialCompletedAt: null, updatedAt: new Date() },
+  })
+
+  return c.json({ user: serializeUser(user) })
 })
