@@ -1,36 +1,41 @@
-import {
-  ArrowRight,
-  BarChart3,
-  Navigation2,
-  Smartphone,
-  Users,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-import { useState } from 'react'
-import { FtueBracketText } from './FtueBracketText'
-import { FtueMapScene } from './FtueMapScene'
-import { FtueTopoBackground } from './FtueTopoBackground'
-import { SignInPanel } from './SignInPanel'
-import { usePwaInstall } from '../lib/pwa-install'
-import { cn } from '../lib/cn'
+import { BarChart3, Navigation2, Smartphone, Users } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { useState } from "react";
+import { FtueBracketText } from "./FtueBracketText";
+import { FtueMapScene } from "./FtueMapScene";
+import { FtueTopoBackground } from "./FtueTopoBackground";
+import { FtueIosInstallGuide } from "./FtueIosInstallGuide";
+import { SignInPanel } from "./SignInPanel";
+import { usePwaInstall } from "../lib/pwa-install";
+import { useSession } from "../lib/auth-client";
+import { cn } from "../lib/cn";
 
-const STEP_COUNT = 3
+const AUTH_STEP = 2;
 
 type FtueOverlayProps = {
-  onComplete: () => void
-}
+  onComplete: () => void;
+};
 
 export function FtueOverlay({ onComplete }: FtueOverlayProps) {
-  const [step, setStep] = useState(0)
-  const { canInstall, installed, promptInstall } = usePwaInstall()
+  const session = useSession();
+  const signedIn = Boolean(session.data?.user);
+  const stepCount = signedIn ? AUTH_STEP : AUTH_STEP + 1;
+  const lastStep = stepCount - 1;
+
+  const [step, setStep] = useState(0);
+  const { canInstall, installed, promptInstall, isIosSafari } = usePwaInstall();
+
+  const showAuthStep = !signedIn && step === AUTH_STEP;
 
   const goNext = () => {
-    if (step < STEP_COUNT - 1) {
-      setStep((value) => value + 1)
-      return
+    if (step < lastStep) {
+      setStep((value) => value + 1);
+      return;
     }
-    onComplete()
-  }
+    onComplete();
+  };
+
+  const continueLabel = step === lastStep ? "Get started" : "Continue";
 
   return (
     <div className="ftue-shell fixed inset-0 z-[200] flex flex-col">
@@ -43,19 +48,18 @@ export function FtueOverlay({ onComplete }: FtueOverlayProps) {
             <FtuePwaStep
               canInstall={canInstall}
               installed={installed}
+              isIosSafari={isIosSafari}
               onInstall={() => void promptInstall()}
             />
           )}
-          {step === 2 && (
-            <FtueAuthStep onAuthSuccess={onComplete} onSkip={onComplete} />
-          )}
+          {showAuthStep && <FtueAuthStep onAuthSuccess={onComplete} />}
         </div>
 
-        {step < 2 ? (
+        {!showAuthStep ? (
           <footer className="relative z-10 shrink-0 px-6 pb-8 pt-2 sm:px-8">
             <button type="button" onClick={goNext} className="ftue-cta">
               <Navigation2 className="size-5" strokeWidth={2.5} />
-              <span>Continue</span>
+              <span>{continueLabel}</span>
             </button>
           </footer>
         ) : null}
@@ -65,27 +69,21 @@ export function FtueOverlay({ onComplete }: FtueOverlayProps) {
         className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center gap-2 px-6 pt-5"
         aria-label="Tutorial progress"
       >
-        {Array.from({ length: STEP_COUNT }, (_, index) => (
+        {Array.from({ length: stepCount }, (_, index) => (
           <span
             key={index}
             className={cn(
-              'h-1.5 rounded-full transition-all',
-              index === step ? 'w-8 bg-[var(--brand)]' : 'w-3 bg-black/10',
+              "h-1.5 rounded-full transition-all",
+              index === step ? "w-8 bg-[var(--brand)]" : "w-3 bg-black/10",
             )}
           />
         ))}
       </div>
     </div>
-  )
+  );
 }
 
-function FtueFeatureItem({
-  icon: Icon,
-  text,
-}: {
-  icon: LucideIcon
-  text: string
-}) {
+function FtueFeatureItem({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
   return (
     <li className="flex items-start gap-3.5">
       <span className="ftue-icon-badge">
@@ -95,27 +93,28 @@ function FtueFeatureItem({
         <FtueBracketText text={text} />
       </p>
     </li>
-  )
+  );
 }
 
 function FtueFeaturesStep() {
   const items = [
-    { icon: Navigation2, text: '(Record) your trips' },
+    { icon: Navigation2, text: "(Record) your trips" },
     {
       icon: Users,
-      text: '(Crew) can add (log entries, photos) and (video).',
+      text: "(Crew) can add (log entries, photos) and (video).",
     },
     {
       icon: BarChart3,
-      text: 'Uncover (detailed stats) and (insights).',
+      text: "Uncover (detailed stats) and (insights).",
     },
-  ]
+  ];
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
-      <h1 className="ftue-headline rise-in mb-8 max-w-[16ch]">
-        The all-in-one app for your sailing adventures
-      </h1>
+      <p className="m-0 my-4 text-base ftue-headline font-semibold text-[var(--ftue-ink-soft)]">
+        Welcome to <span className="brand-title">logmaster</span>
+      </p>
+      <h1 className="text-xl rise-in mb-8">The all-in-one logging app for your sailing adventures</h1>
       <ul className="m-0 flex list-none flex-col gap-5 p-0">
         {items.map((item) => (
           <FtueFeatureItem key={item.text} icon={item.icon} text={item.text} />
@@ -123,77 +122,60 @@ function FtueFeaturesStep() {
       </ul>
       <FtueMapScene />
     </div>
-  )
+  );
 }
 
 function FtuePwaStep({
   canInstall,
   installed,
+  isIosSafari,
   onInstall,
 }: {
-  canInstall: boolean
-  installed: boolean
-  onInstall: () => void
+  canInstall: boolean;
+  installed: boolean;
+  isIosSafari: boolean;
+  onInstall: () => void;
 }) {
+  const showIosGuide = isIosSafari && !installed;
+
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
-      <h1 className="ftue-headline rise-in mb-6 max-w-[14ch]">
-        No install required
-      </h1>
+      <h1 className="ftue-headline rise-in mb-6 max-w-[14ch]">No install required</h1>
       <p className="ftue-feature-copy m-0 max-w-md text-lg leading-relaxed">
         <FtueBracketText text="You and your crew can always use the (web version) for (free!)." />
       </p>
 
-      <div className="mt-8">
-        <button
-          type="button"
-          onClick={onInstall}
-          disabled={installed}
-          className={cn('ftue-secondary-btn', installed && 'opacity-60')}
-        >
-          <Smartphone className="size-4" />
-          {installed ? 'Already on home screen' : 'Add to home screen'}
-        </button>
-        {!canInstall && !installed && (
-          <p className="m-0 mt-3 max-w-sm text-sm leading-6 text-[var(--ftue-ink-soft)]">
-            On iPhone, tap Share then Add to Home Screen. On Android or desktop,
-            use your browser&apos;s install option when it appears.
-          </p>
-        )}
-      </div>
+      {installed ? (
+        <p className="m-0 mt-8 text-sm font-semibold text-[var(--ftue-ink-soft)]">
+          logmaster is already on your home screen.
+        </p>
+      ) : showIosGuide ? (
+        <FtueIosInstallGuide />
+      ) : (
+        <div className="mt-8">
+          <button type="button" onClick={onInstall} className="ftue-secondary-btn">
+            <Smartphone className="size-4" />
+            Add to home screen
+          </button>
+          {!canInstall && (
+            <p className="m-0 mt-3 max-w-sm text-sm leading-6 text-[var(--ftue-ink-soft)]">
+              On Android or desktop, use your browser&apos;s install option when it appears.
+            </p>
+          )}
+        </div>
+      )}
 
-      <FtueMapScene />
+      {!showIosGuide && <FtueMapScene />}
     </div>
-  )
+  );
 }
 
-function FtueAuthStep({
-  onAuthSuccess,
-  onSkip,
-}: {
-  onAuthSuccess: () => void
-  onSkip: () => void
-}) {
+function FtueAuthStep({ onAuthSuccess }: { onAuthSuccess: () => void }) {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col pb-6">
-      <h1 className="ftue-headline rise-in mb-3">Sign in to sync</h1>
-      <p className="m-0 mb-6 max-w-md text-sm leading-6 text-[var(--ftue-ink-soft)]">
-        Create an account to sync trips across devices, or continue without
-        signing in.
-      </p>
-
       <div className="ftue-auth-card rounded-[1.75rem] p-5 sm:p-6">
         <SignInPanel embedded onAuthSuccess={onAuthSuccess} />
       </div>
-
-      <button
-        type="button"
-        onClick={onSkip}
-        className="ftue-secondary-btn mt-5 w-full justify-center"
-      >
-        Continue without account
-        <ArrowRight className="size-4" />
-      </button>
     </div>
-  )
+  );
 }

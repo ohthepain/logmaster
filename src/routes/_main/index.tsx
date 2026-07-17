@@ -435,11 +435,7 @@ function LogbookHome() {
             />
             {crewLoading && <p className="m-0 text-xs text-[var(--sea-ink-soft)]">Refreshing crew list…</p>}
 
-            <p className="m-0 text-xs leading-6 text-[var(--sea-ink-soft)]">
-              Location, timestamp, weather, and country are captured automatically when the trip starts.
-            </p>
-
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mt-4">
               <button
                 type="submit"
                 disabled={creatingTrip}

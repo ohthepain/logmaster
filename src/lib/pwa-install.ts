@@ -11,6 +11,12 @@ function isIosDevice(): boolean {
   return /iphone|ipad|ipod/i.test(navigator.userAgent)
 }
 
+function isIosSafari(): boolean {
+  if (!isIosDevice() || typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent
+  return /safari/i.test(ua) && !/crios|fxios|edgios|opios/i.test(ua)
+}
+
 function isStandalone(): boolean {
   if (typeof window === 'undefined') return false
   return (
@@ -74,5 +80,5 @@ export function usePwaInstall() {
     })
   }
 
-  return { canInstall, installed, promptInstall, isIos }
+  return { canInstall, installed, promptInstall, isIos, isIosSafari: isIosSafari() }
 }
