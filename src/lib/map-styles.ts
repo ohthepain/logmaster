@@ -44,9 +44,9 @@ export function getConfiguredCustomMapId(): string | undefined {
   return raw.length > 0 ? raw : undefined
 }
 
-/** Default basemap when the app boots: env custom map, else Base preset. */
+/** Default basemap when the app boots: env custom map, else Dataviz (dark-friendly underlay). */
 export function defaultRasterMapId(): RasterMapId {
-  return getConfiguredCustomMapId() ?? MapStyle.Base
+  return getConfiguredCustomMapId() ?? MapStyle.Dataviz
 }
 
 export function isPresetRasterMapId(id: string): id is MapPresetId {

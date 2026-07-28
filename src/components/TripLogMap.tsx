@@ -9,7 +9,7 @@ import {
   mapPointsToBounds,
   tripStartMapPoint,
 } from '../lib/logbook-map-geo'
-import { hideBasemapTextSymbolLayers } from '../lib/maplibre-hide-basemap-labels'
+import { applySailingLogMapTheme, sailingMapOverlayPaint } from '../lib/maplibre-sailing-theme'
 import { getGeoJsonSource } from '../lib/maplibre-source'
 import { defaultRasterMapId } from '../lib/map-styles'
 import { appMapVectorStyleUrl, mapTilerTransformRequest } from '../lib/tiles'
@@ -73,7 +73,7 @@ export function TripLogMap({ trip, entries }: TripLogMapProps) {
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right')
 
     map.on('load', () => {
-      hideBasemapTextSymbolLayers(map)
+      applySailingLogMapTheme(map)
 
       map.addSource(TRACK_SOURCE, {
         type: 'geojson',
@@ -83,11 +83,7 @@ export function TripLogMap({ trip, entries }: TripLogMapProps) {
         id: 'trip-log-track-line',
         type: 'line',
         source: TRACK_SOURCE,
-        paint: {
-          'line-color': '#64748b',
-          'line-width': 2.5,
-          'line-opacity': 0.85,
-        },
+        paint: sailingMapOverlayPaint.track,
       })
 
       map.addSource(ENTRY_SOURCE, {
@@ -98,12 +94,7 @@ export function TripLogMap({ trip, entries }: TripLogMapProps) {
         id: 'trip-log-entry-circles',
         type: 'circle',
         source: ENTRY_SOURCE,
-        paint: {
-          'circle-radius': 7,
-          'circle-color': '#0f172a',
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#ffffff',
-        },
+        paint: sailingMapOverlayPaint.entry,
       })
 
       map.addSource(CURRENT_SOURCE, {
@@ -241,10 +232,10 @@ export function TripLogMap({ trip, entries }: TripLogMapProps) {
   }, [mapReady, currentPosition, entryCoords.length])
 
   return (
-    <div className="overflow-hidden rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)]">
-      <div ref={containerRef} className="h-56 w-full sm:h-64" />
+    <div className="overflow-hidden rounded-[1.5rem] border border-[#1a3044] bg-[#070f18]">
+      <div ref={containerRef} className="sailing-map h-56 w-full sm:h-64" />
       {mapError && (
-        <p className="m-0 border-t border-[var(--line)] px-4 py-2 text-xs text-[var(--sea-ink-soft)]">
+        <p className="m-0 border-t border-[#1a3044] px-4 py-2 text-xs text-[#b8c5d0]">
           {mapError}
         </p>
       )}

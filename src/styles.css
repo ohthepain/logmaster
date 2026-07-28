@@ -422,3 +422,36 @@ a {
     transform: translate(-50%, -50%) scale(1.06);
   }
 }
+
+/* Dark nautical map chrome (Sailing Log–style basemap) */
+.sailing-map .maplibregl-ctrl-group {
+  background: rgba(12, 31, 51, 0.94);
+  border: 1px solid rgba(142, 180, 200, 0.14);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.sailing-map .maplibregl-ctrl-group button {
+  filter: brightness(0) invert(1);
+  opacity: 0.88;
+}
+
+.sailing-map .maplibregl-ctrl-group button:hover {
+  background-color: rgba(142, 180, 200, 0.12);
+}
+
+.sailing-map .maplibregl-ctrl-group button + button {
+  border-top: 1px solid rgba(142, 180, 200, 0.12);
+}
+
+.sailing-map .maplibregl-ctrl-attrib {
+  background: rgba(7, 15, 24, 0.88);
+  color: rgba(184, 197, 208, 0.75);
+}
+
+.sailing-map .maplibregl-ctrl-attrib a {
+  color: rgba(142, 180, 200, 0.95);
+}
+
+.sailing-map .maplibregl-canvas {
+  outline: none;
+}

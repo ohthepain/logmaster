@@ -10,7 +10,7 @@ import {
   tripStartMapPoint,
 } from '../lib/logbook-map-geo'
 import type { MapLngLat } from '../lib/logbook-map-geo'
-import { hideBasemapTextSymbolLayers } from '../lib/maplibre-hide-basemap-labels'
+import { applySailingLogMapTheme, sailingMapOverlayPaint } from '../lib/maplibre-sailing-theme'
 import { defaultRasterMapId } from '../lib/map-styles'
 import { appMapVectorStyleUrl, mapTilerTransformRequest } from '../lib/tiles'
 import { getGeoJsonSource } from '../lib/maplibre-source'
@@ -61,7 +61,7 @@ export function LogEntryPositionMap({
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
 
     map.on('load', () => {
-      hideBasemapTextSymbolLayers(map)
+      applySailingLogMapTheme(map)
 
       map.addSource(TRACK_SOURCE, {
         type: 'geojson',
@@ -71,11 +71,7 @@ export function LogEntryPositionMap({
         id: 'compose-log-track-line',
         type: 'line',
         source: TRACK_SOURCE,
-        paint: {
-          'line-color': '#64748b',
-          'line-width': 2.5,
-          'line-opacity': 0.85,
-        },
+        paint: sailingMapOverlayPaint.track,
       })
 
       map.addSource(ENTRY_SOURCE, {
@@ -86,12 +82,7 @@ export function LogEntryPositionMap({
         id: 'compose-log-entry-circles',
         type: 'circle',
         source: ENTRY_SOURCE,
-        paint: {
-          'circle-radius': 7,
-          'circle-color': '#0f172a',
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#ffffff',
-        },
+        paint: sailingMapOverlayPaint.entry,
       })
 
       const marker = new maplibregl.Marker({
@@ -212,9 +203,9 @@ export function LogEntryPositionMap({
   }, [mapReady, position, entryCoords.length])
 
   return (
-    <div className="relative">
-      <div ref={containerRef} className="h-56 w-full sm:h-64" />
-      <p className="pointer-events-none absolute bottom-2 left-2 rounded-full bg-[var(--surface-strong)]/90 px-2.5 py-1 text-[10px] font-medium text-[var(--sea-ink-soft)] shadow-sm">
+    <div className="relative overflow-hidden rounded-[1.25rem] border border-[#1a3044] bg-[#070f18]">
+      <div ref={containerRef} className="sailing-map h-56 w-full sm:h-64" />
+      <p className="pointer-events-none absolute bottom-2 left-2 rounded-full bg-[#0c1f33]/90 px-2.5 py-1 text-[10px] font-medium text-[#b8c5d0] shadow-sm">
         Drag pin or tap map to adjust
       </p>
     </div>
