@@ -1,3 +1,5 @@
+import { apiUrl } from './app-origin'
+
 export type ProfileUser = {
   id: string
   name: string
@@ -9,7 +11,7 @@ export type ProfileUser = {
 const PROFILE_IMAGE_PATH = '/api/profile/photo'
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
+  const response = await fetch(apiUrl(path), {
     credentials: 'include',
     ...init,
     headers: {
@@ -36,7 +38,8 @@ export function profilePhotoUrl(
 ): string | null {
   if (!image) return null
   if (isCustomProfilePhoto(image)) {
-    return cacheBust ? `${PROFILE_IMAGE_PATH}?v=${cacheBust}` : PROFILE_IMAGE_PATH
+    const path = cacheBust ? `${PROFILE_IMAGE_PATH}?v=${cacheBust}` : PROFILE_IMAGE_PATH
+    return apiUrl(path)
   }
   return image
 }

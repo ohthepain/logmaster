@@ -1,7 +1,8 @@
 import type { Boat } from '../domain/boat'
+import { apiUrl } from './app-origin'
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
+  const response = await fetch(apiUrl(path), {
     credentials: 'include',
     ...init,
     headers: {

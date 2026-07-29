@@ -1,4 +1,5 @@
 import type { WeatherSnapshot } from '../domain/logbook'
+import { getAppOrigin } from './app-origin'
 import {
   readDevicePosition,
   subscribeToDevicePosition,
@@ -38,7 +39,7 @@ async function fetchLocationContext(
   longitude: number,
 ): Promise<LocationContextResponse> {
   try {
-    const url = new URL('/api/location/context', window.location.origin)
+    const url = new URL('/api/location/context', getAppOrigin())
     url.searchParams.set('latitude', String(latitude))
     url.searchParams.set('longitude', String(longitude))
     const response = await fetch(url.toString())

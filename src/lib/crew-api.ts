@@ -3,9 +3,10 @@ import type {
   CrewMember,
   CrewPayload,
 } from '../domain/crew'
+import { apiUrl } from './app-origin'
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/api/crew${path}`, {
+  const res = await fetch(apiUrl(`/api/crew${path}`), {
     ...init,
     credentials: 'include',
     headers: {

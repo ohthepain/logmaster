@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">logmaster</string>
+    <string name="title_activity_main">logmaster</string>
+    <string name="package_name">live.logmaster.app</string>
+    <string name="custom_url_scheme">live.logmaster.app</string>
+</resources>

@@ -1,4 +1,5 @@
 import type { LogEntry, Media, Trip } from '../domain/logbook'
+import { apiUrl } from './app-origin'
 import {
   clearLogbook,
   getLogbookDb,
@@ -135,7 +136,7 @@ export async function persistLogbookSnapshot(snapshot: LogbookSnapshot) {
 async function fetchServerLogbook(): Promise<LogbookSnapshot | null> {
   if (!isOnline()) return null
 
-  const response = await fetch('/api/logbook/bootstrap', {
+  const response = await fetch(apiUrl('/api/logbook/bootstrap'), {
     credentials: 'include',
   })
   if (!response.ok) {
@@ -234,7 +235,7 @@ export async function syncLogbook() {
     return { ok: true as const, synced: 0, snapshot }
   }
 
-  const response = await fetch('/api/logbook/sync', {
+  const response = await fetch(apiUrl('/api/logbook/sync'), {
     method: 'POST',
     credentials: 'include',
     headers: {

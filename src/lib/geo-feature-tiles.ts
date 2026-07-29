@@ -1,5 +1,7 @@
 import type { Feature, FeatureCollection, Geometry, LineString } from 'geojson'
 
+import { getAppOrigin } from './app-origin'
+
 export type DegreeTile = {
   latTile: number
   lonTile: number
@@ -135,9 +137,7 @@ export function appGeoFeatureTileUrl(
   resolution: GeoFeatureResolution,
 ): string {
   const base =
-    typeof window === 'undefined'
-      ? 'http://localhost:3020'
-      : window.location.origin
+    typeof window === 'undefined' ? 'http://localhost:3020' : getAppOrigin()
   return `${base}/api/geo-features/${tile.prefix}/v1/tiles/${resolution}.json.gz`
 }
 

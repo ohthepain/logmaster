@@ -1,5 +1,6 @@
 /** Web Mercator XYZ tile indices for a lon/lat bbox at integer zoom (MapLibre / OSM). */
 
+import { getAppOrigin } from './app-origin'
 import type { RasterMapId } from './map-styles'
 import { isAllowedRasterMapId, MapStyle } from './map-styles'
 
@@ -70,9 +71,7 @@ export function appMapTileUrlTemplate(rasterMapId: string): string {
   // Do not use `new URL(...).href` — the URL API encodes `{` and `}` to %7B/%7D, and
   // MapLibre matches literal `{z}` / `{x}` / `{y}` in the string when substituting tiles.
   const base =
-    typeof window === 'undefined'
-      ? 'http://localhost:3020'
-      : window.location.origin
+    typeof window === 'undefined' ? 'http://localhost:3020' : getAppOrigin()
   const q = `?map=${encodeURIComponent(rasterMapId)}`
   return `${base}/api/map-tiles/{z}/{x}/{y}.png${q}`
 }
@@ -83,9 +82,7 @@ export function appMapTileUrlTemplate(rasterMapId: string): string {
  */
 export function appMapVectorStyleUrl(rasterMapId: RasterMapId): string {
   const base =
-    typeof window === 'undefined'
-      ? 'http://localhost:3020'
-      : window.location.origin
+    typeof window === 'undefined' ? 'http://localhost:3020' : getAppOrigin()
   return `${base}/api/map-style-vector?map=${encodeURIComponent(rasterMapId)}`
 }
 
@@ -94,9 +91,7 @@ export function appMapVectorStyleUrl(rasterMapId: RasterMapId): string {
  */
 export function appMaptileCdnQuery(unencodedUpstreamUrl: string): string {
   const base =
-    typeof window === 'undefined'
-      ? 'http://localhost:3020'
-      : window.location.origin
+    typeof window === 'undefined' ? 'http://localhost:3020' : getAppOrigin()
   return `${base}/api/maptiler-cdn?u=${encodeURIComponent(unencodedUpstreamUrl)}`
 }
 

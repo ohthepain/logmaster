@@ -44,6 +44,7 @@ type NewEntryInput = {
   latitude?: number | null
   longitude?: number | null
   accuracy?: number | null
+  timestamp?: string
 }
 
 type UpdateEntryInput = Partial<
@@ -308,7 +309,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       id: makeId(),
       tripId: input.tripId,
       type: input.type,
-      timestamp: context.timestamp,
+      timestamp: input.timestamp ?? context.timestamp,
       latitude: context.latitude,
       longitude: context.longitude,
       accuracy: context.accuracy,

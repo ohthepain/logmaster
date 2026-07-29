@@ -1,11 +1,10 @@
 import { createAuthClient } from 'better-auth/react'
 import { magicLinkClient } from 'better-auth/client/plugins'
 import { offlinePlugin } from 'better-auth-offline'
+import { getAppOrigin } from './app-origin'
 
 const baseURL =
-  typeof window !== 'undefined'
-    ? window.location.origin
-    : 'http://localhost:3020'
+  typeof window !== 'undefined' ? getAppOrigin() : 'http://localhost:3020'
 
 export const authClient = createAuthClient({
   baseURL,

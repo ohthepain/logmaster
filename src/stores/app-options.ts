@@ -8,6 +8,15 @@ type AppOptions = {
   setDevMode: (v: boolean) => void
   lastTripBoatId: string | null
   setLastTripBoatId: (boatId: string | null) => void
+  /** Native app: record GPS in background while a trip is in progress. */
+  backgroundTripRecording: boolean
+  setBackgroundTripRecording: (enabled: boolean) => void
+  /** Minimum minutes between auto-tracked log entries. */
+  autoTrackIntervalMinutes: number
+  setAutoTrackIntervalMinutes: (minutes: number) => void
+  /** Also create an entry after moving at least this many metres. */
+  autoTrackMinDistanceMeters: number
+  setAutoTrackMinDistanceMeters: (meters: number) => void
   /** Basemap: POI/building/transit/landuse visibility (heuristic layer ids). */
   mapBasemapLayerToggles: MapBasemapLayerToggles
   setMapBasemapLayerToggles: (next: Partial<MapBasemapLayerToggles>) => void
@@ -20,6 +29,19 @@ export const useAppOptionsStore = create<AppOptions>()(
       setDevMode: (v) => set({ devMode: v }),
       lastTripBoatId: null,
       setLastTripBoatId: (boatId) => set({ lastTripBoatId: boatId }),
+      backgroundTripRecording: true,
+      setBackgroundTripRecording: (enabled) =>
+        set({ backgroundTripRecording: enabled }),
+      autoTrackIntervalMinutes: 30,
+      setAutoTrackIntervalMinutes: (minutes) =>
+        set({
+          autoTrackIntervalMinutes: Math.max(5, Math.round(minutes)),
+        }),
+      autoTrackMinDistanceMeters: 500,
+      setAutoTrackMinDistanceMeters: (meters) =>
+        set({
+          autoTrackMinDistanceMeters: Math.max(50, Math.round(meters)),
+        }),
       mapBasemapLayerToggles: defaultMapBasemapLayerToggles(),
       setMapBasemapLayerToggles: (next: Partial<MapBasemapLayerToggles>) =>
         set((s) => ({
