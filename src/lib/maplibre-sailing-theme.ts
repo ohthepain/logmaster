@@ -64,11 +64,15 @@ function isHiddenBasemapLayer(id: string): boolean {
   )
 }
 
+import { prepareFlatSailingBasemap } from './maplibre-sailing-map-setup'
+
 /**
  * Restyle a MapTiler vector basemap toward a dark nautical / chart look:
  * deep navy water, muted land, thin grey roads, white labels, reduced POI clutter.
  */
 export function applySailingLogMapTheme(map: maplibregl.Map) {
+  prepareFlatSailingBasemap(map)
+
   const layers = map.getStyle().layers ?? []
 
   for (const layer of layers) {

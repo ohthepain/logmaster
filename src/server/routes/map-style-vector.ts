@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import { Hono } from 'hono'
 import { isAllowedRasterMapId } from '../../lib/map-styles'
-import { styleJsonWithKeysStrippedForClient } from '../../lib/maptiler-style-urls'
+import { styleJsonForSailingMap } from '../../lib/maptiler-style-urls'
 import { getMapTilerApiKeyFromEnv } from '../../lib/server-maptiler-key'
 
 /** Hosted MapTiler vector `style.json` (same `map` ids as raster); keys stripped. */
@@ -34,7 +34,7 @@ mapStyleVectorRoutes.get('/', async (c) => {
     return c.text('Upstream error', 502)
   }
   const json = (await r.json()) as unknown
-  const out = styleJsonWithKeysStrippedForClient(json)
+  const out = styleJsonForSailingMap(json)
   // Do not cache the style in the browser/SW: stale JSON once had broken glyph URLs.
   c.header('Cache-Control', 'no-store')
   return c.json(out)

@@ -1,6 +1,6 @@
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LogEntry, Trip } from '../domain/logbook'
 import { DEV_FALLBACK_POSITION } from '../lib/logbook-context'
 import {
@@ -12,18 +12,29 @@ import {
 import type { MapLngLat } from '../lib/logbook-map-geo'
 import {
   addOpenSeaMapSeamarkOverlay,
-} from '../lib/maplibre-openseamap'
+  bindSeamarkTileRefreshOnViewChange,
+  finalizeSailingMapLayers,
+  guardSailingMapAgainstTerrain,
+  loadSailingMapStyle,
+  scheduleSeamarkTileRefresh,
+} from '../lib/maplibre-sailing-map-setup'
 import { applySailingLogMapTheme, sailingMapOverlayPaint } from '../lib/maplibre-sailing-theme'
 import { defaultRasterMapId } from '../lib/map-styles'
-import { appMapVectorStyleUrl, mapTilerTransformRequest } from '../lib/tiles'
+import { centerMapOnCurrentLocation } from '../lib/sailing-map-viewport'
+import { mapTilerTransformRequest } from '../lib/tiles'
+import { cn } from '../lib/cn'
 import { DevComponentLabel } from './DevComponentLabel'
 import { getGeoJsonSource } from '../lib/maplibre-source'
+import { SailingMapControlStack } from './SailingMapControlStack'
+import { SailingMapFullscreenModal } from './SailingMapFullscreenModal'
 
 type LogEntryPositionMapProps = {
   trip: Trip
   entries: LogEntry[]
   position: MapLngLat | null
   onPositionChange: (position: MapLngLat) => void
+  mapClassName?: string
+  allowFullscreen?: boolean
 }
 
 const ENTRY_SOURCE = 'compose-log-entries'
@@ -35,6 +46,8 @@ export function LogEntryPositionMap({
   entries,
   position,
   onPositionChange,
+  mapClassName = 'h-56 w-full sm:h-64',
+  allowFullscreen = true,
 }: LogEntryPositionMapProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
@@ -42,6 +55,7 @@ export function LogEntryPositionMap({
   const onPositionChangeRef = useRef(onPositionChange)
   const initialFitDoneRef = useRef(false)
   const [mapReady, setMapReady] = useState(false)
+  const [fullscreenOpen, setFullscreenOpen] = useState(false)
 
   const entryCoords = useMemo(() => logEntryMapPoints(entries), [entries])
 
@@ -53,77 +67,102 @@ export function LogEntryPositionMap({
     const container = containerRef.current
     if (!container || mapRef.current) return
 
-    const map = new maplibregl.Map({
-      container,
-      style: appMapVectorStyleUrl(defaultRasterMapId()),
-      center: [DEV_FALLBACK_POSITION.longitude, DEV_FALLBACK_POSITION.latitude],
-      zoom: 10,
-      attributionControl: false,
-      transformRequest: (url) => mapTilerTransformRequest(url),
-    })
+    let cancelled = false
+    let unbindTerrainGuard: (() => void) | undefined
+    let unbindSeamarkRefresh: (() => void) | undefined
+    let map: maplibregl.Map | null = null
 
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
-    map.addControl(
-      new maplibregl.AttributionControl({ compact: true }),
-      'bottom-right',
-    )
+    void loadSailingMapStyle(defaultRasterMapId())
+      .then((style) => {
+        if (cancelled || mapRef.current) return
 
-    map.on('load', () => {
-      applySailingLogMapTheme(map)
-      addOpenSeaMapSeamarkOverlay(map)
-
-      map.addSource(TRACK_SOURCE, {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      })
-      map.addLayer({
-        id: 'compose-log-track-line',
-        type: 'line',
-        source: TRACK_SOURCE,
-        paint: sailingMapOverlayPaint.track,
-      })
-
-      map.addSource(ENTRY_SOURCE, {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      })
-      map.addLayer({
-        id: 'compose-log-entry-circles',
-        type: 'circle',
-        source: ENTRY_SOURCE,
-        paint: sailingMapOverlayPaint.entry,
-      })
-
-      const marker = new maplibregl.Marker({
-        element: createDraftMarkerElement(),
-        draggable: true,
-        anchor: 'center',
-      })
-      marker.on('dragend', () => {
-        const lngLat = marker.getLngLat()
-        onPositionChangeRef.current({
-          longitude: lngLat.lng,
-          latitude: lngLat.lat,
+        map = new maplibregl.Map({
+          container,
+          style,
+          center: [DEV_FALLBACK_POSITION.longitude, DEV_FALLBACK_POSITION.latitude],
+          zoom: 10,
+          pitch: 0,
+          maxPitch: 0,
+          attributionControl: false,
+          transformRequest: (url) => mapTilerTransformRequest(url),
         })
-      })
-      markerRef.current = marker
 
-      map.on('click', (event) => {
-        marker.setLngLat(event.lngLat)
-        onPositionChangeRef.current({
-          longitude: event.lngLat.lng,
-          latitude: event.lngLat.lat,
+        unbindTerrainGuard = guardSailingMapAgainstTerrain(map)
+
+        map.addControl(
+          new maplibregl.AttributionControl({ compact: true }),
+          'bottom-right',
+        )
+
+        map.on('load', () => {
+          if (!map) return
+          applySailingLogMapTheme(map)
+          addOpenSeaMapSeamarkOverlay(map)
+
+          map.addSource(TRACK_SOURCE, {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+          })
+          map.addLayer({
+            id: 'compose-log-track-line',
+            type: 'line',
+            source: TRACK_SOURCE,
+            paint: sailingMapOverlayPaint.track,
+          })
+
+          map.addSource(ENTRY_SOURCE, {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+          })
+          map.addLayer({
+            id: 'compose-log-entry-circles',
+            type: 'circle',
+            source: ENTRY_SOURCE,
+            paint: sailingMapOverlayPaint.entry,
+          })
+
+          const marker = new maplibregl.Marker({
+            element: createDraftMarkerElement(),
+            draggable: true,
+            anchor: 'center',
+          })
+          marker.on('dragend', () => {
+            const lngLat = marker.getLngLat()
+            onPositionChangeRef.current({
+              longitude: lngLat.lng,
+              latitude: lngLat.lat,
+            })
+          })
+          markerRef.current = marker
+
+          map.on('click', (event) => {
+            marker.setLngLat(event.lngLat)
+            onPositionChangeRef.current({
+              longitude: event.lngLat.lng,
+              latitude: event.lngLat.lat,
+            })
+          })
+
+          finalizeSailingMapLayers(map)
+          scheduleSeamarkTileRefresh(map)
+          unbindSeamarkRefresh = bindSeamarkTileRefreshOnViewChange(map)
+
+          setMapReady(true)
         })
+
+        mapRef.current = map
+      })
+      .catch(() => {
+        /* style load failed — map stays blank */
       })
 
-      setMapReady(true)
-    })
-
-    mapRef.current = map
     return () => {
+      cancelled = true
       markerRef.current?.remove()
       markerRef.current = null
-      map.remove()
+      unbindTerrainGuard?.()
+      unbindSeamarkRefresh?.()
+      map?.remove()
       mapRef.current = null
       setMapReady(false)
     }
@@ -195,7 +234,7 @@ export function LogEntryPositionMap({
       map.fitBounds(bounds, { padding: 40, maxZoom: 14, duration: 600 })
       initialFitDoneRef.current = true
     }
-  }, [mapReady, entryCoords, trip.id, trip.startLatitude, trip.startLongitude])
+  }, [mapReady, entryCoords, trip.id, trip.startLatitude, trip.startLongitude, position])
 
   useEffect(() => {
     const map = mapRef.current
@@ -211,14 +250,63 @@ export function LogEntryPositionMap({
     initialFitDoneRef.current = true
   }, [mapReady, position, entryCoords.length])
 
-  return (
-    <div className="relative overflow-hidden rounded-[1.25rem] border border-[#1a3044] bg-[#070f18]">
+  const handleZoomIn = useCallback(() => {
+    mapRef.current?.zoomIn({ duration: 200 })
+  }, [])
+
+  const handleZoomOut = useCallback(() => {
+    mapRef.current?.zoomOut({ duration: 200 })
+  }, [])
+
+  const handleLocate = useCallback(() => {
+    const map = mapRef.current
+    if (!map) return
+    void centerMapOnCurrentLocation(map)
+  }, [])
+
+  const mapShell = (
+    <div className="relative h-full min-h-0 w-full overflow-hidden bg-[#070f18]">
       <DevComponentLabel name="LogEntryPositionMap" className="absolute left-2 top-2 z-10" />
-      <div ref={containerRef} className="sailing-map h-56 w-full sm:h-64" />
-      <p className="pointer-events-none absolute bottom-2 left-2 rounded-full bg-[#0c1f33]/90 px-2.5 py-1 text-[10px] font-medium text-[#b8c5d0] shadow-sm">
+      <div ref={containerRef} className={cn('sailing-map', mapClassName)} />
+      {mapReady ? (
+        <SailingMapControlStack
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onLocate={handleLocate}
+          onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}
+        />
+      ) : null}
+      <p className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-[#0c1f33]/90 px-2.5 py-1 text-[10px] font-medium text-[#b8c5d0] shadow-sm">
         Drag pin or tap map to adjust
       </p>
     </div>
+  )
+
+  return (
+    <>
+      {allowFullscreen ? (
+        <div className="overflow-hidden rounded-[1.25rem] border border-[#1a3044]">
+          {mapShell}
+        </div>
+      ) : (
+        mapShell
+      )}
+      {allowFullscreen && fullscreenOpen ? (
+        <SailingMapFullscreenModal
+          title="Log entry position"
+          onClose={() => setFullscreenOpen(false)}
+        >
+          <LogEntryPositionMap
+            trip={trip}
+            entries={entries}
+            position={position}
+            onPositionChange={onPositionChange}
+            mapClassName="h-full w-full"
+            allowFullscreen={false}
+          />
+        </SailingMapFullscreenModal>
+      ) : null}
+    </>
   )
 }
 

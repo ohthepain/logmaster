@@ -57,6 +57,34 @@ export function styleJsonWithKeysStrippedForClient(style: unknown): unknown {
   return style
 }
 
+/** Flat chart basemap: 3D terrain + hillshade break raster overlays (OpenSeaMap seamarks). */
+export function styleJsonForSailingMap(style: unknown): unknown {
+  const stripped = styleJsonWithKeysStrippedForClient(style)
+  if (!stripped || typeof stripped !== 'object' || Array.isArray(stripped)) {
+    return stripped
+  }
+  const o = { ...(stripped as Record<string, unknown>) }
+  delete o.terrain
+
+  const layers = o.layers
+  if (Array.isArray(layers)) {
+    o.layers = layers.filter((layer) => {
+      if (!layer || typeof layer !== 'object') return true
+      const entry = layer as { id?: string; type?: string }
+      return entry.id !== 'Hillshade' && entry.type !== 'hillshade'
+    })
+  }
+
+  const sources = o.sources
+  if (sources && typeof sources === 'object' && !Array.isArray(sources)) {
+    const nextSources = { ...(sources as Record<string, unknown>) }
+    delete nextSources.terrain_rgb
+    o.sources = nextSources
+  }
+
+  return o
+}
+
 /**
  * Client-side: MapLibre validates `style.glyphs` with string `indexOf("{fontstack}")`.
  * Use after `fetch().json()` so the style is safe even if a proxy or old cache
