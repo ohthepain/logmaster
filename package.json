@@ -70,6 +70,7 @@
     "pg-boss": "^12.15.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "sharp": "^0.35.3",
     "sonner": "^2.0.7",
     "tailwindcss": "^4.1.18",
     "workbox-window": "^7.4.1",

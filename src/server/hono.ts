@@ -9,6 +9,7 @@ import { locationRoutes } from './routes/location'
 import { mapTileRoutes } from './routes/map-tiles'
 import { mapStyleVectorRoutes } from './routes/map-style-vector'
 import { maptileCdnRoutes } from './routes/maptile-cdn'
+import { openseamapSeamarkRoutes } from './routes/openseamap-seamark'
 
 const corsOrigins = getTrustedOrigins()
 
@@ -48,3 +49,4 @@ app.route('/location', locationRoutes)
 app.route('/map-tiles', mapTileRoutes)
 app.route('/map-style-vector', mapStyleVectorRoutes)
 app.route('/maptiler-cdn', maptileCdnRoutes)
+app.route('/openseamap-seamark', openseamapSeamarkRoutes)

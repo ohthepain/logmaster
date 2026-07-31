@@ -9,6 +9,10 @@ import {
   mapPointsToBounds,
   tripStartMapPoint,
 } from '../lib/logbook-map-geo'
+import {
+  addOpenSeaMapSeamarkOverlay,
+  OPEN_SEAMAP_ATTRIBUTION,
+} from '../lib/maplibre-openseamap'
 import { applySailingLogMapTheme, sailingMapOverlayPaint } from '../lib/maplibre-sailing-theme'
 import { getGeoJsonSource } from '../lib/maplibre-source'
 import { defaultRasterMapId } from '../lib/map-styles'
@@ -71,10 +75,17 @@ export function TripLogMap({ trip, entries }: TripLogMapProps) {
     })
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right')
+    map.addControl(
+      new maplibregl.AttributionControl({
+        compact: true,
+        customAttribution: OPEN_SEAMAP_ATTRIBUTION,
+      }),
+      'bottom-right',
+    )
 
     map.on('load', () => {
       applySailingLogMapTheme(map)
+      addOpenSeaMapSeamarkOverlay(map)
 
       map.addSource(TRACK_SOURCE, {
         type: 'geojson',
