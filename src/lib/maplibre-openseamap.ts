@@ -1,8 +1,6 @@
 import type maplibregl from 'maplibre-gl'
 import { getAppOrigin } from './app-origin'
 
-export const OPEN_SEAMAP_ATTRIBUTION = '© OpenSeaMap contributors'
-
 export const OPEN_SEAMAP_SEAMARK_SOURCE_ID = 'openseamap-seamarks'
 export const OPEN_SEAMAP_SEAMARK_LAYER_ID = 'openseamap-seamarks'
 
@@ -32,7 +30,6 @@ export function addOpenSeaMapSeamarkOverlay(map: maplibregl.Map) {
     tileSize: 256,
     minzoom: 0,
     maxzoom: 19,
-    attribution: OPEN_SEAMAP_ATTRIBUTION,
   })
 
   map.addLayer({

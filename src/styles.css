@@ -444,12 +444,12 @@ a {
 }
 
 .sailing-map .maplibregl-ctrl-attrib {
-  background: rgba(7, 15, 24, 0.88);
-  color: rgba(184, 197, 208, 0.75);
+  background: rgba(255, 255, 255, 0.92);
+  color: #000;
 }
 
 .sailing-map .maplibregl-ctrl-attrib a {
-  color: rgba(142, 180, 200, 0.95);
+  color: #000;
 }
 
 .sailing-map .maplibregl-canvas {
