@@ -455,3 +455,22 @@ a {
 .sailing-map .maplibregl-canvas {
   outline: none;
 }
+
+.dev-component-label {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px dashed color-mix(in oklab, var(--brand) 45%, transparent);
+  border-radius: 0.25rem;
+  background: var(--brand-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand);
+  pointer-events: none;
+  user-select: none;
+}

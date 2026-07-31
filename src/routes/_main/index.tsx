@@ -22,7 +22,6 @@ import { defaultBoatPhoto } from "../../domain/boat";
 import { buildSkipperOptions, resolveTripPersonOption, userTripPersonKey } from "../../lib/trip-people";
 import { formatDateTime } from "../../lib/logbook-format";
 import { tripCoverPhotoUrl, tripDisplayName, resolveDefaultBoatIdForNewTrip } from "../../lib/trip-display";
-import { isDevModeAvailable } from "../../lib/dev-mode";
 import { useAppOptionsStore } from "../../stores/app-options";
 import { useLogbookStore, triggerLogbookSyncRetry } from "../../stores/logbook";
 
@@ -53,9 +52,7 @@ function resolveLatestCompletedTrip(trips: Trip[]): Trip | null {
 
 function LogbookHome() {
   const store = useLogbookStore();
-  const devMode = useAppOptionsStore((state) => state.devMode);
   const setLastTripBoatId = useAppOptionsStore((state) => state.setLastTripBoatId);
-  const devModeActive = devMode && isDevModeAvailable();
   const session = useSession();
   const navigate = useNavigate();
   const location = useLocation();
@@ -218,10 +215,6 @@ function LogbookHome() {
     setStartOpen(true);
   };
 
-  const tripCount = store.trips.length;
-  const entryCount = store.entries.filter((entry) => !entry.deleted).length;
-  const unsyncedCount = store.entries.filter((entry) => !entry.synced && !entry.deleted).length;
-
   const handleStartTrip = async (event: FormEvent) => {
     event.preventDefault();
     if (!session.data?.user) {
@@ -287,15 +280,6 @@ function LogbookHome() {
 
   return (
     <main className="page-wrap px-3 pb-24 pt-4 sm:px-4 sm:pb-28">
-      {devModeActive && (
-        <div className="mb-5 flex flex-wrap gap-2">
-          <StatPill label="Trips" value={tripCount} />
-          <StatPill label="Entries" value={entryCount} />
-          <StatPill label="Unsynced" value={unsyncedCount} muted={!unsyncedCount} />
-          <StatPill label="Sync" value={store.syncMessage ?? (store.online ? "Ready" : "Offline")} wide />
-        </div>
-      )}
-
       <div className="space-y-10">
         <section className="space-y-4">
           <HomeSectionHeader title="Trips" to="/trips" addLabel="Add trip" onAdd={openStartTrip} />
@@ -522,30 +506,6 @@ function SignInPrompt({ redirect, message }: { redirect: string; message: string
       >
         Sign in
       </Link>
-    </div>
-  );
-}
-
-function StatPill({
-  label,
-  value,
-  muted,
-  wide,
-}: {
-  label: string;
-  value: number | string;
-  muted?: boolean;
-  wide?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-3 py-2.5 text-[var(--sea-ink)]",
-        wide && "min-w-[11rem] sm:min-w-[13rem]",
-      )}
-    >
-      <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--sea-ink-soft)]">{label}</p>
-      <p className={cn("m-0 mt-1 text-sm font-semibold", muted && "text-[var(--sea-ink-soft)]")}>{value}</p>
     </div>
   );
 }

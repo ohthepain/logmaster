@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { BookOpenText } from "lucide-react";
 import { cn } from "../lib/cn";
 import DevModeToggle from "./DevModeToggle";
+import { DevComponentLabel } from "./DevComponentLabel";
 import ThemeToggle from "./ThemeToggle";
 import { UserMenu } from "./UserMenu";
 
@@ -35,6 +36,7 @@ export function AppHeaderBrand({ className }: { className?: string }) {
 export default function Header() {
   return (
     <header className="sticky top-0 z-50 shrink-0 border-b border-[var(--line)] bg-[color-mix(in_oklab,var(--header-bg)_92%,transparent)] backdrop-blur-xl">
+      <DevComponentLabel name="Header" className="absolute left-3 top-1 z-10 sm:left-4" />
       <div className="page-wrap flex min-h-16 items-center justify-between gap-3 px-3 py-2 sm:px-4">
         <AppHeaderBrand />
         <div className="flex items-center gap-2">

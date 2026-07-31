@@ -180,7 +180,7 @@ export function CrewMemberModal({
   }
 
   return (
-    <Modal title="Crew member" onClose={handleClose}>
+    <Modal title="Crew member" onClose={handleClose} devComponentName="CrewMemberModal">
       <form onSubmit={(e) => void handleSave(e)} className="space-y-5">
         <div className="flex items-center gap-4">
           <div className="relative shrink-0">

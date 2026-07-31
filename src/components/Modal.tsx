@@ -1,15 +1,17 @@
 import { useEffect, useId } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
+import { DevComponentLabel } from './DevComponentLabel'
 
 type ModalProps = {
   title: string
   onClose: () => void
   children: ReactNode
   layer?: 'base' | 'overlay'
+  devComponentName?: string
 }
 
-export function Modal({ title, onClose, children, layer = 'base' }: ModalProps) {
+export function Modal({ title, onClose, children, layer = 'base', devComponentName = 'Modal' }: ModalProps) {
   const titleId = useId()
   const zClass = layer === 'overlay' ? 'z-[100]' : 'z-[90]'
 
@@ -37,6 +39,7 @@ export function Modal({ title, onClose, children, layer = 'base' }: ModalProps) 
         className="w-full max-w-xl rounded-[1.75rem] border border-[var(--panel-border)] bg-[var(--surface-strong)] p-4 shadow-2xl sm:p-6"
         onMouseDown={(event) => event.stopPropagation()}
       >
+        <DevComponentLabel name={devComponentName} />
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <p className="island-kicker">logmaster</p>

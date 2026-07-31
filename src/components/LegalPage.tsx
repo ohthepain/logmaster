@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { LEGAL_LAST_UPDATED } from '../lib/legal'
+import { DevComponentLabel } from './DevComponentLabel'
 
 type LegalSection = {
   id: string
@@ -18,6 +19,7 @@ type LegalPageProps = {
 export function LegalPage({ kicker, title, intro, sections }: LegalPageProps) {
   return (
     <main className="page-wrap px-4 py-12">
+      <DevComponentLabel name="LegalPage" />
       <article className="island-shell mx-auto max-w-3xl rounded-2xl p-6 sm:p-10">
         <p className="island-kicker mb-2">{kicker}</p>
         <h1 className="display-title mb-3 text-3xl font-bold text-[var(--sea-ink)] sm:text-4xl">

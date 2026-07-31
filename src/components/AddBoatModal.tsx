@@ -45,7 +45,7 @@ export function AddBoatModal({ open, onClose, onCreated }: AddBoatModalProps) {
   }
 
   return (
-    <Modal title="Add boat" onClose={handleClose}>
+    <Modal title="Add boat" onClose={handleClose} devComponentName="AddBoatModal">
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">

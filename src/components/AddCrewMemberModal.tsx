@@ -86,7 +86,7 @@ export function AddCrewMemberModal({
   }
 
   return (
-    <Modal title="Add crew member" onClose={handleClose}>
+    <Modal title="Add crew member" onClose={handleClose} devComponentName="AddCrewMemberModal">
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <div className="flex items-center gap-4">
           <button

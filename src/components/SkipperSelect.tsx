@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { CrewAvatar } from './CrewAvatar'
 import type { TripPersonOption } from '../lib/trip-people'
 import { cn } from '../lib/cn'
+import { DevComponentLabel } from './DevComponentLabel'
 
 type SkipperSelectProps = {
   value: string
@@ -41,6 +42,7 @@ export function SkipperSelect({ value, options, onChange }: SkipperSelectProps) 
 
   return (
     <div ref={rootRef} className={cn('relative', open && 'z-30')}>
+      <DevComponentLabel name="SkipperSelect" className="absolute -top-5 left-0" />
       <button
         type="button"
         aria-haspopup="listbox"

@@ -3,6 +3,7 @@ import { Sailboat } from 'lucide-react'
 import { defaultBoatPhoto  } from '../domain/boat'
 import type {Boat} from '../domain/boat';
 import { cn } from '../lib/cn'
+import { DevComponentLabel } from './DevComponentLabel'
 
 type BoatsGridProps = {
   boats: Boat[]
@@ -17,6 +18,7 @@ export function BoatsGrid({
 }: BoatsGridProps) {
   return (
     <div className={cn('flex flex-wrap gap-x-4 gap-y-3', className)}>
+      <DevComponentLabel name="BoatsGrid" className="w-full" />
       {boats.map((boat) => {
         const cover = defaultBoatPhoto(boat.photos)
 

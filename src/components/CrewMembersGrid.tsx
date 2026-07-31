@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { CrewMember } from "../domain/crew";
 import { cn } from "../lib/cn";
+import { DevComponentLabel } from "./DevComponentLabel";
 import { CrewAvatar } from "./CrewAvatar";
 
 type CrewMembersGridProps = {
@@ -12,6 +13,7 @@ type CrewMembersGridProps = {
 export function CrewMembersGrid({ members, className, avatarClassName = "size-20" }: CrewMembersGridProps) {
   return (
     <div className={cn("flex flex-wrap gap-x-4 gap-y-3", className)}>
+      <DevComponentLabel name="CrewMembersGrid" className="w-full" />
       {members.map((member) => (
         <Link
           key={member.id}

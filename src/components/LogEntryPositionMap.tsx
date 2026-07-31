@@ -13,6 +13,7 @@ import type { MapLngLat } from '../lib/logbook-map-geo'
 import { applySailingLogMapTheme, sailingMapOverlayPaint } from '../lib/maplibre-sailing-theme'
 import { defaultRasterMapId } from '../lib/map-styles'
 import { appMapVectorStyleUrl, mapTilerTransformRequest } from '../lib/tiles'
+import { DevComponentLabel } from './DevComponentLabel'
 import { getGeoJsonSource } from '../lib/maplibre-source'
 
 type LogEntryPositionMapProps = {
@@ -204,6 +205,7 @@ export function LogEntryPositionMap({
 
   return (
     <div className="relative overflow-hidden rounded-[1.25rem] border border-[#1a3044] bg-[#070f18]">
+      <DevComponentLabel name="LogEntryPositionMap" className="absolute left-2 top-2 z-10" />
       <div ref={containerRef} className="sailing-map h-56 w-full sm:h-64" />
       <p className="pointer-events-none absolute bottom-2 left-2 rounded-full bg-[#0c1f33]/90 px-2.5 py-1 text-[10px] font-medium text-[#b8c5d0] shadow-sm">
         Drag pin or tap map to adjust

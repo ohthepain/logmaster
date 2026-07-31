@@ -14,7 +14,13 @@ export function getAppOrigin() {
   }
 
   if (isNativePlatform()) {
-    return configuredPublicOrigin() ?? DEFAULT_DEV_ORIGIN
+    const configured = configuredPublicOrigin()
+    if (configured) return configured
+    // Capacitor live reload (server.url) loads http://localhost:3020 in the WebView.
+    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+      return window.location.origin
+    }
+    return DEFAULT_DEV_ORIGIN
   }
 
   return window.location.origin

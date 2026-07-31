@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { authClient, signIn, signUp } from '../lib/auth-client'
 import { passwordResetCallbackUrl } from '../lib/password-reset-url'
+import { DevComponentLabel } from './DevComponentLabel'
 
 type Tab = 'password' | 'magic'
 
@@ -65,7 +66,12 @@ export function SignInPanel({
         callbackURL: afterAuthPath,
       })
       if (result.error) {
-        toast.error(result.error.message ?? 'Google sign in failed')
+        const message = result.error.message ?? 'Google sign in failed'
+        toast.error(
+          message.includes('ECONNREFUSED') || message.toLowerCase().includes('database')
+            ? 'Sign-in server unavailable — is Postgres running?'
+            : message,
+        )
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Google sign in failed')
@@ -192,6 +198,7 @@ export function SignInPanel({
 
   return (
     <div className="w-full max-w-md">
+      <DevComponentLabel name="SignInPanel" />
       <div className="mb-8">
         <h2
           className="text-[var(--sea-ink)] mb-2"

@@ -13,6 +13,7 @@ import { applySailingLogMapTheme, sailingMapOverlayPaint } from '../lib/maplibre
 import { getGeoJsonSource } from '../lib/maplibre-source'
 import { defaultRasterMapId } from '../lib/map-styles'
 import { appMapVectorStyleUrl, mapTilerTransformRequest } from '../lib/tiles'
+import { DevComponentLabel } from './DevComponentLabel'
 
 type TripLogMapProps = {
   trip: Trip
@@ -232,7 +233,8 @@ export function TripLogMap({ trip, entries }: TripLogMapProps) {
   }, [mapReady, currentPosition, entryCoords.length])
 
   return (
-    <div className="overflow-hidden rounded-[1.5rem] border border-[#1a3044] bg-[#070f18]">
+    <div className="relative overflow-hidden rounded-[1.5rem] border border-[#1a3044] bg-[#070f18]">
+      <DevComponentLabel name="TripLogMap" className="absolute left-2 top-2 z-10" />
       <div ref={containerRef} className="sailing-map h-56 w-full sm:h-64" />
       {mapError && (
         <p className="m-0 border-t border-[#1a3044] px-4 py-2 text-xs text-[#b8c5d0]">

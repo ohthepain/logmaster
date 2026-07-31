@@ -109,7 +109,7 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
   }
 
   return (
-    <Modal title="Profile" onClose={handleClose}>
+    <Modal title="Profile" onClose={handleClose} devComponentName="ProfileModal">
       <form onSubmit={(e) => void handleSaveName(e)} className="space-y-5">
         <div className="flex items-center gap-4">
           <div className="relative shrink-0">

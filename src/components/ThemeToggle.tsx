@@ -1,6 +1,7 @@
 import { Monitor, Moon, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { cn } from '../lib/cn'
+import { DevComponentLabel } from './DevComponentLabel'
 
 type ThemeMode = 'light' | 'dark' | 'auto'
 
@@ -67,13 +68,14 @@ export default function ThemeToggle({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'inline-flex shrink-0 items-center rounded-md border border-[var(--chip-line)]',
+        'relative inline-flex shrink-0 items-center rounded-md border border-[var(--chip-line)]',
         'bg-[color-mix(in_oklab,var(--chip-bg)_75%,transparent)] p-0.5 shadow-sm',
         className,
       )}
       role="group"
       aria-label="Color scheme"
     >
+      <DevComponentLabel name="ThemeToggle" className="absolute -top-5 left-0" />
       {OPTIONS.map(({ mode: optionMode, label, icon: Icon }) => {
         const selected = mode === optionMode
         return (

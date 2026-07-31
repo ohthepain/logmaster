@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { cn } from "../lib/cn";
+import { DevComponentLabel } from "./DevComponentLabel";
 
 type Highlight = {
   x: number;
@@ -61,6 +62,7 @@ export function FtueIosInstallGuide() {
       onTouchStart={() => setPaused(true)}
       onTouchEnd={() => setPaused(false)}
     >
+      <DevComponentLabel name="FtueIosInstallGuide" />
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="m-0 text-sm font-semibold text-[var(--ftue-ink)]">
           Add to Home Screen in Safari

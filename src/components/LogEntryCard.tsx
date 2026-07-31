@@ -13,6 +13,7 @@ import {
   formatWeather,
 } from '../lib/logbook-format'
 import { cn } from '../lib/cn'
+import { DevComponentLabel } from './DevComponentLabel'
 
 type LogEntryCardProps = {
   entry: LogEntry
@@ -51,12 +52,13 @@ export function LogEntryCard({
   return (
     <article
       className={cn(
-        'rounded-[1.5rem] border p-4 shadow-sm',
+        'relative rounded-[1.5rem] border p-4 shadow-sm',
         entry.deleted
           ? 'border-red-500/30 bg-red-500/5'
           : 'border-[var(--panel-border)] bg-[var(--surface-strong)]',
       )}
     >
+      <DevComponentLabel name="LogEntryCard" className="absolute left-3 top-3" />
       <div className="flex gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] text-xl">
           {entryIcon(entry.type)}

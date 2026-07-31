@@ -1,10 +1,13 @@
 import { Link } from '@tanstack/react-router'
+import { DevComponentLabel } from './DevComponentLabel'
 
 export function LegalFooter({ className = '' }: { className?: string }) {
   return (
-    <p
-      className={`text-center text-xs text-[var(--sea-ink-soft)] ${className}`.trim()}
-    >
+    <>
+      <DevComponentLabel name="LegalFooter" className="mx-auto mb-2" />
+      <p
+        className={`text-center text-xs text-[var(--sea-ink-soft)] ${className}`.trim()}
+      >
       <Link
         to="/terms"
         className="underline underline-offset-2 hover:text-[var(--sea-ink)]"
@@ -21,5 +24,6 @@ export function LegalFooter({ className = '' }: { className?: string }) {
         Privacy Policy
       </Link>
     </p>
+    </>
   )
 }

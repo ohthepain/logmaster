@@ -1,6 +1,7 @@
 import { MapPin } from 'lucide-react'
 import { supportsBackgroundGps } from '../lib/platform'
 import { useAppOptionsStore } from '../stores/app-options'
+import { DevComponentLabel } from './DevComponentLabel'
 
 export function NativeRecordingSettings({
   tripInProgress,
@@ -26,6 +27,7 @@ export function NativeRecordingSettings({
 
   return (
     <section className="island-shell rounded-2xl p-4 sm:p-5">
+      <DevComponentLabel name="NativeRecordingSettings" />
       <div className="mb-3 flex items-start gap-3">
         <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-muted)] text-[var(--brand)]">
           <MapPin className="size-4" aria-hidden />

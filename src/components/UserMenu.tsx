@@ -6,6 +6,8 @@ import { signOut, useSession } from '../lib/auth-client'
 import { profilePhotoUrl } from '../lib/profile-api'
 import { cn } from '../lib/cn'
 import { ProfileModal } from './ProfileModal'
+import { DevComponentLabel } from './DevComponentLabel'
+import { DevHomeStats } from './DevHomeStats'
 import { useFtue } from './FtueGate'
 
 export function UserMenu() {
@@ -45,6 +47,7 @@ export function UserMenu() {
   return (
     <>
       <div className="relative" ref={rootRef}>
+        <DevComponentLabel name="UserMenu" className="absolute -top-5 left-0" />
         <button
           type="button"
           className={cn(
@@ -118,6 +121,8 @@ export function UserMenu() {
                 </p>
               </div>
             )}
+
+            <DevHomeStats />
 
             <Link
               to="/boats"

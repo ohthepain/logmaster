@@ -172,7 +172,7 @@ export function LogEntryComposerModal({
 
   if (step === 'pick-type') {
     return (
-      <Modal title="Log entry" onClose={handleClose}>
+      <Modal title="Log entry" onClose={handleClose} devComponentName="LogEntryComposerModal">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {LOG_ENTRY_TYPES.map((type) => (
             <button
@@ -215,6 +215,7 @@ export function LogEntryComposerModal({
       title={entryTitle(selectedType)}
       onClose={handleClose}
       layer="overlay"
+      devComponentName="LogEntryComposerModal"
     >
       <div className="space-y-4">
         <button

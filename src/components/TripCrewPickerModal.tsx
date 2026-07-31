@@ -1,5 +1,6 @@
 import { Check, Plus } from 'lucide-react'
 import { Modal } from './Modal'
+import { DevComponentLabel } from './DevComponentLabel'
 import { CrewAvatar } from './CrewAvatar'
 import type { CrewMember } from '../domain/crew'
 import { cn } from '../lib/cn'
@@ -36,6 +37,7 @@ export function TripCrewPickerModal({
       title="Trip crew"
       onClose={onClose}
       layer={stacked ? 'overlay' : 'base'}
+      devComponentName="TripCrewPickerModal"
     >
       <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">
         Choose crew for this trip. Tap someone with a checkmark to remove them.
@@ -119,6 +121,7 @@ export function TripCrewSection({
 
   return (
     <div>
+      <DevComponentLabel name="TripCrewSection" />
       <div className="mb-2 flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-[var(--sea-ink)]">Crew</span>
         <button

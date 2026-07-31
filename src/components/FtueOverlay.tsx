@@ -8,9 +8,11 @@ import { FtueIosInstallGuide } from "./FtueIosInstallGuide";
 import { SignInPanel } from "./SignInPanel";
 import { usePwaInstall } from "../lib/pwa-install";
 import { useSession } from "../lib/auth-client";
+import { isNativePlatform } from "../lib/platform";
 import { cn } from "../lib/cn";
+import { DevComponentLabel } from "./DevComponentLabel";
 
-const AUTH_STEP = 2;
+const AUTH_STEP_WEB = 2;
 
 type FtueOverlayProps = {
   onComplete: () => void;
@@ -19,13 +21,21 @@ type FtueOverlayProps = {
 export function FtueOverlay({ onComplete }: FtueOverlayProps) {
   const session = useSession();
   const signedIn = Boolean(session.data?.user);
-  const stepCount = signedIn ? AUTH_STEP : AUTH_STEP + 1;
+  const skipPwaStep = isNativePlatform();
+  const authStep = skipPwaStep ? 1 : AUTH_STEP_WEB;
+  const stepCount = signedIn
+    ? skipPwaStep
+      ? 1
+      : 2
+    : skipPwaStep
+      ? 2
+      : 3;
   const lastStep = stepCount - 1;
 
   const [step, setStep] = useState(0);
   const { canInstall, installed, promptInstall, isIosSafari } = usePwaInstall();
 
-  const showAuthStep = !signedIn && step === AUTH_STEP;
+  const showAuthStep = !signedIn && step === authStep;
 
   const goNext = () => {
     if (step < lastStep) {
@@ -39,12 +49,13 @@ export function FtueOverlay({ onComplete }: FtueOverlayProps) {
 
   return (
     <div className="ftue-shell fixed inset-0 z-[200] flex flex-col">
+      <DevComponentLabel name="FtueOverlay" className="absolute left-3 top-3 z-20 sm:left-4" />
       <FtueTopoBackground />
 
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-4 pt-10 sm:px-8 sm:pt-12">
           {step === 0 && <FtueFeaturesStep />}
-          {step === 1 && (
+          {!skipPwaStep && step === 1 && (
             <FtuePwaStep
               canInstall={canInstall}
               installed={installed}
