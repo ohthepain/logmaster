@@ -7,6 +7,7 @@ import { DevComponentLabel } from "./DevComponentLabel";
 import { LogEntryComposerModal } from "./LogEntryComposerModal";
 import { Modal } from "./Modal";
 import { TripCrewPickerModal, TripCrewSection } from "./TripCrewPickerModal";
+import { TripLegSection } from "./TripLegSection";
 import { TripLogMap } from "./TripLogMap";
 import { NativeRecordingSettings } from "./NativeRecordingSettings";
 import type { LogEntry, Media } from "../domain/logbook";
@@ -36,6 +37,7 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
   const [crewPickerOpen, setCrewPickerOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [selectedLegId, setSelectedLegId] = useState<string | null>(null);
 
   useEffect(() => {
     void useLogbookStore.getState().load();
@@ -61,12 +63,17 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
       .finally(() => setCrewLoading(false));
   }, [tripId]);
 
+  useEffect(() => {
+    setSelectedLegId(null);
+  }, [tripId]);
+
   const entries = useMemo(
     () =>
       store.entries
         .filter((entry) => entry.tripId === tripId && !entry.deleted)
+        .filter((entry) => !selectedLegId || entry.legId === selectedLegId)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-    [store.entries, tripId],
+    [store.entries, tripId, selectedLegId],
   );
 
   const mediaByEntry = useMemo(() => {
@@ -248,7 +255,7 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
           ) : (
             <div className="space-y-3">
               {entries.map((entry) => (
-                <LogEntryCard
+                <LogEntry Card
                   key={entry.id}
                   entry={entry}
                   media={mediaByEntry.get(entry.id) ?? []}

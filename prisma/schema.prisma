@@ -124,15 +124,37 @@ model Trip {
   updatedAt      DateTime    @updatedAt
 
   logEntries     LogEntry[]
+  legs           Leg[]
 
   @@index([status, startedAt])
   @@map("trip")
+}
+
+model Leg {
+  id           String    @id @default(cuid())
+  tripId       String
+  trip         Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  sequence     Int
+  title        String?
+  startEventId String?
+  endEventId   String?
+  startedAt    DateTime
+  endedAt      DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  logEntries   LogEntry[]
+
+  @@index([tripId, sequence])
+  @@map("leg")
 }
 
 model LogEntry {
   id         String         @id @default(cuid())
   tripId     String
   trip       Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  legId      String?
+  leg        Leg?           @relation(fields: [legId], references: [id], onDelete: SetNull)
   type       LogEntryType
   timestamp  DateTime
   latitude   Float?
@@ -150,6 +172,7 @@ model LogEntry {
   media      Media[]
 
   @@index([tripId, timestamp])
+  @@index([legId, timestamp])
   @@index([synced, updatedAt])
   @@map("log_entry")
 }

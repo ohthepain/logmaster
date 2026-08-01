@@ -38,6 +38,24 @@ function toTrip(data: Record<string, unknown>) {
   }
 }
 
+function toLeg(data: Record<string, unknown>) {
+  const startedAt = parseDate(data.startedAt) ?? new Date()
+  const createdAt = parseDate(data.createdAt) ?? startedAt
+  const updatedAt = parseDate(data.updatedAt) ?? startedAt
+  return {
+    id: String(data.id ?? crypto.randomUUID()),
+    tripId: String(data.tripId),
+    sequence: Number(data.sequence ?? 0),
+    title: (data.title as string | null | undefined) ?? null,
+    startEventId: (data.startEventId as string | null | undefined) ?? null,
+    endEventId: (data.endEventId as string | null | undefined) ?? null,
+    startedAt,
+    endedAt: parseDate(data.endedAt),
+    createdAt,
+    updatedAt,
+  }
+}
+
 function toLogEntry(data: Record<string, unknown>) {
   const timestamp = parseDate(data.timestamp) ?? new Date()
   const createdAt = parseDate(data.createdAt) ?? timestamp
@@ -45,6 +63,7 @@ function toLogEntry(data: Record<string, unknown>) {
   return {
     id: String(data.id ?? crypto.randomUUID()),
     tripId: String(data.tripId),
+    legId: (data.legId as string | null | undefined) ?? null,
     type: String(data.type ?? 'NOTE'),
     timestamp,
     latitude: (data.latitude as number | null | undefined) ?? null,
@@ -82,24 +101,27 @@ function toMedia(data: Record<string, unknown>) {
 export const logbookRoutes = new Hono()
 
 logbookRoutes.get('/bootstrap', async (c) => {
-  const [trips, logEntries, media] = await Promise.all([
+  const [trips, legs, logEntries, media] = await Promise.all([
     db.trip.findMany({ orderBy: [{ updatedAt: 'desc' }] }),
+    db.leg.findMany({ orderBy: [{ tripId: 'asc' }, { sequence: 'asc' }] }),
     db.logEntry.findMany({ orderBy: [{ timestamp: 'asc' }] }),
     db.media.findMany({ orderBy: [{ createdAt: 'asc' }] }),
   ])
-  return c.json({ trips, logEntries, media })
+  return c.json({ trips, legs, logEntries, media })
 })
 
 logbookRoutes.post('/sync', async (c) => {
   try {
     const body = (await c.req.json().catch(() => ({}))) as {
       trips?: Record<string, unknown>[]
+      legs?: Record<string, unknown>[]
       logEntries?: Record<string, unknown>[]
       media?: Record<string, unknown>[]
       deletedTripIds?: string[]
     }
 
     const trips = body.trips ?? []
+    const legs = body.legs ?? []
     const logEntries = body.logEntries ?? []
     const media = body.media ?? []
     const deletedTripIds = (body.deletedTripIds ?? []).filter(
@@ -112,13 +134,20 @@ logbookRoutes.post('/sync', async (c) => {
       })
     }
 
-    if (trips.length > 0 || logEntries.length > 0 || media.length > 0) {
+    if (trips.length > 0 || legs.length > 0 || logEntries.length > 0 || media.length > 0) {
       await prisma.$transaction([
       ...trips.map((trip) =>
         db.trip.upsert({
           where: { id: String(trip.id) },
           create: toTrip(trip) as any,
           update: toTrip(trip) as any,
+        }),
+      ),
+      ...legs.map((leg) =>
+        db.leg.upsert({
+          where: { id: String(leg.id) },
+          create: toLeg(leg) as any,
+          update: toLeg(leg) as any,
         }),
       ),
       ...logEntries.map((entry) =>
@@ -138,14 +167,16 @@ logbookRoutes.post('/sync', async (c) => {
       ])
     }
 
-    const [savedTrips, savedEntries, savedMedia] = await Promise.all([
+    const [savedTrips, savedLegs, savedEntries, savedMedia] = await Promise.all([
       db.trip.findMany({ orderBy: [{ updatedAt: 'desc' }] }),
+      db.leg.findMany({ orderBy: [{ tripId: 'asc' }, { sequence: 'asc' }] }),
       db.logEntry.findMany({ orderBy: [{ timestamp: 'asc' }] }),
       db.media.findMany({ orderBy: [{ createdAt: 'asc' }] }),
     ])
 
     return c.json({
       trips: savedTrips,
+      legs: savedLegs,
       logEntries: savedEntries,
       media: savedMedia,
     })

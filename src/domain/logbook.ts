@@ -52,9 +52,24 @@ export type Trip = {
   updatedAt: string
 }
 
+export type Leg = {
+  id: string
+  tripId: string
+  sequence: number
+  title?: string | null
+  startEventId?: string | null
+  endEventId?: string | null
+  startedAt: string
+  endedAt?: string | null
+  createdAt: string
+  updatedAt: string
+  synced: boolean
+}
+
 export type LogEntry = {
   id: string
   tripId: string
+  legId?: string | null
   type: LogEntryType
   timestamp: string
   latitude?: number | null
@@ -84,6 +99,7 @@ export type Media = {
 }
 
 export type TripWithEntries = Trip & {
+  legs: Leg[]
   entries: Array<LogEntry & { media: Media[] }>
 }
 

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type {
+  Leg,
   LogEntry,
   LogEntryType,
   Media,
@@ -15,11 +16,18 @@ import {
 } from '../lib/logbook-sync'
 import type { LogbookSnapshot } from '../lib/logbook-sync'
 import {
+  mergeLegs,
+  rebuildLegsForTrip,
+  sortLegs,
+} from '../lib/trip-legs'
+import {
   addPendingDeletedTripId,
+  deleteLeg,
   deleteLogEntry,
   deleteMedia,
   deleteTrip as deleteTripFromIdb,
   loadLogbookSnapshot,
+  putLeg,
   putLogEntry,
   putMedia,
   putTrip,
@@ -66,8 +74,11 @@ type UpdateTripInput = Partial<
   >
 >
 
+type UpdateLegInput = Partial<Pick<Leg, 'title'>>
+
 type LogbookState = {
   trips: Trip[]
+  legs: Leg[]
   entries: LogEntry[]
   media: Media[]
   activeTripId: string | null
@@ -83,6 +94,8 @@ type LogbookState = {
   startTrip: (input: NewTripInput) => Promise<Trip | null>
   updateTrip: (tripId: string, patch: UpdateTripInput) => Promise<void>
   deleteTrip: (tripId: string) => Promise<void>
+  updateLeg: (legId: string, patch: UpdateLegInput) => Promise<void>
+  mergeLegWithPrevious: (legId: string) => Promise<void>
   addEntry: (input: NewEntryInput) => Promise<LogEntry | null>
   updateEntry: (entryId: string, patch: UpdateEntryInput) => Promise<void>
   deleteEntry: (entryId: string) => Promise<void>
@@ -122,6 +135,7 @@ function resolveActiveTripId(trips: Trip[], current: string | null) {
 
 function applySnapshot(set: (partial: Partial<LogbookState>) => void, snapshot: LogbookSnapshot, selectedTripId: string | null) {
   const sortedTrips = sortTrips(snapshot.trips)
+  const sortedLegs = sortLegs(snapshot.legs ?? [])
   const sortedEntries = sortEntries(snapshot.logEntries)
   const activeTripId = resolveActiveTripId(sortedTrips, null)
   const nextSelected =
@@ -131,6 +145,7 @@ function applySnapshot(set: (partial: Partial<LogbookState>) => void, snapshot: 
 
   set({
     trips: sortedTrips,
+    legs: sortedLegs,
     entries: sortedEntries,
     media: snapshot.media,
     activeTripId,
@@ -163,8 +178,44 @@ async function assertSyncedWhenOnline(get: () => LogbookState) {
   throw new Error(get().syncMessage ?? 'Could not sync to server')
 }
 
+async function persistLegsAndEntries(legs: Leg[], entries: LogEntry[]) {
+  await Promise.all([
+    ...legs.filter((leg) => !leg.synced).map((leg) => putLeg(leg)),
+    ...entries.filter((entry) => !entry.synced).map((entry) => putLogEntry(entry)),
+  ])
+}
+
+async function applyTripLegRebuild(
+  tripId: string,
+  get: () => LogbookState,
+  set: (partial: Partial<LogbookState> | ((state: LogbookState) => Partial<LogbookState>)) => void,
+) {
+  const previousLegIds = new Set(
+    get().legs.filter((leg) => leg.tripId === tripId).map((leg) => leg.id),
+  )
+  const { legs, entries } = rebuildLegsForTrip(tripId, get().entries, get().legs)
+  const nextLegIds = new Set(
+    legs.filter((leg) => leg.tripId === tripId).map((leg) => leg.id),
+  )
+  for (const legId of previousLegIds) {
+    if (!nextLegIds.has(legId)) {
+      await deleteLeg(legId)
+    }
+  }
+  await persistLegsAndEntries(
+    legs.filter((leg) => leg.tripId === tripId),
+    entries.filter((entry) => entry.tripId === tripId),
+  )
+  set({
+    legs,
+    entries: sortEntries(entries),
+    syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+  })
+}
+
 export const useLogbookStore = create<LogbookState>((set, get) => ({
   trips: [],
+  legs: [],
   entries: [],
   media: [],
   activeTripId: null,
@@ -260,12 +311,14 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
 
   deleteTrip: async (tripId) => {
     const entries = get().entries.filter((entry) => entry.tripId === tripId)
+    const tripLegs = get().legs.filter((leg) => leg.tripId === tripId)
     const entryIds = new Set(entries.map((entry) => entry.id))
     const media = get().media.filter((item) => entryIds.has(item.logEntryId))
 
     addPendingDeletedTripId(tripId)
     await deleteTripFromIdb(tripId)
     await Promise.all([
+      ...tripLegs.map((leg) => deleteLeg(leg.id)),
       ...entries.map((entry) => deleteLogEntry(entry.id)),
       ...media.map((item) => deleteMedia(item.id)),
     ])
@@ -280,6 +333,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
           : state.selectedTripId
       return {
         trips,
+        legs: state.legs.filter((leg) => leg.tripId !== tripId),
         entries: state.entries.filter((entry) => entry.tripId !== tripId),
         media: state.media.filter((item) => !entryIds.has(item.logEntryId)),
         selectedTripId: nextSelected,
@@ -289,6 +343,48 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       }
     })
 
+    void get().syncNow()
+  },
+
+  updateLeg: async (legId, patch) => {
+    const current = get().legs.find((leg) => leg.id === legId)
+    if (!current) return
+    const next: Leg = {
+      ...current,
+      ...patch,
+      title:
+        patch.title !== undefined ? patch.title?.trim() || null : current.title ?? null,
+      updatedAt: nowIso(),
+      synced: false,
+    }
+    await putLeg(next)
+    set((state) => ({
+      legs: state.legs.map((leg) => (leg.id === legId ? next : leg)),
+      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+    }))
+    void get().syncNow()
+  },
+
+  mergeLegWithPrevious: async (legId) => {
+    const leg = get().legs.find((item) => item.id === legId)
+    if (!leg || leg.sequence === 0) return
+    const previous = get().legs.find(
+      (item) => item.tripId === leg.tripId && item.sequence === leg.sequence - 1,
+    )
+    if (!previous) return
+    const result = mergeLegs(previous.id, leg.id, get().legs, get().entries)
+    if (!result) return
+    await Promise.all([
+      deleteLeg(previous.id),
+      deleteLeg(leg.id),
+      ...result.legs.filter((l) => !l.synced).map((l) => putLeg(l)),
+      ...result.entries.filter((e) => !e.synced).map((e) => putLogEntry(e)),
+    ])
+    set({
+      legs: result.legs,
+      entries: sortEntries(result.entries),
+      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+    })
     void get().syncNow()
   },
 
@@ -329,6 +425,8 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       entries: sortEntries([...state.entries, entry]),
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
+
+    await applyTripLegRebuild(input.tripId, get, set)
 
     if (input.type === 'END_TRIP') {
       const trip = get().trips.find((t) => t.id === input.tripId)
@@ -398,6 +496,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       ),
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
+    await applyTripLegRebuild(current.tripId, get, set)
     void get().syncNow()
   },
 
@@ -417,6 +516,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       ),
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
+    await applyTripLegRebuild(current.tripId, get, set)
     void get().syncNow()
   },
 

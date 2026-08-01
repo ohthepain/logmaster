@@ -1,10 +1,12 @@
-import type { LogEntry, Media, Trip } from '../domain/logbook'
+import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
+import { rebuildAllLegs } from './trip-legs'
 import { apiUrl } from './app-origin'
 import {
   clearLogbook,
   getLogbookDb,
   getPendingDeletedTripIds,
   loadLogbookSnapshot,
+  putLeg,
   putLogEntry,
   putMedia,
   putTrip,
@@ -13,6 +15,7 @@ import {
 
 export type LogbookSnapshot = {
   trips: Trip[]
+  legs: Leg[]
   logEntries: LogEntry[]
   media: Media[]
 }
@@ -40,11 +43,16 @@ function filterDeletedTrips<T extends { id: string }>(
   return items.filter((item) => !deletedTripIds.has(item.id))
 }
 
-function filterDeletedTripEntries<T extends { tripId: string }>(
+function filterDeletedTripLegs<T extends { tripId: string }>(
   items: T[],
   deletedTripIds: Set<string>,
 ) {
   return items.filter((item) => !deletedTripIds.has(item.tripId))
+}
+
+function ensureLegsInSnapshot(snapshot: LogbookSnapshot): LogbookSnapshot {
+  const { legs, entries } = rebuildAllLegs(snapshot.logEntries, snapshot.legs ?? [])
+  return { ...snapshot, legs, logEntries: entries }
 }
 
 function mergeSnapshots(
@@ -54,7 +62,8 @@ function mergeSnapshots(
 ): LogbookSnapshot {
   const deletedTripIds = new Set(pendingDeletedTripIds)
   const serverTrips = filterDeletedTrips(server.trips, deletedTripIds)
-  const serverEntries = filterDeletedTripEntries(server.logEntries, deletedTripIds)
+  const serverLegs = filterDeletedTripLegs(server.legs ?? [], deletedTripIds)
+  const serverEntries = filterDeletedTripLegs(server.logEntries, deletedTripIds)
   const deletedEntryIds = new Set(
     server.logEntries
       .filter((entry) => deletedTripIds.has(entry.tripId))
@@ -83,6 +92,20 @@ function mergeSnapshots(
         coverPhotoDataUrl:
           trip.coverPhotoDataUrl ?? existing.coverPhotoDataUrl ?? null,
       })
+    }
+  }
+
+  const legMap = new Map(
+    serverLegs.map((leg) => [leg.id, { ...leg, synced: true }]),
+  )
+  for (const leg of local.legs ?? []) {
+    if (deletedTripIds.has(leg.tripId)) continue
+    if (!leg.synced) {
+      legMap.set(leg.id, leg)
+      continue
+    }
+    if (!legMap.has(leg.id)) {
+      legMap.set(leg.id, leg)
     }
   }
 
@@ -115,11 +138,12 @@ function mergeSnapshots(
     }
   }
 
-  return {
+  return ensureLegsInSnapshot({
     trips: mergeCoverPhotos([...tripMap.values()], coverPhotoByTrip),
+    legs: [...legMap.values()],
     logEntries: [...entryMap.values()],
     media: [...mediaMap.values()],
-  }
+  })
 }
 
 export async function persistLogbookSnapshot(snapshot: LogbookSnapshot) {
@@ -127,6 +151,7 @@ export async function persistLogbookSnapshot(snapshot: LogbookSnapshot) {
   await clearLogbook()
   await Promise.all([
     ...snapshot.trips.map((trip) => putTrip(trip)),
+    ...snapshot.legs.map((leg) => putLeg(leg)),
     ...snapshot.logEntries.map((entry) => putLogEntry(entry)),
     ...snapshot.media.map((item) => putMedia(item)),
   ])
@@ -144,15 +169,16 @@ async function fetchServerLogbook(): Promise<LogbookSnapshot | null> {
   }
 
   const payload = (await response.json()) as SyncPayload
-  return {
+  return ensureLegsInSnapshot({
     trips: payload.trips,
+    legs: (payload.legs ?? []).map((leg) => ({ ...leg, synced: true })),
     logEntries: payload.logEntries.map((entry) => ({ ...entry, synced: true })),
     media: payload.media.map((item) => ({ ...item, synced: true })),
-  }
+  })
 }
 
 export async function bootstrapLogbook() {
-  const local = await loadLogbookSnapshot()
+  const local = ensureLegsInSnapshot(await loadLogbookSnapshot())
   const pendingDeletedTripIds = getPendingDeletedTripIds()
 
   if (!isOnline()) {
@@ -161,12 +187,12 @@ export async function bootstrapLogbook() {
 
   try {
     const server = await fetchServerLogbook()
-    if (!server) return local
+    if (!server) return ensureLegsInSnapshot(local)
     const merged = mergeSnapshots(local, server, pendingDeletedTripIds)
     await persistLogbookSnapshot(merged)
     return merged
   } catch {
-    return local
+    return ensureLegsInSnapshot(local)
   }
 }
 
@@ -180,8 +206,12 @@ function getPendingSyncItems(
   pendingDeletedTripIds: string[] = getPendingDeletedTripIds(),
 ) {
   const pendingEntries = snapshot.logEntries.filter((entry) => !entry.synced)
+  const pendingLegs = (snapshot.legs ?? []).filter((leg) => !leg.synced)
   const pendingMedia = snapshot.media.filter((item) => !item.synced)
-  const unsyncedTripIds = new Set(pendingEntries.map((entry) => entry.tripId))
+  const unsyncedTripIds = new Set([
+    ...pendingEntries.map((entry) => entry.tripId),
+    ...pendingLegs.map((leg) => leg.tripId),
+  ])
   const serverTripMap = new Map(server?.trips.map((trip) => [trip.id, trip]) ?? [])
   const pendingTrips = snapshot.trips.filter((trip) => {
     if (unsyncedTripIds.has(trip.id)) return true
@@ -195,11 +225,13 @@ function getPendingSyncItems(
 
   return {
     pendingTrips,
+    pendingLegs,
     pendingEntries,
     pendingMedia,
     pendingDeletedTripIds,
     hasPending:
       pendingTrips.length > 0 ||
+      pendingLegs.length > 0 ||
       pendingEntries.length > 0 ||
       pendingMedia.length > 0 ||
       pendingDeletedTripIds.length > 0,
@@ -223,7 +255,7 @@ export async function syncLogbook() {
     server = null
   }
 
-  const { pendingTrips, pendingEntries, pendingMedia, hasPending } =
+  const { pendingTrips, pendingLegs, pendingEntries, pendingMedia, hasPending } =
     getPendingSyncItems(snapshot, server, pendingDeletedTripIds)
 
   if (!hasPending) {
@@ -243,6 +275,7 @@ export async function syncLogbook() {
     },
     body: JSON.stringify({
       trips: pendingTrips,
+      legs: pendingLegs,
       logEntries: pendingEntries,
       media: pendingMedia,
       deletedTripIds: pendingDeletedTripIds,
@@ -261,11 +294,12 @@ export async function syncLogbook() {
   }
 
   const payload = (await response.json()) as SyncPayload
-  const mergedSnapshot: LogbookSnapshot = {
+  const mergedSnapshot: LogbookSnapshot = ensureLegsInSnapshot({
     trips: mergeCoverPhotos(payload.trips, coverPhotoByTrip),
+    legs: (payload.legs ?? []).map((leg) => ({ ...leg, synced: true })),
     logEntries: payload.logEntries.map((entry) => ({ ...entry, synced: true })),
     media: payload.media.map((item) => ({ ...item, synced: true })),
-  }
+  })
   await persistLogbookSnapshot(mergedSnapshot)
   removePendingDeletedTripIds(pendingDeletedTripIds)
 
@@ -273,6 +307,7 @@ export async function syncLogbook() {
     ok: true as const,
     synced:
       pendingTrips.length +
+      pendingLegs.length +
       pendingEntries.length +
       pendingMedia.length +
       pendingDeletedTripIds.length,
