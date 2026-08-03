@@ -12,7 +12,7 @@ import {
   loadSailingMapStyle,
   scheduleSeamarkTileRefresh,
 } from "../lib/maplibre-sailing-map-setup";
-import { applySailingLogMapTheme, sailingMapOverlayPaint } from "../lib/maplibre-sailing-theme";
+import { applySailingLogMapTheme, sailingMapOverlayPaint, SailingMapColors } from "../lib/maplibre-sailing-theme";
 import { getGeoJsonSource } from "../lib/maplibre-source";
 import { defaultRasterMapId } from "../lib/map-styles";
 import { centerMapOnCurrentLocation } from "../lib/sailing-map-viewport";
@@ -283,7 +283,10 @@ export function TripLogMap({
   }, []);
 
   const mapShell = (
-    <div className="relative h-full min-h-0 w-full overflow-hidden bg-[#070f18]">
+    <div
+      className="relative h-full min-h-0 w-full overflow-hidden"
+      style={{ backgroundColor: SailingMapColors.background }}
+    >
       <DevComponentLabel name="TripLogMap" className="absolute left-2 top-2 z-10" />
       <div ref={containerRef} className={cn("sailing-map", mapClassName)} />
       {mapReady ? (
@@ -294,14 +297,29 @@ export function TripLogMap({
           onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}
         />
       ) : null}
-      {mapError ? <p className="m-0 border-t border-[#1a3044] px-4 py-2 text-xs text-[#b8c5d0]">{mapError}</p> : null}
+      {mapError ? (
+        <p
+          className="m-0 border-t px-4 py-2 text-xs"
+          style={{
+            borderColor: SailingMapColors.chromeBorder,
+            color: SailingMapColors.labelSecondary,
+          }}
+        >
+          {mapError}
+        </p>
+      ) : null}
     </div>
   );
 
   return (
     <>
       {allowFullscreen ? (
-        <div className="overflow-hidden rounded-[1.5rem] border border-[#1a3044]">{mapShell}</div>
+        <div
+          className="overflow-hidden rounded-[1.5rem] border"
+          style={{ borderColor: SailingMapColors.chromeBorder }}
+        >
+          {mapShell}
+        </div>
       ) : (
         mapShell
       )}

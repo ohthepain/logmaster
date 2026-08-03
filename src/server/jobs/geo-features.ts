@@ -8,6 +8,7 @@ import type {
   BuildGeoFeaturesResult,
 } from '../geo-features/build'
 import type { GeoFeatureBbox } from '../geo-features/sources'
+import { createJobLogger } from './job-log'
 
 export const BUILD_GEO_FEATURES_QUEUE = 'build_geo_features'
 
@@ -18,6 +19,10 @@ export type BuildGeoFeaturesPayload = {
     geonames?: boolean
     naturalearth?: boolean
   }
+}
+
+export type BuildGeoFeaturesJobResult = BuildGeoFeaturesResult & {
+  logs: string
 }
 
 function buildOptionsFromPayload(
@@ -38,16 +43,36 @@ function buildOptionsFromPayload(
 
 export async function buildGeoFeaturesJob(
   payload: BuildGeoFeaturesPayload = {},
-): Promise<BuildGeoFeaturesResult> {
-  return buildGeoFeatures(buildOptionsFromPayload(payload))
+  jobId?: string,
+): Promise<BuildGeoFeaturesJobResult> {
+  const logger = jobId ? createJobLogger(jobId) : null
+  const log = (message: string) => {
+    console.log(message)
+    logger?.log(message)
+  }
+  try {
+    const result = await buildGeoFeatures({
+      ...buildOptionsFromPayload(payload),
+      log,
+    })
+    log(`[geo-features] done ${JSON.stringify(result)}`)
+    await logger?.finish()
+    return { ...result, logs: logger?.getText() ?? '' }
+  } catch (error) {
+    log(
+      `[geo-features] failed ${error instanceof Error ? error.message : String(error)}`,
+    )
+    await logger?.finish()
+    throw error
+  }
 }
 
 export async function handleBuildGeoFeaturesBatches(
   jobs: Job<BuildGeoFeaturesPayload>[],
-): Promise<BuildGeoFeaturesResult[]> {
-  const results: BuildGeoFeaturesResult[] = []
+): Promise<BuildGeoFeaturesJobResult[]> {
+  const results: BuildGeoFeaturesJobResult[] = []
   for (const job of jobs) {
-    results.push(await buildGeoFeaturesJob(job.data))
+    results.push(await buildGeoFeaturesJob(job.data, job.id))
   }
   return results
 }

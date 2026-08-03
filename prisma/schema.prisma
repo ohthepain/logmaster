@@ -130,6 +130,13 @@ model Trip {
   @@map("trip")
 }
 
+model DeletedTrip {
+  id        String   @id
+  deletedAt DateTime @default(now())
+
+  @@map("deleted_trip")
+}
+
 model Leg {
   id           String    @id @default(cuid())
   tripId       String
@@ -290,4 +297,12 @@ model FriendRequest {
   @@unique([requesterUserId, addresseeUserId])
   @@index([addresseeUserId, status])
   @@map("friend_request")
+}
+
+model AdminJobLog {
+  jobId     String   @id
+  log       String   @default("")
+  updatedAt DateTime @updatedAt
+
+  @@map("admin_job_log")
 }

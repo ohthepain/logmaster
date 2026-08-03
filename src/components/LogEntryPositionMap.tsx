@@ -18,7 +18,7 @@ import {
   loadSailingMapStyle,
   scheduleSeamarkTileRefresh,
 } from '../lib/maplibre-sailing-map-setup'
-import { applySailingLogMapTheme, sailingMapOverlayPaint } from '../lib/maplibre-sailing-theme'
+import { applySailingLogMapTheme, sailingMapOverlayPaint, SailingMapColors } from '../lib/maplibre-sailing-theme'
 import { defaultRasterMapId } from '../lib/map-styles'
 import { centerMapOnCurrentLocation } from '../lib/sailing-map-viewport'
 import { mapTilerTransformRequest } from '../lib/tiles'
@@ -265,7 +265,10 @@ export function LogEntryPositionMap({
   }, [])
 
   const mapShell = (
-    <div className="relative h-full min-h-0 w-full overflow-hidden bg-[#070f18]">
+    <div
+      className="relative h-full min-h-0 w-full overflow-hidden"
+      style={{ backgroundColor: SailingMapColors.background }}
+    >
       <DevComponentLabel name="LogEntryPositionMap" className="absolute left-2 top-2 z-10" />
       <div ref={containerRef} className={cn('sailing-map', mapClassName)} />
       {mapReady ? (
@@ -276,7 +279,13 @@ export function LogEntryPositionMap({
           onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}
         />
       ) : null}
-      <p className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-[#0c1f33]/90 px-2.5 py-1 text-[10px] font-medium text-[#b8c5d0] shadow-sm">
+      <p
+        className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full px-2.5 py-1 text-[10px] font-medium shadow-sm"
+        style={{
+          backgroundColor: `${SailingMapColors.chromeSurface}e6`,
+          color: SailingMapColors.labelSecondary,
+        }}
+      >
         Drag pin or tap map to adjust
       </p>
     </div>
@@ -285,7 +294,10 @@ export function LogEntryPositionMap({
   return (
     <>
       {allowFullscreen ? (
-        <div className="overflow-hidden rounded-[1.25rem] border border-[#1a3044]">
+        <div
+          className="overflow-hidden rounded-[1.25rem] border"
+          style={{ borderColor: SailingMapColors.chromeBorder }}
+        >
           {mapShell}
         </div>
       ) : (

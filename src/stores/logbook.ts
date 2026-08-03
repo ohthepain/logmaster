@@ -22,6 +22,7 @@ import {
 } from '../lib/trip-legs'
 import {
   addPendingDeletedTripId,
+  addPendingTripId,
   deleteLeg,
   deleteLogEntry,
   deleteMedia,
@@ -31,6 +32,7 @@ import {
   putLogEntry,
   putMedia,
   putTrip,
+  removePendingTripIds,
 } from '../lib/logbook-idb'
 
 type NewTripInput = {
@@ -272,6 +274,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     }
 
     await putTrip(trip)
+    addPendingTripId(trip.id)
     set((state) => ({
       trips: sortTrips([trip, ...state.trips]),
       selectedTripId: trip.id,
@@ -302,6 +305,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       updatedAt: nowIso(),
     }
     await putTrip(next)
+    addPendingTripId(tripId)
     set((state) => ({
       trips: state.trips.map((trip) => (trip.id === tripId ? next : trip)),
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
@@ -316,6 +320,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     const media = get().media.filter((item) => entryIds.has(item.logEntryId))
 
     addPendingDeletedTripId(tripId)
+    removePendingTripIds([tripId])
     await deleteTripFromIdb(tripId)
     await Promise.all([
       ...tripLegs.map((leg) => deleteLeg(leg.id)),
@@ -438,6 +443,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
           updatedAt: nowIso(),
         }
         await putTrip(completed)
+        addPendingTripId(completed.id)
         set((state) => ({
           trips: state.trips.map((item) =>
             item.id === completed.id ? completed : item,
@@ -465,6 +471,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
           updatedAt: nowIso(),
         }
         await putTrip(updated)
+        addPendingTripId(updated.id)
         set((state) => ({
           trips: state.trips.map((item) =>
             item.id === updated.id ? updated : item,

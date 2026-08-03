@@ -1,5 +1,9 @@
 import { Hono } from 'hono'
 import { prisma } from '../db'
+import {
+  deleteTripsFromLogbook,
+  getDeletedTripIds,
+} from '../deleted-trips'
 
 const db = prisma as any
 
@@ -101,13 +105,14 @@ function toMedia(data: Record<string, unknown>) {
 export const logbookRoutes = new Hono()
 
 logbookRoutes.get('/bootstrap', async (c) => {
-  const [trips, legs, logEntries, media] = await Promise.all([
+  const [trips, legs, logEntries, media, deletedTripIds] = await Promise.all([
     db.trip.findMany({ orderBy: [{ updatedAt: 'desc' }] }),
     db.leg.findMany({ orderBy: [{ tripId: 'asc' }, { sequence: 'asc' }] }),
     db.logEntry.findMany({ orderBy: [{ timestamp: 'asc' }] }),
     db.media.findMany({ orderBy: [{ createdAt: 'asc' }] }),
+    getDeletedTripIds(),
   ])
-  return c.json({ trips, legs, logEntries, media })
+  return c.json({ trips, legs, logEntries, media, deletedTripIds })
 })
 
 logbookRoutes.post('/sync', async (c) => {
@@ -129,35 +134,55 @@ logbookRoutes.post('/sync', async (c) => {
     )
 
     if (deletedTripIds.length > 0) {
-      await db.trip.deleteMany({
-        where: { id: { in: deletedTripIds } },
-      })
+      await deleteTripsFromLogbook(deletedTripIds)
     }
 
-    if (trips.length > 0 || legs.length > 0 || logEntries.length > 0 || media.length > 0) {
+    const tombstoneIds = new Set(await getDeletedTripIds())
+    const tripsToUpsert = trips.filter(
+      (trip) => !tombstoneIds.has(String(trip.id)),
+    )
+    const legsToUpsert = legs.filter(
+      (leg) => !tombstoneIds.has(String(leg.tripId)),
+    )
+    const entriesToUpsert = logEntries.filter(
+      (entry) => !tombstoneIds.has(String(entry.tripId)),
+    )
+    const allowedEntryIds = new Set(
+      entriesToUpsert.map((entry) => String(entry.id)),
+    )
+    const mediaToUpsert = media.filter((item) =>
+      allowedEntryIds.has(String(item.logEntryId)),
+    )
+
+    if (
+      tripsToUpsert.length > 0 ||
+      legsToUpsert.length > 0 ||
+      entriesToUpsert.length > 0 ||
+      mediaToUpsert.length > 0
+    ) {
       await prisma.$transaction([
-      ...trips.map((trip) =>
+      ...tripsToUpsert.map((trip) =>
         db.trip.upsert({
           where: { id: String(trip.id) },
           create: toTrip(trip) as any,
           update: toTrip(trip) as any,
         }),
       ),
-      ...legs.map((leg) =>
+      ...legsToUpsert.map((leg) =>
         db.leg.upsert({
           where: { id: String(leg.id) },
           create: toLeg(leg) as any,
           update: toLeg(leg) as any,
         }),
       ),
-      ...logEntries.map((entry) =>
+      ...entriesToUpsert.map((entry) =>
         db.logEntry.upsert({
           where: { id: String(entry.id) },
           create: toLogEntry(entry) as any,
           update: toLogEntry(entry) as any,
         }),
       ),
-      ...media.map((item) =>
+      ...mediaToUpsert.map((item) =>
         db.media.upsert({
           where: { id: String(item.id) },
           create: toMedia(item) as any,
@@ -167,11 +192,13 @@ logbookRoutes.post('/sync', async (c) => {
       ])
     }
 
-    const [savedTrips, savedLegs, savedEntries, savedMedia] = await Promise.all([
+    const [savedTrips, savedLegs, savedEntries, savedMedia, savedDeletedTripIds] =
+      await Promise.all([
       db.trip.findMany({ orderBy: [{ updatedAt: 'desc' }] }),
       db.leg.findMany({ orderBy: [{ tripId: 'asc' }, { sequence: 'asc' }] }),
       db.logEntry.findMany({ orderBy: [{ timestamp: 'asc' }] }),
       db.media.findMany({ orderBy: [{ createdAt: 'asc' }] }),
+      getDeletedTripIds(),
     ])
 
     return c.json({
@@ -179,6 +206,7 @@ logbookRoutes.post('/sync', async (c) => {
       legs: savedLegs,
       logEntries: savedEntries,
       media: savedMedia,
+      deletedTripIds: savedDeletedTripIds,
     })
   } catch (error) {
     console.error('[logbook/sync]', error)

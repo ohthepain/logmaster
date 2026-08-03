@@ -19,6 +19,82 @@ export function tripCoverPhotoUrl(
   return trip.coverPhotoDataUrl ?? trip.boatPhotoUrl ?? null
 }
 
+export function tripHeroTitle(
+  trip: Pick<Trip, 'title' | 'boatName' | 'status'>,
+): string {
+  const name = tripDisplayName(trip)
+  return trip.status === 'PLANNED' ? `${name} (PLANNED)` : name
+}
+
+export function firstName(name: string): string {
+  const trimmed = name.trim()
+  if (!trimmed) return name
+  return trimmed.split(/\s+/)[0] ?? trimmed
+}
+
+export function formatTripShortDate(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+  }).format(date)
+}
+
+export function formatTripDateRange(
+  trip: Pick<Trip, 'status' | 'createdAt' | 'startedAt' | 'completedAt'>,
+): string {
+  if (trip.status === 'PLANNED') {
+    return formatTripShortDate(trip.createdAt)
+  }
+
+  const start = formatTripShortDate(trip.startedAt)
+  if (trip.status === 'COMPLETED' && trip.completedAt) {
+    return `${start} → ${formatTripShortDate(trip.completedAt)}`
+  }
+
+  return start
+}
+
+export function formatTripRelativeStatus(
+  trip: Pick<Trip, 'status' | 'createdAt' | 'startedAt' | 'completedAt'>,
+): string {
+  const now = Date.now()
+
+  if (trip.status === 'PLANNED') {
+    const plannedStart = new Date(trip.startedAt).getTime()
+    if (!Number.isNaN(plannedStart) && plannedStart > now) {
+      return formatRelativeFutureDays(plannedStart)
+    }
+    return 'Ready to start'
+  }
+
+  if (trip.status === 'IN_PROGRESS') {
+    return formatRelativePastLabel(new Date(trip.startedAt), 'Started')
+  }
+
+  if (trip.status === 'COMPLETED' && trip.completedAt) {
+    return formatRelativePastLabel(new Date(trip.completedAt), 'Ended')
+  }
+
+  return trip.status.replace('_', ' ').toLowerCase()
+}
+
+function formatRelativeFutureDays(targetMs: number): string {
+  const days = Math.ceil((targetMs - Date.now()) / (1000 * 60 * 60 * 24))
+  if (days <= 0) return 'Ready to start'
+  if (days === 1) return 'Starts tomorrow'
+  return `Starts in ${days} days`
+}
+
+function formatRelativePastLabel(date: Date, prefix: string): string {
+  const days = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24))
+  if (days <= 0) return `${prefix} today`
+  if (days === 1) return `${prefix} yesterday`
+  if (days < 14) return `${prefix} ${days} days ago`
+  return `${prefix} ${formatTripShortDate(date.toISOString())}`
+}
+
 export function defaultBoatIdForNewTrip(
   trips: Trip[],
   boats: Array<{ id: string; name: string }>,

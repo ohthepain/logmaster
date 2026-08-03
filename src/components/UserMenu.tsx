@@ -8,12 +8,14 @@ import { cn } from '../lib/cn'
 import { ProfileModal } from './ProfileModal'
 import { DevComponentLabel } from './DevComponentLabel'
 import { DevHomeStats } from './DevHomeStats'
+import { useIsAdmin } from '../lib/use-admin'
 import { useFtue } from './FtueGate'
 
 export function UserMenu() {
   const session = useSession()
   const user = session.data?.user
   const { resetTutorial } = useFtue()
+  const { isAdmin } = useIsAdmin()
   const [open, setOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [photoVersion, setPhotoVersion] = useState(0)
@@ -140,6 +142,17 @@ export function UserMenu() {
             >
               Crew
             </Link>
+
+            {isAdmin ? (
+              <Link
+                to="/admin"
+                role="menuitem"
+                className="block rounded-xl px-3 py-2 text-sm font-semibold text-[var(--brand)] no-underline outline-none hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20"
+                onClick={() => setOpen(false)}
+              >
+                Admin
+              </Link>
+            ) : null}
 
             <button
               type="button"

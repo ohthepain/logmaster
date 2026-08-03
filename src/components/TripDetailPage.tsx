@@ -1,20 +1,27 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Camera, Check, FileText, Sailboat, Trash2, User } from "lucide-react";
+import { Check, FileText, Sailboat, Trash2, User } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LogEntryCard } from "./LogEntryCard";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { LogEntryComposerModal } from "./LogEntryComposerModal";
 import { Modal } from "./Modal";
-import { TripCrewPickerModal, TripCrewSection } from "./TripCrewPickerModal";
+import { TripCrewPickerModal } from "./TripCrewPickerModal";
+import { TripDetailHero } from "./TripDetailHero";
 import { TripLegSection } from "./TripLegSection";
 import { TripLogMap } from "./TripLogMap";
 import { NativeRecordingSettings } from "./NativeRecordingSettings";
 import type { LogEntry, Media } from "../domain/logbook";
 import type { CrewMember } from "../domain/crew";
+import { useSession } from "../lib/auth-client";
 import { fetchCrew } from "../lib/crew-api";
 import { readImageFile } from "../lib/image-file";
 import { formatDateTime, formatPosition } from "../lib/logbook-format";
+import {
+  buildSkipperOptions,
+  parseTripPersonKey,
+  resolveTripPersonOption,
+} from "../lib/trip-people";
 import { tripCoverPhotoUrl, tripDisplayName } from "../lib/trip-display";
 import { useLogbookStore, triggerLogbookSyncRetry } from "../stores/logbook";
 
@@ -24,6 +31,7 @@ type TripDetailPageProps = {
 
 export function TripDetailPage({ tripId }: TripDetailPageProps) {
   const navigate = useNavigate();
+  const session = useSession();
   const store = useLogbookStore();
   const trip = store.trips.find((item) => item.id === tripId) ?? null;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,6 +94,34 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
     return map;
   }, [store.media]);
 
+  const skipperOptions = useMemo(() => {
+    const user = session.data?.user;
+    if (!user) return [];
+    return buildSkipperOptions({
+      userId: user.id,
+      userName: user.name,
+      userImage: user.image,
+      crewMembers,
+    });
+  }, [session.data?.user, crewMembers]);
+
+  const tripCrew = useMemo(() => {
+    if (!trip) return [];
+    const selected = crewMembers.filter((member) => (trip.crewMemberIds ?? []).includes(member.id));
+    const skipperKey = trip.skipperKey;
+    if (!skipperKey) return selected;
+
+    const parsed = parseTripPersonKey(skipperKey);
+    if (parsed?.kind !== "crew") return selected;
+
+    return selected.filter((member) => member.id !== parsed.id);
+  }, [trip, crewMembers]);
+
+  const skipperPerson = useMemo(
+    () => (trip ? resolveTripPersonOption(trip.skipperKey, skipperOptions) : null),
+    [trip, skipperOptions],
+  );
+
   if (!store.booted) {
     return (
       <main className="page-wrap px-3 py-8 sm:px-4">
@@ -100,7 +136,6 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
       <main className="page-wrap px-3 py-8 sm:px-4">
         <DevComponentLabel name="TripDetailPage" />
         <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand)] no-underline">
-          <ArrowLeft className="size-4" />
           Back to trips
         </Link>
         <p className="mt-6 text-sm text-[var(--sea-ink-soft)]">Trip not found.</p>
@@ -110,7 +145,6 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
 
   const coverPhoto = tripCoverPhotoUrl(trip);
   const displayName = tripDisplayName(trip);
-  const tripCrewIds = trip.crewMemberIds ?? [];
 
   const saveTitle = async () => {
     const trimmed = title.trim();
@@ -217,6 +251,34 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
   return (
     <>
       <DevComponentLabel name="TripDetailPage" />
+      <TripDetailHero
+        trip={trip}
+        title={title}
+        coverPhoto={coverPhoto}
+        busy={busy}
+        skipperName={skipperPerson?.name ?? trip.skipper ?? null}
+        skipperImageUrl={skipperPerson?.imageUrl ?? null}
+        skipperUserId={
+          skipperPerson?.kind === "user"
+            ? skipperPerson.id
+            : (skipperPerson?.linkedUserId ?? undefined)
+        }
+        crewMembers={tripCrew}
+        crewLoading={crewLoading}
+        onTitleChange={setTitle}
+        onTitleBlur={() => void saveTitle()}
+        onPhotoClick={() => fileInputRef.current?.click()}
+        onAddCrewClick={() => setCrewPickerOpen(true)}
+      />
+      <input
+        ref={fileInputRef}
+        id={fileInputId}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={(event) => void handlePhotoPick(event.target.files?.[0])}
+      />
+
       <main className="page-wrap px-3 pb-24 pt-4 sm:px-4 sm:pb-28">
         <div className="mx-auto max-w-3xl space-y-5">
           {trip.status === "PLANNED" ? (
@@ -240,6 +302,12 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
             </button>
           ) : null}
 
+          <TripLegSection
+            tripId={trip.id}
+            selectedLegId={selectedLegId}
+            onSelectLeg={setSelectedLegId}
+          />
+
           <TripLogMap trip={trip} entries={entries} />
 
           <NativeRecordingSettings tripInProgress={trip.status === "IN_PROGRESS"} />
@@ -255,7 +323,7 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
           ) : (
             <div className="space-y-3">
               {entries.map((entry) => (
-                <LogEntry Card
+                <LogEntryCard
                   key={entry.id}
                   entry={entry}
                   media={mediaByEntry.get(entry.id) ?? []}
@@ -275,96 +343,50 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
             </div>
           )}
 
-          <div className="overflow-hidden rounded-[1.75rem] border border-[var(--panel-border)] bg-[var(--panel)]">
-            <div className="relative aspect-[16/9] bg-[var(--chip-bg)]">
-              {coverPhoto ? (
-                <img src={coverPhoto} alt="" className="size-full object-cover" />
+          <div className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] p-4 sm:p-5">
+            <p className="m-0 text-sm text-[var(--sea-ink-soft)]">Boat: {trip.boatName}</p>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {trip.status !== "PLANNED" ? (
+                <MetaLine label="Started" value={formatDateTime(trip.startedAt)} />
               ) : (
-                <div className="flex size-full items-center justify-center text-[var(--sea-ink-soft)]">
-                  <Sailboat className="size-16" strokeWidth={1.25} />
-                </div>
+                <MetaLine label="Created" value={formatDateTime(trip.createdAt)} />
               )}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={busy}
-                className="absolute bottom-3 right-3 inline-flex size-10 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--surface-strong)] text-[var(--sea-ink)] shadow-sm"
-                aria-label="Upload trip photo"
-              >
-                <Camera className="size-4" />
-              </button>
-              <input
-                ref={fileInputRef}
-                id={fileInputId}
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={(e) => void handlePhotoPick(e.target.files?.[0])}
-              />
+              <MetaLine label="Status" value={trip.status.replace("_", " ")} />
+              {trip.status !== "PLANNED" && (
+                <>
+                  <MetaLine label="Position" value={formatPosition(trip.startLatitude, trip.startLongitude)} />
+                  <MetaLine label="Country" value={trip.startCountry ?? "Unknown"} />
+                </>
+              )}
+              {trip.skipper && <MetaLine label="Skipper" value={trip.skipper} icon={User} />}
             </div>
 
-            <div className="space-y-4 p-4 sm:p-5">
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">Trip name</span>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  onBlur={() => void saveTitle()}
-                  placeholder={trip.boatName}
-                  className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
-                />
-                <p className="m-0 mt-1.5 text-xs text-[var(--sea-ink-soft)]">Boat: {trip.boatName}</p>
-              </label>
-
-              {coverPhoto && trip.coverPhotoDataUrl && (
+            {trip.status === "IN_PROGRESS" && (
+              <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => void handleRemovePhoto()}
                   disabled={busy}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 dark:text-red-300"
+                  onClick={() => void handleEndTrip()}
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] disabled:opacity-60"
                 >
-                  <Trash2 className="size-3.5" />
-                  Remove photo
+                  <Check className="size-4" />
+                  End trip
                 </button>
-              )}
-
-              <TripCrewSection
-                crewMembers={crewMembers}
-                selectedIds={tripCrewIds}
-                onAddClick={() => setCrewPickerOpen(true)}
-              />
-              {crewLoading && <p className="m-0 text-xs text-[var(--sea-ink-soft)]">Loading crew…</p>}
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                {trip.status !== "PLANNED" ? (
-                  <MetaLine label="Started" value={formatDateTime(trip.startedAt)} />
-                ) : (
-                  <MetaLine label="Created" value={formatDateTime(trip.createdAt)} />
-                )}
-                <MetaLine label="Status" value={trip.status.replace("_", " ")} />
-                {trip.status !== "PLANNED" && (
-                  <>
-                    <MetaLine label="Position" value={formatPosition(trip.startLatitude, trip.startLongitude)} />
-                    <MetaLine label="Country" value={trip.startCountry ?? "Unknown"} />
-                  </>
-                )}
-                {trip.skipper && <MetaLine label="Skipper" value={trip.skipper} icon={User} />}
               </div>
+            )}
 
-              {trip.status === "IN_PROGRESS" && (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void handleEndTrip()}
-                    className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] disabled:opacity-60"
-                  >
-                    <Check className="size-4" />
-                    End trip
-                  </button>
-                </div>
-              )}
-            </div>
+            {coverPhoto && trip.coverPhotoDataUrl && (
+              <button
+                type="button"
+                onClick={() => void handleRemovePhoto()}
+                disabled={busy}
+                className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 dark:text-red-300"
+              >
+                <Trash2 className="size-3.5" />
+                Remove photo
+              </button>
+            )}
           </div>
 
           <div className="border-t border-[var(--line)] pt-4 pb-8">
@@ -386,7 +408,7 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
       <TripCrewPickerModal
         open={crewPickerOpen}
         crewMembers={crewMembers}
-        selectedIds={tripCrewIds}
+        selectedIds={trip.crewMemberIds ?? []}
         onClose={() => setCrewPickerOpen(false)}
         onChange={(ids) => void handleCrewChange(ids)}
       />

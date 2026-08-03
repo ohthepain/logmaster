@@ -30,11 +30,12 @@ const DB_NAME = 'logmaster'
 const DB_VERSION = 2
 
 const PENDING_DELETED_TRIPS_KEY = 'logmaster-pending-trip-deletes'
+const PENDING_TRIP_SYNC_KEY = 'logmaster-pending-trip-sync'
 
-export function getPendingDeletedTripIds(): string[] {
+function readPendingIdList(key: string): string[] {
   if (typeof localStorage === 'undefined') return []
   try {
-    const raw = localStorage.getItem(PENDING_DELETED_TRIPS_KEY)
+    const raw = localStorage.getItem(key)
     if (!raw) return []
     const parsed = JSON.parse(raw)
     return Array.isArray(parsed)
@@ -45,22 +46,51 @@ export function getPendingDeletedTripIds(): string[] {
   }
 }
 
-export function addPendingDeletedTripId(id: string) {
+function writePendingIdList(key: string, ids: string[]) {
   if (typeof localStorage === 'undefined') return
+  if (ids.length === 0) {
+    localStorage.removeItem(key)
+    return
+  }
+  localStorage.setItem(key, JSON.stringify(ids))
+}
+
+export function getPendingDeletedTripIds(): string[] {
+  return readPendingIdList(PENDING_DELETED_TRIPS_KEY)
+}
+
+export function addPendingDeletedTripId(id: string) {
   const ids = new Set(getPendingDeletedTripIds())
   ids.add(id)
-  localStorage.setItem(PENDING_DELETED_TRIPS_KEY, JSON.stringify([...ids]))
+  writePendingIdList(PENDING_DELETED_TRIPS_KEY, [...ids])
 }
 
 export function removePendingDeletedTripIds(ids: string[]) {
-  if (typeof localStorage === 'undefined' || ids.length === 0) return
+  if (ids.length === 0) return
   const remove = new Set(ids)
-  const remaining = getPendingDeletedTripIds().filter((id) => !remove.has(id))
-  if (remaining.length === 0) {
-    localStorage.removeItem(PENDING_DELETED_TRIPS_KEY)
-    return
-  }
-  localStorage.setItem(PENDING_DELETED_TRIPS_KEY, JSON.stringify(remaining))
+  writePendingIdList(
+    PENDING_DELETED_TRIPS_KEY,
+    getPendingDeletedTripIds().filter((id) => !remove.has(id)),
+  )
+}
+
+export function getPendingTripIds(): string[] {
+  return readPendingIdList(PENDING_TRIP_SYNC_KEY)
+}
+
+export function addPendingTripId(id: string) {
+  const ids = new Set(getPendingTripIds())
+  ids.add(id)
+  writePendingIdList(PENDING_TRIP_SYNC_KEY, [...ids])
+}
+
+export function removePendingTripIds(ids: string[]) {
+  if (ids.length === 0) return
+  const remove = new Set(ids)
+  writePendingIdList(
+    PENDING_TRIP_SYNC_KEY,
+    getPendingTripIds().filter((id) => !remove.has(id)),
+  )
 }
 
 export async function getLogbookDb() {

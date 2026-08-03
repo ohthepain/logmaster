@@ -2,6 +2,7 @@ import { X } from 'lucide-react'
 import { useEffect, useId } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
+import { SailingMapColors } from '../lib/maplibre-sailing-theme'
 
 type SailingMapFullscreenModalProps = {
   title: string
@@ -33,20 +34,33 @@ export function SailingMapFullscreenModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[110] flex flex-col bg-[#070f18]"
+      className="fixed inset-0 z-[110] flex flex-col"
+      style={{ backgroundColor: SailingMapColors.background }}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
     >
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[#1a3044] px-4 py-3">
-        <h2 id={titleId} className="m-0 text-base font-semibold text-[#e8eef4]">
+      <header
+        className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-3"
+        style={{ borderColor: SailingMapColors.chromeBorder }}
+      >
+        <h2
+          id={titleId}
+          className="m-0 text-base font-semibold"
+          style={{ color: SailingMapColors.label }}
+        >
           {title}
         </h2>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close full-screen map"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#1a3044] bg-[#0c1f33] text-[#e8eef4] transition hover:bg-[#1a3044]"
+          className="flex h-9 w-9 items-center justify-center rounded-full border transition"
+          style={{
+            borderColor: SailingMapColors.chromeBorder,
+            backgroundColor: SailingMapColors.chromeSurface,
+            color: SailingMapColors.label,
+          }}
         >
           <X className="size-4" />
         </button>

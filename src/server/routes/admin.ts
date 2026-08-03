@@ -1,52 +1,207 @@
 import { Hono } from 'hono'
+import { prisma } from '../db'
+import {
+  forbidden,
+  getSessionUser,
+  isAdminEmail,
+  isAdminRequest,
+  unauthorized,
+} from '../admin-auth'
 import { getBoss } from '../jobs/boss'
 import { BUILD_GEO_FEATURES_QUEUE } from '../jobs/geo-features'
 import type { BuildGeoFeaturesPayload } from '../jobs/geo-features'
+import { BUILD_MARINAS_QUEUE } from '../jobs/marinas'
+import type { BuildMarinasPayload } from '../jobs/marinas'
 import { enqueueEuropeGeoFeatures } from '../jobs/queue'
+import { enqueueNorthAmericaMarinas } from '../jobs/marina-queue'
+import { deleteTripsFromLogbook } from '../deleted-trips'
+import {
+  cancelUnifiedAdminJob,
+  getAdminJobLogText,
+  getUnifiedAdminJob,
+  listUnifiedAdminJobs,
+  rerunUnifiedAdminJob,
+} from '../jobs/admin-jobs-list'
+import { shortJobOutputMessage } from '../../lib/admin-jobs'
+
+const db = prisma as any
 
 export const adminRoutes = new Hono()
 
-const MAX_JOBS = 500
-const OUTPUT_MESSAGE_MAX = 280
-const SUPPORTED_JOB_QUEUES = [BUILD_GEO_FEATURES_QUEUE] as const
+adminRoutes.get('/status', async (c) => {
+  const admin = await isAdminRequest(c.req.raw.headers)
+  return c.json({ admin })
+})
 
-type SupportedJobQueue = (typeof SUPPORTED_JOB_QUEUES)[number]
-type AdminJobPayload = BuildGeoFeaturesPayload
+adminRoutes.use('*', async (c, next) => {
+  const user = await getSessionUser(c.req.raw.headers)
+  if (!user) return unauthorized()
+  if (!isAdminEmail(user.email)) return forbidden()
+  await next()
+})
 
-function truncateMessage(s: string, max: number): string {
-  const t = s.trim()
-  if (t.length <= max) return t
-  return `${t.slice(0, max - 1)}…`
+function serializeTrip(trip: {
+  id: string
+  boatName: string
+  registration: string | null
+  skipper: string | null
+  skipperKey: string | null
+  crewMemberIds: unknown
+  title: string | null
+  coverPhotoDataUrl: string | null
+  boatId: string | null
+  boatPhotoUrl: string | null
+  startedAt: Date
+  completedAt: Date | null
+  startLatitude: number | null
+  startLongitude: number | null
+  startCountry: string | null
+  status: string
+  createdAt: Date
+  updatedAt: Date
+}) {
+  return {
+    id: trip.id,
+    boatName: trip.boatName,
+    registration: trip.registration,
+    skipper: trip.skipper,
+    skipperKey: trip.skipperKey,
+    crewMemberIds: Array.isArray(trip.crewMemberIds)
+      ? (trip.crewMemberIds as string[])
+      : null,
+    title: trip.title,
+    coverPhotoDataUrl: trip.coverPhotoDataUrl,
+    boatId: trip.boatId,
+    boatPhotoUrl: trip.boatPhotoUrl,
+    startedAt: trip.startedAt.toISOString(),
+    completedAt: trip.completedAt?.toISOString() ?? null,
+    startLatitude: trip.startLatitude,
+    startLongitude: trip.startLongitude,
+    startCountry: trip.startCountry,
+    status: trip.status,
+    createdAt: trip.createdAt.toISOString(),
+    updatedAt: trip.updatedAt.toISOString(),
+  }
 }
 
-/** Human-readable line for pg-boss job `output` (errors use serialize-error shape). */
-function shortJobOutputMessage(output: object | null): string | null {
-  if (output == null) return null
-  if (typeof output !== 'object' || Array.isArray(output)) return null
-  const o = output as Record<string, unknown>
-  const top = o.message
-  if (typeof top === 'string' && top.trim()) {
-    return truncateMessage(top, OUTPUT_MESSAGE_MAX)
+adminRoutes.get('/users', async (c) => {
+  const users = await db.user.findMany({
+    orderBy: [{ createdAt: 'desc' }],
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      emailVerified: true,
+      createdAt: true,
+    },
+  })
+  return c.json({
+    users: users.map((user: (typeof users)[number]) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      emailVerified: user.emailVerified,
+      createdAt: user.createdAt.toISOString(),
+    })),
+  })
+})
+
+adminRoutes.delete('/users/:userId', async (c) => {
+  const userId = c.req.param('userId')
+  const currentUser = await getSessionUser(c.req.raw.headers)
+  if (currentUser?.id === userId) {
+    return c.json({ error: 'You cannot delete your own account' }, 400)
   }
-  const nested = o.error
-  if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
-    const m = (nested as Record<string, unknown>).message
-    if (typeof m === 'string' && m.trim()) {
-      return truncateMessage(m, OUTPUT_MESSAGE_MAX)
+
+  const existing = await db.user.findUnique({ where: { id: userId } })
+  if (!existing) return c.json({ error: 'User not found' }, 404)
+
+  await db.user.delete({ where: { id: userId } })
+  return c.json({ ok: true })
+})
+
+adminRoutes.get('/trips', async (c) => {
+  const trips = await db.trip.findMany({
+    orderBy: [{ updatedAt: 'desc' }],
+  })
+  return c.json({ trips: trips.map(serializeTrip) })
+})
+
+adminRoutes.delete('/trips/:tripId', async (c) => {
+  const tripId = c.req.param('tripId')
+  const deletedCount = await deleteTripsFromLogbook([tripId])
+  if (deletedCount === 0) {
+    const existingTombstone = await db.deletedTrip.findUnique({
+      where: { id: tripId },
+    })
+    if (!existingTombstone) {
+      return c.json({ error: 'Trip not found' }, 404)
     }
   }
-  const value = o.value
-  if (typeof value === 'string' && value.trim()) {
-    return truncateMessage(value, OUTPUT_MESSAGE_MAX)
-  }
-  try {
-    const raw = JSON.stringify(output)
-    if (raw === '{}' || raw === 'null') return null
-    return truncateMessage(raw, OUTPUT_MESSAGE_MAX)
-  } catch {
-    return null
-  }
+  return c.json({ ok: true })
+})
+
+const MAX_JOBS = 500
+const SUPPORTED_JOB_QUEUES = [BUILD_GEO_FEATURES_QUEUE, BUILD_MARINAS_QUEUE] as const
+
+type SupportedJobQueue = (typeof SUPPORTED_JOB_QUEUES)[number]
+type AdminJobPayload = BuildGeoFeaturesPayload | BuildMarinasPayload
+
+function toIso(value: Date | null | undefined): string | null {
+  return value ? value.toISOString() : null
 }
+
+adminRoutes.get('/jobs', async (c) => {
+  const limitRaw = c.req.query('limit')
+  const limit =
+    typeof limitRaw === 'string' && Number.isInteger(Number(limitRaw))
+      ? Math.min(Math.max(Number(limitRaw), 1), 500)
+      : 50
+  const payload = await listUnifiedAdminJobs(limit)
+  return c.json(payload)
+})
+
+adminRoutes.get('/jobs/:jobId/logs', async (c) => {
+  const jobId = c.req.param('jobId')
+  const job = await getUnifiedAdminJob(jobId)
+  if (!job) return c.json({ error: 'Job not found' }, 404)
+  const log = await getAdminJobLogText(jobId)
+  return c.json({ log: log ?? '', state: job.state })
+})
+
+adminRoutes.get('/jobs/:jobId', async (c) => {
+  const job = await getUnifiedAdminJob(c.req.param('jobId'))
+  if (!job) return c.json({ error: 'Job not found' }, 404)
+  return c.json(job)
+})
+
+adminRoutes.post('/jobs/:jobId/cancel', async (c) => {
+  try {
+    const result = await cancelUnifiedAdminJob(c.req.param('jobId'))
+    return c.json({ ok: true, ...result })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Cancel failed'
+    const status =
+      message === 'Job not found'
+        ? 404
+        : message === 'Job is already finished' ||
+            message === 'Failed jobs cannot be cancelled'
+          ? 400
+          : 400
+    return c.json({ error: message }, status)
+  }
+})
+
+adminRoutes.post('/jobs/:jobId/rerun', async (c) => {
+  try {
+    const result = await rerunUnifiedAdminJob(c.req.param('jobId'))
+    return c.json({ ok: true, ...result }, 201)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Re-run failed'
+    const status = message === 'Job not found' ? 404 : 400
+    return c.json({ error: message }, status)
+  }
+})
 
 adminRoutes.get('/pgboss/jobs', async (c) => {
   const boss = await getBoss()
@@ -90,13 +245,48 @@ adminRoutes.get('/pgboss/jobs', async (c) => {
       retryLimit: j.retryLimit,
       singletonKey: j.singletonKey,
       createdOn: j.createdOn.toISOString(),
-      startedOn: j.startedOn.toISOString(),
-      completedOn: j.completedOn ? j.completedOn.toISOString() : null,
-      startAfter: j.startAfter.toISOString(),
+      startedOn: toIso(j.startedOn),
+      completedOn: toIso(j.completedOn),
+      startAfter: toIso(j.startAfter) ?? j.createdOn.toISOString(),
       output: j.output,
-      outputMessage: shortJobOutputMessage(j.output),
+      outputMessage: shortJobOutputMessage(
+        j.output as Record<string, unknown> | null | undefined,
+        queueName,
+      ),
     })),
   })
+})
+
+adminRoutes.post('/jobs/geo-features/runs', async (c) => {
+  const body = await c.req.json().catch(() => ({}))
+  const dryRun =
+    typeof body === 'object' &&
+    body !== null &&
+    !Array.isArray(body) &&
+    (body as Record<string, unknown>).dryRun === true
+  const id = await enqueueEuropeGeoFeatures({ dryRun })
+  return c.json({ ok: true, jobId: id, queued: true, dryRun }, 202)
+})
+
+adminRoutes.post('/jobs/marinas/runs', async (c) => {
+  const body = await c.req.json().catch(() => ({}))
+  const dryRun =
+    typeof body === 'object' &&
+    body !== null &&
+    !Array.isArray(body) &&
+    (body as Record<string, unknown>).dryRun === true
+  const limitCellsRaw = (body as Record<string, unknown>).limitCells
+  const limitCells =
+    typeof limitCellsRaw === 'number' && Number.isInteger(limitCellsRaw)
+      ? limitCellsRaw
+      : null
+  const regionRaw = (body as Record<string, unknown>).region
+  const region =
+    regionRaw === 'canada' || regionRaw === 'north-america'
+      ? regionRaw
+      : 'north-america'
+  const id = await enqueueNorthAmericaMarinas({ dryRun, limitCells, region })
+  return c.json({ ok: true, jobId: id, queued: true, dryRun, limitCells, region }, 202)
 })
 
 adminRoutes.post('/pgboss/geo-features/europe', async (c) => {
@@ -108,4 +298,25 @@ adminRoutes.post('/pgboss/geo-features/europe', async (c) => {
     (body as Record<string, unknown>).dryRun === true
   const id = await enqueueEuropeGeoFeatures({ dryRun })
   return c.json({ ok: true, jobId: id, queued: true, dryRun }, 202)
+})
+
+adminRoutes.post('/pgboss/marinas/north-america', async (c) => {
+  const body = await c.req.json().catch(() => ({}))
+  const dryRun =
+    typeof body === 'object' &&
+    body !== null &&
+    !Array.isArray(body) &&
+    (body as Record<string, unknown>).dryRun === true
+  const limitCellsRaw = (body as Record<string, unknown>).limitCells
+  const limitCells =
+    typeof limitCellsRaw === 'number' && Number.isInteger(limitCellsRaw)
+      ? limitCellsRaw
+      : null
+  const regionRaw = (body as Record<string, unknown>).region
+  const region =
+    regionRaw === 'canada' || regionRaw === 'north-america'
+      ? regionRaw
+      : 'north-america'
+  const id = await enqueueNorthAmericaMarinas({ dryRun, limitCells, region })
+  return c.json({ ok: true, jobId: id, queued: true, dryRun, limitCells, region }, 202)
 })

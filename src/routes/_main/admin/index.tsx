@@ -1,10 +1,32 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useEffect } from 'react'
+import { useSession } from '../../../lib/auth-client'
+import { useIsAdmin } from '../../../lib/use-admin'
 
 export const Route = createFileRoute('/_main/admin/')({
   component: AdminHome,
 })
 
 function AdminHome() {
+  const session = useSession()
+  const navigate = useNavigate()
+  const { isAdmin, loading } = useIsAdmin()
+
+  useEffect(() => {
+    if (loading || session.isPending) return
+    if (!session.data?.user || !isAdmin) {
+      void navigate({ to: '/' })
+    }
+  }, [isAdmin, loading, navigate, session.data?.user, session.isPending])
+
+  if (loading || session.isPending || !isAdmin) {
+    return (
+      <main className="page-wrap px-4 py-8">
+        <p className="text-[var(--sea-ink-soft)]">Loading…</p>
+      </main>
+    )
+  }
+
   return (
     <main className="page-wrap px-4 py-8">
       <section className="island-shell rounded-2xl p-6 sm:p-8">
@@ -22,15 +44,50 @@ function AdminHome() {
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           <li>
             <Link
-              to="/admin/pgboss"
+              to="/admin/trips"
               className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
             >
-              pg-boss jobs
+              Trips
             </Link>
             <span className="text-[var(--sea-ink-soft)]"> — </span>
             <span className="text-[var(--sea-ink-soft)]">
-              queue stats and{' '}
-              <code className="text-sm">build_geo_features</code> job history
+              view and delete all trips
+            </span>
+          </li>
+          <li>
+            <Link
+              to="/admin/users"
+              className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
+            >
+              Users
+            </Link>
+            <span className="text-[var(--sea-ink-soft)]"> — </span>
+            <span className="text-[var(--sea-ink-soft)]">
+              view and delete user accounts
+            </span>
+          </li>
+          <li>
+            <Link
+              to="/admin/job-management"
+              className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
+            >
+              Jobs
+            </Link>
+            <span className="text-[var(--sea-ink-soft)]"> — </span>
+            <span className="text-[var(--sea-ink-soft)]">
+              all runs, output, re-run, and duration
+            </span>
+          </li>
+          <li>
+            <Link
+              to="/admin/jobs"
+              className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
+            >
+              Background jobs
+            </Link>
+            <span className="text-[var(--sea-ink-soft)]"> — </span>
+            <span className="text-[var(--sea-ink-soft)]">
+              start map data builds (geo features, marinas)
             </span>
           </li>
           <li>

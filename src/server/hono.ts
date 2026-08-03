@@ -10,6 +10,9 @@ import { mapTileRoutes } from './routes/map-tiles'
 import { mapStyleVectorRoutes } from './routes/map-style-vector'
 import { maptileCdnRoutes } from './routes/maptile-cdn'
 import { openseamapSeamarkRoutes } from './routes/openseamap-seamark'
+import { adminRoutes } from './routes/admin'
+import { geoFeatureRoutes } from './routes/geo-features'
+import { marinaRoutes } from './routes/marinas'
 
 const corsOrigins = getTrustedOrigins()
 
@@ -50,3 +53,6 @@ app.route('/map-tiles', mapTileRoutes)
 app.route('/map-style-vector', mapStyleVectorRoutes)
 app.route('/maptiler-cdn', maptileCdnRoutes)
 app.route('/openseamap-seamark', openseamapSeamarkRoutes)
+app.route('/admin', adminRoutes)
+app.route('/geo-features', geoFeatureRoutes)
+app.route('/marinas', marinaRoutes)

@@ -27,6 +27,7 @@ export type BuildGeoFeaturesOptions = {
   dryRun?: boolean
   onlyTile?: DegreeTile | null
   bbox?: GeoFeatureBbox
+  log?: (message: string) => void
 }
 
 export type BuildGeoFeaturesResult = {
@@ -189,12 +190,13 @@ async function uploadObject(
   key: string,
   body: string | Buffer,
   contentType: string,
+  log: (message: string) => void,
   contentEncoding?: string,
 ): Promise<void> {
   const byteLength =
     typeof body === 'string' ? Buffer.byteLength(body) : body.byteLength
   if (dryRun) {
-    console.log(
+    log(
       `[geo-features] dry-run ${key} (${byteLength.toLocaleString()} bytes)`,
     )
     return
@@ -210,7 +212,7 @@ async function uploadObject(
       CacheControl: 'public, max-age=31536000, immutable',
     }),
   )
-  console.log(
+  log(
     `[geo-features] uploaded s3://${bucket}/${key} (${byteLength.toLocaleString()} bytes)`,
   )
 }
@@ -220,6 +222,7 @@ async function uploadTile(
   bucket: string,
   dryRun: boolean,
   tile: TileAccumulator,
+  log: (message: string) => void,
 ): Promise<void> {
   const prefix = tile.tile.prefix
 
@@ -231,6 +234,7 @@ async function uploadTile(
       `${prefix}/geonames.geojson`,
       JSON.stringify(rawFeatureCollection(tile.rawGeoNames)),
       'application/geo+json',
+      log,
     )
   }
 
@@ -241,6 +245,7 @@ async function uploadTile(
     `${prefix}/v1/tiles/highres.json.gz`,
     gzipFeatureCollection(tile.highres),
     'application/geo+json',
+    log,
     'gzip',
   )
   await uploadObject(
@@ -250,6 +255,7 @@ async function uploadTile(
     `${prefix}/v1/tiles/lowres.json.gz`,
     gzipFeatureCollection(tile.lowres),
     'application/geo+json',
+    log,
     'gzip',
   )
 }
@@ -257,6 +263,7 @@ async function uploadTile(
 export async function buildGeoFeatures(
   options: BuildGeoFeaturesOptions = {},
 ): Promise<BuildGeoFeaturesResult> {
+  const log = options.log ?? ((message: string) => console.log(message))
   const dryRun = options.dryRun ?? false
   const onlyTile = options.onlyTile ?? null
   const bbox = options.bbox
@@ -264,7 +271,7 @@ export async function buildGeoFeatures(
   if (!bucket)
     throw new Error('Set S3_BUCKET_GEOJSON before running geo:features')
 
-  console.log('[geo-features] loading GeoNames cities5000')
+  log('[geo-features] loading GeoNames cities5000')
   const geoNames = await loadGeoNamesCities({ bbox })
   const lowresGeoNames = geoNames.normalized.filter(
     (feature) => (feature.properties.population ?? 0) >= 100_000,
@@ -289,11 +296,11 @@ export async function buildGeoFeatures(
     a.tile.prefix.localeCompare(b.tile.prefix),
   )
 
-  console.log(
+  log(
     `[geo-features] writing ${sortedTiles.length.toLocaleString()} tile folders`,
   )
   for (const tile of sortedTiles) {
-    await uploadTile(s3, bucket, dryRun, tile)
+    await uploadTile(s3, bucket, dryRun, tile, log)
   }
 
   return {

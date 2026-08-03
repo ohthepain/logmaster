@@ -9,6 +9,7 @@ type PositionSnapshot = {
 type PositionListener = (position: PositionSnapshot) => void;
 
 const CACHE_TTL_MS = 30_000;
+const GEO_TIMEOUT_MS = 2_000;
 const listeners = new Set<PositionListener>();
 let cached: PositionSnapshot | null = null;
 let cachedAt = 0;
@@ -93,20 +94,21 @@ async function resolveDevicePosition(): Promise<PositionSnapshot> {
     return devFallbackPosition("insecure context");
   }
 
-  const highAccuracy = await requestPosition({
-    enableHighAccuracy: true,
-    maximumAge: CACHE_TTL_MS,
-    timeout: 5_000,
-  });
+  const [highAccuracy, lowAccuracy] = await Promise.all([
+    requestPosition({
+      enableHighAccuracy: true,
+      maximumAge: CACHE_TTL_MS,
+      timeout: GEO_TIMEOUT_MS,
+    }),
+    requestPosition({
+      enableHighAccuracy: false,
+      maximumAge: 60_000,
+      timeout: GEO_TIMEOUT_MS,
+    }),
+  ]);
   if (highAccuracy?.latitude != null && highAccuracy.longitude != null) {
     return highAccuracy;
   }
-
-  const lowAccuracy = await requestPosition({
-    enableHighAccuracy: false,
-    maximumAge: 60_000,
-    timeout: 10_000,
-  });
   if (lowAccuracy?.latitude != null && lowAccuracy.longitude != null) {
     return lowAccuracy;
   }

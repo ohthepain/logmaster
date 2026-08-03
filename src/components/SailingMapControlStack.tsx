@@ -16,7 +16,7 @@ export function SailingMapControlStack({
 }: SailingMapControlStackProps) {
   return (
     <div className="sailing-map-controls pointer-events-none absolute right-2.5 top-2.5 z-10">
-      <div className="pointer-events-auto flex flex-col overflow-hidden rounded-md border border-[rgba(142,180,200,0.14)] bg-[rgba(12,31,51,0.94)] shadow-[0_4px_16px_rgba(0,0,0,0.35)]">
+      <div className="pointer-events-auto flex flex-col overflow-hidden rounded-md border border-[rgba(126,200,232,0.2)] bg-[rgba(26,51,72,0.94)] shadow-[0_4px_16px_rgba(0,0,0,0.25)]">
         <MapControlButton label="Zoom in" onClick={onZoomIn}>
           <Plus className="size-4" strokeWidth={2.25} />
         </MapControlButton>
@@ -53,8 +53,8 @@ function MapControlButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className={`flex h-[29px] w-[29px] items-center justify-center text-white/90 transition hover:bg-[rgba(142,180,200,0.12)] ${
-        bordered ? 'border-t border-[rgba(142,180,200,0.12)]' : ''
+      className={`flex h-[29px] w-[29px] items-center justify-center text-white/95 transition hover:bg-[rgba(126,200,232,0.16)] ${
+        bordered ? 'border-t border-[rgba(126,200,232,0.2)]' : ''
       }`}
     >
       {children}

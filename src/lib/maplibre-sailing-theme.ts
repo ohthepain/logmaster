@@ -1,21 +1,24 @@
 import type maplibregl from 'maplibre-gl'
 
-/** Dark nautical palette inspired by chart-style sailing apps. */
+/** Medium nautical palette — readable water/land contrast without near-black crush. */
 export const SailingMapColors = {
-  background: '#070f18',
-  water: '#0c1f33',
-  waterway: '#0a1828',
-  land: '#1a2830',
-  landuse: '#243832',
-  landusePark: '#1e3330',
-  road: '#6b7785',
-  roadMinor: '#4a5560',
-  label: '#e8eef4',
-  labelSecondary: '#b8c5d0',
-  labelHalo: '#070f18',
-  track: '#8eb4c8',
-  entryFill: '#f1f5f9',
-  entryStroke: '#0c1f33',
+  background: '#1a3348',
+  water: '#25608a',
+  waterway: '#1e5070',
+  land: '#3d5248',
+  landuse: '#4a6058',
+  landusePark: '#3d5548',
+  road: '#9aa8b4',
+  roadMinor: '#6a7884',
+  label: '#f0f4f8',
+  labelSecondary: '#c8d4de',
+  labelHalo: '#1a3348',
+  track: '#7ec8e8',
+  entryFill: '#ffffff',
+  entryStroke: '#25608a',
+  /** Map chrome (shell borders, control surfaces). */
+  chromeBorder: '#2d4a62',
+  chromeSurface: '#25608a',
 } as const
 
 function isAppOverlayLayer(id: string): boolean {
@@ -67,8 +70,8 @@ function isHiddenBasemapLayer(id: string): boolean {
 import { prepareFlatSailingBasemap } from './maplibre-sailing-map-setup'
 
 /**
- * Restyle a MapTiler vector basemap toward a dark nautical / chart look:
- * deep navy water, muted land, thin grey roads, white labels, reduced POI clutter.
+ * Restyle a MapTiler vector basemap toward a nautical chart look:
+ * medium-blue water, muted green land, thin grey roads, white labels, reduced POI clutter.
  */
 export function applySailingLogMapTheme(map: maplibregl.Map) {
   prepareFlatSailingBasemap(map)
