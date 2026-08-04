@@ -20,6 +20,7 @@ import {
   rebuildLegsForTrip,
   sortLegs,
 } from '../lib/trip-legs'
+import { syncTripOperationalFields } from '../domain/trip-state'
 import {
   addPendingDeletedTripId,
   addPendingTripId,
@@ -215,6 +216,35 @@ async function applyTripLegRebuild(
   })
 }
 
+async function applyTripOperationalSync(
+  tripId: string,
+  get: () => LogbookState,
+  set: (partial: Partial<LogbookState> | ((state: LogbookState) => Partial<LogbookState>)) => void,
+  patch: Partial<Trip> = {},
+) {
+  const trip = get().trips.find((item) => item.id === tripId)
+  if (!trip) return
+
+  const nextTrip = {
+    ...syncTripOperationalFields(trip, get().entries.filter((entry) => entry.tripId === tripId)),
+    ...patch,
+    updatedAt: nowIso(),
+  }
+
+  await putTrip(nextTrip)
+  addPendingTripId(tripId)
+  set((state) => ({
+    trips: state.trips.map((item) => (item.id === tripId ? nextTrip : item)),
+    activeTripId:
+      patch.status === 'IN_PROGRESS'
+        ? tripId
+        : patch.status === 'COMPLETED' && state.activeTripId === tripId
+          ? null
+          : state.activeTripId,
+    syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+  }))
+}
+
 export const useLogbookStore = create<LogbookState>((set, get) => ({
   trips: [],
   legs: [],
@@ -269,6 +299,10 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       startLongitude: context.longitude,
       startCountry: context.country,
       status: 'PLANNED',
+      sailsUp: null,
+      engineOn: null,
+      moored: null,
+      anchorDown: null,
       createdAt: now,
       updatedAt: now,
     }
@@ -282,7 +316,14 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     }))
 
     await flushLogbookSync(get)
-    await assertSyncedWhenOnline(get)
+    try {
+      await assertSyncedWhenOnline(get)
+    } catch (error) {
+      set({
+        syncMessage:
+          error instanceof Error ? error.message : 'Could not sync to server',
+      })
+    }
     return trip
   },
 
@@ -433,28 +474,14 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
 
     await applyTripLegRebuild(input.tripId, get, set)
 
-    if (input.type === 'END_TRIP') {
-      const trip = get().trips.find((t) => t.id === input.tripId)
-      if (trip) {
-        const completed = {
-          ...trip,
-          status: 'COMPLETED' as TripStatus,
+    const trip = get().trips.find((item) => item.id === input.tripId)
+    if (trip) {
+      if (input.type === 'END_TRIP') {
+        await applyTripOperationalSync(input.tripId, get, set, {
+          status: 'COMPLETED',
           completedAt: entry.timestamp,
-          updatedAt: nowIso(),
-        }
-        await putTrip(completed)
-        addPendingTripId(completed.id)
-        set((state) => ({
-          trips: state.trips.map((item) =>
-            item.id === completed.id ? completed : item,
-          ),
-          activeTripId:
-            state.activeTripId === completed.id ? null : state.activeTripId,
-        }))
-      }
-    } else {
-      const trip = get().trips.find((t) => t.id === input.tripId)
-      if (trip) {
+        })
+      } else {
         const starting =
           trip.status === 'PLANNED'
             ? {
@@ -465,25 +492,19 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
                 startCountry: context.country,
               }
             : {}
-        const updated = {
-          ...trip,
-          ...starting,
-          updatedAt: nowIso(),
-        }
-        await putTrip(updated)
-        addPendingTripId(updated.id)
-        set((state) => ({
-          trips: state.trips.map((item) =>
-            item.id === updated.id ? updated : item,
-          ),
-          activeTripId:
-            trip.status === 'PLANNED' ? updated.id : state.activeTripId,
-        }))
+        await applyTripOperationalSync(input.tripId, get, set, starting)
       }
     }
 
     await flushLogbookSync(get)
-    await assertSyncedWhenOnline(get)
+    try {
+      await assertSyncedWhenOnline(get)
+    } catch (error) {
+      set({
+        syncMessage:
+          error instanceof Error ? error.message : 'Could not sync to server',
+      })
+    }
     return entry
   },
 
@@ -504,6 +525,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
     await applyTripLegRebuild(current.tripId, get, set)
+    await applyTripOperationalSync(current.tripId, get, set)
     void get().syncNow()
   },
 
@@ -524,6 +546,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
     await applyTripLegRebuild(current.tripId, get, set)
+    await applyTripOperationalSync(current.tripId, get, set)
     void get().syncNow()
   },
 

@@ -120,6 +120,10 @@ model Trip {
   startLongitude Float?
   startCountry   String?
   status         TripStatus  @default(PLANNED)
+  sailsUp        Boolean?
+  engineOn       Boolean?
+  moored         Boolean?
+  anchorDown     Boolean?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 

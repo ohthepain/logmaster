@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Check, FileText, Sailboat, Trash2, User } from "lucide-react";
+import { Check, Sailboat, Trash2, User } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LogEntryCard } from "./LogEntryCard";
@@ -10,8 +10,9 @@ import { TripCrewPickerModal } from "./TripCrewPickerModal";
 import { TripDetailHero } from "./TripDetailHero";
 import { TripLegSection } from "./TripLegSection";
 import { TripLogMap } from "./TripLogMap";
+import { TripOperationalStatus } from "./TripOperationalStatus";
 import { NativeRecordingSettings } from "./NativeRecordingSettings";
-import type { LogEntry, Media } from "../domain/logbook";
+import type { Media } from "../domain/logbook";
 import type { CrewMember } from "../domain/crew";
 import { useSession } from "../lib/auth-client";
 import { fetchCrew } from "../lib/crew-api";
@@ -37,13 +38,11 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputId = useId();
   const [title, setTitle] = useState("");
-  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
-  const [editingNote, setEditingNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
   const [crewLoading, setCrewLoading] = useState(false);
   const [crewPickerOpen, setCrewPickerOpen] = useState(false);
-  const [composerOpen, setComposerOpen] = useState(false);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [selectedLegId, setSelectedLegId] = useState<string | null>(null);
 
@@ -75,13 +74,18 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
     setSelectedLegId(null);
   }, [tripId]);
 
-  const entries = useMemo(
+  const tripEntries = useMemo(
     () =>
       store.entries
         .filter((entry) => entry.tripId === tripId && !entry.deleted)
-        .filter((entry) => !selectedLegId || entry.legId === selectedLegId)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-    [store.entries, tripId, selectedLegId],
+    [store.entries, tripId],
+  );
+
+  const entries = useMemo(
+    () =>
+      tripEntries.filter((entry) => !selectedLegId || entry.legId === selectedLegId),
+    [tripEntries, selectedLegId],
   );
 
   const mediaByEntry = useMemo(() => {
@@ -203,6 +207,19 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
     }
   };
 
+  const handleQuickNote = async () => {
+    setBusy(true);
+    try {
+      const entry = await store.addEntry({ tripId: trip.id, type: "NOTE" });
+      if (!entry) return;
+      toast.success("Note added — tap to edit");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add note");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleDeleteTrip = async () => {
     setBusy(true);
     try {
@@ -217,35 +234,12 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
     }
   };
 
-  const openEdit = (entry: LogEntry) => {
-    setEditingEntryId(entry.id);
-    setEditingNote(entry.notes ?? "");
-  };
-
-  const saveEdit = async () => {
-    if (!editingEntryId) return;
-    await store.updateEntry(editingEntryId, { notes: editingNote });
-    setEditingEntryId(null);
-    setEditingNote("");
+  const openEntry = (entryId: string) => {
+    setSelectedEntryId(entryId);
   };
 
   const handleCrewChange = async (ids: string[]) => {
     await store.updateTrip(trip.id, { crewMemberIds: ids });
-  };
-
-  const handleEntryPhoto = async (entryId: string, file: File) => {
-    try {
-      await store.attachMedia(entryId, {
-        logEntryId: entryId,
-        type: "photo",
-        localPath: file.name,
-        remoteUrl: null,
-        thumbnailUrl: URL.createObjectURL(file),
-      });
-      toast.success("Photo added");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to add photo");
-    }
   };
 
   return (
@@ -294,13 +288,15 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
           ) : trip.status === "IN_PROGRESS" ? (
             <button
               type="button"
-              onClick={() => setComposerOpen(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-[var(--btn-bg)] px-4 py-3.5 text-base font-bold text-[var(--btn-text)] shadow-sm transition hover:-translate-y-px"
+              disabled={busy}
+              onClick={() => void handleQuickNote()}
+              className="flex w-full items-center justify-center gap-2 rounded-[1.25rem] border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-3 text-sm font-semibold text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
             >
-              <FileText className="size-5" />
-              Log entry
+              Add note
             </button>
           ) : null}
+
+          <TripOperationalStatus tripId={trip.id} trip={trip} entries={tripEntries} />
 
           <TripLegSection
             tripId={trip.id}
@@ -327,17 +323,7 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
                   key={entry.id}
                   entry={entry}
                   media={mediaByEntry.get(entry.id) ?? []}
-                  onEdit={() => openEdit(entry)}
-                  onDelete={() => void store.deleteEntry(entry.id)}
-                  editing={editingEntryId === entry.id}
-                  editingNote={editingNote}
-                  onEditingNoteChange={setEditingNote}
-                  onSaveEdit={() => void saveEdit()}
-                  onCancelEdit={() => {
-                    setEditingEntryId(null);
-                    setEditingNote("");
-                  }}
-                  onAddPhoto={(file) => void handleEntryPhoto(entry.id, file)}
+                  onOpen={() => openEntry(entry.id)}
                 />
               ))}
             </div>
@@ -403,7 +389,12 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
         </div>
       </main>
 
-      <LogEntryComposerModal open={composerOpen} tripId={trip.id} onClose={() => setComposerOpen(false)} />
+      <LogEntryComposerModal
+        open={selectedEntryId !== null}
+        tripId={trip.id}
+        entryId={selectedEntryId}
+        onClose={() => setSelectedEntryId(null)}
+      />
 
       <TripCrewPickerModal
         open={crewPickerOpen}

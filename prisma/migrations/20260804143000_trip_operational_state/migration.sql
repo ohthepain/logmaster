@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "trip" ADD COLUMN "sailsUp" BOOLEAN,
+ADD COLUMN "engineOn" BOOLEAN,
+ADD COLUMN "moored" BOOLEAN,
+ADD COLUMN "anchorDown" BOOLEAN;

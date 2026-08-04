@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LogEntry, Trip } from '../domain/logbook'
 import { DEV_FALLBACK_POSITION } from '../lib/logbook-context'
 import {
+  isValidMapLngLat,
   logEntryMapPoints,
   mapBrandColor,
   mapPointsToBounds,
@@ -53,6 +54,7 @@ export function LogEntryPositionMap({
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markerRef = useRef<maplibregl.Marker | null>(null)
   const onPositionChangeRef = useRef(onPositionChange)
+  const positionRef = useRef(position)
   const initialFitDoneRef = useRef(false)
   const [mapReady, setMapReady] = useState(false)
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
@@ -62,6 +64,10 @@ export function LogEntryPositionMap({
   useEffect(() => {
     onPositionChangeRef.current = onPositionChange
   }, [onPositionChange])
+
+  useEffect(() => {
+    positionRef.current = position
+  }, [position])
 
   useEffect(() => {
     const container = containerRef.current
@@ -128,6 +134,7 @@ export function LogEntryPositionMap({
           })
           marker.on('dragend', () => {
             const lngLat = marker.getLngLat()
+            if (!lngLat) return
             onPositionChangeRef.current({
               longitude: lngLat.lng,
               latitude: lngLat.lat,
@@ -136,7 +143,11 @@ export function LogEntryPositionMap({
           markerRef.current = marker
 
           map.on('click', (event) => {
+            if (!event.lngLat) return
             marker.setLngLat(event.lngLat)
+            if (!marker.getElement().isConnected) {
+              marker.addTo(map!)
+            }
             onPositionChangeRef.current({
               longitude: event.lngLat.lng,
               latitude: event.lngLat.lat,
@@ -171,12 +182,12 @@ export function LogEntryPositionMap({
   useEffect(() => {
     const map = mapRef.current
     const marker = markerRef.current
-    if (!map || !mapReady || !marker || !position) return
+    if (!map || !mapReady || !marker || !isValidMapLngLat(position)) return
 
+    marker.setLngLat([position.longitude, position.latitude])
     if (!marker.getElement().isConnected) {
       marker.addTo(map)
     }
-    marker.setLngLat([position.longitude, position.latitude])
   }, [mapReady, position])
 
   useEffect(() => {
@@ -227,21 +238,21 @@ export function LogEntryPositionMap({
     const fitPoints = [...entryCoords]
     const start = tripStartMapPoint(trip)
     if (start) fitPoints.push(start)
-    if (position) fitPoints.push(position)
+    if (isValidMapLngLat(positionRef.current)) fitPoints.push(positionRef.current)
 
     const bounds = mapPointsToBounds(fitPoints)
     if (bounds) {
       map.fitBounds(bounds, { padding: 40, maxZoom: 14, duration: 600 })
       initialFitDoneRef.current = true
     }
-  }, [mapReady, entryCoords, trip.id, trip.startLatitude, trip.startLongitude, position])
+  }, [mapReady, entryCoords, trip.id, trip.startLatitude, trip.startLongitude])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !mapReady || initialFitDoneRef.current || entryCoords.length > 0) {
       return
     }
-    if (!position) return
+    if (!isValidMapLngLat(position)) return
     map.easeTo({
       center: [position.longitude, position.latitude],
       zoom: 12,

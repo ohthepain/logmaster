@@ -37,6 +37,10 @@ function toTrip(data: Record<string, unknown>) {
     startLongitude: (data.startLongitude as number | null | undefined) ?? null,
     startCountry: (data.startCountry as string | null | undefined) ?? null,
     status: String(data.status ?? 'PLANNED'),
+    sailsUp: (data.sailsUp as boolean | null | undefined) ?? null,
+    engineOn: (data.engineOn as boolean | null | undefined) ?? null,
+    moored: (data.moored as boolean | null | undefined) ?? null,
+    anchorDown: (data.anchorDown as boolean | null | undefined) ?? null,
     createdAt,
     updatedAt,
   }

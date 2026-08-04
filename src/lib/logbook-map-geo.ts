@@ -2,6 +2,16 @@ import type { LogEntry, Trip } from '../domain/logbook'
 
 export type MapLngLat = { longitude: number; latitude: number }
 
+export function isValidMapLngLat(
+  position: MapLngLat | null | undefined,
+): position is MapLngLat {
+  return (
+    position != null &&
+    Number.isFinite(position.longitude) &&
+    Number.isFinite(position.latitude)
+  )
+}
+
 export function logEntryMapPoints(entries: LogEntry[]): MapLngLat[] {
   return [...entries]
     .sort(
@@ -10,7 +20,10 @@ export function logEntryMapPoints(entries: LogEntry[]): MapLngLat[] {
     )
     .filter(
       (entry): entry is LogEntry & { latitude: number; longitude: number } =>
-        entry.latitude != null && entry.longitude != null,
+        entry.latitude != null &&
+        entry.longitude != null &&
+        Number.isFinite(entry.latitude) &&
+        Number.isFinite(entry.longitude),
     )
     .map((entry) => ({
       longitude: entry.longitude,
@@ -35,6 +48,8 @@ export function mapPointsToBounds(points: MapLngLat[]) {
     south = Math.min(south, point.latitude)
     north = Math.max(north, point.latitude)
   }
+  // MapLibre fitBounds throws when bounds have zero area (single point).
+  if (west === east && south === north) return null
   return [
     [west, south],
     [east, north],

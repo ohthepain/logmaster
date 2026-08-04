@@ -57,6 +57,10 @@ function serializeTrip(trip: {
   startLongitude: number | null
   startCountry: string | null
   status: string
+  sailsUp: boolean | null
+  engineOn: boolean | null
+  moored: boolean | null
+  anchorDown: boolean | null
   createdAt: Date
   updatedAt: Date
 }) {
@@ -79,6 +83,10 @@ function serializeTrip(trip: {
     startLongitude: trip.startLongitude,
     startCountry: trip.startCountry,
     status: trip.status,
+    sailsUp: trip.sailsUp,
+    engineOn: trip.engineOn,
+    moored: trip.moored,
+    anchorDown: trip.anchorDown,
     createdAt: trip.createdAt.toISOString(),
     updatedAt: trip.updatedAt.toISOString(),
   }
