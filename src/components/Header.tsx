@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { BookOpenText, Map } from "lucide-react";
 import { cn } from "../lib/cn";
 import DevModeToggle from "./DevModeToggle";
 import { DevComponentLabel } from "./DevComponentLabel";
+import { HeaderNav } from "./HeaderNav";
 import ThemeToggle from "./ThemeToggle";
 import { UserMenu } from "./UserMenu";
 
@@ -40,21 +40,7 @@ export default function Header() {
       <div className="page-wrap flex min-h-16 items-center justify-between gap-3 px-3 py-2 sm:px-4">
         <AppHeaderBrand />
         <div className="flex items-center gap-2">
-          <Link
-            to="/trips"
-            className="hidden items-center gap-1.5 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-xs font-semibold text-[var(--sea-ink)] no-underline transition hover:bg-[var(--link-bg-hover)] sm:inline-flex"
-          >
-            <BookOpenText className="size-4" />
-            Trips
-          </Link>
-          <Link
-            to="/map"
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] no-underline transition hover:bg-[var(--link-bg-hover)]"
-            aria-label="Map"
-            title="Map"
-          >
-            <Map className="size-4" strokeWidth={2} aria-hidden />
-          </Link>
+          <HeaderNav />
           <DevModeToggle />
           <ThemeToggle />
           <UserMenu />

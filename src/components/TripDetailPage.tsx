@@ -11,7 +11,6 @@ import { TripCrewPickerModal } from "./TripCrewPickerModal";
 import { TripCoverEditModal } from "./TripCoverEditModal";
 import { TripDetailHero } from "./TripDetailHero";
 import { TripLegSection } from "./TripLegSection";
-import { TripLogMap } from "./TripLogMap";
 import { TripOperationalStatus } from "./TripOperationalStatus";
 import { NativeRecordingSettings } from "./NativeRecordingSettings";
 import type { Media } from "../domain/logbook";
@@ -313,13 +312,6 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
             tripId={trip.id}
             selectedLegId={selectedLegId}
             onSelectLeg={setSelectedLegId}
-          />
-
-          <TripLogMap
-            trip={trip}
-            entries={entries}
-            focusEntryId={selectedEntryId}
-            showCurrentPosition={trip.status !== "COMPLETED"}
           />
 
           <NativeRecordingSettings tripInProgress={trip.status === "IN_PROGRESS"} />
