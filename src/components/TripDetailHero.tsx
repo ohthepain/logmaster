@@ -1,7 +1,8 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, Camera, Plus, Sailboat } from 'lucide-react'
-import type { Trip } from '../domain/logbook'
+import { ArrowLeft, Pencil, Plus, Sailboat } from 'lucide-react'
+import type { LogEntry, Trip } from '../domain/logbook'
 import type { CrewMember } from '../domain/crew'
+import type { TripDetailCoverDisplay } from '../lib/trip-display'
 import {
   firstName,
   formatTripDateRange,
@@ -10,11 +11,13 @@ import {
 } from '../lib/trip-display'
 import { CrewAvatar } from './CrewAvatar'
 import { DevComponentLabel } from './DevComponentLabel'
+import { TripLogMap } from './TripLogMap'
 
 type TripDetailHeroProps = {
   trip: Trip
   title: string
-  coverPhoto: string | null
+  cover: TripDetailCoverDisplay
+  mapEntries: Pick<LogEntry, 'type' | 'timestamp' | 'latitude' | 'longitude' | 'deleted'>[]
   busy: boolean
   skipperName: string | null
   skipperImageUrl: string | null
@@ -23,14 +26,15 @@ type TripDetailHeroProps = {
   crewLoading: boolean
   onTitleChange: (value: string) => void
   onTitleBlur: () => void
-  onPhotoClick: () => void
+  onEditCoverClick: () => void
   onAddCrewClick: () => void
 }
 
 export function TripDetailHero({
   trip,
   title,
-  coverPhoto,
+  cover,
+  mapEntries,
   busy,
   skipperName,
   skipperImageUrl,
@@ -39,15 +43,31 @@ export function TripDetailHero({
   crewLoading,
   onTitleChange,
   onTitleBlur,
-  onPhotoClick,
+  onEditCoverClick,
   onAddCrewClick,
 }: TripDetailHeroProps) {
+  const showCurrentPosition = trip.status !== 'COMPLETED'
+
   return (
     <section className="relative isolate min-h-[min(28rem,72vh)] w-full overflow-hidden bg-[var(--chip-bg)]">
       <DevComponentLabel name="TripDetailHero" className="absolute left-3 top-14 z-20 sm:left-4" />
 
-      {coverPhoto ? (
-        <img src={coverPhoto} alt="" className="absolute inset-0 size-full object-cover" />
+      {cover.kind === 'photo' && cover.photoUrl ? (
+        <img src={cover.photoUrl} alt="" className="absolute inset-0 size-full object-cover" />
+      ) : cover.kind === 'map' ? (
+        <div className="absolute inset-0">
+          <TripLogMap
+            trip={trip}
+            entries={mapEntries as LogEntry[]}
+            mapClassName="absolute inset-0 size-full"
+            allowFullscreen={false}
+            showControls={false}
+            showCurrentPosition={showCurrentPosition}
+            interactive={false}
+            embedded
+            showSeamarks={false}
+          />
+        </div>
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(145deg,#1e3a5f_0%,#0f172a_55%,#020617_100%)] text-white/35">
           <Sailboat className="size-24" strokeWidth={1.1} />
@@ -69,12 +89,12 @@ export function TripDetailHero({
 
           <button
             type="button"
-            onClick={onPhotoClick}
+            onClick={onEditCoverClick}
             disabled={busy}
             className="inline-flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45 disabled:opacity-60"
-            aria-label="Upload trip photo"
+            aria-label="Edit trip cover"
           >
-            <Camera className="size-4" />
+            <Pencil className="size-4" />
           </button>
         </div>
 

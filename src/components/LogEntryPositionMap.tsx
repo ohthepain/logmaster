@@ -7,8 +7,6 @@ import {
   isValidMapLngLat,
   logEntryMapPoints,
   mapBrandColor,
-  mapPointsToBounds,
-  tripStartMapPoint,
 } from '../lib/logbook-map-geo'
 import type { MapLngLat } from '../lib/logbook-map-geo'
 import {
@@ -21,7 +19,7 @@ import {
 } from '../lib/maplibre-sailing-map-setup'
 import { applySailingLogMapTheme, sailingMapOverlayPaint, SailingMapColors } from '../lib/maplibre-sailing-theme'
 import { defaultRasterMapId } from '../lib/map-styles'
-import { centerMapOnCurrentLocation } from '../lib/sailing-map-viewport'
+import { centerMapOnCurrentLocation, centerMapOnPoint } from '../lib/sailing-map-viewport'
 import { mapTilerTransformRequest } from '../lib/tiles'
 import { cn } from '../lib/cn'
 import { DevComponentLabel } from './DevComponentLabel'
@@ -34,6 +32,7 @@ type LogEntryPositionMapProps = {
   entries: LogEntry[]
   position: MapLngLat | null
   onPositionChange: (position: MapLngLat) => void
+  initialViewport?: 'current-location' | 'entry-focus'
   mapClassName?: string
   allowFullscreen?: boolean
 }
@@ -47,6 +46,7 @@ export function LogEntryPositionMap({
   entries,
   position,
   onPositionChange,
+  initialViewport = 'current-location',
   mapClassName = 'h-56 w-full sm:h-64',
   allowFullscreen = true,
 }: LogEntryPositionMapProps) {
@@ -229,37 +229,16 @@ export function LogEntryPositionMap({
 
   useEffect(() => {
     initialFitDoneRef.current = false
-  }, [trip.id])
+  }, [trip.id, initialViewport])
 
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !mapReady) return
-
-    const fitPoints = [...entryCoords]
-    const start = tripStartMapPoint(trip)
-    if (start) fitPoints.push(start)
-    if (isValidMapLngLat(positionRef.current)) fitPoints.push(positionRef.current)
-
-    const bounds = mapPointsToBounds(fitPoints)
-    if (bounds) {
-      map.fitBounds(bounds, { padding: 40, maxZoom: 14, duration: 600 })
-      initialFitDoneRef.current = true
-    }
-  }, [mapReady, entryCoords, trip.id, trip.startLatitude, trip.startLongitude])
-
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !mapReady || initialFitDoneRef.current || entryCoords.length > 0) {
-      return
-    }
+    if (!map || !mapReady || initialFitDoneRef.current) return
     if (!isValidMapLngLat(position)) return
-    map.easeTo({
-      center: [position.longitude, position.latitude],
-      zoom: 12,
-      duration: 600,
-    })
+
+    centerMapOnPoint(map, position, 14)
     initialFitDoneRef.current = true
-  }, [mapReady, position, entryCoords.length])
+  }, [mapReady, initialViewport, position, trip.id])
 
   const handleZoomIn = useCallback(() => {
     mapRef.current?.zoomIn({ duration: 200 })
@@ -272,8 +251,12 @@ export function LogEntryPositionMap({
   const handleLocate = useCallback(() => {
     const map = mapRef.current
     if (!map) return
+    if (initialViewport === 'entry-focus' && isValidMapLngLat(position)) {
+      centerMapOnPoint(map, position, 14)
+      return
+    }
     void centerMapOnCurrentLocation(map)
-  }, [])
+  }, [initialViewport, position])
 
   const mapShell = (
     <div

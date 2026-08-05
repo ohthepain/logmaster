@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { BookOpenText } from "lucide-react";
+import { BookOpenText, Map } from "lucide-react";
 import { cn } from "../lib/cn";
 import DevModeToggle from "./DevModeToggle";
 import { DevComponentLabel } from "./DevComponentLabel";
@@ -46,6 +46,14 @@ export default function Header() {
           >
             <BookOpenText className="size-4" />
             Trips
+          </Link>
+          <Link
+            to="/map"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] no-underline transition hover:bg-[var(--link-bg-hover)]"
+            aria-label="Map"
+            title="Map"
+          >
+            <Map className="size-4" strokeWidth={2} aria-hidden />
           </Link>
           <DevModeToggle />
           <ThemeToggle />

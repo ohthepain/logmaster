@@ -179,7 +179,8 @@ function SwitchSide({
           ? 'bg-[var(--sea-ink)] text-[var(--btn-text)] shadow-sm'
           : 'text-[var(--sea-ink-soft)]',
         !disabled && !selected && 'hover:text-[var(--sea-ink)]',
-        disabled && 'cursor-default opacity-60',
+        disabled && 'cursor-default',
+        disabled && !selected && 'opacity-60',
       )}
     >
       {pending ? '…' : label}

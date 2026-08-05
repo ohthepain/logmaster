@@ -12,6 +12,51 @@ export function isValidMapLngLat(
   )
 }
 
+export function logEntryMapPoint(
+  entry: LogEntry | null | undefined,
+): MapLngLat | null {
+  if (
+    entry?.latitude == null ||
+    entry.longitude == null ||
+    !Number.isFinite(entry.latitude) ||
+    !Number.isFinite(entry.longitude)
+  ) {
+    return null
+  }
+  return { longitude: entry.longitude, latitude: entry.latitude }
+}
+
+export type TripLogMapViewportTarget =
+  | { kind: 'current-location' }
+  | { kind: 'point'; point: MapLngLat }
+  | { kind: 'fit-track'; points: MapLngLat[] }
+
+export function resolveTripLogMapViewport(
+  trip: Pick<Trip, 'status' | 'startLatitude' | 'startLongitude'>,
+  entries: LogEntry[],
+  options?: { focusEntryId?: string | null },
+): TripLogMapViewportTarget {
+  if (trip.status === 'IN_PROGRESS' || trip.status === 'PLANNED') {
+    return { kind: 'current-location' }
+  }
+
+  if (options?.focusEntryId) {
+    const entry = entries.find((item) => item.id === options.focusEntryId)
+    const point = logEntryMapPoint(entry)
+    if (point) return { kind: 'point', point }
+  }
+
+  const fitPoints = [...logEntryMapPoints(entries)]
+  const start = tripStartMapPoint(trip as Trip)
+  if (start) fitPoints.push(start)
+
+  if (fitPoints.length === 1) {
+    return { kind: 'point', point: fitPoints[0] }
+  }
+
+  return { kind: 'fit-track', points: fitPoints }
+}
+
 export function logEntryMapPoints(entries: LogEntry[]): MapLngLat[] {
   return [...entries]
     .sort(

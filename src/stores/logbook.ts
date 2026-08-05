@@ -70,6 +70,7 @@ type UpdateTripInput = Partial<
     Trip,
     | 'title'
     | 'coverPhotoDataUrl'
+    | 'coverKind'
     | 'boatName'
     | 'registration'
     | 'skipper'
@@ -293,6 +294,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       skipperKey: input.skipperKey ?? null,
       crewMemberIds: input.crewMemberIds?.length ? input.crewMemberIds : null,
       title: defaultTripTitle(input.boatName, startedDate),
+      coverKind: 'map',
       startedAt: context.timestamp,
       completedAt: null,
       startLatitude: context.latitude,

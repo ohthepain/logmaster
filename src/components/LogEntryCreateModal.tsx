@@ -1,46 +1,51 @@
-import { Camera, Check, LocateFixed, Mic, Trash2, X } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { ArrowLeft, Camera, Check, LocateFixed, Mic, X } from 'lucide-react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { LogEntryPositionMap } from './LogEntryPositionMap'
 import { Modal } from './Modal'
-import { entryTitle } from '../domain/logbook'
-import type { Media } from '../domain/logbook'
+import {
+  entryIcon,
+  entryTitle,
+  visibleLogEntryTypes,
+} from '../domain/logbook'
+import type { LogEntryType } from '../domain/logbook'
 import {
   DEV_FALLBACK_POSITION,
   getCurrentPosition,
+  subscribeToDevicePosition,
 } from '../lib/logbook-context'
 import { formatPosition } from '../lib/logbook-format'
 import type { MapLngLat } from '../lib/logbook-map-geo'
 import { cn } from '../lib/cn'
 import { useLogbookStore } from '../stores/logbook'
 
-type LogEntryComposerModalProps = {
+type LogEntryCreateModalProps = {
   open: boolean
   tripId: string
-  entryId: string | null
   onClose: () => void
 }
 
-export function LogEntryComposerModal({
+type Step = 'pick-type' | 'compose'
+
+export function LogEntryCreateModal({
   open,
   tripId,
-  entryId,
   onClose,
-}: LogEntryComposerModalProps) {
+}: LogEntryCreateModalProps) {
   const store = useLogbookStore()
   const trip = store.trips.find((item) => item.id === tripId) ?? null
-  const entry = entryId
-    ? store.entries.find((item) => item.id === entryId) ?? null
-    : null
   const tripEntries = store.entries.filter(
-    (item) => item.tripId === tripId && !item.deleted,
+    (entry) => entry.tripId === tripId && !entry.deleted,
   )
-  const entryMedia = entryId
-    ? store.media.filter((item) => item.logEntryId === entryId)
-    : []
+  const entryTypes = useMemo(
+    () => (trip ? visibleLogEntryTypes(trip, tripEntries) : []),
+    [trip, tripEntries],
+  )
   const fileInputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const positionEditedRef = useRef(false)
+  const [step, setStep] = useState<Step>('pick-type')
+  const [selectedType, setSelectedType] = useState<LogEntryType | null>(null)
   const [draftNote, setDraftNote] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
@@ -48,7 +53,6 @@ export function LogEntryComposerModal({
   const [draftPosition, setDraftPosition] = useState<MapLngLat | null>(null)
   const [positionLabel, setPositionLabel] = useState('Locating…')
   const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
 
   const applyDraftPosition = (position: MapLngLat) => {
     setDraftPosition(position)
@@ -56,6 +60,8 @@ export function LogEntryComposerModal({
   }
 
   const reset = () => {
+    setStep('pick-type')
+    setSelectedType(null)
     setDraftNote('')
     setPhotoFile(null)
     if (photoPreview) URL.revokeObjectURL(photoPreview)
@@ -65,36 +71,40 @@ export function LogEntryComposerModal({
     positionEditedRef.current = false
     setPositionLabel('Locating…')
     setSaving(false)
-    setDeleting(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   useEffect(() => {
     if (!open) {
       reset()
-      return
     }
-    if (!entry) return
+  }, [open])
 
-    setDraftNote(entry.notes ?? '')
-    setIncludeVoiceNote(
-      entry.data?.voiceNote === true || entry.data?.placeholder === true,
-    )
-    positionEditedRef.current = false
+  useEffect(() => {
+    if (!open || step !== 'compose') return
 
-    if (entry.latitude != null && entry.longitude != null) {
+    return subscribeToDevicePosition((position) => {
+      if (positionEditedRef.current) return
+      if (position.latitude == null || position.longitude == null) {
+        applyDraftPosition({
+          longitude: DEV_FALLBACK_POSITION.longitude,
+          latitude: DEV_FALLBACK_POSITION.latitude,
+        })
+        return
+      }
       applyDraftPosition({
-        latitude: entry.latitude,
-        longitude: entry.longitude,
+        longitude: position.longitude,
+        latitude: position.latitude,
       })
-      return
-    }
+    })
+  }, [open, step, tripId])
 
-    setDraftPosition(null)
-    setPositionLabel('Position unavailable')
-  }, [open, entry?.id, entry?.latitude, entry?.longitude, entry?.notes, entry?.data])
+  if (!open) return null
 
-  if (!open || !entry || !trip) return null
+  const pickType = (type: LogEntryType) => {
+    setSelectedType(type)
+    setStep('compose')
+  }
 
   const handlePhotoPick = (file: File | undefined) => {
     if (!file || !file.type.startsWith('image/')) return
@@ -112,23 +122,29 @@ export function LogEntryComposerModal({
   }
 
   const handleSave = async () => {
+    if (!selectedType) return
     setSaving(true)
     try {
-      const data = { ...(entry.data ?? {}) }
+      const data: Record<string, unknown> = {}
+      if (photoFile) {
+        data.fileName = photoFile.name
+        data.size = photoFile.size
+        data.mimeType = photoFile.type
+      }
       if (includeVoiceNote) {
         data.voiceNote = true
         data.placeholder = true
-      } else {
-        delete data.voiceNote
-        delete data.placeholder
       }
 
-      await store.updateEntry(entry.id, {
-        notes: draftNote.trim() || null,
+      const entry = await store.addEntry({
+        tripId,
+        type: selectedType,
+        notes: draftNote.trim() || undefined,
+        data: Object.keys(data).length > 0 ? data : undefined,
         latitude: draftPosition?.latitude ?? null,
         longitude: draftPosition?.longitude ?? null,
-        data: Object.keys(data).length > 0 ? data : null,
       })
+      if (!entry) return
 
       if (photoFile) {
         await store.attachMedia(entry.id, {
@@ -140,31 +156,44 @@ export function LogEntryComposerModal({
         })
       }
 
-      toast.success('Log entry updated')
+      toast.success(`${entryTitle(selectedType)} logged`)
       onClose()
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to update log entry',
+        error instanceof Error ? error.message : 'Failed to save log entry',
       )
     } finally {
       setSaving(false)
     }
   }
 
-  const handleDelete = async () => {
-    setDeleting(true)
-    try {
-      await store.deleteEntry(entry.id)
-      toast.success('Log entry deleted')
-      onClose()
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to delete log entry',
-      )
-    } finally {
-      setDeleting(false)
-    }
+  if (step === 'pick-type') {
+    return (
+      <Modal title="Log entry" onClose={onClose} devComponentName="LogEntryCreateModal">
+        {entryTypes.length === 0 ? (
+          <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
+            No log entry types are available right now.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {entryTypes.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => pickType(type)}
+                className="rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-3 text-left text-sm font-semibold text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]"
+              >
+                <span className="block text-lg">{entryIcon(type)}</span>
+                <span className="mt-1 block">{entryTitle(type)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </Modal>
+    )
   }
+
+  if (!selectedType || !trip) return null
 
   const handlePositionChange = (position: MapLngLat) => {
     positionEditedRef.current = true
@@ -175,10 +204,7 @@ export function LogEntryComposerModal({
     positionEditedRef.current = false
     const position = await getCurrentPosition({ force: true })
     if (position.latitude == null || position.longitude == null) {
-      applyDraftPosition({
-        longitude: DEV_FALLBACK_POSITION.longitude,
-        latitude: DEV_FALLBACK_POSITION.latitude,
-      })
+      toast.error('Could not get current location')
       return
     }
     applyDraftPosition({
@@ -187,23 +213,30 @@ export function LogEntryComposerModal({
     })
   }
 
-  const mapEntries = tripEntries.filter((item) => item.id !== entry.id)
-
   return (
     <Modal
-      title={entryTitle(entry.type)}
+      title={entryTitle(selectedType)}
       onClose={onClose}
       layer="overlay"
-      devComponentName="LogEntryComposerModal"
+      devComponentName="LogEntryCreateModal"
     >
       <div className="space-y-4">
+        <button
+          type="button"
+          onClick={() => setStep('pick-type')}
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand)]"
+        >
+          <ArrowLeft className="size-4" />
+          Change type
+        </button>
+
         <div className="overflow-hidden rounded-[1.25rem] border border-[var(--panel-border)]">
           <LogEntryPositionMap
             trip={trip}
-            entries={mapEntries}
+            entries={tripEntries}
             position={draftPosition}
             onPositionChange={handlePositionChange}
-            initialViewport="entry-focus"
+            initialViewport="current-location"
           />
           <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] px-3 py-2">
             <p className="m-0 text-xs text-[var(--sea-ink-soft)]">{positionLabel}</p>
@@ -217,8 +250,6 @@ export function LogEntryComposerModal({
             </button>
           </div>
         </div>
-
-        <ExistingMedia media={entryMedia} />
 
         <div className="space-y-2">
           <p className="m-0 text-sm font-medium text-[var(--sea-ink)]">Photo</p>
@@ -246,7 +277,7 @@ export function LogEntryComposerModal({
                 className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)]"
               >
                 <Camera className="size-4" />
-                Add photo
+                Take photo
               </button>
               <input
                 ref={fileInputRef}
@@ -301,45 +332,14 @@ export function LogEntryComposerModal({
 
         <button
           type="button"
-          disabled={saving || deleting}
+          disabled={saving}
           onClick={() => void handleSave()}
           className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
         >
           <Check className="size-4" />
-          {saving ? 'Saving…' : 'Save changes'}
-        </button>
-
-        <button
-          type="button"
-          disabled={saving || deleting}
-          onClick={() => void handleDelete()}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm font-semibold text-red-700 disabled:opacity-60 dark:text-red-300"
-        >
-          <Trash2 className="size-4" />
-          {deleting ? 'Deleting…' : 'Delete entry'}
+          {saving ? 'Saving…' : `Save ${entryTitle(selectedType)}`}
         </button>
       </div>
     </Modal>
-  )
-}
-
-function ExistingMedia({ media }: { media: Media[] }) {
-  const photos = media.filter((item) => item.thumbnailUrl)
-  if (photos.length === 0) return null
-
-  return (
-    <div className="space-y-2">
-      <p className="m-0 text-sm font-medium text-[var(--sea-ink)]">Photos</p>
-      <div className="flex flex-wrap gap-2">
-        {photos.map((item) => (
-          <img
-            key={item.id}
-            src={item.thumbnailUrl ?? undefined}
-            alt=""
-            className="size-24 rounded-xl border border-[var(--line)] object-cover"
-          />
-        ))}
-      </div>
-    </div>
   )
 }

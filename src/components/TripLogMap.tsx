@@ -3,7 +3,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LogEntry, Trip } from "../domain/logbook";
 import { DEV_FALLBACK_POSITION, subscribeToDevicePosition } from "../lib/logbook-context";
-import { logEntryMapPoints, mapBrandColor, mapPointsToBounds, tripStartMapPoint } from "../lib/logbook-map-geo";
+import { logEntryMapPoints, mapBrandColor, mapPointsToBounds, resolveTripLogMapViewport } from "../lib/logbook-map-geo";
 import {
   addOpenSeaMapSeamarkOverlay,
   bindSeamarkTileRefreshOnViewChange,
@@ -15,7 +15,7 @@ import {
 import { applySailingLogMapTheme, sailingMapOverlayPaint, SailingMapColors } from "../lib/maplibre-sailing-theme";
 import { getGeoJsonSource } from "../lib/maplibre-source";
 import { defaultRasterMapId } from "../lib/map-styles";
-import { centerMapOnCurrentLocation } from "../lib/sailing-map-viewport";
+import { centerMapOnCurrentLocation, centerMapOnPoint } from "../lib/sailing-map-viewport";
 import { mapTilerTransformRequest } from "../lib/tiles";
 import { cn } from "../lib/cn";
 import { DevComponentLabel } from "./DevComponentLabel";
@@ -25,8 +25,14 @@ import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
 type TripLogMapProps = {
   trip: Trip;
   entries: LogEntry[];
+  focusEntryId?: string | null;
   mapClassName?: string;
   allowFullscreen?: boolean;
+  showControls?: boolean;
+  showCurrentPosition?: boolean;
+  interactive?: boolean;
+  embedded?: boolean;
+  showSeamarks?: boolean;
 };
 
 type LngLat = { longitude: number; latitude: number };
@@ -38,21 +44,37 @@ const CURRENT_SOURCE = "trip-current-position";
 export function TripLogMap({
   trip,
   entries,
+  focusEntryId = null,
   mapClassName = "h-56 w-full sm:h-64",
   allowFullscreen = true,
+  showControls = true,
+  showCurrentPosition = true,
+  interactive = true,
+  embedded = false,
+  showSeamarks = true,
 }: TripLogMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const initialFitDoneRef = useRef(false);
-  const currentPositionRef = useRef<LngLat | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [currentPosition, setCurrentPosition] = useState<LngLat | null>(null);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
 
   const entryCoords = useMemo(() => logEntryMapPoints(entries), [entries]);
+  const viewportTarget = useMemo(
+    () => resolveTripLogMapViewport(trip, entries, { focusEntryId }),
+    [trip, entries, focusEntryId],
+  );
 
   useEffect(() => {
+    if (!showCurrentPosition) {
+      setCurrentPosition(null);
+    }
+  }, [showCurrentPosition]);
+
+  useEffect(() => {
+    if (!showCurrentPosition) return;
     return subscribeToDevicePosition((position) => {
       if (position.latitude == null || position.longitude == null) {
         setCurrentPosition({
@@ -66,11 +88,7 @@ export function TripLogMap({
         latitude: position.latitude,
       });
     });
-  }, []);
-
-  useEffect(() => {
-    currentPositionRef.current = currentPosition;
-  }, [currentPosition]);
+  }, [showCurrentPosition]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -93,6 +111,7 @@ export function TripLogMap({
           pitch: 0,
           maxPitch: 0,
           attributionControl: false,
+          interactive,
           transformRequest: (url) => mapTilerTransformRequest(url),
         });
 
@@ -103,7 +122,9 @@ export function TripLogMap({
         map.on("load", () => {
           if (!map) return;
           applySailingLogMapTheme(map);
-          addOpenSeaMapSeamarkOverlay(map);
+          if (showSeamarks) {
+            addOpenSeaMapSeamarkOverlay(map);
+          }
 
           map.addSource(TRACK_SOURCE, {
             type: "geojson",
@@ -154,8 +175,10 @@ export function TripLogMap({
           });
 
           finalizeSailingMapLayers(map);
-          scheduleSeamarkTileRefresh(map);
-          unbindSeamarkRefresh = bindSeamarkTileRefreshOnViewChange(map);
+          if (showSeamarks) {
+            scheduleSeamarkTileRefresh(map);
+            unbindSeamarkRefresh = bindSeamarkTileRefreshOnViewChange(map);
+          }
 
           setMapReady(true);
         });
@@ -181,7 +204,7 @@ export function TripLogMap({
       mapRef.current = null;
       setMapReady(false);
     };
-  }, []);
+  }, [interactive, showSeamarks]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -219,54 +242,55 @@ export function TripLogMap({
 
     currentSource.setData({
       type: "FeatureCollection",
-      features: currentPosition
-        ? [
-            {
-              type: "Feature",
-              geometry: {
-                type: "Point",
-                coordinates: [currentPosition.longitude, currentPosition.latitude],
+      features:
+        showCurrentPosition && currentPosition
+          ? [
+              {
+                type: "Feature",
+                geometry: {
+                  type: "Point",
+                  coordinates: [currentPosition.longitude, currentPosition.latitude],
+                },
+                properties: {},
               },
-              properties: {},
-            },
-          ]
-        : [],
+            ]
+          : [],
     });
-  }, [mapReady, entryCoords, currentPosition]);
+  }, [mapReady, entryCoords, currentPosition, showCurrentPosition]);
 
   useEffect(() => {
     initialFitDoneRef.current = false;
-  }, [trip.id]);
+  }, [trip.id, focusEntryId, viewportTarget.kind]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !mapReady) return;
+    if (!map || !mapReady || initialFitDoneRef.current) return;
 
-    const fitPoints = [...entryCoords];
-    const start = tripStartMapPoint(trip);
-    if (start) fitPoints.push(start);
-    if (currentPositionRef.current) fitPoints.push(currentPositionRef.current);
-
-    const bounds = mapPointsToBounds(fitPoints);
-    if (bounds) {
-      map.fitBounds(bounds, { padding: 48, maxZoom: 14, duration: 600 });
+    if (viewportTarget.kind === "current-location") {
+      if (!showCurrentPosition || !currentPosition) return;
+      centerMapOnPoint(map, currentPosition, 14);
       initialFitDoneRef.current = true;
-    }
-  }, [mapReady, entryCoords, trip.id, trip.startLatitude, trip.startLongitude]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady || initialFitDoneRef.current || entryCoords.length > 0) {
       return;
     }
-    if (!currentPosition) return;
-    map.easeTo({
-      center: [currentPosition.longitude, currentPosition.latitude],
-      zoom: 12,
-      duration: 600,
-    });
-    initialFitDoneRef.current = true;
-  }, [mapReady, currentPosition, entryCoords.length]);
+
+    if (viewportTarget.kind === "point") {
+      centerMapOnPoint(map, viewportTarget.point, 14);
+      initialFitDoneRef.current = true;
+      return;
+    }
+
+    const bounds = mapPointsToBounds(viewportTarget.points);
+    if (bounds) {
+      map.fitBounds(bounds, { padding: embedded ? 24 : 48, maxZoom: 14, duration: 600 });
+      initialFitDoneRef.current = true;
+    }
+  }, [
+    mapReady,
+    viewportTarget,
+    currentPosition,
+    showCurrentPosition,
+    embedded,
+  ]);
 
   const handleZoomIn = useCallback(() => {
     mapRef.current?.zoomIn({ duration: 200 });
@@ -287,9 +311,11 @@ export function TripLogMap({
       className="relative h-full min-h-0 w-full overflow-hidden"
       style={{ backgroundColor: SailingMapColors.background }}
     >
-      <DevComponentLabel name="TripLogMap" className="absolute left-2 top-2 z-10" />
+      {!embedded ? (
+        <DevComponentLabel name="TripLogMap" className="absolute left-2 top-2 z-10" />
+      ) : null}
       <div ref={containerRef} className={cn("sailing-map", mapClassName)} />
-      {mapReady ? (
+      {mapReady && showControls ? (
         <SailingMapControlStack
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
@@ -311,6 +337,10 @@ export function TripLogMap({
     </div>
   );
 
+  if (embedded) {
+    return mapShell;
+  }
+
   return (
     <>
       {allowFullscreen ? (
@@ -327,7 +357,13 @@ export function TripLogMap({
         <SailingMapFullscreenModal title="Trip map" onClose={() => setFullscreenOpen(false)}>
           <DevComponentLabel name="TripLogMap" />
 
-          <TripLogMap trip={trip} entries={entries} mapClassName="h-full w-full" allowFullscreen={false} />
+          <TripLogMap
+            trip={trip}
+            entries={entries}
+            focusEntryId={focusEntryId}
+            mapClassName="h-full w-full"
+            allowFullscreen={false}
+          />
         </SailingMapFullscreenModal>
       ) : null}
     </>

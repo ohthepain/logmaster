@@ -1,12 +1,14 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Check, Sailboat, Trash2, User } from "lucide-react";
+import { Check, FileText, Sailboat, Trash2, User } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LogEntryCard } from "./LogEntryCard";
 import { DevComponentLabel } from "./DevComponentLabel";
+import { LogEntryCreateModal } from "./LogEntryCreateModal";
 import { LogEntryComposerModal } from "./LogEntryComposerModal";
 import { Modal } from "./Modal";
 import { TripCrewPickerModal } from "./TripCrewPickerModal";
+import { TripCoverEditModal } from "./TripCoverEditModal";
 import { TripDetailHero } from "./TripDetailHero";
 import { TripLegSection } from "./TripLegSection";
 import { TripLogMap } from "./TripLogMap";
@@ -23,7 +25,7 @@ import {
   parseTripPersonKey,
   resolveTripPersonOption,
 } from "../lib/trip-people";
-import { tripCoverPhotoUrl, tripDisplayName } from "../lib/trip-display";
+import { tripDetailCoverDisplay, tripDisplayName } from "../lib/trip-display";
 import { useLogbookStore, triggerLogbookSyncRetry } from "../stores/logbook";
 
 type TripDetailPageProps = {
@@ -43,7 +45,9 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
   const [crewLoading, setCrewLoading] = useState(false);
   const [crewPickerOpen, setCrewPickerOpen] = useState(false);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const [createEntryOpen, setCreateEntryOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [coverEditOpen, setCoverEditOpen] = useState(false);
   const [selectedLegId, setSelectedLegId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -147,7 +151,7 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
     );
   }
 
-  const coverPhoto = tripCoverPhotoUrl(trip);
+  const cover = tripDetailCoverDisplay(trip);
   const displayName = tripDisplayName(trip);
 
   const saveTitle = async () => {
@@ -162,8 +166,9 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
     setBusy(true);
     try {
       const coverPhotoDataUrl = await readImageFile(file);
-      await store.updateTrip(trip.id, { coverPhotoDataUrl });
+      await store.updateTrip(trip.id, { coverKind: "photo", coverPhotoDataUrl });
       toast.success("Trip photo updated");
+      setCoverEditOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to upload photo");
     } finally {
@@ -172,17 +177,34 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
     }
   };
 
-  const handleRemovePhoto = async () => {
-    if (!coverPhoto) return;
+  const handleChooseMapCover = async () => {
     setBusy(true);
     try {
-      await store.updateTrip(trip.id, { coverPhotoDataUrl: null });
-      toast.success("Trip photo removed");
+      await store.updateTrip(trip.id, { coverKind: "map" });
+      toast.success("Trip cover set to map");
+      setCoverEditOpen(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove photo");
+      toast.error(error instanceof Error ? error.message : "Failed to update cover");
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleRemoveCover = async () => {
+    setBusy(true);
+    try {
+      await store.updateTrip(trip.id, { coverKind: null, coverPhotoDataUrl: null });
+      toast.success("Trip cover removed");
+      setCoverEditOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove cover");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleChoosePhotoCover = () => {
+    fileInputRef.current?.click();
   };
 
   const handleStartTrip = async () => {
@@ -202,19 +224,6 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
     try {
       await store.addEntry({ tripId: trip.id, type: "END_TRIP" });
       toast.success("Trip completed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleQuickNote = async () => {
-    setBusy(true);
-    try {
-      const entry = await store.addEntry({ tripId: trip.id, type: "NOTE" });
-      if (!entry) return;
-      toast.success("Note added — tap to edit");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to add note");
     } finally {
       setBusy(false);
     }
@@ -248,7 +257,8 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
       <TripDetailHero
         trip={trip}
         title={title}
-        coverPhoto={coverPhoto}
+        cover={cover}
+        mapEntries={tripEntries}
         busy={busy}
         skipperName={skipperPerson?.name ?? trip.skipper ?? null}
         skipperImageUrl={skipperPerson?.imageUrl ?? null}
@@ -261,7 +271,7 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
         crewLoading={crewLoading}
         onTitleChange={setTitle}
         onTitleBlur={() => void saveTitle()}
-        onPhotoClick={() => fileInputRef.current?.click()}
+        onEditCoverClick={() => setCoverEditOpen(true)}
         onAddCrewClick={() => setCrewPickerOpen(true)}
       />
       <input
@@ -289,10 +299,11 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
             <button
               type="button"
               disabled={busy}
-              onClick={() => void handleQuickNote()}
-              className="flex w-full items-center justify-center gap-2 rounded-[1.25rem] border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-3 text-sm font-semibold text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
+              onClick={() => setCreateEntryOpen(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-[var(--btn-bg)] px-4 py-3.5 text-base font-bold text-[var(--btn-text)] shadow-sm transition hover:-translate-y-px disabled:opacity-60"
             >
-              Add note
+              <FileText className="size-5" />
+              Log entry
             </button>
           ) : null}
 
@@ -304,7 +315,12 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
             onSelectLeg={setSelectedLegId}
           />
 
-          <TripLogMap trip={trip} entries={entries} />
+          <TripLogMap
+            trip={trip}
+            entries={entries}
+            focusEntryId={selectedEntryId}
+            showCurrentPosition={trip.status !== "COMPLETED"}
+          />
 
           <NativeRecordingSettings tripInProgress={trip.status === "IN_PROGRESS"} />
 
@@ -362,17 +378,6 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
               </div>
             )}
 
-            {coverPhoto && trip.coverPhotoDataUrl && (
-              <button
-                type="button"
-                onClick={() => void handleRemovePhoto()}
-                disabled={busy}
-                className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 dark:text-red-300"
-              >
-                <Trash2 className="size-3.5" />
-                Remove photo
-              </button>
-            )}
           </div>
 
           <div className="border-t border-[var(--line)] pt-4 pb-8">
@@ -389,6 +394,12 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
         </div>
       </main>
 
+      <LogEntryCreateModal
+        open={createEntryOpen}
+        tripId={trip.id}
+        onClose={() => setCreateEntryOpen(false)}
+      />
+
       <LogEntryComposerModal
         open={selectedEntryId !== null}
         tripId={trip.id}
@@ -402,6 +413,16 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
         selectedIds={trip.crewMemberIds ?? []}
         onClose={() => setCrewPickerOpen(false)}
         onChange={(ids) => void handleCrewChange(ids)}
+      />
+
+      <TripCoverEditModal
+        open={coverEditOpen}
+        busy={busy}
+        cover={cover}
+        onClose={() => setCoverEditOpen(false)}
+        onChoosePhoto={handleChoosePhotoCover}
+        onChooseMap={() => void handleChooseMapCover()}
+        onRemoveCover={() => void handleRemoveCover()}
       />
 
       {deleteConfirmOpen && (

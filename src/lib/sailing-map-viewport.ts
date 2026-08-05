@@ -1,5 +1,18 @@
 import type maplibregl from 'maplibre-gl'
 import { DEV_FALLBACK_POSITION, getCurrentPosition } from './logbook-context'
+import type { MapLngLat } from './logbook-map-geo'
+
+export function centerMapOnPoint(
+  map: maplibregl.Map,
+  point: MapLngLat,
+  zoom = 14,
+) {
+  map.easeTo({
+    center: [point.longitude, point.latitude],
+    zoom,
+    duration: 600,
+  })
+}
 
 export async function centerMapOnCurrentLocation(
   map: maplibregl.Map,

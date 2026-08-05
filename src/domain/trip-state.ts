@@ -193,8 +193,9 @@ export function needsCastOff(
   state: TripOperationalState,
   entries: Pick<LogEntry, 'type' | 'deleted'>[],
 ) {
-  if (!state.inProgress || state.anchorDown === true) return false
+  if (!state.inProgress) return false
   if (state.moored === true) return true
+  if (state.anchorDown === true) return false
   return !entries.some((entry) => !entry.deleted && entry.type === 'CAST_OFF')
 }
 

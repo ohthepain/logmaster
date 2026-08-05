@@ -252,6 +252,7 @@ describe('isLogEntryTypeVisible', () => {
 
     const anchoredEntries = [
       entry('START_TRIP', '2026-01-01T10:00:00Z'),
+      entry('CAST_OFF', '2026-01-01T10:05:00Z'),
       entry('ANCHOR_DROPPED', '2026-01-01T18:00:00Z'),
     ]
 
@@ -263,6 +264,23 @@ describe('isLogEntryTypeVisible', () => {
     ).toBe(true)
     expect(
       isLogEntryTypeVisible('CAST_OFF', inProgressTrip, anchoredEntries),
+    ).toBe(false)
+    expect(
+      isLogEntryTypeVisible('MOORED', inProgressTrip, anchoredEntries),
+    ).toBe(true)
+  })
+
+  it('shows cast off when moored even if anchor is down', () => {
+    const mooredAndAnchoredEntries = [
+      entry('START_TRIP', '2026-01-01T10:00:00Z'),
+      entry('ANCHOR_DROPPED', '2026-01-01T10:30:00Z'),
+    ]
+
+    expect(
+      isLogEntryTypeVisible('CAST_OFF', inProgressTrip, mooredAndAnchoredEntries),
+    ).toBe(true)
+    expect(
+      isLogEntryTypeVisible('MOORED', inProgressTrip, mooredAndAnchoredEntries),
     ).toBe(false)
   })
 

@@ -1,4 +1,4 @@
-import type { Trip } from '../domain/logbook'
+import type { Trip, TripCoverKind } from '../domain/logbook'
 
 export function tripDisplayName(trip: Pick<Trip, 'title' | 'boatName'>): string {
   const title = trip.title?.trim()
@@ -13,9 +13,45 @@ export function defaultTripTitle(boatName: string, date = new Date()): string {
   return `${boatName.trim()} - ${monthYear}`
 }
 
+export function resolveTripCoverKind(
+  trip: Pick<Trip, 'coverKind' | 'coverPhotoDataUrl'>,
+): TripCoverKind | null {
+  if (trip.coverKind === 'photo' || trip.coverKind === 'map') {
+    return trip.coverKind
+  }
+  if (trip.coverPhotoDataUrl) return 'photo'
+  return null
+}
+
+export type TripDetailCoverDisplay = {
+  kind: 'photo' | 'map' | 'none'
+  photoUrl: string | null
+}
+
+export function tripDetailCoverDisplay(
+  trip: Pick<Trip, 'coverKind' | 'coverPhotoDataUrl' | 'boatPhotoUrl'>,
+): TripDetailCoverDisplay {
+  const coverKind = resolveTripCoverKind(trip)
+  if (coverKind === 'map') {
+    return { kind: 'map', photoUrl: null }
+  }
+  if (coverKind === 'photo') {
+    return {
+      kind: 'photo',
+      photoUrl: trip.coverPhotoDataUrl ?? trip.boatPhotoUrl ?? null,
+    }
+  }
+  return { kind: 'none', photoUrl: null }
+}
+
 export function tripCoverPhotoUrl(
-  trip: Pick<Trip, 'coverPhotoDataUrl' | 'boatPhotoUrl'>,
+  trip: Pick<Trip, 'coverKind' | 'coverPhotoDataUrl' | 'boatPhotoUrl'>,
 ): string | null {
+  const coverKind = resolveTripCoverKind(trip)
+  if (coverKind === 'map') return null
+  if (coverKind === 'photo') {
+    return trip.coverPhotoDataUrl ?? trip.boatPhotoUrl ?? null
+  }
   return trip.coverPhotoDataUrl ?? trip.boatPhotoUrl ?? null
 }
 

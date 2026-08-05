@@ -49,6 +49,7 @@ function serializeTrip(trip: {
   crewMemberIds: unknown
   title: string | null
   coverPhotoDataUrl: string | null
+  coverKind: string | null
   boatId: string | null
   boatPhotoUrl: string | null
   startedAt: Date
@@ -75,6 +76,7 @@ function serializeTrip(trip: {
       : null,
     title: trip.title,
     coverPhotoDataUrl: trip.coverPhotoDataUrl,
+    coverKind: trip.coverKind,
     boatId: trip.boatId,
     boatPhotoUrl: trip.boatPhotoUrl,
     startedAt: trip.startedAt.toISOString(),

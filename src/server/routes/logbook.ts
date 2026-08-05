@@ -29,6 +29,10 @@ function toTrip(data: Record<string, unknown>) {
     title: (data.title as string | null | undefined) ?? null,
     coverPhotoDataUrl:
       (data.coverPhotoDataUrl as string | null | undefined) ?? null,
+    coverKind:
+      data.coverKind === 'photo' || data.coverKind === 'map'
+        ? data.coverKind
+        : null,
     boatId: (data.boatId as string | null | undefined) ?? null,
     boatPhotoUrl: (data.boatPhotoUrl as string | null | undefined) ?? null,
     startedAt,

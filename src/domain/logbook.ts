@@ -7,6 +7,9 @@ import type { TripOperationalState } from './trip-state'
 export const TRIP_STATUSES = ['PLANNED', 'IN_PROGRESS', 'COMPLETED'] as const
 export type TripStatus = (typeof TRIP_STATUSES)[number]
 
+export const TRIP_COVER_KINDS = ['photo', 'map'] as const
+export type TripCoverKind = (typeof TRIP_COVER_KINDS)[number]
+
 export const LOG_ENTRY_TYPES = [
   'START_TRIP',
   'SAILS_UP',
@@ -46,6 +49,7 @@ export type Trip = {
   crewMemberIds?: string[] | null
   title?: string | null
   coverPhotoDataUrl?: string | null
+  coverKind?: TripCoverKind | null
   boatId?: string | null
   boatPhotoUrl?: string | null
   startedAt: string

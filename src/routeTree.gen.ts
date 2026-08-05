@@ -15,6 +15,7 @@ import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as MainTermsRouteImport } from './routes/_main/terms'
 import { Route as MainSignInRouteImport } from './routes/_main/sign-in'
 import { Route as MainPrivacyRouteImport } from './routes/_main/privacy'
+import { Route as MainMapRouteImport } from './routes/_main/map'
 import { Route as MainAboutRouteImport } from './routes/_main/about'
 import { Route as MainTripsIndexRouteImport } from './routes/_main/trips/index'
 import { Route as MainResetPasswordIndexRouteImport } from './routes/_main/reset-password/index'
@@ -63,6 +64,11 @@ const MainSignInRoute = MainSignInRouteImport.update({
 const MainPrivacyRoute = MainPrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => MainRouteRoute,
+} as any)
+const MainMapRoute = MainMapRouteImport.update({
+  id: '/map',
+  path: '/map',
   getParentRoute: () => MainRouteRoute,
 } as any)
 const MainAboutRoute = MainAboutRouteImport.update({
@@ -170,6 +176,7 @@ const MainAdminJobsGeoFeaturesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof MainIndexRoute
   '/about': typeof MainAboutRoute
+  '/map': typeof MainMapRoute
   '/privacy': typeof MainPrivacyRoute
   '/sign-in': typeof MainSignInRoute
   '/terms': typeof MainTermsRoute
@@ -196,6 +203,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/about': typeof MainAboutRoute
+  '/map': typeof MainMapRoute
   '/privacy': typeof MainPrivacyRoute
   '/sign-in': typeof MainSignInRoute
   '/terms': typeof MainTermsRoute
@@ -225,6 +233,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_main': typeof MainRouteRouteWithChildren
   '/_main/about': typeof MainAboutRoute
+  '/_main/map': typeof MainMapRoute
   '/_main/privacy': typeof MainPrivacyRoute
   '/_main/sign-in': typeof MainSignInRoute
   '/_main/terms': typeof MainTermsRoute
@@ -255,6 +264,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/map'
     | '/privacy'
     | '/sign-in'
     | '/terms'
@@ -281,6 +291,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/about'
+    | '/map'
     | '/privacy'
     | '/sign-in'
     | '/terms'
@@ -309,6 +320,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_main'
     | '/_main/about'
+    | '/_main/map'
     | '/_main/privacy'
     | '/_main/sign-in'
     | '/_main/terms'
@@ -382,6 +394,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof MainPrivacyRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
+    '/_main/map': {
+      id: '/_main/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MainMapRouteImport
       parentRoute: typeof MainRouteRoute
     }
     '/_main/about': {
@@ -529,6 +548,7 @@ declare module '@tanstack/react-router' {
 
 interface MainRouteRouteChildren {
   MainAboutRoute: typeof MainAboutRoute
+  MainMapRoute: typeof MainMapRoute
   MainPrivacyRoute: typeof MainPrivacyRoute
   MainSignInRoute: typeof MainSignInRoute
   MainTermsRoute: typeof MainTermsRoute
@@ -556,6 +576,7 @@ interface MainRouteRouteChildren {
 
 const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainAboutRoute: MainAboutRoute,
+  MainMapRoute: MainMapRoute,
   MainPrivacyRoute: MainPrivacyRoute,
   MainSignInRoute: MainSignInRoute,
   MainTermsRoute: MainTermsRoute,
