@@ -456,6 +456,47 @@ a {
   outline: none;
 }
 
+.sailing-map-feature-popup.maplibregl-popup {
+  z-index: 30;
+}
+
+.sailing-map-feature-popup .maplibregl-popup-content {
+  padding: 0.65rem 0.75rem 0.7rem;
+  border: 1px solid rgba(126, 200, 232, 0.22);
+  border-radius: 0.65rem;
+  background: rgba(26, 51, 72, 0.97);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color: #fff;
+}
+
+.sailing-map-feature-popup .maplibregl-popup-tip {
+  border-top-color: rgba(26, 51, 72, 0.97);
+}
+
+.sailing-map-feature-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-bottom-color: rgba(26, 51, 72, 0.97);
+}
+
+.sailing-map-feature-popup.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-left-color: rgba(26, 51, 72, 0.97);
+}
+
+.sailing-map-feature-popup.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-right-color: rgba(26, 51, 72, 0.97);
+}
+
+.sailing-map-feature-popup .maplibregl-popup-close-button {
+  padding: 0.2rem 0.45rem;
+  font-size: 1rem;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.sailing-map-feature-popup .maplibregl-popup-close-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
 .dev-component-label {
   display: block;
   width: fit-content;

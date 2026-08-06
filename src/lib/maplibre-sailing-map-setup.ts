@@ -12,6 +12,7 @@ import {
   openSeaMapSeamarkTileUrl,
   OPEN_SEAMAP_DARK_PAINT,
 } from './maplibre-openseamap'
+import { ensureMapDataLayerStackOrder } from './maplibre-data-layers'
 
 const HILLSHADE_LAYER_ID = 'Hillshade'
 
@@ -129,12 +130,12 @@ export function addOpenSeaMapSeamarkOverlay(map: maplibregl.Map) {
     })
   }
 
-  ensureSeamarkLayerOnTop(map)
+  ensureMapDataLayerStackOrder(map)
 }
 
 export function finalizeSailingMapLayers(map: maplibregl.Map) {
   prepareFlatSailingBasemap(map)
-  ensureSeamarkLayerOnTop(map)
+  ensureMapDataLayerStackOrder(map)
   reloadSeamarkTiles(map)
   try {
     map.resize()
@@ -146,7 +147,7 @@ export function finalizeSailingMapLayers(map: maplibregl.Map) {
 /** One-shot tile refresh after pan/zoom settles — avoids per-idle moveLayer thrashing. */
 export function scheduleSeamarkTileRefresh(map: maplibregl.Map) {
   map.once('idle', () => {
-    ensureSeamarkLayerOnTop(map)
+    ensureMapDataLayerStackOrder(map)
     reloadSeamarkTiles(map)
   })
 }

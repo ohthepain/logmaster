@@ -18,9 +18,10 @@ import {
 } from '../lib/logbook-context'
 import { advanceIso, realNowIso } from '../lib/dev-time-travel'
 import { isDevModeAvailable } from '../lib/dev-mode'
-import { formatDateTime, formatPosition } from '../lib/logbook-format'
+import { formatDateTime } from '../lib/logbook-format'
 import type { MapLngLat } from '../lib/logbook-map-geo'
 import { cn } from '../lib/cn'
+import { usePositionPlaceLabel } from '../lib/use-position-place-label'
 import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore } from '../stores/logbook'
 
@@ -74,7 +75,9 @@ export function LogEntryCreateModal({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const voiceChunksRef = useRef<Blob[]>([])
   const [draftPosition, setDraftPosition] = useState<MapLngLat | null>(null)
-  const [positionLabel, setPositionLabel] = useState('Locating…')
+  const positionLabel = usePositionPlaceLabel(draftPosition, {
+    enabled: step === 'compose',
+  })
   const [saving, setSaving] = useState(false)
   const [entryTimestampIso, setEntryTimestampIso] = useState(realNowIso)
   const devMode = useAppOptionsStore((state) => state.devMode)
@@ -92,7 +95,6 @@ export function LogEntryCreateModal({
 
   const applyDraftPosition = (position: MapLngLat) => {
     setDraftPosition(position)
-    setPositionLabel(formatPosition(position.latitude, position.longitude))
   }
 
   const clearVoiceRecording = () => {
@@ -122,7 +124,6 @@ export function LogEntryCreateModal({
     stopVoiceRecording()
     setDraftPosition(null)
     positionEditedRef.current = false
-    setPositionLabel('Locating…')
     setSaving(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }

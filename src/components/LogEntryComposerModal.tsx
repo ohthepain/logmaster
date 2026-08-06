@@ -9,9 +9,12 @@ import {
   DEV_FALLBACK_POSITION,
   getCurrentPosition,
 } from '../lib/logbook-context'
-import { formatPosition } from '../lib/logbook-format'
 import type { MapLngLat } from '../lib/logbook-map-geo'
 import { cn } from '../lib/cn'
+import {
+  seedPlaceFromEntryData,
+  usePositionPlaceLabel,
+} from '../lib/use-position-place-label'
 import { useLogbookStore } from '../stores/logbook'
 
 type LogEntryComposerModalProps = {
@@ -47,13 +50,18 @@ export function LogEntryComposerModal({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [includeVoiceNote, setIncludeVoiceNote] = useState(false)
   const [draftPosition, setDraftPosition] = useState<MapLngLat | null>(null)
-  const [positionLabel, setPositionLabel] = useState('Locating…')
+  const [seedPlace, setSeedPlace] = useState(() =>
+    entry ? seedPlaceFromEntryData(entry.data) : null,
+  )
+  const positionLabel = usePositionPlaceLabel(draftPosition, {
+    seedPlace,
+  })
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   const applyDraftPosition = (position: MapLngLat) => {
     setDraftPosition(position)
-    setPositionLabel(formatPosition(position.latitude, position.longitude))
+    setSeedPlace(null)
   }
 
   const reset = () => {
@@ -63,8 +71,8 @@ export function LogEntryComposerModal({
     setPhotoPreview(null)
     setIncludeVoiceNote(false)
     setDraftPosition(null)
+    setSeedPlace(null)
     positionEditedRef.current = false
-    setPositionLabel('Locating…')
     setSaving(false)
     setDeleting(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -84,15 +92,17 @@ export function LogEntryComposerModal({
     positionEditedRef.current = false
 
     if (entry.latitude != null && entry.longitude != null) {
-      applyDraftPosition({
+      const place = seedPlaceFromEntryData(entry.data)
+      setSeedPlace(place)
+      setDraftPosition({
         latitude: entry.latitude,
         longitude: entry.longitude,
       })
       return
     }
 
+    setSeedPlace(null)
     setDraftPosition(null)
-    setPositionLabel('Position unavailable')
   }, [open, entry?.id, entry?.latitude, entry?.longitude, entry?.notes, entry?.data])
 
   if (!open || !entry || !trip) return null

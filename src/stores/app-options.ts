@@ -3,6 +3,10 @@ import { persist } from 'zustand/middleware'
 import { clearDevPositionOverride } from '../lib/device-position'
 import { defaultMapBasemapLayerToggles } from '../lib/maplibre-basemap-layer-toggles'
 import type { MapBasemapLayerToggles } from '../lib/maplibre-basemap-layer-toggles'
+import {
+  defaultMapDataLayerToggles,
+  type MapDataLayerToggles,
+} from '../lib/map-data-layers'
 
 type AppOptions = {
   devMode: boolean
@@ -27,6 +31,9 @@ type AppOptions = {
   /** Basemap: POI/building/transit/landuse visibility (heuristic layer ids). */
   mapBasemapLayerToggles: MapBasemapLayerToggles
   setMapBasemapLayerToggles: (next: Partial<MapBasemapLayerToggles>) => void
+  /** Vector map data overlays (marinas, seamarks, place labels, …). */
+  mapDataLayerToggles: MapDataLayerToggles
+  setMapDataLayerToggles: (next: Partial<MapDataLayerToggles>) => void
 }
 
 export const useAppOptionsStore = create<AppOptions>()(
@@ -68,6 +75,11 @@ export const useAppOptionsStore = create<AppOptions>()(
       setMapBasemapLayerToggles: (next: Partial<MapBasemapLayerToggles>) =>
         set((s) => ({
           mapBasemapLayerToggles: { ...s.mapBasemapLayerToggles, ...next },
+        })),
+      mapDataLayerToggles: defaultMapDataLayerToggles(),
+      setMapDataLayerToggles: (next: Partial<MapDataLayerToggles>) =>
+        set((s) => ({
+          mapDataLayerToggles: { ...s.mapDataLayerToggles, ...next },
         })),
     }),
     { name: 'travelmode-app-options' },

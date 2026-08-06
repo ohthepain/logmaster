@@ -8,6 +8,8 @@ import {
   overpassElementToMarina,
   overpassMirrorUrls,
   overpassQueryForCell,
+  primaryOverpassMirrorForCell,
+  shouldScheduleAnotherRetryPass,
 } from './overpass'
 import { mergeMarinaFeatures } from './schema'
 
@@ -49,13 +51,13 @@ describe('overpass marina parsing', () => {
   it('prefers configured Overpass URL then falls back to defaults', () => {
     expect(overpassMirrorUrls(null)).toEqual([
       'https://overpass.kumi.systems/api/interpreter',
-      'https://overpass-api.de/api/interpreter',
+      'https://overpass.openstreetmap.fr/api/interpreter',
     ])
     expect(
       overpassMirrorUrls('https://overpass.osm.ch/api/interpreter'),
     ).toEqual([
       'https://overpass.kumi.systems/api/interpreter',
-      'https://overpass-api.de/api/interpreter',
+      'https://overpass.openstreetmap.fr/api/interpreter',
     ])
   })
 
@@ -84,6 +86,25 @@ describe('overpass marina parsing', () => {
     expect(formatOverpassErrorCode('Overpass 504: gateway timeout')).toBe('504')
     expect(formatOverpassErrorCode('Cell query timed out')).toBe('CELL_TIMEOUT')
     expect(formatOverpassErrorCode('Overpass timeout: too busy')).toBe('TIMEOUT')
+    expect(
+      formatOverpassErrorCode('The operation was aborted due to timeout'),
+    ).toBe('TIMEOUT')
+  })
+
+  it('keeps retry passes while cells succeed, stops on a dry pass', () => {
+    expect(shouldScheduleAnotherRetryPass(0, 9, 7)).toBe(true)
+    expect(shouldScheduleAnotherRetryPass(1, 6, 3)).toBe(true)
+    expect(shouldScheduleAnotherRetryPass(2, 3, 0)).toBe(false)
+    expect(shouldScheduleAnotherRetryPass(0, 0, 0)).toBe(false)
+    expect(shouldScheduleAnotherRetryPass(1, 4, 0)).toBe(false)
+  })
+
+  it('round-robins primary mirrors across cells', () => {
+    const mirrors = overpassMirrorUrls(null)
+    expect(primaryOverpassMirrorForCell(0, mirrors)).toBe(mirrors[0])
+    expect(primaryOverpassMirrorForCell(1, mirrors)).toBe(mirrors[1])
+    expect(primaryOverpassMirrorForCell(2, mirrors)).toBe(mirrors[0])
+    expect(primaryOverpassMirrorForCell(5, mirrors)).toBe(mirrors[1])
   })
 
   it('builds expected Overpass QL', () => {

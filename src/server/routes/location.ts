@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import type { WeatherSnapshot } from '../../domain/logbook'
+import { reverseLookupPlaceFromTiles } from '../places/reverse-lookup'
 
 function parseCoordinate(
   value: string | undefined,
@@ -96,6 +97,27 @@ locationRoutes.get('/context', async (c) => {
     longitude,
     country,
     weather,
+    timestamp: new Date().toISOString(),
+  })
+})
+
+locationRoutes.get('/place', async (c) => {
+  const latitude = parseCoordinate(c.req.query('latitude'), -90, 90)
+  const longitude = parseCoordinate(c.req.query('longitude'), -180, 180)
+
+  if (latitude == null || longitude == null) {
+    return c.json({ error: 'latitude and longitude are required' }, 400)
+  }
+
+  const maxDistanceM = parseCoordinate(c.req.query('maxDistanceM'), 100, 200_000)
+  const place = await reverseLookupPlaceFromTiles(latitude, longitude, {
+    maxDistanceM: maxDistanceM ?? undefined,
+  })
+
+  return c.json({
+    latitude,
+    longitude,
+    place,
     timestamp: new Date().toISOString(),
   })
 })

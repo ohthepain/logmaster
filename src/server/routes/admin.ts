@@ -12,8 +12,13 @@ import { BUILD_GEO_FEATURES_QUEUE } from '../jobs/geo-features'
 import type { BuildGeoFeaturesPayload } from '../jobs/geo-features'
 import { BUILD_MARINAS_QUEUE } from '../jobs/marinas'
 import type { BuildMarinasPayload } from '../jobs/marinas'
+import { BUILD_OSM_POINTS_QUEUE } from '../jobs/osm-points'
+import type { BuildOsmPointsPayload } from '../jobs/osm-points'
 import { enqueueEuropeGeoFeatures, enqueueGeoFeaturesBuild, parseGeoFeaturesRegionId } from '../jobs/queue'
 import { enqueueMarinasBuild, enqueueNorthAmericaMarinas, parseMarinasRegionId } from '../jobs/marina-queue'
+import { enqueueOsmPointsBuild } from '../jobs/osm-points-queue'
+import type { OsmPointDatasetId } from '../../lib/map-data-layers'
+import { isMapRegionId } from '../../lib/map-regions'
 import { deleteTripsFromLogbook } from '../deleted-trips'
 import {
   cancelUnifiedAdminJob,
@@ -152,10 +157,17 @@ adminRoutes.delete('/trips/:tripId', async (c) => {
 })
 
 const MAX_JOBS = 500
-const SUPPORTED_JOB_QUEUES = [BUILD_GEO_FEATURES_QUEUE, BUILD_MARINAS_QUEUE] as const
+const SUPPORTED_JOB_QUEUES = [
+  BUILD_GEO_FEATURES_QUEUE,
+  BUILD_MARINAS_QUEUE,
+  BUILD_OSM_POINTS_QUEUE,
+] as const
 
 type SupportedJobQueue = (typeof SUPPORTED_JOB_QUEUES)[number]
-type AdminJobPayload = BuildGeoFeaturesPayload | BuildMarinasPayload
+type AdminJobPayload =
+  | BuildGeoFeaturesPayload
+  | BuildMarinasPayload
+  | BuildOsmPointsPayload
 
 function toIso(value: Date | null | undefined): string | null {
   return value ? value.toISOString() : null
@@ -303,6 +315,44 @@ adminRoutes.post('/jobs/marinas/runs', async (c) => {
   const id = await enqueueMarinasBuild({ dryRun, limitCells, regionId })
   return c.json(
     { ok: true, jobId: id, queued: true, dryRun, limitCells, regionId },
+    202,
+  )
+})
+
+function parseOsmPointDataset(value: unknown): OsmPointDatasetId | null {
+  if (
+    value === 'harbours' ||
+    value === 'anchorages' ||
+    value === 'places' ||
+    value === 'seamarks'
+  ) {
+    return value
+  }
+  return null
+}
+
+adminRoutes.post('/jobs/osm-points/runs', async (c) => {
+  const body = await c.req.json().catch(() => ({}))
+  const dryRun =
+    typeof body === 'object' &&
+    body !== null &&
+    !Array.isArray(body) &&
+    (body as Record<string, unknown>).dryRun === true
+  const limitCellsRaw = (body as Record<string, unknown>).limitCells
+  const limitCells =
+    typeof limitCellsRaw === 'number' && Number.isInteger(limitCellsRaw)
+      ? limitCellsRaw
+      : null
+  const dataset = parseOsmPointDataset((body as Record<string, unknown>).dataset)
+  if (!dataset) {
+    return c.text('Invalid or missing dataset (harbours, anchorages, places, seamarks)', 400)
+  }
+  const regionRaw = (body as Record<string, unknown>).regionId
+  const regionId =
+    typeof regionRaw === 'string' && isMapRegionId(regionRaw) ? regionRaw : 'uk'
+  const id = await enqueueOsmPointsBuild(dataset, { dryRun, limitCells, regionId })
+  return c.json(
+    { ok: true, jobId: id, queued: true, dryRun, limitCells, regionId, dataset },
     202,
   )
 })

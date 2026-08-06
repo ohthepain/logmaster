@@ -7,6 +7,7 @@ import {
   getMapRegion,
   MAP_LAYERS,
   MAP_REGIONS,
+  osmPointsDatasetForBuildLayer,
   type MapLayerId,
   type MapRegionId,
 } from '../../lib/map-regions'
@@ -33,7 +34,10 @@ export function AdminRegionBuildPanel({ onQueued }: AdminRegionBuildPanelProps) 
     () => availableLayersForRegion(region),
     [region],
   )
-  const marinasSelected = selectedLayers.includes('osm-marinas')
+  const overpassSelected = selectedLayers.some((layerId) => {
+    const layer = MAP_LAYERS.find((entry) => entry.id === layerId)
+    return layer?.overpass === true
+  })
 
   useEffect(() => {
     setSelectedLayers(availableLayers.map((layer) => layer.id))
@@ -88,6 +92,26 @@ export function AdminRegionBuildPanel({ onQueued }: AdminRegionBuildPanelProps) 
               body: JSON.stringify({
                 dryRun,
                 regionId,
+                limitCells: limit ?? null,
+              }),
+            })
+            if (!response.ok) {
+              errors.push(await response.text())
+              continue
+            }
+            const payload = (await response.json()) as { jobId: string }
+            results.push({ layerId, jobId: payload.jobId })
+          }
+
+          const osmDataset = osmPointsDatasetForBuildLayer(layerId)
+          if (osmDataset) {
+            const response = await fetch('/api/admin/jobs/osm-points/runs', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                dryRun,
+                regionId,
+                dataset: osmDataset,
                 limitCells: limit ?? null,
               }),
             })
@@ -217,7 +241,7 @@ export function AdminRegionBuildPanel({ onQueued }: AdminRegionBuildPanelProps) 
         </ul>
       </fieldset>
 
-      {marinasSelected ? (
+      {overpassSelected ? (
         <label className="flex w-full max-w-xs flex-col gap-1 text-sm text-[var(--sea-ink)]">
           Limit Overpass cells (optional)
           <input

@@ -1,4 +1,6 @@
 import type { Leg, LogEntry, LogEntryType } from '../domain/logbook'
+import { formatPosition } from './logbook-format'
+import { entryPlaceFromData, formatLogEntryPlace } from './logbook-place'
 import { generateLegColor, resolveLegColor } from './leg-colors'
 
 /** Start a new leg (underway / departure). */
@@ -29,6 +31,45 @@ export function defaultLegTitle(sequence: number): string {
 
 export function legDisplayTitle(leg: Leg): string {
   return leg.title?.trim() || defaultLegTitle(leg.sequence)
+}
+
+export function entryPlaceLabel(entry: LogEntry): string | null {
+  const place = entryPlaceFromData(entry.data)
+  if (place) return formatLogEntryPlace(place)
+  if (entry.latitude != null && entry.longitude != null) {
+    return formatPosition(entry.latitude, entry.longitude)
+  }
+  return null
+}
+
+export function legEntriesForDisplay(leg: Leg, entries: LogEntry[]): LogEntry[] {
+  return entriesForLeg(leg.id, entries).sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  )
+}
+
+export function legEndpointPlaceLabels(
+  leg: Leg,
+  entries: LogEntry[],
+): { from: string | null; to: string | null } {
+  const legEntries = legEntriesForDisplay(leg, entries)
+  if (legEntries.length === 0) return { from: null, to: null }
+  const first = legEntries[0]
+  const last = legEntries[legEntries.length - 1]
+  return {
+    from: entryPlaceLabel(first),
+    to: entryPlaceLabel(last),
+  }
+}
+
+export function formatLegRouteLabel(
+  from: string | null,
+  to: string | null,
+): string | null {
+  if (from && to && from !== to) return `${from} → ${to}`
+  if (from) return from
+  if (to) return to
+  return null
 }
 
 type RebuildResult = {
@@ -103,10 +144,10 @@ export function rebuildLegsForTrip(
   let currentLeg: Leg | null = null
   let sequence = 0
 
-  const openLeg = (entry: LogEntry) => {
+  const openLeg = (entry: LogEntry): Leg => {
     const preserved = preservedByStartEvent.get(entry.id)
     const now = nowIso()
-    currentLeg = preserved
+    const nextLeg: Leg = preserved
       ? {
           ...preserved,
           sequence,
@@ -133,8 +174,10 @@ export function rebuildLegsForTrip(
           updatedAt: now,
           synced: false,
         }
-    newLegs.push(currentLeg)
+    currentLeg = nextLeg
+    newLegs.push(nextLeg)
     sequence += 1
+    return nextLeg
   }
 
   const closeLeg = (entry: LogEntry) => {
@@ -155,11 +198,13 @@ export function rebuildLegsForTrip(
       currentLeg = null
     }
 
-    if (!currentLeg && shouldOpenLeg(entry)) {
-      openLeg(entry)
+    let legForEntry: Leg | null = currentLeg
+
+    if (!legForEntry && shouldOpenLeg(entry)) {
+      legForEntry = openLeg(entry)
     }
 
-    entryLegIds.set(entry.id, currentLeg?.id ?? null)
+    entryLegIds.set(entry.id, legForEntry?.id ?? null)
 
     if (isLegEndType(entry.type)) {
       closeLeg(entry)

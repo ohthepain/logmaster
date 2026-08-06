@@ -14,16 +14,23 @@ import {
   loadSailingMapStyle,
   scheduleSeamarkTileRefresh,
 } from "../lib/maplibre-sailing-map-setup";
+import { installMapDataLayers } from "../lib/maplibre-data-layers";
+import { useMapDataLayerSync } from "../lib/use-map-data-layer-sync";
 import { applySailingLogMapTheme, sailingMapLegEntryPaint, sailingMapLegTrackPaint, SailingMapColors } from "../lib/maplibre-sailing-theme";
 import { getGeoJsonSource } from "../lib/maplibre-source";
 import { defaultRasterMapId } from "../lib/map-styles";
 import { centerMapOnCurrentLocation, centerMapOnPoint } from "../lib/sailing-map-viewport";
+import {
+  fetchReversePlaceLookup,
+  formatReversePlaceLabel,
+} from "../lib/place-reverse-lookup-api";
 import { mapTilerTransformRequest } from "../lib/tiles";
 import { cn } from "../lib/cn";
 import { useAppOptionsStore } from "../stores/app-options";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { SailingMapControlStack } from "./SailingMapControlStack";
 import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
+import { SailingMapLayerPanel } from "./SailingMapLayerPanel";
 
 type TripLogMapProps = {
   trip: Trip;
@@ -63,12 +70,19 @@ export function TripLogMap({
   const currentPositionMarkerRef = useRef<maplibregl.Marker | null>(null);
   const initialFitDoneRef = useRef(false);
   const devMode = useAppOptionsStore((state) => state.devMode);
+  const mapDataLayerToggles = useAppOptionsStore((state) => state.mapDataLayerToggles);
+  const setMapDataLayerToggles = useAppOptionsStore((state) => state.setMapDataLayerToggles);
   const devDraggablePosition =
     devMode && isDevModeAvailable() && showCurrentPosition && interactive;
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [currentPosition, setCurrentPosition] = useState<LngLat | null>(null);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
+
+  useMapDataLayerSync(mapRef, mapReady, mapDataLayerToggles, {
+    enablePopups: interactive,
+    seamarksAllowed: showSeamarks,
+  });
 
   const legTrackGeoJson = useMemo(() => buildLegTrackGeoJson(entries, legs), [entries, legs]);
   const legEntryGeoJson = useMemo(() => buildLegEntryPointsGeoJson(entries, legs), [entries, legs]);
@@ -132,9 +146,8 @@ export function TripLogMap({
         map.on("load", () => {
           if (!map) return;
           applySailingLogMapTheme(map);
-          if (showSeamarks) {
-            addOpenSeaMapSeamarkOverlay(map);
-          }
+          addOpenSeaMapSeamarkOverlay(map);
+          installMapDataLayers(map);
 
           map.addSource(TRACK_SOURCE, {
             type: "geojson",
@@ -185,10 +198,8 @@ export function TripLogMap({
           });
 
           finalizeSailingMapLayers(map);
-          if (showSeamarks) {
-            scheduleSeamarkTileRefresh(map);
-            unbindSeamarkRefresh = bindSeamarkTileRefreshOnViewChange(map);
-          }
+          scheduleSeamarkTileRefresh(map);
+          unbindSeamarkRefresh = bindSeamarkTileRefreshOnViewChange(map);
 
           setMapReady(true);
         });
@@ -214,7 +225,7 @@ export function TripLogMap({
       mapRef.current = null;
       setMapReady(false);
     };
-  }, [interactive, showSeamarks]);
+  }, [interactive]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -270,6 +281,20 @@ export function TripLogMap({
       setDevPositionOverride({
         latitude: lngLat.lat,
         longitude: lngLat.lng,
+      });
+      void fetchReversePlaceLookup(lngLat.lat, lngLat.lng).then((place) => {
+        if (place) {
+          console.info(
+            "[dev position] nearest place:",
+            formatReversePlaceLabel(place),
+            place,
+          );
+          return;
+        }
+        console.info("[dev position] no named place within lookup range", {
+          latitude: lngLat.lat,
+          longitude: lngLat.lng,
+        });
       });
     });
 
@@ -350,12 +375,20 @@ export function TripLogMap({
       ) : null}
       <div ref={containerRef} className={cn("sailing-map", mapClassName)} />
       {mapReady && showControls ? (
-        <SailingMapControlStack
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onLocate={handleLocate}
-          onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}
-        />
+        <>
+          <SailingMapControlStack
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onLocate={handleLocate}
+            layers={
+              <SailingMapLayerPanel
+                toggles={mapDataLayerToggles}
+                onChange={setMapDataLayerToggles}
+              />
+            }
+            onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}
+          />
+        </>
       ) : null}
       {mapReady && devDraggablePosition ? (
         <p
@@ -382,8 +415,29 @@ export function TripLogMap({
     </div>
   );
 
+  const fullscreenModal =
+    allowFullscreen && fullscreenOpen ? (
+      <SailingMapFullscreenModal title="Trip map" onClose={() => setFullscreenOpen(false)}>
+        <DevComponentLabel name="TripLogMap" />
+
+        <TripLogMap
+          trip={trip}
+          entries={entries}
+          legs={legs}
+          focusEntryId={focusEntryId}
+          mapClassName="h-full w-full"
+          allowFullscreen={false}
+        />
+      </SailingMapFullscreenModal>
+    ) : null;
+
   if (embedded) {
-    return mapShell;
+    return (
+      <>
+        {mapShell}
+        {fullscreenModal}
+      </>
+    );
   }
 
   return (
@@ -398,20 +452,7 @@ export function TripLogMap({
       ) : (
         mapShell
       )}
-      {allowFullscreen && fullscreenOpen ? (
-        <SailingMapFullscreenModal title="Trip map" onClose={() => setFullscreenOpen(false)}>
-          <DevComponentLabel name="TripLogMap" />
-
-          <TripLogMap
-            trip={trip}
-            entries={entries}
-            legs={legs}
-            focusEntryId={focusEntryId}
-            mapClassName="h-full w-full"
-            allowFullscreen={false}
-          />
-        </SailingMapFullscreenModal>
-      ) : null}
+      {fullscreenModal}
     </>
   );
 }

@@ -4,19 +4,20 @@ import { cellSpanDegrees, splitGridCell } from './grid'
 
 const DEFAULT_OVERPASS_URLS = [
   'https://overpass.kumi.systems/api/interpreter',
-  'https://overpass-api.de/api/interpreter',
+  'https://overpass.openstreetmap.fr/api/interpreter',
 ] as const
 
 /** Known-broken mirrors — never use even when configured in OVERPASS_URL. */
 const BLOCKED_OVERPASS_HOSTS = new Set(['overpass.osm.ch'])
 
-const OVERPASS_FETCH_TIMEOUT_MS = 60_000
-const MIRROR_SWITCH_DELAY_MS = 2_000
+/** Must exceed `[timeout:…]` in Overpass QL (often 120s for dense seamark cells). */
+const OVERPASS_FETCH_TIMEOUT_MS = 130_000
 const CELL_WALL_TIMEOUT_MS = 120_000
 const MAX_SPLIT_DEPTH = 1
 const MIN_CELL_DEGREES = 0.75
 export const DEFAULT_CELL_CONCURRENCY = 5
-const MAX_FAILED_RETRY_PASSES = 2
+/** Absolute cap so a stuck mirror cannot retry forever. */
+export const MAX_RETRY_PASSES = 20
 const FAILED_RETRY_DELAY_MS = 15_000
 
 type OverpassElement = {
@@ -27,6 +28,8 @@ type OverpassElement = {
   lon?: number
   center?: { lat: number; lon: number }
 }
+
+export type { OverpassElement }
 
 type OverpassResponse = {
   elements?: OverpassElement[]
@@ -141,8 +144,16 @@ async function withWallTimeout<T>(
   }
 }
 
-function overpassUrls(): string[] {
-  return overpassMirrorUrls(process.env.OVERPASS_URL)
+/** Round-robin primary mirror for a grid cell — spreads load across public instances. */
+export function primaryOverpassMirrorForCell(
+  cellSlot: number,
+  urls: readonly string[],
+): string {
+  if (urls.length === 0) {
+    throw new Error('No Overpass mirrors configured')
+  }
+  const index = ((cellSlot % urls.length) + urls.length) % urls.length
+  return urls[index]!
 }
 
 /** Visible for tests — configured mirror first, then defaults (deduped, blocklist applied). */
@@ -213,19 +224,29 @@ function formatFetchError(error: unknown, url: string): Error {
   return new Error(`Overpass request to ${url} failed: ${String(error)}`)
 }
 
+function overpassUrls(): string[] {
+  return overpassMirrorUrls(process.env.OVERPASS_URL)
+}
+
 async function fetchOverpassOnce(
   query: string,
   url: string,
+  externalSignal?: AbortSignal,
 ): Promise<OverpassResponse> {
+  const timeoutSignal = AbortSignal.timeout(OVERPASS_FETCH_TIMEOUT_MS)
+  const signal = externalSignal
+    ? AbortSignal.any([externalSignal, timeoutSignal])
+    : timeoutSignal
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Accept: 'application/json',
-      'User-Agent': 'logmaster/1.0 (marina tile builder)',
+      'User-Agent': 'logmaster/1.0 (map tile builder; contact: admin@logmaster.live)',
     },
     body: new URLSearchParams({ data: query }),
-    signal: AbortSignal.timeout(OVERPASS_FETCH_TIMEOUT_MS),
+    signal,
   })
 
   const text = await response.text()
@@ -256,54 +277,91 @@ async function fetchOverpassOnce(
   return payload
 }
 
-async function fetchOverpassWithRetries(query: string, attempts = 3): Promise<OverpassResponse> {
-  const urls = overpassUrls()
-  let lastError: unknown
-
-  for (let urlIndex = 0; urlIndex < urls.length; urlIndex++) {
-    const url = urls[urlIndex]
-    for (let attempt = 0; attempt < attempts; attempt++) {
-      try {
-        return await fetchOverpassOnce(query, url)
-      } catch (error) {
-        lastError = formatFetchError(error, url)
-        if (shouldTryNextMirror(error)) {
-          break
-        }
-        const retryableStatus =
-          error instanceof Error && isTimeoutError(error.message)
-        if (!retryableStatus || attempt === attempts - 1) {
-          break
-        }
-        await sleep(1500 * (attempt + 1))
-      }
-    }
-    if (urlIndex < urls.length - 1) {
-      await sleep(MIRROR_SWITCH_DELAY_MS)
+/** Query all mirrors at once; first success wins and cancels the rest. */
+async function fetchOverpassRace(
+  query: string,
+  urls: readonly string[],
+): Promise<OverpassResponse> {
+  if (urls.length === 0) {
+    throw new Error('No Overpass mirrors available for race')
+  }
+  if (urls.length === 1) {
+    try {
+      return await fetchOverpassOnce(query, urls[0]!)
+    } catch (error) {
+      throw formatFetchError(error, urls[0]!)
     }
   }
 
-  const tried = urls.join(', ')
-  if (lastError instanceof Error) {
-    throw new Error(`${lastError.message}. Tried: ${tried}`)
-  }
-  throw new Error(`Overpass request failed. Tried: ${tried}`)
+  return new Promise((resolve, reject) => {
+    let pending = urls.length
+    let settled = false
+    const errors: Error[] = []
+    const controllers = urls.map(() => new AbortController())
+
+    for (let index = 0; index < urls.length; index++) {
+      const url = urls[index]!
+      const abortSignal = controllers[index]!.signal
+      void fetchOverpassOnce(query, url, abortSignal)
+        .then((result) => {
+          if (settled) return
+          settled = true
+          for (let j = 0; j < controllers.length; j++) {
+            if (j !== index) controllers[j]!.abort()
+          }
+          resolve(result)
+        })
+        .catch((error) => {
+          if (settled) return
+          errors.push(formatFetchError(error, url))
+          pending -= 1
+          if (pending === 0) {
+            settled = true
+            const tried = urls.join(', ')
+            reject(
+              new Error(
+                `${errors.map((entry) => entry.message).join('; ')}. Tried: ${tried}`,
+              ),
+            )
+          }
+        })
+    }
+  })
 }
 
-async function fetchMarinasForCellRecursive(
-  cell: GridCell,
-  depth = 0,
-): Promise<MarinaFeature[]> {
-  const query = overpassQueryForCell(cell)
+async function fetchOverpassForCell(
+  query: string,
+  cellSlot: number,
+): Promise<OverpassResponse> {
+  const urls = overpassUrls()
+  const primary = primaryOverpassMirrorForCell(cellSlot, urls)
+
   try {
-    const payload = await fetchOverpassWithRetries(query)
-    const elements = payload.elements ?? []
-    const features: MarinaFeature[] = []
-    for (const element of elements) {
-      const feature = overpassElementToMarina(element)
-      if (feature) features.push(feature)
+    return await fetchOverpassOnce(query, primary)
+  } catch (primaryError) {
+    if (!shouldTryNextMirror(primaryError)) {
+      throw formatFetchError(primaryError, primary)
     }
-    return features
+  }
+
+  const fallbacks = urls.filter((url) => url !== primary)
+  if (fallbacks.length === 0) {
+    throw new Error(`Overpass request failed for ${primary}`)
+  }
+
+  return fetchOverpassRace(query, fallbacks)
+}
+
+async function fetchElementsForCellRecursive(
+  cell: GridCell,
+  queryForCell: (cell: GridCell) => string,
+  cellSlot: number,
+  depth = 0,
+): Promise<OverpassElement[]> {
+  const query = queryForCell(cell)
+  try {
+    const payload = await fetchOverpassForCell(query, cellSlot)
+    return payload.elements ?? []
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     if (
@@ -314,13 +372,34 @@ async function fetchMarinasForCellRecursive(
       throw error
     }
     const parts = splitGridCell(cell)
-    const features: MarinaFeature[] = []
+    const elements: OverpassElement[] = []
     for (const part of parts) {
-      features.push(...(await fetchMarinasForCellRecursive(part, depth + 1)))
+      elements.push(
+        ...(await fetchElementsForCellRecursive(part, queryForCell, cellSlot, depth + 1)),
+      )
       await sleep(500)
     }
-    return features
+    return elements
   }
+}
+
+async function fetchMarinasForCellRecursive(
+  cell: GridCell,
+  cellSlot: number,
+  depth = 0,
+): Promise<MarinaFeature[]> {
+  const elements = await fetchElementsForCellRecursive(
+    cell,
+    overpassQueryForCell,
+    cellSlot,
+    depth,
+  )
+  const features: MarinaFeature[] = []
+  for (const element of elements) {
+    const feature = overpassElementToMarina(element)
+    if (feature) features.push(feature)
+  }
+  return features
 }
 
 export type MarinaCellResult = {
@@ -333,12 +412,30 @@ export type MarinaCellResult = {
   pass?: number
 }
 
+export function shouldScheduleAnotherRetryPass(
+  pass: number,
+  pendingCount: number,
+  passSuccessCount: number,
+  maxPasses = MAX_RETRY_PASSES,
+): boolean {
+  if (pendingCount === 0) return false
+  if (pass >= maxPasses) return false
+  if (pass > 0 && passSuccessCount === 0) return false
+  return true
+}
+
 export function formatOverpassErrorCode(message: string): string {
   const statusMatch = message.match(/Overpass (\d{3})/)
   if (statusMatch) return statusMatch[1]
   const lower = message.toLowerCase()
   if (lower.includes('cell query timed out')) return 'CELL_TIMEOUT'
-  if (lower.includes('timeout') || lower.includes('too busy')) return 'TIMEOUT'
+  if (
+    lower.includes('aborted due to timeout') ||
+    lower.includes('timeout') ||
+    lower.includes('too busy')
+  ) {
+    return 'TIMEOUT'
+  }
   if (lower.includes('invalid dataset timestamp')) return 'BAD_MIRROR'
   if (lower.includes('fetch failed') || lower.includes('econnrefused')) {
     return 'NETWORK'
@@ -368,13 +465,36 @@ type CellFetchOutcome = {
   error: string | null
 }
 
-async function fetchOneCell(cell: GridCell): Promise<{
+async function fetchOneCellElements(
+  cell: GridCell,
+  queryForCell: (cell: GridCell) => string,
+  cellSlot: number,
+): Promise<{ elements: OverpassElement[]; error: string | null }> {
+  try {
+    const elements = await withWallTimeout(
+      fetchElementsForCellRecursive(cell, queryForCell, cellSlot),
+      CELL_WALL_TIMEOUT_MS,
+      'Cell query timed out',
+    )
+    return { elements, error: null }
+  } catch (error) {
+    return {
+      elements: [],
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+async function fetchOneCell(
+  cell: GridCell,
+  cellSlot: number,
+): Promise<{
   features: MarinaFeature[]
   error: string | null
 }> {
   try {
     const features = await withWallTimeout(
-      fetchMarinasForCellRecursive(cell),
+      fetchMarinasForCellRecursive(cell, cellSlot),
       CELL_WALL_TIMEOUT_MS,
       'Cell query timed out',
     )
@@ -387,9 +507,119 @@ async function fetchOneCell(cell: GridCell): Promise<{
   }
 }
 
+type ElementFetchOutcome = {
+  item: CellWorkItem
+  elements: OverpassElement[]
+  error: string | null
+}
+
+async function fetchElementCellsInParallel(
+  items: CellWorkItem[],
+  queryForCell: (cell: GridCell) => string,
+  concurrency: number,
+  pass: number,
+  onOutcome: (outcome: ElementFetchOutcome) => void,
+  signal?: AbortSignal,
+): Promise<ElementFetchOutcome[]> {
+  if (items.length === 0) return []
+
+  const results: ElementFetchOutcome[] = new Array(items.length)
+  let nextIndex = 0
+
+  async function worker() {
+    while (true) {
+      if (signal?.aborted) throw new Error('Job cancelled')
+      const slot = nextIndex
+      nextIndex += 1
+      if (slot >= items.length) return
+
+      const item = items[slot]
+      const cellSlot = item.index - 1 + pass
+      const { elements, error } = await fetchOneCellElements(
+        item.cell,
+        queryForCell,
+        cellSlot,
+      )
+      const outcome = { item, elements, error }
+      results[slot] = outcome
+      onOutcome(outcome)
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker()),
+  )
+  return results
+}
+
+export async function fetchOverpassElementsForCells(
+  cells: GridCell[],
+  queryForCell: (cell: GridCell) => string,
+  options: FetchMarinasOptions = {},
+): Promise<OverpassElement[]> {
+  const concurrency = options.concurrency ?? DEFAULT_CELL_CONCURRENCY
+  const limitedCells =
+    options.limitCells != null && options.limitCells > 0
+      ? cells.slice(0, options.limitCells)
+      : cells
+
+  const total = limitedCells.length
+  let pending: CellWorkItem[] = limitedCells.map((cell, index) => ({
+    index: index + 1,
+    cell,
+  }))
+  const all: OverpassElement[] = []
+
+  let pass = 0
+  while (pending.length > 0) {
+    if (options.signal?.aborted) throw new Error('Job cancelled')
+
+    if (pass > 0) {
+      options.onRetryPass?.({ pass, cellCount: pending.length })
+      await sleep(options.delayMs ?? FAILED_RETRY_DELAY_MS)
+    }
+
+    const passConcurrency = Math.min(concurrency, pending.length)
+    const outcomes = await fetchElementCellsInParallel(
+      pending,
+      queryForCell,
+      passConcurrency,
+      pass,
+      (outcome) => {
+        all.push(...outcome.elements)
+        options.onCellResult?.({
+          index: outcome.item.index,
+          total,
+          cell: outcome.item.cell,
+          status: outcome.error ? 'failed' : 'ok',
+          featureCount: outcome.elements.length,
+          errorCode: outcome.error
+            ? formatOverpassErrorCode(outcome.error)
+            : null,
+          pass,
+        })
+      },
+      options.signal,
+    )
+
+    const passSuccessCount = outcomes.filter((outcome) => !outcome.error).length
+    pending = outcomes
+      .filter((outcome) => outcome.error)
+      .map((outcome) => outcome.item)
+
+    if (!shouldScheduleAnotherRetryPass(pass, pending.length, passSuccessCount)) {
+      break
+    }
+    pass += 1
+  }
+
+  return all
+}
+
 async function fetchCellsInParallel(
   items: CellWorkItem[],
   concurrency: number,
+  pass: number,
   onOutcome: (outcome: CellFetchOutcome) => void,
   signal?: AbortSignal,
 ): Promise<CellFetchOutcome[]> {
@@ -408,7 +638,8 @@ async function fetchCellsInParallel(
       if (slot >= items.length) return
 
       const item = items[slot]
-      const { features, error } = await fetchOneCell(item.cell)
+      const cellSlot = item.index - 1 + pass
+      const { features, error } = await fetchOneCell(item.cell, cellSlot)
       const outcome = { item, features, error }
       results[slot] = outcome
       onOutcome(outcome)
@@ -447,8 +678,8 @@ export async function fetchMarinasForCells(
   }))
   const all: MarinaFeature[] = []
 
-  for (let pass = 0; pass <= MAX_FAILED_RETRY_PASSES; pass++) {
-    if (pending.length === 0) break
+  let pass = 0
+  while (pending.length > 0) {
     if (options.signal?.aborted) {
       throw new Error('Job cancelled')
     }
@@ -458,10 +689,11 @@ export async function fetchMarinasForCells(
       await sleep(options.delayMs ?? FAILED_RETRY_DELAY_MS)
     }
 
-    const passConcurrency = pass === 0 ? concurrency : 1
+    const passConcurrency = Math.min(concurrency, pending.length)
     const outcomes = await fetchCellsInParallel(
       pending,
       passConcurrency,
+      pass,
       (outcome) => {
         all.push(...outcome.features)
         options.onCellResult?.({
@@ -479,9 +711,15 @@ export async function fetchMarinasForCells(
       options.signal,
     )
 
+    const passSuccessCount = outcomes.filter((outcome) => !outcome.error).length
     pending = outcomes
       .filter((outcome) => outcome.error)
       .map((outcome) => outcome.item)
+
+    if (!shouldScheduleAnotherRetryPass(pass, pending.length, passSuccessCount)) {
+      break
+    }
+    pass += 1
   }
 
   return all

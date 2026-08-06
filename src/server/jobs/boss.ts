@@ -7,6 +7,10 @@ import {
   BUILD_MARINAS_QUEUE,
   handleBuildMarinasBatches,
 } from './marinas'
+import {
+  BUILD_OSM_POINTS_QUEUE,
+  handleBuildOsmPointsBatches,
+} from './osm-points'
 import { MARINA_QUEUE_EXPIRE_SECONDS } from './marina-job-expire'
 
 let boss: PgBoss | null = null
@@ -26,7 +30,11 @@ export async function getBoss(): Promise<PgBoss> {
     if (!registered) {
       await b.createQueue(BUILD_GEO_FEATURES_QUEUE)
       await b.createQueue(BUILD_MARINAS_QUEUE)
+      await b.createQueue(BUILD_OSM_POINTS_QUEUE)
       await b.updateQueue(BUILD_MARINAS_QUEUE, {
+        expireInSeconds: MARINA_QUEUE_EXPIRE_SECONDS,
+      })
+      await b.updateQueue(BUILD_OSM_POINTS_QUEUE, {
         expireInSeconds: MARINA_QUEUE_EXPIRE_SECONDS,
       })
       // pg-boss v10+: `work(name, options, handler)` — not (name, handler, options).
@@ -47,6 +55,15 @@ export async function getBoss(): Promise<PgBoss> {
           pollingIntervalSeconds: 10,
         },
         handleBuildMarinasBatches,
+      )
+      await b.work(
+        BUILD_OSM_POINTS_QUEUE,
+        {
+          localConcurrency: 1,
+          batchSize: 1,
+          pollingIntervalSeconds: 10,
+        },
+        handleBuildOsmPointsBatches,
       )
       registered = true
     }

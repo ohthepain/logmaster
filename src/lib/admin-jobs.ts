@@ -5,6 +5,7 @@ import {
 
 export const BUILD_GEO_FEATURES_QUEUE = 'build_geo_features'
 export const BUILD_MARINAS_QUEUE = 'build_marinas'
+export const BUILD_OSM_POINTS_QUEUE = 'build_osm_points'
 
 export const ADMIN_JOB_CATALOG = [
   {
@@ -20,6 +21,13 @@ export const ADMIN_JOB_CATALOG = [
     description:
       'OSM marinas via Overpass → 1° S3 tiles for tappable marina points.',
     queue: BUILD_MARINAS_QUEUE,
+  },
+  {
+    id: 'osm-points',
+    title: 'OSM points',
+    description:
+      'Harbours, anchorages, coastal places, and seamarks via Overpass → 1° S3 tiles.',
+    queue: BUILD_OSM_POINTS_QUEUE,
   },
 ] as const
 
@@ -108,6 +116,16 @@ export function formatMarinasRunInput(data: Record<string, unknown>): string {
   return parts.join(' · ')
 }
 
+export function formatOsmPointsRunInput(data: Record<string, unknown>): string {
+  const dataset = data.dataset ?? 'points'
+  const regionId = data.regionId ?? data.region
+  const parts = [`${String(dataset)} · ${mapRegionLabel(String(regionId ?? 'uk'))}`]
+  parts.push(`${String(data.gridStep ?? 3)}° grid`)
+  if (data.limitCells) parts.push(`${String(data.limitCells)} cells`)
+  if (data.dryRun) parts.push('dry run')
+  return parts.join(' · ')
+}
+
 export function formatGeoFeaturesRunResult(
   output: Record<string, unknown> | undefined,
 ): string | null {
@@ -146,6 +164,27 @@ export function formatMarinasRunResult(
   return parts.join(' · ')
 }
 
+export function formatOsmPointsRunResult(
+  output: Record<string, unknown> | undefined,
+): string | null {
+  const value = unwrapJobOutput(output)
+  if (!value) return null
+  const result = value as {
+    featuresFound?: number
+    tilesWritten?: number
+    cellsQueried?: number
+    dataset?: string
+  }
+  if (result.featuresFound == null && result.tilesWritten == null) return null
+  const label = result.dataset ?? 'features'
+  const parts = [
+    `${result.featuresFound ?? 0} ${label}`,
+    `${result.tilesWritten ?? 0} tiles`,
+    `${result.cellsQueried ?? '?'} cells queried`,
+  ]
+  return parts.join(' · ')
+}
+
 export function formatJobRunResult(
   queue: string,
   output: Record<string, unknown> | undefined,
@@ -155,6 +194,9 @@ export function formatJobRunResult(
   }
   if (queue === BUILD_MARINAS_QUEUE) {
     return formatMarinasRunResult(output)
+  }
+  if (queue === BUILD_OSM_POINTS_QUEUE) {
+    return formatOsmPointsRunResult(output)
   }
   return null
 }
@@ -168,6 +210,9 @@ export function formatJobRunInput(
   }
   if (queue === BUILD_MARINAS_QUEUE) {
     return formatMarinasRunInput(data)
+  }
+  if (queue === BUILD_OSM_POINTS_QUEUE) {
+    return formatOsmPointsRunInput(data)
   }
   return '—'
 }
@@ -204,6 +249,7 @@ export type UnifiedAdminJobsPayload = {
 export const JOB_TYPE_LABELS: Record<AdminJobCatalogId, string> = {
   'geo-features': 'Geo features',
   marinas: 'Marinas',
+  'osm-points': 'OSM points',
 }
 
 export const JOB_STATE_STYLES: Record<string, string> = {

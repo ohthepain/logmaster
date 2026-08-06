@@ -2,9 +2,9 @@ import { entryIcon, entryTitle } from '../domain/logbook'
 import type { LogEntry, Media } from '../domain/logbook'
 import {
   formatDateTime,
-  formatPosition,
   formatWeather,
 } from '../lib/logbook-format'
+import { formatPositionDisplay, entryPlaceFromData } from '../lib/logbook-place'
 import { cn } from '../lib/cn'
 import { DevComponentLabel } from './DevComponentLabel'
 
@@ -52,7 +52,13 @@ export function LogEntryCard({ entry, media, onOpen }: LogEntryCardProps) {
             </div>
 
             <div className="mt-2 space-y-2 text-sm text-[var(--sea-ink)]">
-              <p className="m-0">{formatPosition(entry.latitude, entry.longitude)}</p>
+              <p className="m-0">
+                {formatPositionDisplay(
+                  entry.latitude,
+                  entry.longitude,
+                  entryPlaceFromData(entry.data),
+                )}
+              </p>
               {entry.heading != null && (
                 <p className="m-0">Heading {Math.round(entry.heading)}°</p>
               )}

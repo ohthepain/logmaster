@@ -20,13 +20,17 @@ import {
 } from '../lib/maplibre-sailing-map-setup'
 import { applySailingLogMapTheme, sailingMapLegEntryPaint, sailingMapLegTrackPaint, SailingMapColors } from '../lib/maplibre-sailing-theme'
 import { defaultRasterMapId } from '../lib/map-styles'
+import { installMapDataLayers, queryTappableMapDataFeatures } from '../lib/maplibre-data-layers'
+import { useMapDataLayerSync } from '../lib/use-map-data-layer-sync'
 import { centerMapOnCurrentLocation, centerMapOnPoint } from '../lib/sailing-map-viewport'
 import { mapTilerTransformRequest } from '../lib/tiles'
 import { cn } from '../lib/cn'
+import { useAppOptionsStore } from '../stores/app-options'
 import { DevComponentLabel } from './DevComponentLabel'
 import { getGeoJsonSource } from '../lib/maplibre-source'
 import { SailingMapControlStack } from './SailingMapControlStack'
 import { SailingMapFullscreenModal } from './SailingMapFullscreenModal'
+import { SailingMapLayerPanel } from './SailingMapLayerPanel'
 
 type LogEntryPositionMapProps = {
   trip: Trip
@@ -61,6 +65,12 @@ export function LogEntryPositionMap({
   const initialFitDoneRef = useRef(false)
   const [mapReady, setMapReady] = useState(false)
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
+  const mapDataLayerToggles = useAppOptionsStore((state) => state.mapDataLayerToggles)
+  const setMapDataLayerToggles = useAppOptionsStore((state) => state.setMapDataLayerToggles)
+
+  useMapDataLayerSync(mapRef, mapReady, mapDataLayerToggles, {
+    enablePopups: true,
+  })
 
   const legTrackGeoJson = useMemo(
     () => buildLegTrackGeoJson(entries, legs),
@@ -114,6 +124,7 @@ export function LogEntryPositionMap({
           if (!map) return
           applySailingLogMapTheme(map)
           addOpenSeaMapSeamarkOverlay(map)
+          installMapDataLayers(map)
 
           map.addSource(TRACK_SOURCE, {
             type: 'geojson',
@@ -154,6 +165,12 @@ export function LogEntryPositionMap({
 
           map.on('click', (event) => {
             if (!event.lngLat) return
+            const hits = queryTappableMapDataFeatures(
+              map!,
+              event.point,
+              useAppOptionsStore.getState().mapDataLayerToggles,
+            )
+            if (hits.length > 0) return
             marker.setLngLat(event.lngLat)
             if (!marker.getElement().isConnected) {
               marker.addTo(map!)
@@ -251,12 +268,20 @@ export function LogEntryPositionMap({
       <DevComponentLabel name="LogEntryPositionMap" className="absolute left-2 top-2 z-10" />
       <div ref={containerRef} className={cn('sailing-map', mapClassName)} />
       {mapReady ? (
-        <SailingMapControlStack
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onLocate={handleLocate}
-          onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}
-        />
+        <>
+          <SailingMapControlStack
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onLocate={handleLocate}
+            layers={
+              <SailingMapLayerPanel
+                toggles={mapDataLayerToggles}
+                onChange={setMapDataLayerToggles}
+              />
+            }
+            onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}
+          />
+        </>
       ) : null}
       <p
         className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full px-2.5 py-1 text-[10px] font-medium shadow-sm"

@@ -3,10 +3,14 @@ import type { Leg, LogEntry } from '../domain/logbook'
 import { generateLegColor } from './leg-colors'
 import {
   defaultLegTitle,
+  entryPlaceLabel,
+  formatLegRouteLabel,
   legDisplayTitle,
+  legEndpointPlaceLabels,
   mergeLegs,
   rebuildLegsForTrip,
 } from './trip-legs'
+import { formatLegDateTimeRange } from './logbook-format'
 
 function entry(
   partial: Partial<LogEntry> & Pick<LogEntry, 'id' | 'type' | 'timestamp'>,
@@ -136,5 +140,75 @@ describe('mergeLegs', () => {
 describe('legDisplayTitle', () => {
   it('uses default when title empty', () => {
     expect(legDisplayTitle({ sequence: 0 } as Leg)).toBe(defaultLegTitle(0))
+  })
+})
+
+describe('formatLegDateTimeRange', () => {
+  it('shows end time only on the same day', () => {
+    const label = formatLegDateTimeRange(
+      '2026-08-06T10:00:00',
+      '2026-08-06T18:30:00',
+    )
+    expect(label).toMatch(/10:00/)
+    expect(label).toMatch(/6:30/)
+    expect(label).not.toMatch(/Aug 6.*Aug 6/)
+  })
+
+  it('shows end date when the leg spans days', () => {
+    const label = formatLegDateTimeRange(
+      '2026-08-06T10:00:00',
+      '2026-08-07T08:00:00',
+    )
+    expect(label).toMatch(/Aug 6/)
+    expect(label).toMatch(/Aug 7/)
+    expect(label).toMatch(/8:00/)
+  })
+})
+
+describe('legEndpointPlaceLabels', () => {
+  it('uses first and last entry places in the leg', () => {
+    const leg: Leg = {
+      id: 'leg-1',
+      tripId: 'trip-1',
+      sequence: 0,
+      title: null,
+      startEventId: 'e1',
+      endEventId: 'e3',
+      startedAt: '2026-01-01T10:00:00Z',
+      endedAt: '2026-01-01T18:00:00Z',
+      color: '#7ec8e8',
+      createdAt: '2026-01-01T10:00:00Z',
+      updatedAt: '2026-01-01T10:00:00Z',
+      synced: true,
+    }
+    const entries = [
+      entry({
+        id: 'e1',
+        type: 'CAST_OFF',
+        timestamp: '2026-01-01T10:00:00Z',
+        legId: 'leg-1',
+        data: { place: { name: 'Cowes', detail: null, kind: 'town', source: 'geonames', distanceM: 10 } },
+      }),
+      entry({
+        id: 'e2',
+        type: 'NOTE',
+        timestamp: '2026-01-01T12:00:00Z',
+        legId: 'leg-1',
+      }),
+      entry({
+        id: 'e3',
+        type: 'MOORED',
+        timestamp: '2026-01-01T18:00:00Z',
+        legId: 'leg-1',
+        data: { place: { name: 'Portsmouth', detail: null, kind: 'town', source: 'geonames', distanceM: 12 } },
+      }),
+    ]
+
+    expect(legEndpointPlaceLabels(leg, entries)).toEqual({
+      from: 'Cowes',
+      to: 'Portsmouth',
+    })
+    expect(formatLegRouteLabel('Cowes', 'Portsmouth')).toBe('Cowes → Portsmouth')
+    expect(entryPlaceLabel(entries[1])).toBeNull()
   })
 })

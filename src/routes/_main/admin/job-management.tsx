@@ -2,8 +2,12 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { JobOutputViewer } from '../../../components/admin/JobOutputViewer'
 import { AdminPageShell } from '../../../components/admin/AdminPageShell'
+import { cancelAdminJob, rerunAdminJob } from '../../../lib/admin-api'
 import type { UnifiedAdminJobRow, UnifiedAdminJobsPayload } from '../../../lib/admin-jobs'
 import {
+  adminJobRerunLabel,
+  canCancelAdminJob,
+  canRerunAdminJob,
   formatJobCreatedTime,
   formatJobDuration,
   JOB_STATE_STYLES,
@@ -38,7 +42,7 @@ function AdminJobManagementPage() {
   const [err, setErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [rerunningId, setRerunningId] = useState<string | null>(null)
+  const [actingJobId, setActingJobId] = useState<string | null>(null)
   const [outputJob, setOutputJob] = useState<{
     id: string
     title: string
@@ -77,8 +81,22 @@ function AdminJobManagementPage() {
     return () => clearInterval(interval)
   }, [hasRunning, load])
 
+  const handleCancel = async (job: UnifiedAdminJobRow) => {
+    if (!globalThis.confirm('Cancel this job?')) return
+    setActionError(null)
+    setActingJobId(job.id)
+    try {
+      await cancelAdminJob(job.id)
+      await load()
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Cancel failed')
+    } finally {
+      setActingJobId(null)
+    }
+  }
+
   const handleRerun = async (job: UnifiedAdminJobRow) => {
-    const label = job.state === 'failed' ? 'Retry' : 'Re-run'
+    const label = adminJobRerunLabel(job.state)
     if (
       !globalThis.confirm(
         `${label} this job with the same settings?\n\n${job.input}`,
@@ -87,22 +105,14 @@ function AdminJobManagementPage() {
       return
     }
     setActionError(null)
-    setRerunningId(job.id)
+    setActingJobId(job.id)
     try {
-      const response = await fetch(
-        `/api/admin/jobs/${encodeURIComponent(job.id)}/rerun`,
-        { method: 'POST' },
-      )
-      const body = (await response.json().catch(() => ({}))) as {
-        error?: string
-      }
-      if (!response.ok) {
-        setActionError(body.error ?? `${label} failed (${response.status})`)
-        return
-      }
+      await rerunAdminJob(job.id)
       await load()
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : `${label} failed`)
     } finally {
-      setRerunningId(null)
+      setActingJobId(null)
     }
   }
 
@@ -172,14 +182,10 @@ function AdminJobManagementPage() {
           </div>
           <div className="divide-y divide-[var(--line)]">
             {data.jobs.map((job) => {
-              const canRerun =
-                job.state === 'failed' ||
-                job.state === 'completed' ||
-                job.state === 'cancelled'
-              const rerunLabel =
-                job.state === 'failed' || job.state === 'cancelled'
-                  ? 'Retry'
-                  : 'Re-run'
+              const showCancel = canCancelAdminJob(job.state)
+              const showRerun = canRerunAdminJob(job.state)
+              const rerunLabel = adminJobRerunLabel(job.state)
+              const actionBusy = actingJobId !== null
               return (
                 <div
                   key={job.id}
@@ -232,14 +238,24 @@ function AdminJobManagementPage() {
                     >
                       Output
                     </button>
-                    {canRerun ? (
+                    {showCancel ? (
                       <button
                         type="button"
-                        disabled={rerunningId !== null}
+                        disabled={actionBusy}
+                        onClick={() => void handleCancel(job)}
+                        className="rounded-lg border border-red-500/40 bg-red-500/10 px-2 py-1 font-mono text-xs text-red-700 disabled:opacity-60 dark:text-red-300"
+                      >
+                        {actingJobId === job.id ? '…' : 'Cancel'}
+                      </button>
+                    ) : null}
+                    {showRerun ? (
+                      <button
+                        type="button"
+                        disabled={actionBusy}
                         onClick={() => void handleRerun(job)}
                         className="rounded-lg border border-[var(--btn-bg)] bg-[var(--btn-bg)] px-2 py-1 font-mono text-xs text-[var(--btn-text)] disabled:opacity-60"
                       >
-                        {rerunningId === job.id ? '…' : rerunLabel}
+                        {actingJobId === job.id ? '…' : rerunLabel}
                       </button>
                     ) : null}
                   </div>

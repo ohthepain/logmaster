@@ -6,10 +6,13 @@ import {
   ADMIN_JOB_CATALOG,
   BUILD_GEO_FEATURES_QUEUE,
   BUILD_MARINAS_QUEUE,
+  BUILD_OSM_POINTS_QUEUE,
   formatGeoFeaturesRunInput,
   formatGeoFeaturesRunResult,
   formatMarinasRunInput,
   formatMarinasRunResult,
+  formatOsmPointsRunInput,
+  formatOsmPointsRunResult,
   type AdminJobCatalogId,
 } from '../../../../lib/admin-jobs'
 
@@ -20,7 +23,11 @@ type JobsSearch = {
 export const Route = createFileRoute('/_main/admin/jobs/')({
   validateSearch: (search: Record<string, unknown>): JobsSearch => {
     const tab = search.tab
-    if (tab === 'geo-features' || tab === 'marinas') {
+    if (
+      tab === 'geo-features' ||
+      tab === 'marinas' ||
+      tab === 'osm-points'
+    ) {
       return { tab }
     }
     return {}
@@ -106,6 +113,16 @@ function AdminJobsIndexPage() {
             queue={BUILD_MARINAS_QUEUE}
             formatInput={formatMarinasRunInput}
             formatResult={formatMarinasRunResult}
+          />
+        </div>
+      ) : null}
+
+      {tab === 'osm-points' ? (
+        <div role="tabpanel" className="flex flex-col gap-8">
+          <AdminJobRunsPanel
+            queue={BUILD_OSM_POINTS_QUEUE}
+            formatInput={formatOsmPointsRunInput}
+            formatResult={formatOsmPointsRunResult}
           />
         </div>
       ) : null}

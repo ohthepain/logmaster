@@ -58,10 +58,10 @@ export function TripDetailHero({
       ) : null}
 
       <div className="pointer-events-none relative z-10 flex min-h-[min(28rem,72vh)] flex-col px-3 pt-3 sm:px-4">
-        <div className="pointer-events-auto flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-3">
           <Link
             to="/"
-            className="inline-flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-sm no-underline transition hover:bg-black/45"
+            className="pointer-events-auto inline-flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-sm no-underline transition hover:bg-black/45"
             aria-label="Back to trips"
           >
             <ArrowLeft className="size-4" />
@@ -71,7 +71,7 @@ export function TripDetailHero({
             type="button"
             onClick={onEditCoverClick}
             disabled={busy}
-            className="inline-flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45 disabled:opacity-60"
+            className="pointer-events-auto inline-flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45 disabled:opacity-60"
             aria-label="Edit trip cover"
           >
             <Pencil className="size-4" />

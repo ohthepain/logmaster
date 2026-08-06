@@ -2,8 +2,13 @@ import { Merge, Pencil } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import type { Leg } from '../domain/logbook'
-import { formatDateTime } from '../lib/logbook-format'
-import { legDisplayTitle, legsForTrip } from '../lib/trip-legs'
+import { formatLegDateTimeRange } from '../lib/logbook-format'
+import {
+  formatLegRouteLabel,
+  legDisplayTitle,
+  legEndpointPlaceLabels,
+  legsForTrip,
+} from '../lib/trip-legs'
 import { useLogbookStore } from '../stores/logbook'
 import { DevComponentLabel } from './DevComponentLabel'
 import { Modal } from './Modal'
@@ -20,9 +25,14 @@ export function TripLegSection({
   onSelectLeg,
 }: TripLegSectionProps) {
   const legs = useLogbookStore((state) => state.legs)
+  const entries = useLogbookStore((state) => state.entries)
   const updateLeg = useLogbookStore((state) => state.updateLeg)
   const mergeLegWithPrevious = useLogbookStore((state) => state.mergeLegWithPrevious)
   const tripLegs = useMemo(() => legsForTrip(tripId, legs), [tripId, legs])
+  const tripEntries = useMemo(
+    () => entries.filter((entry) => entry.tripId === tripId && !entry.deleted),
+    [entries, tripId],
+  )
   const [editLeg, setEditLeg] = useState<Leg | null>(null)
   const [editTitle, setEditTitle] = useState('')
 
@@ -59,44 +69,64 @@ export function TripLegSection({
         <p className="m-0 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--sea-ink-soft)]">
           Legs
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="space-y-2">
           <button
             type="button"
             onClick={() => onSelectLeg(null)}
-            className={legChipClass(selectedLegId === null)}
+            className={legRowClass(selectedLegId === null)}
           >
             All legs
           </button>
-          {tripLegs.map((leg) => (
-            <div key={leg.id} className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => onSelectLeg(leg.id)}
-                className={legChipClass(selectedLegId === leg.id)}
-                title={`${formatDateTime(leg.startedAt)}${leg.endedAt ? ` – ${formatDateTime(leg.endedAt)}` : ''}`}
-              >
-                {legDisplayTitle(leg)}
-              </button>
-              <button
-                type="button"
-                aria-label={`Edit ${legDisplayTitle(leg)}`}
-                onClick={() => openEdit(leg)}
-                className="inline-flex size-8 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]"
-              >
-                <Pencil className="size-3.5" />
-              </button>
-              {leg.sequence > 0 ? (
+          {tripLegs.map((leg) => {
+            const { from, to } = legEndpointPlaceLabels(leg, tripEntries)
+            const route = formatLegRouteLabel(from, to)
+            const timeRange = formatLegDateTimeRange(leg.startedAt, leg.endedAt)
+            const title = legDisplayTitle(leg)
+
+            return (
+              <div key={leg.id} className="flex items-start gap-1">
                 <button
                   type="button"
-                  aria-label={`Merge ${legDisplayTitle(leg)} with previous leg`}
-                  onClick={() => void handleMerge(leg)}
-                  className="inline-flex size-8 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]"
+                  onClick={() => onSelectLeg(leg.id)}
+                  className={legRowClass(selectedLegId === leg.id, true)}
+                  title={timeRange}
                 >
-                  <Merge className="size-3.5" />
+                  <span className="block text-sm font-semibold leading-5">
+                    {title}
+                    {route ? ` · ${route}` : ''}
+                  </span>
+                  <span
+                    className={[
+                      'mt-0.5 block text-xs leading-5',
+                      selectedLegId === leg.id
+                        ? 'text-[var(--btn-text)]/75'
+                        : 'text-[var(--sea-ink-soft)]',
+                    ].join(' ')}
+                  >
+                    {timeRange}
+                  </span>
                 </button>
-              ) : null}
-            </div>
-          ))}
+                <button
+                  type="button"
+                  aria-label={`Edit ${title}`}
+                  onClick={() => openEdit(leg)}
+                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]"
+                >
+                  <Pencil className="size-3.5" />
+                </button>
+                {leg.sequence > 0 ? (
+                  <button
+                    type="button"
+                    aria-label={`Merge ${title} with previous leg`}
+                    onClick={() => void handleMerge(leg)}
+                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]"
+                  >
+                    <Merge className="size-3.5" />
+                  </button>
+                ) : null}
+              </div>
+            )
+          })}
         </div>
         <p className="m-0 text-[11px] leading-5 text-[var(--sea-ink-soft)]">
           New legs are created automatically when you log cast off or anchor weighed.
@@ -143,9 +173,10 @@ export function TripLegSection({
   )
 }
 
-function legChipClass(active: boolean) {
+function legRowClass(active: boolean, grow = false) {
   return [
-    'rounded-full px-3 py-1.5 text-sm font-semibold transition',
+    grow ? 'min-w-0 flex-1 text-left' : 'w-full text-left',
+    'rounded-2xl px-3 py-2 transition',
     active
       ? 'bg-[var(--btn-bg)] text-[var(--btn-text)]'
       : 'border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] hover:bg-[var(--surface-strong)]',

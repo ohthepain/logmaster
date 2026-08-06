@@ -7,13 +7,21 @@ export type MapBbox = {
 
 export type MapRegionId = 'uk' | 'europe' | 'north-america' | 'canada'
 
-export type MapLayerId = 'geonames-cities' | 'osm-marinas'
+/** Layers that can be rebuilt from admin (coarse build targets). */
+export type MapBuildLayerId =
+  | 'geonames-cities'
+  | 'osm-marinas'
+  | 'osm-harbours'
+  | 'osm-anchorage'
+  | 'osm-places'
+  | 'osm-seamarks'
 
-export type MapLayerDefinition = {
-  id: MapLayerId
+export type MapBuildLayerDefinition = {
+  id: MapBuildLayerId
   title: string
   description: string
   output: string
+  overpass: boolean
 }
 
 export type MapRegionDefinition = {
@@ -21,17 +29,17 @@ export type MapRegionDefinition = {
   label: string
   description: string
   bbox: MapBbox
-  /** Approximate count of 1° S3 tile folders covered by this bbox. */
   degreeTileCount: number
-  /** Approximate Overpass grid cells at 3° step (when marinas layer applies). */
   overpassCellCount: number
   layers: Record<
-    MapLayerId,
+    MapBuildLayerId,
     { available: true } | { available: false; reason: string }
   >
 }
 
-/** Great Britain, Northern Ireland, and nearby coasts — fast builds for UK dev. */
+/** @deprecated Use MapBuildLayerId — kept for gradual migration. */
+export type MapLayerId = MapBuildLayerId
+
 export const UK_MAP_BBOX: MapBbox = {
   west: -8.2,
   south: 49.9,
@@ -60,18 +68,48 @@ export const CANADA_MAP_BBOX: MapBbox = {
   north: 72,
 }
 
-export const MAP_LAYERS: MapLayerDefinition[] = [
+export const MAP_LAYERS: MapBuildLayerDefinition[] = [
   {
     id: 'geonames-cities',
     title: 'Place labels',
     description: 'GeoNames cities5000 → highres / lowres label tiles.',
     output: 'v1/tiles/highres.json.gz, lowres.json.gz',
+    overpass: false,
   },
   {
     id: 'osm-marinas',
     title: 'Marinas',
-    description: 'OSM leisure=marina via Overpass → tappable marina points.',
+    description: 'OSM leisure=marina and seamark:type=marina.',
     output: 'v1/tiles/marinas.json.gz',
+    overpass: true,
+  },
+  {
+    id: 'osm-harbours',
+    title: 'Harbours',
+    description: 'OSM harbours and seamark:type=harbour.',
+    output: 'v1/tiles/harbours.json.gz',
+    overpass: true,
+  },
+  {
+    id: 'osm-anchorage',
+    title: 'Anchorages',
+    description: 'OSM seamark:type=anchorage.',
+    output: 'v1/tiles/anchorages.json.gz',
+    overpass: true,
+  },
+  {
+    id: 'osm-places',
+    title: 'Coastal places',
+    description: 'OSM bays, capes, islands, and straits.',
+    output: 'v1/tiles/places.json.gz',
+    overpass: true,
+  },
+  {
+    id: 'osm-seamarks',
+    title: 'Seamarks',
+    description: 'OSM buoys, beacons, lights, notices, and wrecks.',
+    output: 'v1/tiles/seamarks.json.gz',
+    overpass: true,
   },
 ]
 
@@ -89,6 +127,14 @@ function estimateOverpassCellCount(bbox: MapBbox, gridStep = 3): number {
     }
   }
   return count
+}
+
+const overpassLayersAvailable = {
+  'osm-marinas': { available: true as const },
+  'osm-harbours': { available: true as const },
+  'osm-anchorage': { available: true as const },
+  'osm-places': { available: true as const },
+  'osm-seamarks': { available: true as const },
 }
 
 function buildRegion(
@@ -113,7 +159,7 @@ export const MAP_REGIONS: MapRegionDefinition[] = [
     bbox: UK_MAP_BBOX,
     layers: {
       'geonames-cities': { available: true },
-      'osm-marinas': { available: true },
+      ...overpassLayersAvailable,
     },
   }),
   buildRegion({
@@ -124,6 +170,10 @@ export const MAP_REGIONS: MapRegionDefinition[] = [
     layers: {
       'geonames-cities': { available: true },
       'osm-marinas': { available: false, reason: 'Use United Kingdom for now.' },
+      'osm-harbours': { available: false, reason: 'Use United Kingdom for now.' },
+      'osm-anchorage': { available: false, reason: 'Use United Kingdom for now.' },
+      'osm-places': { available: false, reason: 'Use United Kingdom for now.' },
+      'osm-seamarks': { available: false, reason: 'Use United Kingdom for now.' },
     },
   }),
   buildRegion({
@@ -136,20 +186,20 @@ export const MAP_REGIONS: MapRegionDefinition[] = [
         available: false,
         reason: 'GeoNames builds are configured for Europe / UK.',
       },
-      'osm-marinas': { available: true },
+      ...overpassLayersAvailable,
     },
   }),
   buildRegion({
     id: 'canada',
     label: 'Canada (quick test)',
-    description: 'Smaller North American bbox for faster marina Overpass runs.',
+    description: 'Smaller North American bbox for faster Overpass runs.',
     bbox: CANADA_MAP_BBOX,
     layers: {
       'geonames-cities': {
         available: false,
         reason: 'GeoNames builds are configured for Europe / UK.',
       },
-      'osm-marinas': { available: true },
+      ...overpassLayersAvailable,
     },
   }),
 ]
@@ -183,11 +233,13 @@ export function mapRegionLabel(regionId: MapRegionId | string | undefined): stri
 
 export function availableLayersForRegion(
   region: MapRegionDefinition,
-): MapLayerDefinition[] {
+): MapBuildLayerDefinition[] {
   return MAP_LAYERS.filter((layer) => region.layers[layer.id]?.available === true)
 }
 
-export function defaultLayersForRegion(region: MapRegionDefinition): MapLayerId[] {
+export function defaultLayersForRegion(
+  region: MapRegionDefinition,
+): MapBuildLayerId[] {
   return availableLayersForRegion(region).map((layer) => layer.id)
 }
 
@@ -197,5 +249,15 @@ export function marinaRegionForMapRegion(
   if (regionId === 'canada') return 'canada'
   if (regionId === 'north-america') return 'north-america'
   if (regionId === 'uk') return 'uk'
-  throw new Error(`Region "${regionId}" does not support marina builds`)
+  throw new Error(`Region "${regionId}" does not support Overpass builds`)
+}
+
+export function osmPointsDatasetForBuildLayer(
+  layerId: MapBuildLayerId,
+): 'harbours' | 'anchorages' | 'places' | 'seamarks' | null {
+  if (layerId === 'osm-harbours') return 'harbours'
+  if (layerId === 'osm-anchorage') return 'anchorages'
+  if (layerId === 'osm-places') return 'places'
+  if (layerId === 'osm-seamarks') return 'seamarks'
+  return null
 }

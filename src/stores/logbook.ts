@@ -8,6 +8,7 @@ import type {
   TripStatus,
 } from '../domain/logbook'
 import { captureLogbookContext } from '../lib/logbook-context'
+import { attachPlaceToEntryData } from '../lib/logbook-place'
 import { defaultTripTitle } from '../lib/trip-display'
 import {
   bootstrapLogbook,
@@ -468,6 +469,11 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     const timestamp = useDraftTimestamp
       ? devLogEntryDraftTimeIso
       : (input.timestamp ?? context.timestamp)
+    const entryData = await attachPlaceToEntryData(
+      input.data,
+      context.latitude,
+      context.longitude,
+    )
     const entry: LogEntry = {
       id: makeId(),
       tripId: input.tripId,
@@ -479,7 +485,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       heading: input.heading ?? context.heading ?? null,
       createdBy: 'captain',
       notes: input.notes?.trim() || null,
-      data: input.data ?? null,
+      data: entryData,
       weather: context.weather,
       createdAt: nowIso(),
       updatedAt: nowIso(),
@@ -537,9 +543,24 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
   updateEntry: async (entryId, patch) => {
     const current = get().entries.find((entry) => entry.id === entryId)
     if (!current) return
+
+    const latitude =
+      patch.latitude !== undefined ? patch.latitude : current.latitude
+    const longitude =
+      patch.longitude !== undefined ? patch.longitude : current.longitude
+    const positionTouched =
+      patch.latitude !== undefined || patch.longitude !== undefined
+    let data =
+      patch.data !== undefined ? patch.data : (current.data ?? null)
+
+    if (positionTouched) {
+      data = await attachPlaceToEntryData(data, latitude, longitude)
+    }
+
     const next = {
       ...current,
       ...patch,
+      data,
       updatedAt: nowIso(),
       synced: false,
     }
