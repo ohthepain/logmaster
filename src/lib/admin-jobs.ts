@@ -1,3 +1,8 @@
+import {
+  formatMapBbox,
+  mapRegionLabel,
+} from './map-regions'
+
 export const BUILD_GEO_FEATURES_QUEUE = 'build_geo_features'
 export const BUILD_MARINAS_QUEUE = 'build_marinas'
 
@@ -82,10 +87,11 @@ export function formatGeoFeaturesRunInput(data: Record<string, unknown>): string
     | { west: number; south: number; east: number; north: number }
     | undefined
   const parts = ['GeoNames cities']
-  if (bbox) {
-    parts.push(
-      `bbox ${bbox.west},${bbox.south},${bbox.east},${bbox.north}`,
-    )
+  const regionId = data.regionId
+  if (typeof regionId === 'string' && regionId.trim()) {
+    parts.push(mapRegionLabel(regionId))
+  } else if (bbox) {
+    parts.push(`bbox ${formatMapBbox(bbox)}`)
   } else {
     parts.push('Europe')
   }
@@ -94,7 +100,8 @@ export function formatGeoFeaturesRunInput(data: Record<string, unknown>): string
 }
 
 export function formatMarinasRunInput(data: Record<string, unknown>): string {
-  const parts = [`Marinas ${String(data.region ?? 'north-america')}`]
+  const regionId = data.regionId ?? data.region
+  const parts = [`Marinas ${mapRegionLabel(String(regionId ?? 'north-america'))}`]
   parts.push(`${String(data.gridStep ?? 3)}° grid`)
   if (data.limitCells) parts.push(`${String(data.limitCells)} cells`)
   if (data.dryRun) parts.push('dry run')

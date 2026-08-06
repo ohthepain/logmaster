@@ -1,8 +1,6 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback, useState } from 'react'
-import { AdminGeoFeaturesJobControls } from '../../../../components/admin/AdminGeoFeaturesJobControls'
+import { useCallback } from 'react'
 import { AdminJobRunsPanel } from '../../../../components/admin/AdminJobRunsPanel'
-import { AdminMarinasJobControls } from '../../../../components/admin/AdminMarinasJobControls'
 import { AdminPageShell } from '../../../../components/admin/AdminPageShell'
 import {
   ADMIN_JOB_CATALOG,
@@ -34,12 +32,6 @@ function AdminJobsIndexPage() {
   const { tab: tabFromSearch } = Route.useSearch()
   const tab = tabFromSearch ?? 'geo-features'
   const navigate = useNavigate()
-  const [refreshTokens, setRefreshTokens] = useState<
-    Record<AdminJobCatalogId, number>
-  >({
-    'geo-features': 0,
-    marinas: 0,
-  })
 
   const setTab = useCallback(
     (next: AdminJobCatalogId) => {
@@ -48,21 +40,21 @@ function AdminJobsIndexPage() {
     [navigate],
   )
 
-  const bumpRefresh = useCallback((jobId: AdminJobCatalogId) => {
-    setRefreshTokens((current) => ({
-      ...current,
-      [jobId]: current[jobId] + 1,
-    }))
-  }, [])
-
   return (
     <AdminPageShell
       kicker="Background jobs"
       title="Map data builds"
-      description="Queue long-running imports that write gzipped GeoJSON tiles to S3. Run pnpm worker in a separate terminal to process jobs."
+      description="Monitor long-running map data imports by layer. Queue new builds from the region page."
     >
       <p className="mb-6 text-sm text-[var(--sea-ink-soft)]">
-        View all runs on the{' '}
+        Queue builds on{' '}
+        <Link
+          to="/admin/regions"
+          className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
+        >
+          Build by region
+        </Link>
+        . View all runs on the{' '}
         <Link
           to="/admin/job-management"
           className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
@@ -100,26 +92,20 @@ function AdminJobsIndexPage() {
 
       {tab === 'geo-features' ? (
         <div role="tabpanel" className="flex flex-col gap-8">
-          <AdminGeoFeaturesJobControls
-            onQueued={() => bumpRefresh('geo-features')}
-          />
           <AdminJobRunsPanel
             queue={BUILD_GEO_FEATURES_QUEUE}
             formatInput={formatGeoFeaturesRunInput}
             formatResult={formatGeoFeaturesRunResult}
-            refreshToken={refreshTokens['geo-features']}
           />
         </div>
       ) : null}
 
       {tab === 'marinas' ? (
         <div role="tabpanel" className="flex flex-col gap-8">
-          <AdminMarinasJobControls onQueued={() => bumpRefresh('marinas')} />
           <AdminJobRunsPanel
             queue={BUILD_MARINAS_QUEUE}
             formatInput={formatMarinasRunInput}
             formatResult={formatMarinasRunResult}
-            refreshToken={refreshTokens.marinas}
           />
         </div>
       ) : null}

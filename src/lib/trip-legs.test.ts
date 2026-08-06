@@ -57,15 +57,35 @@ describe('rebuildLegsForTrip', () => {
     expect(legs[1].startEventId).toBe('e3')
   })
 
-  it('starts a new leg on anchor weighed', () => {
+  it('starts a new leg on anchor weighed after stopping', () => {
     const entries = [
       entry({ id: 'e1', type: 'START_TRIP', timestamp: '2026-01-01T10:00:00Z' }),
-      entry({ id: 'e2', type: 'ANCHOR_WEIGHED', timestamp: '2026-01-02T08:00:00Z' }),
+      entry({ id: 'e2', type: 'ANCHOR_DROPPED', timestamp: '2026-01-01T18:00:00Z' }),
+      entry({ id: 'e3', type: 'ANCHOR_WEIGHED', timestamp: '2026-01-02T08:00:00Z' }),
     ]
     const { legs } = rebuildLegsForTrip('trip-1', entries, [])
     expect(legs).toHaveLength(2)
     expect(legs[0].color).toBe(generateLegColor(0))
     expect(legs[1].color).toBe(generateLegColor(1))
+    expect(legs[1].startEventId).toBe('e3')
+  })
+
+  it('does not start a leg for hourly logs while stopped overnight', () => {
+    const entries = [
+      entry({ id: 'e1', type: 'START_TRIP', timestamp: '2026-01-01T10:00:00Z' }),
+      entry({ id: 'e2', type: 'MOORED', timestamp: '2026-01-01T18:00:00Z' }),
+      entry({ id: 'e3', type: 'HOURLY_LOG', timestamp: '2026-01-01T19:00:00Z' }),
+      entry({ id: 'e4', type: 'HOURLY_LOG', timestamp: '2026-01-02T00:00:00Z' }),
+      entry({ id: 'e5', type: 'CAST_OFF', timestamp: '2026-01-02T08:00:00Z' }),
+      entry({ id: 'e6', type: 'HOURLY_LOG', timestamp: '2026-01-02T09:00:00Z' }),
+    ]
+    const { legs, entries: out } = rebuildLegsForTrip('trip-1', entries, [])
+
+    expect(legs).toHaveLength(2)
+    expect(out.find((e) => e.id === 'e3')?.legId).toBeNull()
+    expect(out.find((e) => e.id === 'e4')?.legId).toBeNull()
+    expect(out.find((e) => e.id === 'e5')?.legId).toBe(legs[1].id)
+    expect(out.find((e) => e.id === 'e6')?.legId).toBe(legs[1].id)
   })
 })
 

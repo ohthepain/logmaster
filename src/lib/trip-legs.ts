@@ -56,8 +56,9 @@ function endLeg(leg: Leg, endedAt: string, endEventId?: string | null): Leg {
 
 /**
  * Rebuild legs for one trip from its log entries.
- * CAST_OFF / ANCHOR_WEIGHED close the open leg and start a new one.
+ * The first leg opens on the first entry; later legs open only on CAST_OFF / ANCHOR_WEIGHED.
  * ANCHOR_DROPPED / MOORED / END_TRIP close the open leg.
+ * Entries while stopped (e.g. hourly logs overnight) stay unassigned until departure.
  */
 export function rebuildLegsForTrip(
   tripId: string,
@@ -143,17 +144,22 @@ export function rebuildLegsForTrip(
     currentLeg = null
   }
 
+  const shouldOpenLeg = (entry: LogEntry) => {
+    if (isLegStartType(entry.type)) return true
+    return sequence === 0
+  }
+
   for (const entry of tripEntries) {
     if (isLegStartType(entry.type) && currentLeg) {
       newLegs[newLegs.length - 1] = endLeg(currentLeg, entry.timestamp)
       currentLeg = null
     }
 
-    if (!currentLeg) {
+    if (!currentLeg && shouldOpenLeg(entry)) {
       openLeg(entry)
     }
 
-    entryLegIds.set(entry.id, currentLeg!.id)
+    entryLegIds.set(entry.id, currentLeg?.id ?? null)
 
     if (isLegEndType(entry.type)) {
       closeLeg(entry)

@@ -312,5 +312,6 @@ if (
 export {
   CANADA_MARINA_BBOX,
   NORTH_AMERICA_MARINA_BBOX,
+  UK_MARINA_BBOX,
   type MarinaBbox,
 } from './bboxes'

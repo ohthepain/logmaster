@@ -80,14 +80,26 @@ function AdminHome() {
           </li>
           <li>
             <Link
-              to="/admin/jobs"
+              to="/admin/regions"
               className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
             >
-              Background jobs
+              Build map data
             </Link>
             <span className="text-[var(--sea-ink-soft)]"> — </span>
             <span className="text-[var(--sea-ink-soft)]">
-              start map data builds (geo features, marinas)
+              queue map tile builds by region and layer
+            </span>
+          </li>
+          <li>
+            <Link
+              to="/admin/jobs"
+              className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
+            >
+              Map data builds
+            </Link>
+            <span className="text-[var(--sea-ink-soft)]"> — </span>
+            <span className="text-[var(--sea-ink-soft)]">
+              monitor geo features and marina jobs by layer
             </span>
           </li>
           <li>

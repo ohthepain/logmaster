@@ -3,6 +3,7 @@ import {
   buildMarinas,
   CANADA_MARINA_BBOX,
   NORTH_AMERICA_MARINA_BBOX,
+  UK_MARINA_BBOX,
 } from '../marinas/build'
 import type { BuildMarinasOptions, BuildMarinasResult } from '../marinas/build'
 import type { MarinaBbox } from '../marinas/bboxes'
@@ -11,7 +12,8 @@ import { createJobLogger } from './job-log'
 export const BUILD_MARINAS_QUEUE = 'build_marinas'
 
 export type BuildMarinasPayload = {
-  region?: 'north-america' | 'canada'
+  region?: 'north-america' | 'canada' | 'uk'
+  regionId?: string
   bbox?: MarinaBbox
   dryRun?: boolean
   gridStep?: number
@@ -26,6 +28,7 @@ export type BuildMarinasJobResult = BuildMarinasResult & {
 function bboxForPayload(payload: BuildMarinasPayload): MarinaBbox {
   if (payload.bbox) return payload.bbox
   if (payload.region === 'canada') return CANADA_MARINA_BBOX
+  if (payload.region === 'uk') return UK_MARINA_BBOX
   return NORTH_AMERICA_MARINA_BBOX
 }
 

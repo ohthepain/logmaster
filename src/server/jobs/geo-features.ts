@@ -13,6 +13,7 @@ import { createJobLogger } from './job-log'
 export const BUILD_GEO_FEATURES_QUEUE = 'build_geo_features'
 
 export type BuildGeoFeaturesPayload = {
+  regionId?: string
   bbox?: GeoFeatureBbox
   dryRun?: boolean
   sources?: {

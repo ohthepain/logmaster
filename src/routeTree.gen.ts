@@ -32,6 +32,7 @@ import { Route as MainAdminTripsRouteImport } from './routes/_main/admin/trips'
 import { Route as MainAdminPgbossRouteImport } from './routes/_main/admin/pgboss'
 import { Route as MainAdminJobManagementRouteImport } from './routes/_main/admin/job-management'
 import { Route as MainAdminCountriesRouteImport } from './routes/_main/admin/countries'
+import { Route as MainAdminRegionsIndexRouteImport } from './routes/_main/admin/regions/index'
 import { Route as MainAdminJobsIndexRouteImport } from './routes/_main/admin/jobs/index'
 import { Route as MainCrewInviteTokenRouteImport } from './routes/_main/crew/invite/$token'
 import { Route as MainAdminJobsSystemRouteImport } from './routes/_main/admin/jobs/system'
@@ -152,6 +153,11 @@ const MainAdminCountriesRoute = MainAdminCountriesRouteImport.update({
   path: '/admin/countries',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainAdminRegionsIndexRoute = MainAdminRegionsIndexRouteImport.update({
+  id: '/admin/regions/',
+  path: '/admin/regions/',
+  getParentRoute: () => MainRouteRoute,
+} as any)
 const MainAdminJobsIndexRoute = MainAdminJobsIndexRouteImport.update({
   id: '/admin/jobs/',
   path: '/admin/jobs/',
@@ -207,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/admin/jobs/system': typeof MainAdminJobsSystemRoute
   '/crew/invite/$token': typeof MainCrewInviteTokenRoute
   '/admin/jobs/': typeof MainAdminJobsIndexRoute
+  '/admin/regions/': typeof MainAdminRegionsIndexRoute
 }
 export interface FileRoutesByTo {
   '/about': typeof MainAboutRoute
@@ -236,6 +243,7 @@ export interface FileRoutesByTo {
   '/admin/jobs/system': typeof MainAdminJobsSystemRoute
   '/crew/invite/$token': typeof MainCrewInviteTokenRoute
   '/admin/jobs': typeof MainAdminJobsIndexRoute
+  '/admin/regions': typeof MainAdminRegionsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -267,6 +275,7 @@ export interface FileRoutesById {
   '/_main/admin/jobs/system': typeof MainAdminJobsSystemRoute
   '/_main/crew/invite/$token': typeof MainCrewInviteTokenRoute
   '/_main/admin/jobs/': typeof MainAdminJobsIndexRoute
+  '/_main/admin/regions/': typeof MainAdminRegionsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -298,6 +307,7 @@ export interface FileRouteTypes {
     | '/admin/jobs/system'
     | '/crew/invite/$token'
     | '/admin/jobs/'
+    | '/admin/regions/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/about'
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/admin/jobs/system'
     | '/crew/invite/$token'
     | '/admin/jobs'
+    | '/admin/regions'
   id:
     | '__root__'
     | '/_main'
@@ -357,6 +368,7 @@ export interface FileRouteTypes {
     | '/_main/admin/jobs/system'
     | '/_main/crew/invite/$token'
     | '/_main/admin/jobs/'
+    | '/_main/admin/regions/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -527,6 +539,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAdminCountriesRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/admin/regions/': {
+      id: '/_main/admin/regions/'
+      path: '/admin/regions'
+      fullPath: '/admin/regions/'
+      preLoaderRoute: typeof MainAdminRegionsIndexRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/admin/jobs/': {
       id: '/_main/admin/jobs/'
       path: '/admin/jobs'
@@ -592,6 +611,7 @@ interface MainRouteRouteChildren {
   MainAdminJobsSystemRoute: typeof MainAdminJobsSystemRoute
   MainCrewInviteTokenRoute: typeof MainCrewInviteTokenRoute
   MainAdminJobsIndexRoute: typeof MainAdminJobsIndexRoute
+  MainAdminRegionsIndexRoute: typeof MainAdminRegionsIndexRoute
 }
 
 const MainRouteRouteChildren: MainRouteRouteChildren = {
@@ -621,6 +641,7 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainAdminJobsSystemRoute: MainAdminJobsSystemRoute,
   MainCrewInviteTokenRoute: MainCrewInviteTokenRoute,
   MainAdminJobsIndexRoute: MainAdminJobsIndexRoute,
+  MainAdminRegionsIndexRoute: MainAdminRegionsIndexRoute,
 }
 
 const MainRouteRouteWithChildren = MainRouteRoute._addFileChildren(

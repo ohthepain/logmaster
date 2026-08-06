@@ -1,0 +1,151 @@
+---
+description: Map data layers, S3 tile layout, Overpass builds, and tappable vs raster overlays
+alwaysApply: false
+---
+
+# Map data — design
+
+## Core idea
+
+Chart data comes in two forms:
+
+| Kind | Source | MapLibre | Tappable? |
+|------|--------|----------|-----------|
+| **Basemap overlay** | Live raster tiles | `raster` source | No — pixels only |
+| **Data layer** | Offline Overpass → S3 GeoJSON tiles | `geojson` / vector source | Yes — `queryRenderedFeatures` + popup from OSM tags |
+
+**Rule:** only **vector data layers** can be tappable. Raster overlays (including OpenSeaMap) are for chart symbology, not interaction.
+
+## Build pipeline
+
+1. **Overpass** — query OSM in a **3° grid** over a region bbox (UK, Europe, Canada, …).
+2. **Normalize** — Point features with shared shape: `id`, `osmType`, `osmId`, `name`, `tags`, `sources: ['osm']` (see `MarinaProperties` in `src/server/marinas/schema.ts`; reuse for new layers).
+3. **Tile** — bucket into **1° folders** (`N59/E018/…`) matching `src/server/geo-features/tile.ts`.
+4. **Upload** — gzip GeoJSON to `S3_BUCKET_GEOJSON`.
+5. **Serve** — `GET /api/{layer}/:lat/:lon/v1/tiles/….json.gz` (same-origin; client loads visible tiles).
+6. **Jobs** — pg-boss queue per layer type (`build_geo_features`, `build_marinas`, future `build_seamarks`, …). Admin: `/admin/regions`, `/admin/jobs`, `/admin/job-management`.
+
+GeoNames place labels use the same 1° tiling but are built from **GeoNames cities5000**, not Overpass.
+
+## Map UI (sailing maps)
+
+- **OpenSeaMap seamarks** — raster overlay via same-origin proxy `/api/openseamap-seamark/{z}/{x}/{y}.png` (`src/lib/maplibre-openseamap.ts`). On by default on trip maps; not persisted.
+- **Basemap toggles** — MapTiler land/water/labels (`src/lib/maplibre-basemap-layer-toggles.ts`); stored in app options.
+- **Data layers** — each gets its own MapLibre source + symbol/circle layer; per-map toggles (not persisted yet). Tap → popup with name + relevant tags + link to OSM.
+
+Keep **OpenSeaMap raster** and **vector seamarks** complementary: raster for dense chart symbols; vector for objects we want to tap (and optionally hide duplicate raster symbols at high zoom later).
+
+---
+
+# Implemented today
+
+| Layer id | Admin name | Build job | S3 tile(s) | API | Map UI |
+|----------|------------|-----------|------------|-----|--------|
+| `geonames-cities` | Place labels | `build_geo_features` | `v1/tiles/highres.json.gz`, `lowres.json.gz` | `/api/geo-features/…` | Not on chart yet |
+| `osm-marinas` | Marinas | `build_marinas` | `v1/tiles/marinas.json.gz` | `/api/marinas/…` | Vector + tap **planned** |
+
+**Marinas Overpass query** (today):
+
+```text
+nwr["leisure"="marina"](bbox);
+nwr["seamark:type"="marina"](bbox);
+```
+
+**Regions** (`src/lib/map-regions.ts`):
+
+| Region | Place labels | Marinas |
+|--------|--------------|---------|
+| UK | ✓ | ✓ |
+| Europe | ✓ | — (use UK for now) |
+| North America | — | ✓ |
+| Canada (test) | — | ✓ |
+
+---
+
+# Planned data layers
+
+Use **one tile file per layer** (or per logical group) so regions can rebuild and toggle independently. Do **not** put harbours or seamarks into `marinas.json.gz`.
+
+## Mooring & shelter
+
+| Layer id | OSM / Overpass | Tile file | Concept | UI |
+|----------|----------------|-----------|---------|-----|
+| `osm-marinas` | `leisure=marina`, `seamark:type=marina` | `marinas.json.gz` | Actionable mooring | Tappable; “anchor here” context |
+| `osm-harbours` | `seamark:type=harbour`, `harbour=yes` on `place=*` where useful | `harbours.json.gz` | Shelter / port of refuge, not a berth | Tappable; info only |
+| `osm-anchorage` | `seamark:type=anchorage`, `seamark:anchorage:category=*` | `anchorages.json.gz` | Designated anchoring | Tappable |
+
+## Place names (coastal geography)
+
+Merge into **`highres.json.gz`** (with GeoNames) **or** a dedicated `osm-places.json.gz` if we need separate rebuild/toggle. Prefer **highres merge** for label de-duplication and one “place names” toggle; use a separate file only if build size or refresh cadence differs.
+
+| Layer id | OSM / Overpass | Storage | UI |
+|----------|----------------|---------|-----|
+| `osm-bay` | `natural=bay` | highres (or `osm-places.json.gz`) | Tappable bay names |
+| `osm-cape` | `natural=cape` | ↑ | Tappable headlands |
+| `osm-island` | `place=island`, `place=islet` | ↑ | Tappable islands |
+| `osm-strait` | `natural=strait` | ↑ | Optional — narrow water labels |
+
+## Navigation aids (seamarks)
+
+| Layer id | OSM / Overpass | Tile file | UI |
+|----------|----------------|-----------|-----|
+| `osm-seamarks-buoys` | `seamark:type=buoy`, `seamark:type=beacon`, lateral/cardinal/specialized buoy tags | `seamarks.json.gz` | Tappable; show `seamark:buoy:*`, colour, name |
+| `osm-seamarks-lights` | `seamark:type=light_major`, `light_minor`, `seamark:light:*` | `lights.json.gz` or same file with `kind` property | Tappable; **future:** animate flash sequence from `seamark:light:sequence` |
+| `osm-seamarks-other` | `seamark:type=notice`, `seamark:type=restricted_area`, fairway, pipeline, cable | `seamarks.json.gz` | Tappable warnings / info |
+
+**Admin job:** `/admin/jobs/seamarks` (future) — same region/grid pattern as marinas; consider **smaller bboxes** or **higher grid step** first (buoys are dense in harbours).
+
+**Light animation:** only meaningful for vector lights with OSM `seamark:light:sequence` / `seamark:light:period` tags; keep as a later map enhancement, not part of the build job.
+
+## Optional / lower priority
+
+| Layer id | Notes |
+|----------|--------|
+| `osm-wrecks` | `seamark:type=wreck`, `historic=wreck` — safety |
+| `osm-fairway` | Line geometry; needs LineString tiles, not just points |
+| `naturalearth` | Coastline/context (disabled in current geo build) |
+
+---
+
+# S3 layout (per 1° tile)
+
+```text
+N59/E018/
+  geonames.geojson              ← optional raw dump from GeoNames build
+  v1/tiles/highres.json.gz      ← GeoNames cities + future OSM place points
+  v1/tiles/lowres.json.gz       ← simplified place labels
+  v1/tiles/marinas.json.gz      ← mooring points (implemented)
+  v1/tiles/harbours.json.gz     ← planned
+  v1/tiles/anchorages.json.gz   ← planned
+  v1/tiles/seamarks.json.gz     ← planned (buoys, beacons, notices, …)
+  v1/tiles/lights.json.gz       ← planned (optional split from seamarks)
+```
+
+Prefix format: `N{lat}/E{lon}` or `S…/W…` — see `DegreeTile` in `src/server/geo-features/tile.ts`.
+
+---
+
+# Admin & code map
+
+| Concern | Location |
+|---------|----------|
+| Region + layer matrix | `src/lib/map-regions.ts` |
+| Marina Overpass + build | `src/server/marinas/` |
+| GeoNames build | `src/server/geo-features/` |
+| pg-boss workers | `pnpm worker` — `src/server/jobs/` |
+| Region build UI | `/admin/regions` |
+| Per-layer job tabs | `/admin/jobs` |
+| All runs, output, re-run | `/admin/job-management` |
+
+When adding a layer: extend `MapLayerId` + `MAP_LAYERS`, add queue + handler, S3 writer, API route, MapLibre source/layer, and admin starter — follow the marinas pattern.
+
+---
+
+# Design decisions (keep consistent)
+
+1. **Tappable = vector only.** OpenSeaMap stays raster.
+2. **One Overpass job per layer type** — avoids one failed query blocking unrelated data.
+3. **Reuse point feature schema** across OSM layers; use `tags` for layer-specific popup fields.
+4. **Regions gate availability** — not every layer builds for every bbox (see Europe marinas note).
+5. **Layer toggles are ephemeral** for data overlays today; basemap toggles persist in `app-options`.
+6. **Harbour ≠ marina** — different concept and tile file; harbours are informational, marinas are mooring targets.

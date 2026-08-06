@@ -45,6 +45,13 @@ export const EUROPE_GEO_FEATURE_BBOX: GeoFeatureBbox = {
   north: 72,
 }
 
+export const UK_GEO_FEATURE_BBOX: GeoFeatureBbox = {
+  west: -8.2,
+  south: 49.9,
+  east: 1.8,
+  north: 60.9,
+}
+
 function parseBbox(value: string): GeoFeatureBbox {
   const [west, south, east, north] = value
     .split(',')

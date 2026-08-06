@@ -12,8 +12,8 @@ import { BUILD_GEO_FEATURES_QUEUE } from '../jobs/geo-features'
 import type { BuildGeoFeaturesPayload } from '../jobs/geo-features'
 import { BUILD_MARINAS_QUEUE } from '../jobs/marinas'
 import type { BuildMarinasPayload } from '../jobs/marinas'
-import { enqueueEuropeGeoFeatures } from '../jobs/queue'
-import { enqueueNorthAmericaMarinas } from '../jobs/marina-queue'
+import { enqueueEuropeGeoFeatures, enqueueGeoFeaturesBuild, parseGeoFeaturesRegionId } from '../jobs/queue'
+import { enqueueMarinasBuild, enqueueNorthAmericaMarinas, parseMarinasRegionId } from '../jobs/marina-queue'
 import { deleteTripsFromLogbook } from '../deleted-trips'
 import {
   cancelUnifiedAdminJob,
@@ -274,8 +274,11 @@ adminRoutes.post('/jobs/geo-features/runs', async (c) => {
     body !== null &&
     !Array.isArray(body) &&
     (body as Record<string, unknown>).dryRun === true
-  const id = await enqueueEuropeGeoFeatures({ dryRun })
-  return c.json({ ok: true, jobId: id, queued: true, dryRun }, 202)
+  const regionId =
+    parseGeoFeaturesRegionId((body as Record<string, unknown>).regionId) ??
+    'europe'
+  const id = await enqueueGeoFeaturesBuild({ regionId, dryRun })
+  return c.json({ ok: true, jobId: id, queued: true, dryRun, regionId }, 202)
 })
 
 adminRoutes.post('/jobs/marinas/runs', async (c) => {
@@ -290,13 +293,18 @@ adminRoutes.post('/jobs/marinas/runs', async (c) => {
     typeof limitCellsRaw === 'number' && Number.isInteger(limitCellsRaw)
       ? limitCellsRaw
       : null
-  const regionRaw = (body as Record<string, unknown>).region
-  const region =
-    regionRaw === 'canada' || regionRaw === 'north-america'
+  const regionRaw = (body as Record<string, unknown>).regionId ??
+    (body as Record<string, unknown>).region
+  const regionId =
+    parseMarinasRegionId(regionRaw) ??
+    (regionRaw === 'canada' || regionRaw === 'north-america'
       ? regionRaw
-      : 'north-america'
-  const id = await enqueueNorthAmericaMarinas({ dryRun, limitCells, region })
-  return c.json({ ok: true, jobId: id, queued: true, dryRun, limitCells, region }, 202)
+      : 'north-america')
+  const id = await enqueueMarinasBuild({ dryRun, limitCells, regionId })
+  return c.json(
+    { ok: true, jobId: id, queued: true, dryRun, limitCells, regionId },
+    202,
+  )
 })
 
 adminRoutes.post('/pgboss/geo-features/europe', async (c) => {
