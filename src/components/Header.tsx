@@ -37,10 +37,10 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 shrink-0 border-b border-[var(--line)] bg-[color-mix(in_oklab,var(--header-bg)_92%,transparent)] backdrop-blur-xl">
       <DevComponentLabel name="Header" className="absolute left-3 top-1 z-10 sm:left-4" />
-      <div className="page-wrap flex min-h-16 items-center justify-between gap-3 px-3 py-2 sm:px-4">
+      <div className="page-wrap grid min-h-16 grid-cols-[1fr_auto_1fr] items-center gap-3 px-3 py-2 sm:px-4">
         <AppHeaderBrand />
-        <div className="flex items-center gap-2">
-          <HeaderNav />
+        <HeaderNav />
+        <div className="flex items-center justify-end gap-2">
           <DevModeToggle />
           <ThemeToggle />
           <UserMenu />

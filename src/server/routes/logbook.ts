@@ -63,6 +63,7 @@ function toLeg(data: Record<string, unknown>) {
     endEventId: (data.endEventId as string | null | undefined) ?? null,
     startedAt,
     endedAt: parseDate(data.endedAt),
+    color: String(data.color ?? '#7ec8e8'),
     createdAt,
     updatedAt,
   }

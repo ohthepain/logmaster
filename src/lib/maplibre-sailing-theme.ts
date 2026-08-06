@@ -156,3 +156,16 @@ export const sailingMapOverlayPaint = {
     'circle-stroke-color': SailingMapColors.entryStroke,
   },
 } as const
+
+export const sailingMapLegTrackPaint = {
+  'line-color': ['get', 'color'],
+  'line-width': 2.5,
+  'line-opacity': 0.9,
+} satisfies maplibregl.LineLayerSpecification['paint']
+
+export const sailingMapLegEntryPaint = {
+  'circle-radius': 7,
+  'circle-color': SailingMapColors.entryFill,
+  'circle-stroke-width': 2.5,
+  'circle-stroke-color': ['get', 'color'],
+} satisfies maplibregl.CircleLayerSpecification['paint']

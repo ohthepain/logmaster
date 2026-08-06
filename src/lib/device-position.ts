@@ -31,6 +31,42 @@ function isFresh() {
   return cached != null && Date.now() - cachedAt < CACHE_TTL_MS;
 }
 
+let devPositionOverride: Pick<PositionSnapshot, 'latitude' | 'longitude'> | null = null;
+
+export function setDevPositionOverride(position: {
+  latitude: number;
+  longitude: number;
+} | null) {
+  devPositionOverride = position;
+  if (!position) return;
+  publish({
+    latitude: position.latitude,
+    longitude: position.longitude,
+    accuracy: null,
+    heading: null,
+    timestamp: freshTimestamp(),
+  });
+}
+
+export function clearDevPositionOverride() {
+  devPositionOverride = null;
+}
+
+export function getDevPositionOverride() {
+  return devPositionOverride;
+}
+
+function devOverrideSnapshot(): PositionSnapshot | null {
+  if (!devPositionOverride) return null;
+  return {
+    latitude: devPositionOverride.latitude,
+    longitude: devPositionOverride.longitude,
+    accuracy: null,
+    heading: null,
+    timestamp: freshTimestamp(),
+  };
+}
+
 function publish(position: PositionSnapshot) {
   cached = position;
   cachedAt = Date.now();
@@ -85,6 +121,9 @@ function devFallbackPosition(detail?: string): PositionSnapshot {
 }
 
 async function resolveDevicePosition(): Promise<PositionSnapshot> {
+  const override = devOverrideSnapshot();
+  if (override) return override;
+
   if (typeof navigator === "undefined") {
     return devFallbackPosition("not supported");
   }
@@ -122,7 +161,10 @@ function ensureWatch() {
   }
 
   watchId = navigator.geolocation.watchPosition(
-    (position) => publish(toPositionSnapshot(position)),
+    (position) => {
+      if (devPositionOverride) return;
+      publish(toPositionSnapshot(position));
+    },
     () => {},
     { enableHighAccuracy: true, maximumAge: CACHE_TTL_MS },
   );
@@ -137,6 +179,9 @@ function stopWatchIfIdle() {
 }
 
 export async function readDevicePosition(options?: { force?: boolean }): Promise<PositionSnapshot> {
+  const override = devOverrideSnapshot();
+  if (override) return override;
+
   if (!options?.force && isFresh() && cached) {
     return cloneCached(cached);
   }

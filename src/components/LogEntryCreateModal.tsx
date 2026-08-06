@@ -1,8 +1,10 @@
-import { ArrowLeft, Camera, Check, LocateFixed, Mic, X } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { ArrowLeft, Camera, Check, LocateFixed, Mic, PenLine, X } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { LogEntryPositionMap } from './LogEntryPositionMap'
 import { Modal } from './Modal'
+import { VoiceNotePlayback } from './VoiceNotePlayback'
 import {
   entryIcon,
   entryTitle,
@@ -14,9 +16,12 @@ import {
   getCurrentPosition,
   subscribeToDevicePosition,
 } from '../lib/logbook-context'
-import { formatPosition } from '../lib/logbook-format'
+import { advanceIso, realNowIso } from '../lib/dev-time-travel'
+import { isDevModeAvailable } from '../lib/dev-mode'
+import { formatDateTime, formatPosition } from '../lib/logbook-format'
 import type { MapLngLat } from '../lib/logbook-map-geo'
 import { cn } from '../lib/cn'
+import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore } from '../stores/logbook'
 
 type LogEntryCreateModalProps = {
@@ -26,6 +31,17 @@ type LogEntryCreateModalProps = {
 }
 
 type Step = 'pick-type' | 'compose'
+
+const HOUR_MS = 60 * 60 * 1000
+
+function resolveInitialEntryTimestamp(
+  tripStartedAt: string | undefined,
+  draftIso: string | null,
+): string {
+  if (draftIso) return draftIso
+  if (tripStartedAt) return tripStartedAt
+  return realNowIso()
+}
 
 export function LogEntryCreateModal({
   open,
@@ -37,6 +53,7 @@ export function LogEntryCreateModal({
   const tripEntries = store.entries.filter(
     (entry) => entry.tripId === tripId && !entry.deleted,
   )
+  const tripLegs = store.legs.filter((leg) => leg.tripId === tripId)
   const entryTypes = useMemo(
     () => (trip ? visibleLogEntryTypes(trip, tripEntries) : []),
     [trip, tripEntries],
@@ -47,26 +64,62 @@ export function LogEntryCreateModal({
   const [step, setStep] = useState<Step>('pick-type')
   const [selectedType, setSelectedType] = useState<LogEntryType | null>(null)
   const [draftNote, setDraftNote] = useState('')
+  const [noteEditing, setNoteEditing] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [includeVoiceNote, setIncludeVoiceNote] = useState(false)
+  const [voiceRecordingUrl, setVoiceRecordingUrl] = useState<string | null>(null)
+  const [voiceRecordingBlob, setVoiceRecordingBlob] = useState<Blob | null>(null)
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false)
+  const noteInputRef = useRef<HTMLTextAreaElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const voiceChunksRef = useRef<Blob[]>([])
   const [draftPosition, setDraftPosition] = useState<MapLngLat | null>(null)
   const [positionLabel, setPositionLabel] = useState('Locating…')
   const [saving, setSaving] = useState(false)
+  const [entryTimestampIso, setEntryTimestampIso] = useState(realNowIso)
+  const devMode = useAppOptionsStore((state) => state.devMode)
+  const devTimeTravelEnabled = useAppOptionsStore(
+    (state) => state.devTimeTravelEnabled,
+  )
+  const devLogEntryDraftTimeIso = useAppOptionsStore(
+    (state) => state.devLogEntryDraftTimeIso,
+  )
+  const setDevLogEntryDraftTimeIso = useAppOptionsStore(
+    (state) => state.setDevLogEntryDraftTimeIso,
+  )
+  const showTimeTravel =
+    devMode && devTimeTravelEnabled && isDevModeAvailable()
 
   const applyDraftPosition = (position: MapLngLat) => {
     setDraftPosition(position)
     setPositionLabel(formatPosition(position.latitude, position.longitude))
   }
 
+  const clearVoiceRecording = () => {
+    if (voiceRecordingUrl) URL.revokeObjectURL(voiceRecordingUrl)
+    setVoiceRecordingUrl(null)
+    setVoiceRecordingBlob(null)
+  }
+
+  const stopVoiceRecording = () => {
+    const recorder = mediaRecorderRef.current
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop()
+    }
+    mediaRecorderRef.current = null
+    setIsRecordingVoice(false)
+  }
+
   const reset = () => {
     setStep('pick-type')
     setSelectedType(null)
     setDraftNote('')
+    setNoteEditing(false)
     setPhotoFile(null)
     if (photoPreview) URL.revokeObjectURL(photoPreview)
     setPhotoPreview(null)
-    setIncludeVoiceNote(false)
+    clearVoiceRecording()
+    stopVoiceRecording()
     setDraftPosition(null)
     positionEditedRef.current = false
     setPositionLabel('Locating…')
@@ -77,8 +130,22 @@ export function LogEntryCreateModal({
   useEffect(() => {
     if (!open) {
       reset()
+      return
     }
-  }, [open])
+    if (!showTimeTravel) return
+    setEntryTimestampIso(
+      resolveInitialEntryTimestamp(trip?.startedAt, devLogEntryDraftTimeIso),
+    )
+  }, [open, showTimeTravel, trip?.startedAt, devLogEntryDraftTimeIso])
+
+  useEffect(() => {
+    if (!open || !showTimeTravel) return
+    return useAppOptionsStore.subscribe((state) => {
+      if (state.devLogEntryDraftTimeIso) {
+        setEntryTimestampIso(state.devLogEntryDraftTimeIso)
+      }
+    })
+  }, [open, showTimeTravel])
 
   useEffect(() => {
     if (!open || step !== 'compose') return
@@ -121,6 +188,49 @@ export function LogEntryCreateModal({
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  const handleVoiceToggle = async () => {
+    if (isRecordingVoice) {
+      stopVoiceRecording()
+      return
+    }
+
+    if (voiceRecordingUrl) {
+      clearVoiceRecording()
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      voiceChunksRef.current = []
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) voiceChunksRef.current.push(event.data)
+      }
+
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop())
+        const blob = new Blob(voiceChunksRef.current, {
+          type: recorder.mimeType || 'audio/webm',
+        })
+        if (blob.size === 0) return
+        clearVoiceRecording()
+        setVoiceRecordingBlob(blob)
+        setVoiceRecordingUrl(URL.createObjectURL(blob))
+      }
+
+      mediaRecorderRef.current = recorder
+      recorder.start()
+      setIsRecordingVoice(true)
+    } catch {
+      toast.error('Microphone access is unavailable')
+    }
+  }
+
+  const openNoteEditor = () => {
+    setNoteEditing(true)
+    requestAnimationFrame(() => noteInputRef.current?.focus())
+  }
+
   const handleSave = async () => {
     if (!selectedType) return
     setSaving(true)
@@ -131,9 +241,8 @@ export function LogEntryCreateModal({
         data.size = photoFile.size
         data.mimeType = photoFile.type
       }
-      if (includeVoiceNote) {
+      if (voiceRecordingBlob) {
         data.voiceNote = true
-        data.placeholder = true
       }
 
       const entry = await store.addEntry({
@@ -143,6 +252,7 @@ export function LogEntryCreateModal({
         data: Object.keys(data).length > 0 ? data : undefined,
         latitude: draftPosition?.latitude ?? null,
         longitude: draftPosition?.longitude ?? null,
+        timestamp: showTimeTravel ? entryTimestampIso : undefined,
       })
       if (!entry) return
 
@@ -156,7 +266,20 @@ export function LogEntryCreateModal({
         })
       }
 
+      if (voiceRecordingBlob && voiceRecordingUrl) {
+        await store.attachMedia(entry.id, {
+          logEntryId: entry.id,
+          type: 'voice',
+          localPath: 'voice-note.webm',
+          remoteUrl: voiceRecordingUrl,
+          thumbnailUrl: null,
+        })
+      }
+
       toast.success(`${entryTitle(selectedType)} logged`)
+      if (showTimeTravel) {
+        setDevLogEntryDraftTimeIso(advanceIso(entryTimestampIso, HOUR_MS))
+      }
       onClose()
     } catch (error) {
       toast.error(
@@ -167,28 +290,48 @@ export function LogEntryCreateModal({
     }
   }
 
+  const timeTravelNotice = showTimeTravel ? (
+    <div className="rounded-2xl border border-dashed border-[var(--brand)]/45 bg-[color-mix(in_oklab,var(--brand-muted)_35%,var(--panel))] px-3 py-2.5 text-xs leading-5 text-[var(--sea-ink-soft)]">
+      Entry time:{' '}
+      <span className="font-semibold text-[var(--sea-ink)]">
+        {formatDateTime(entryTimestampIso)}
+      </span>
+      {' · '}
+      <Link
+        to="/dev/time-travel"
+        className="font-semibold text-[var(--brand)] no-underline"
+        onClick={onClose}
+      >
+        Edit in time travel
+      </Link>
+    </div>
+  ) : null
+
   if (step === 'pick-type') {
     return (
       <Modal title="Log entry" onClose={onClose} devComponentName="LogEntryCreateModal">
-        {entryTypes.length === 0 ? (
-          <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-            No log entry types are available right now.
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {entryTypes.map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => pickType(type)}
-                className="rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-3 text-left text-sm font-semibold text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]"
-              >
-                <span className="block text-lg">{entryIcon(type)}</span>
-                <span className="mt-1 block">{entryTitle(type)}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="space-y-4">
+          {timeTravelNotice}
+          {entryTypes.length === 0 ? (
+            <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
+              No log entry types are available right now.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {entryTypes.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => pickType(type)}
+                  className="rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-3 text-left text-sm font-semibold text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]"
+                >
+                  <span className="block text-lg">{entryIcon(type)}</span>
+                  <span className="mt-1 block">{entryTitle(type)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </Modal>
     )
   }
@@ -230,10 +373,13 @@ export function LogEntryCreateModal({
           Change type
         </button>
 
+        {timeTravelNotice}
+
         <div className="overflow-hidden rounded-[1.25rem] border border-[var(--panel-border)]">
           <LogEntryPositionMap
             trip={trip}
             entries={tripEntries}
+            legs={tripLegs}
             position={draftPosition}
             onPositionChange={handlePositionChange}
             initialViewport="current-location"
@@ -251,8 +397,38 @@ export function LogEntryCreateModal({
           </div>
         </div>
 
-        <div className="space-y-2">
-          <p className="m-0 text-sm font-medium text-[var(--sea-ink)]">Photo</p>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <AttachmentIconButton
+              icon={Camera}
+              label="Add photo"
+              active={!!photoPreview}
+              onClick={() => fileInputRef.current?.click()}
+            />
+            <AttachmentIconButton
+              icon={PenLine}
+              label="Add note"
+              active={noteEditing || draftNote.trim().length > 0}
+              onClick={openNoteEditor}
+            />
+            <AttachmentIconButton
+              icon={Mic}
+              label={isRecordingVoice ? 'Stop recording' : 'Record voice note'}
+              active={isRecordingVoice || !!voiceRecordingUrl}
+              recording={isRecordingVoice}
+              onClick={() => void handleVoiceToggle()}
+            />
+            <input
+              ref={fileInputRef}
+              id={fileInputId}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              onChange={(e) => handlePhotoPick(e.target.files?.[0])}
+            />
+          </div>
+
           {photoPreview ? (
             <div className="relative overflow-hidden rounded-2xl border border-[var(--panel-border)]">
               <img
@@ -269,65 +445,37 @@ export function LogEntryCreateModal({
                 <X className="size-4" />
               </button>
             </div>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)]"
-              >
-                <Camera className="size-4" />
-                Take photo
-              </button>
-              <input
-                ref={fileInputRef}
-                id={fileInputId}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="sr-only"
-                onChange={(e) => handlePhotoPick(e.target.files?.[0])}
-              />
-            </>
-          )}
-        </div>
+          ) : null}
 
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
-            Note
-          </span>
-          <textarea
-            value={draftNote}
-            onChange={(e) => setDraftNote(e.target.value)}
-            rows={3}
-            placeholder="Optional note"
-            className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
-          />
-        </label>
-
-        <div className="space-y-2">
-          <p className="m-0 text-sm font-medium text-[var(--sea-ink)]">
-            Voice note
-          </p>
-          <button
-            type="button"
-            onClick={() => setIncludeVoiceNote((current) => !current)}
-            className={cn(
-              'inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition',
-              includeVoiceNote
-                ? 'border-[var(--sea-ink)] bg-[var(--active-panel)] text-[var(--sea-ink)]'
-                : 'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)]',
-            )}
-          >
-            <Mic className="size-4" />
-            {includeVoiceNote ? 'Voice note included' : 'Add voice note'}
-          </button>
-          {includeVoiceNote && (
-            <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
-              Recording will be added in a future update. This entry is marked
-              for a voice note.
+          {noteEditing ? (
+            <textarea
+              ref={noteInputRef}
+              value={draftNote}
+              onChange={(e) => setDraftNote(e.target.value)}
+              onBlur={() => {
+                if (!draftNote.trim()) setNoteEditing(false)
+              }}
+              rows={3}
+              placeholder="Add a note…"
+              className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-sm text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
+            />
+          ) : draftNote.trim() ? (
+            <p className="m-0 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-sm leading-6 text-[var(--sea-ink)]">
+              {draftNote.trim()}
             </p>
-          )}
+          ) : null}
+
+          {voiceRecordingUrl ? (
+            <VoiceNotePlayback
+              src={voiceRecordingUrl}
+              onRemove={() => {
+                clearVoiceRecording()
+                stopVoiceRecording()
+              }}
+            />
+          ) : isRecordingVoice ? (
+            <p className="m-0 text-xs font-medium text-[var(--brand)]">Recording… tap mic to stop</p>
+          ) : null}
         </div>
 
         <button
@@ -341,5 +489,39 @@ export function LogEntryCreateModal({
         </button>
       </div>
     </Modal>
+  )
+}
+
+function AttachmentIconButton({
+  icon: Icon,
+  label,
+  active,
+  recording = false,
+  onClick,
+}: {
+  icon: typeof Camera
+  label: string
+  active?: boolean
+  recording?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        'inline-flex size-11 items-center justify-center rounded-2xl border transition outline-none',
+        'focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--panel)]',
+        active
+          ? recording
+            ? 'border-[var(--brand)] bg-[var(--brand-muted)] text-[var(--brand)]'
+            : 'border-[var(--sea-ink)] bg-[var(--active-panel)] text-[var(--sea-ink)]'
+          : 'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)] hover:border-[var(--line)] hover:text-[var(--sea-ink)]',
+      )}
+    >
+      <Icon className={cn('size-5', recording && 'animate-pulse')} strokeWidth={2.1} />
+    </button>
   )
 }

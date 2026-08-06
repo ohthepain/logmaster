@@ -1,9 +1,6 @@
 import type { WeatherSnapshot } from '../domain/logbook'
 import { getAppOrigin } from './app-origin'
-import {
-  readDevicePosition,
-  subscribeToDevicePosition,
-} from './device-position'
+import { readDevicePosition } from './device-position'
 
 type PositionSnapshot = {
   latitude: number | null
@@ -27,7 +24,13 @@ export async function getCurrentPosition(options?: {
   return readDevicePosition(options)
 }
 
-export { subscribeToDevicePosition }
+export {
+  clearDevPositionOverride,
+  getDevPositionOverride,
+  readDevicePosition,
+  setDevPositionOverride,
+  subscribeToDevicePosition,
+} from './device-position'
 
 type LocationContextResponse = {
   country?: string | null

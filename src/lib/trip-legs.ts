@@ -1,4 +1,5 @@
 import type { Leg, LogEntry, LogEntryType } from '../domain/logbook'
+import { generateLegColor, resolveLegColor } from './leg-colors'
 
 /** Start a new leg (underway / departure). */
 export const LEG_START_TYPES: LogEntryType[] = ['CAST_OFF', 'ANCHOR_WEIGHED']
@@ -73,6 +74,12 @@ export function rebuildLegsForTrip(
   const preservedTitles = new Map(
     legsForTrip(tripId, existingLegs).map((leg) => [leg.sequence, leg.title]),
   )
+  const preservedColors = new Map(
+    legsForTrip(tripId, existingLegs).map((leg) => [
+      leg.sequence,
+      resolveLegColor(leg.color, leg.sequence),
+    ]),
+  )
   const preservedByStartEvent = new Map(
     legsForTrip(tripId, existingLegs)
       .filter((leg) => leg.startEventId)
@@ -103,6 +110,7 @@ export function rebuildLegsForTrip(
           ...preserved,
           sequence,
           title: preserved.title ?? preservedTitles.get(sequence) ?? null,
+          color: resolveLegColor(preserved.color, sequence),
           startEventId: entry.id,
           startedAt: entry.timestamp,
           endEventId: null,
@@ -115,6 +123,7 @@ export function rebuildLegsForTrip(
           tripId,
           sequence,
           title: preservedTitles.get(sequence) ?? null,
+          color: preservedColors.get(sequence) ?? generateLegColor(sequence),
           startEventId: entry.id,
           endEventId: null,
           startedAt: entry.timestamp,
@@ -200,6 +209,7 @@ export function mergeLegs(
   const mergedLeg: Leg = {
     ...first,
     title: first.title ?? second.title,
+    color: resolveLegColor(first.color, first.sequence),
     endEventId: second.endEventId,
     endedAt: second.endedAt,
     updatedAt: now,

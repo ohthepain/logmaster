@@ -44,6 +44,11 @@ function MapPage() {
     )
   }, [store.entries, trip])
 
+  const legs = useMemo(() => {
+    if (!trip) return []
+    return store.legs.filter((leg) => leg.tripId === trip.id)
+  }, [store.legs, trip])
+
   if (!store.booted) {
     return (
       <main className="page-wrap px-3 py-8 sm:px-4">
@@ -102,6 +107,7 @@ function MapPage() {
         <TripLogMap
           trip={trip}
           entries={entries}
+          legs={legs}
           mapClassName="h-full min-h-[calc(100dvh-8.5rem)] w-full"
           embedded
           allowFullscreen={false}

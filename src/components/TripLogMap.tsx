@@ -1,9 +1,11 @@
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { LogEntry, Trip } from "../domain/logbook";
-import { DEV_FALLBACK_POSITION, subscribeToDevicePosition } from "../lib/logbook-context";
-import { logEntryMapPoints, mapBrandColor, mapPointsToBounds, resolveTripLogMapViewport } from "../lib/logbook-map-geo";
+import type { LogEntry, Leg, Trip } from "../domain/logbook";
+import { DEV_FALLBACK_POSITION, setDevPositionOverride, subscribeToDevicePosition } from "../lib/logbook-context";
+import { isDevModeAvailable } from "../lib/dev-mode";
+import { buildLegEntryPointsGeoJson, buildLegTrackGeoJson, mapBrandColor, mapPointsToBounds, resolveTripLogMapViewport } from "../lib/logbook-map-geo";
+import { createCurrentPositionMarkerElement } from "../lib/map-current-position-marker";
 import {
   addOpenSeaMapSeamarkOverlay,
   bindSeamarkTileRefreshOnViewChange,
@@ -12,12 +14,13 @@ import {
   loadSailingMapStyle,
   scheduleSeamarkTileRefresh,
 } from "../lib/maplibre-sailing-map-setup";
-import { applySailingLogMapTheme, sailingMapOverlayPaint, SailingMapColors } from "../lib/maplibre-sailing-theme";
+import { applySailingLogMapTheme, sailingMapLegEntryPaint, sailingMapLegTrackPaint, SailingMapColors } from "../lib/maplibre-sailing-theme";
 import { getGeoJsonSource } from "../lib/maplibre-source";
 import { defaultRasterMapId } from "../lib/map-styles";
 import { centerMapOnCurrentLocation, centerMapOnPoint } from "../lib/sailing-map-viewport";
 import { mapTilerTransformRequest } from "../lib/tiles";
 import { cn } from "../lib/cn";
+import { useAppOptionsStore } from "../stores/app-options";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { SailingMapControlStack } from "./SailingMapControlStack";
 import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
@@ -25,6 +28,7 @@ import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
 type TripLogMapProps = {
   trip: Trip;
   entries: LogEntry[];
+  legs?: Leg[];
   focusEntryId?: string | null;
   mapClassName?: string;
   allowFullscreen?: boolean;
@@ -44,6 +48,7 @@ const CURRENT_SOURCE = "trip-current-position";
 export function TripLogMap({
   trip,
   entries,
+  legs = [],
   focusEntryId = null,
   mapClassName = "h-56 w-full sm:h-64",
   allowFullscreen = true,
@@ -55,13 +60,18 @@ export function TripLogMap({
 }: TripLogMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const currentPositionMarkerRef = useRef<maplibregl.Marker | null>(null);
   const initialFitDoneRef = useRef(false);
+  const devMode = useAppOptionsStore((state) => state.devMode);
+  const devDraggablePosition =
+    devMode && isDevModeAvailable() && showCurrentPosition && interactive;
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [currentPosition, setCurrentPosition] = useState<LngLat | null>(null);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
 
-  const entryCoords = useMemo(() => logEntryMapPoints(entries), [entries]);
+  const legTrackGeoJson = useMemo(() => buildLegTrackGeoJson(entries, legs), [entries, legs]);
+  const legEntryGeoJson = useMemo(() => buildLegEntryPointsGeoJson(entries, legs), [entries, legs]);
   const viewportTarget = useMemo(
     () => resolveTripLogMapViewport(trip, entries, { focusEntryId }),
     [trip, entries, focusEntryId],
@@ -134,7 +144,7 @@ export function TripLogMap({
             id: "trip-log-track-line",
             type: "line",
             source: TRACK_SOURCE,
-            paint: sailingMapOverlayPaint.track,
+            paint: sailingMapLegTrackPaint,
           });
 
           map.addSource(ENTRY_SOURCE, {
@@ -145,7 +155,7 @@ export function TripLogMap({
             id: "trip-log-entry-circles",
             type: "circle",
             source: ENTRY_SOURCE,
-            paint: sailingMapOverlayPaint.entry,
+            paint: sailingMapLegEntryPaint,
           });
 
           map.addSource(CURRENT_SOURCE, {
@@ -215,35 +225,13 @@ export function TripLogMap({
     const currentSource = getGeoJsonSource(map, CURRENT_SOURCE);
     if (!trackSource || !entrySource || !currentSource) return;
 
-    trackSource.setData(
-      entryCoords.length >= 2
-        ? {
-            type: "Feature",
-            geometry: {
-              type: "LineString",
-              coordinates: entryCoords.map((point) => [point.longitude, point.latitude]),
-            },
-            properties: {},
-          }
-        : { type: "FeatureCollection", features: [] },
-    );
-
-    entrySource.setData({
-      type: "FeatureCollection",
-      features: entryCoords.map((point, index) => ({
-        type: "Feature",
-        geometry: {
-          type: "Point",
-          coordinates: [point.longitude, point.latitude],
-        },
-        properties: { index: index + 1 },
-      })),
-    });
+    trackSource.setData(legTrackGeoJson);
+    entrySource.setData(legEntryGeoJson);
 
     currentSource.setData({
       type: "FeatureCollection",
       features:
-        showCurrentPosition && currentPosition
+        showCurrentPosition && currentPosition && !devDraggablePosition
           ? [
               {
                 type: "Feature",
@@ -256,7 +244,53 @@ export function TripLogMap({
             ]
           : [],
     });
-  }, [mapReady, entryCoords, currentPosition, showCurrentPosition]);
+  }, [mapReady, legTrackGeoJson, legEntryGeoJson, currentPosition, showCurrentPosition, devDraggablePosition]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !devDraggablePosition) {
+      currentPositionMarkerRef.current?.remove();
+      currentPositionMarkerRef.current = null;
+      return;
+    }
+
+    const marker = new maplibregl.Marker({
+      element: createCurrentPositionMarkerElement({ devDraggable: true }),
+      draggable: true,
+      anchor: "center",
+    });
+
+    marker.on("dragstart", () => {
+      marker.getElement().style.cursor = "grabbing";
+    });
+
+    marker.on("dragend", () => {
+      marker.getElement().style.cursor = "grab";
+      const lngLat = marker.getLngLat();
+      setDevPositionOverride({
+        latitude: lngLat.lat,
+        longitude: lngLat.lng,
+      });
+    });
+
+    currentPositionMarkerRef.current = marker;
+
+    return () => {
+      marker.remove();
+      currentPositionMarkerRef.current = null;
+    };
+  }, [mapReady, devDraggablePosition]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const marker = currentPositionMarkerRef.current;
+    if (!map || !mapReady || !devDraggablePosition || !marker || !currentPosition) return;
+
+    marker.setLngLat([currentPosition.longitude, currentPosition.latitude]);
+    if (!marker.getElement().isConnected) {
+      marker.addTo(map);
+    }
+  }, [mapReady, devDraggablePosition, currentPosition]);
 
   useEffect(() => {
     initialFitDoneRef.current = false;
@@ -323,6 +357,17 @@ export function TripLogMap({
           onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}
         />
       ) : null}
+      {mapReady && devDraggablePosition ? (
+        <p
+          className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full px-2.5 py-1 text-[10px] font-medium shadow-sm"
+          style={{
+            backgroundColor: `${SailingMapColors.chromeSurface}e6`,
+            color: SailingMapColors.labelSecondary,
+          }}
+        >
+          Dev: drag position dot to fake GPS
+        </p>
+      ) : null}
       {mapError ? (
         <p
           className="m-0 border-t px-4 py-2 text-xs"
@@ -360,6 +405,7 @@ export function TripLogMap({
           <TripLogMap
             trip={trip}
             entries={entries}
+            legs={legs}
             focusEntryId={focusEntryId}
             mapClassName="h-full w-full"
             allowFullscreen={false}

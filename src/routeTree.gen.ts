@@ -24,6 +24,7 @@ import { Route as MainBoatsIndexRouteImport } from './routes/_main/boats/index'
 import { Route as MainAdminIndexRouteImport } from './routes/_main/admin/index'
 import { Route as MainTripsTripIdRouteImport } from './routes/_main/trips/$tripId'
 import { Route as MainResetPasswordTokenRouteImport } from './routes/_main/reset-password/$token'
+import { Route as MainDevTimeTravelRouteImport } from './routes/_main/dev/time-travel'
 import { Route as MainBoatsNewRouteImport } from './routes/_main/boats/new'
 import { Route as MainBoatsBoatIdRouteImport } from './routes/_main/boats/$boatId'
 import { Route as MainAdminUsersRouteImport } from './routes/_main/admin/users'
@@ -111,6 +112,11 @@ const MainResetPasswordTokenRoute = MainResetPasswordTokenRouteImport.update({
   path: '/reset-password/$token',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainDevTimeTravelRoute = MainDevTimeTravelRouteImport.update({
+  id: '/dev/time-travel',
+  path: '/dev/time-travel',
+  getParentRoute: () => MainRouteRoute,
+} as any)
 const MainBoatsNewRoute = MainBoatsNewRouteImport.update({
   id: '/boats/new',
   path: '/boats/new',
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof MainAdminUsersRoute
   '/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/boats/new': typeof MainBoatsNewRoute
+  '/dev/time-travel': typeof MainDevTimeTravelRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/trips/$tripId': typeof MainTripsTripIdRoute
   '/admin/': typeof MainAdminIndexRoute
@@ -216,6 +223,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof MainAdminUsersRoute
   '/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/boats/new': typeof MainBoatsNewRoute
+  '/dev/time-travel': typeof MainDevTimeTravelRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/trips/$tripId': typeof MainTripsTripIdRoute
   '/admin': typeof MainAdminIndexRoute
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/_main/admin/users': typeof MainAdminUsersRoute
   '/_main/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/_main/boats/new': typeof MainBoatsNewRoute
+  '/_main/dev/time-travel': typeof MainDevTimeTravelRoute
   '/_main/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/_main/trips/$tripId': typeof MainTripsTripIdRoute
   '/_main/admin/': typeof MainAdminIndexRoute
@@ -276,6 +285,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/boats/$boatId'
     | '/boats/new'
+    | '/dev/time-travel'
     | '/reset-password/$token'
     | '/trips/$tripId'
     | '/admin/'
@@ -304,6 +314,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/boats/$boatId'
     | '/boats/new'
+    | '/dev/time-travel'
     | '/reset-password/$token'
     | '/trips/$tripId'
     | '/admin'
@@ -333,6 +344,7 @@ export interface FileRouteTypes {
     | '/_main/admin/users'
     | '/_main/boats/$boatId'
     | '/_main/boats/new'
+    | '/_main/dev/time-travel'
     | '/_main/reset-password/$token'
     | '/_main/trips/$tripId'
     | '/_main/admin/'
@@ -459,6 +471,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainResetPasswordTokenRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/dev/time-travel': {
+      id: '/_main/dev/time-travel'
+      path: '/dev/time-travel'
+      fullPath: '/dev/time-travel'
+      preLoaderRoute: typeof MainDevTimeTravelRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/boats/new': {
       id: '/_main/boats/new'
       path: '/boats/new'
@@ -560,6 +579,7 @@ interface MainRouteRouteChildren {
   MainAdminUsersRoute: typeof MainAdminUsersRoute
   MainBoatsBoatIdRoute: typeof MainBoatsBoatIdRoute
   MainBoatsNewRoute: typeof MainBoatsNewRoute
+  MainDevTimeTravelRoute: typeof MainDevTimeTravelRoute
   MainResetPasswordTokenRoute: typeof MainResetPasswordTokenRoute
   MainTripsTripIdRoute: typeof MainTripsTripIdRoute
   MainAdminIndexRoute: typeof MainAdminIndexRoute
@@ -588,6 +608,7 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainAdminUsersRoute: MainAdminUsersRoute,
   MainBoatsBoatIdRoute: MainBoatsBoatIdRoute,
   MainBoatsNewRoute: MainBoatsNewRoute,
+  MainDevTimeTravelRoute: MainDevTimeTravelRoute,
   MainResetPasswordTokenRoute: MainResetPasswordTokenRoute,
   MainTripsTripIdRoute: MainTripsTripIdRoute,
   MainAdminIndexRoute: MainAdminIndexRoute,

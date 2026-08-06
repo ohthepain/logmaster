@@ -21,6 +21,9 @@ import {
   sortLegs,
 } from '../lib/trip-legs'
 import { syncTripOperationalFields } from '../domain/trip-state'
+import { advanceIso } from '../lib/dev-time-travel'
+import { isDevModeAvailable } from '../lib/dev-mode'
+import { sortLogEntriesChronologically } from '../lib/logbook-entry-order'
 import {
   addPendingDeletedTripId,
   addPendingTripId,
@@ -35,6 +38,9 @@ import {
   putTrip,
   removePendingTripIds,
 } from '../lib/logbook-idb'
+import { useAppOptionsStore } from './app-options'
+
+const DEV_ENTRY_TIME_ADVANCE_MS = 60 * 60 * 1000
 
 type NewTripInput = {
   boatName: string
@@ -78,7 +84,7 @@ type UpdateTripInput = Partial<
   >
 >
 
-type UpdateLegInput = Partial<Pick<Leg, 'title'>>
+type UpdateLegInput = Partial<Pick<Leg, 'title' | 'color'>>
 
 type LogbookState = {
   trips: Trip[]
@@ -119,9 +125,7 @@ function makeId() {
 }
 
 function sortEntries(entries: LogEntry[]) {
-  return [...entries].sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-  )
+  return sortLogEntriesChronologically(entries)
 }
 
 function sortTrips(trips: Trip[]) {
@@ -449,11 +453,26 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
           }
         : undefined,
     )
+    const {
+      devMode,
+      devTimeTravelEnabled,
+      devLogEntryDraftTimeIso,
+      setDevLogEntryDraftTimeIso,
+    } = useAppOptionsStore.getState()
+    const useDraftTimestamp =
+      input.timestamp == null &&
+      devMode &&
+      devTimeTravelEnabled &&
+      isDevModeAvailable() &&
+      devLogEntryDraftTimeIso != null
+    const timestamp = useDraftTimestamp
+      ? devLogEntryDraftTimeIso
+      : (input.timestamp ?? context.timestamp)
     const entry: LogEntry = {
       id: makeId(),
       tripId: input.tripId,
       type: input.type,
-      timestamp: input.timestamp ?? context.timestamp,
+      timestamp,
       latitude: context.latitude,
       longitude: context.longitude,
       accuracy: context.accuracy,
@@ -469,6 +488,11 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     }
 
     await putLogEntry(entry)
+    if (useDraftTimestamp) {
+      setDevLogEntryDraftTimeIso(
+        advanceIso(timestamp, DEV_ENTRY_TIME_ADVANCE_MS),
+      )
+    }
     set((state) => ({
       entries: sortEntries([...state.entries, entry]),
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',

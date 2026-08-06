@@ -15,15 +15,9 @@ import { TripOperationalStatus } from "./TripOperationalStatus";
 import { NativeRecordingSettings } from "./NativeRecordingSettings";
 import type { Media } from "../domain/logbook";
 import type { CrewMember } from "../domain/crew";
-import { useSession } from "../lib/auth-client";
 import { fetchCrew } from "../lib/crew-api";
 import { readImageFile } from "../lib/image-file";
 import { formatDateTime, formatPosition } from "../lib/logbook-format";
-import {
-  buildSkipperOptions,
-  parseTripPersonKey,
-  resolveTripPersonOption,
-} from "../lib/trip-people";
 import { tripDetailCoverDisplay, tripDisplayName } from "../lib/trip-display";
 import { useLogbookStore, triggerLogbookSyncRetry } from "../stores/logbook";
 
@@ -33,15 +27,12 @@ type TripDetailPageProps = {
 
 export function TripDetailPage({ tripId }: TripDetailPageProps) {
   const navigate = useNavigate();
-  const session = useSession();
   const store = useLogbookStore();
   const trip = store.trips.find((item) => item.id === tripId) ?? null;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputId = useId();
-  const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
   const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
-  const [crewLoading, setCrewLoading] = useState(false);
   const [crewPickerOpen, setCrewPickerOpen] = useState(false);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [createEntryOpen, setCreateEntryOpen] = useState(false);
@@ -58,24 +49,22 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
   }, [tripId]);
 
   useEffect(() => {
-    if (!trip) return;
-    setTitle(trip.title ?? "");
-  }, [trip]);
-
-  useEffect(() => {
-    setCrewLoading(true);
     void fetchCrew()
       .then((payload) => {
         setCrewMembers(payload.members);
         triggerLogbookSyncRetry();
       })
-      .catch(() => toast.error("Could not load your crew"))
-      .finally(() => setCrewLoading(false));
+      .catch(() => toast.error("Could not load your crew"));
   }, [tripId]);
 
   useEffect(() => {
     setSelectedLegId(null);
   }, [tripId]);
+
+  const tripLegs = useMemo(
+    () => store.legs.filter((leg) => leg.tripId === tripId),
+    [store.legs, tripId],
+  );
 
   const tripEntries = useMemo(
     () =>
@@ -101,34 +90,6 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
     return map;
   }, [store.media]);
 
-  const skipperOptions = useMemo(() => {
-    const user = session.data?.user;
-    if (!user) return [];
-    return buildSkipperOptions({
-      userId: user.id,
-      userName: user.name,
-      userImage: user.image,
-      crewMembers,
-    });
-  }, [session.data?.user, crewMembers]);
-
-  const tripCrew = useMemo(() => {
-    if (!trip) return [];
-    const selected = crewMembers.filter((member) => (trip.crewMemberIds ?? []).includes(member.id));
-    const skipperKey = trip.skipperKey;
-    if (!skipperKey) return selected;
-
-    const parsed = parseTripPersonKey(skipperKey);
-    if (parsed?.kind !== "crew") return selected;
-
-    return selected.filter((member) => member.id !== parsed.id);
-  }, [trip, crewMembers]);
-
-  const skipperPerson = useMemo(
-    () => (trip ? resolveTripPersonOption(trip.skipperKey, skipperOptions) : null),
-    [trip, skipperOptions],
-  );
-
   if (!store.booted) {
     return (
       <main className="page-wrap px-3 py-8 sm:px-4">
@@ -152,13 +113,6 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
 
   const cover = tripDetailCoverDisplay(trip);
   const displayName = tripDisplayName(trip);
-
-  const saveTitle = async () => {
-    const trimmed = title.trim();
-    if (trimmed === (trip.title ?? "")) return;
-    await store.updateTrip(trip.id, { title: trimmed || null });
-    toast.success("Trip name updated");
-  };
 
   const handlePhotoPick = async (file: File | undefined) => {
     if (!file || !file.type.startsWith("image/")) return;
@@ -255,23 +209,11 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
       <DevComponentLabel name="TripDetailPage" />
       <TripDetailHero
         trip={trip}
-        title={title}
         cover={cover}
         mapEntries={tripEntries}
+        mapLegs={tripLegs}
         busy={busy}
-        skipperName={skipperPerson?.name ?? trip.skipper ?? null}
-        skipperImageUrl={skipperPerson?.imageUrl ?? null}
-        skipperUserId={
-          skipperPerson?.kind === "user"
-            ? skipperPerson.id
-            : (skipperPerson?.linkedUserId ?? undefined)
-        }
-        crewMembers={tripCrew}
-        crewLoading={crewLoading}
-        onTitleChange={setTitle}
-        onTitleBlur={() => void saveTitle()}
         onEditCoverClick={() => setCoverEditOpen(true)}
-        onAddCrewClick={() => setCrewPickerOpen(true)}
       />
       <input
         ref={fileInputRef}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Leg, LogEntry } from '../domain/logbook'
+import { generateLegColor } from './leg-colors'
 import {
   defaultLegTitle,
   legDisplayTitle,
@@ -63,6 +64,8 @@ describe('rebuildLegsForTrip', () => {
     ]
     const { legs } = rebuildLegsForTrip('trip-1', entries, [])
     expect(legs).toHaveLength(2)
+    expect(legs[0].color).toBe(generateLegColor(0))
+    expect(legs[1].color).toBe(generateLegColor(1))
   })
 })
 
@@ -78,6 +81,7 @@ describe('mergeLegs', () => {
         endEventId: 'e2',
         startedAt: '2026-01-01T10:00:00Z',
         endedAt: '2026-01-02T08:00:00Z',
+        color: '#7ec8e8',
         createdAt: '2026-01-01T10:00:00Z',
         updatedAt: '2026-01-01T10:00:00Z',
         synced: true,
@@ -91,6 +95,7 @@ describe('mergeLegs', () => {
         endEventId: null,
         startedAt: '2026-01-02T08:00:00Z',
         endedAt: null,
+        color: '#f4a261',
         createdAt: '2026-01-02T08:00:00Z',
         updatedAt: '2026-01-02T08:00:00Z',
         synced: true,

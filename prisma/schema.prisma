@@ -157,6 +157,7 @@ model Leg {
   endEventId   String?
   startedAt    DateTime
   endedAt      DateTime?
+  color        String    @default("#7ec8e8")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

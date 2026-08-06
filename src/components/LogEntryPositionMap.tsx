@@ -1,11 +1,12 @@
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { LogEntry, Trip } from '../domain/logbook'
+import type { LogEntry, Leg, Trip } from '../domain/logbook'
 import { DEV_FALLBACK_POSITION } from '../lib/logbook-context'
 import {
+  buildLegEntryPointsGeoJson,
+  buildLegTrackGeoJson,
   isValidMapLngLat,
-  logEntryMapPoints,
   mapBrandColor,
 } from '../lib/logbook-map-geo'
 import type { MapLngLat } from '../lib/logbook-map-geo'
@@ -17,7 +18,7 @@ import {
   loadSailingMapStyle,
   scheduleSeamarkTileRefresh,
 } from '../lib/maplibre-sailing-map-setup'
-import { applySailingLogMapTheme, sailingMapOverlayPaint, SailingMapColors } from '../lib/maplibre-sailing-theme'
+import { applySailingLogMapTheme, sailingMapLegEntryPaint, sailingMapLegTrackPaint, SailingMapColors } from '../lib/maplibre-sailing-theme'
 import { defaultRasterMapId } from '../lib/map-styles'
 import { centerMapOnCurrentLocation, centerMapOnPoint } from '../lib/sailing-map-viewport'
 import { mapTilerTransformRequest } from '../lib/tiles'
@@ -30,6 +31,7 @@ import { SailingMapFullscreenModal } from './SailingMapFullscreenModal'
 type LogEntryPositionMapProps = {
   trip: Trip
   entries: LogEntry[]
+  legs?: Leg[]
   position: MapLngLat | null
   onPositionChange: (position: MapLngLat) => void
   initialViewport?: 'current-location' | 'entry-focus'
@@ -44,6 +46,7 @@ const DRAFT_MARKER_ID = 'compose-draft-marker'
 export function LogEntryPositionMap({
   trip,
   entries,
+  legs = [],
   position,
   onPositionChange,
   initialViewport = 'current-location',
@@ -59,7 +62,14 @@ export function LogEntryPositionMap({
   const [mapReady, setMapReady] = useState(false)
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
 
-  const entryCoords = useMemo(() => logEntryMapPoints(entries), [entries])
+  const legTrackGeoJson = useMemo(
+    () => buildLegTrackGeoJson(entries, legs),
+    [entries, legs],
+  )
+  const legEntryGeoJson = useMemo(
+    () => buildLegEntryPointsGeoJson(entries, legs),
+    [entries, legs],
+  )
 
   useEffect(() => {
     onPositionChangeRef.current = onPositionChange
@@ -113,7 +123,7 @@ export function LogEntryPositionMap({
             id: 'compose-log-track-line',
             type: 'line',
             source: TRACK_SOURCE,
-            paint: sailingMapOverlayPaint.track,
+            paint: sailingMapLegTrackPaint,
           })
 
           map.addSource(ENTRY_SOURCE, {
@@ -124,7 +134,7 @@ export function LogEntryPositionMap({
             id: 'compose-log-entry-circles',
             type: 'circle',
             source: ENTRY_SOURCE,
-            paint: sailingMapOverlayPaint.entry,
+            paint: sailingMapLegEntryPaint,
           })
 
           const marker = new maplibregl.Marker({
@@ -198,34 +208,9 @@ export function LogEntryPositionMap({
     const entrySource = getGeoJsonSource(map, ENTRY_SOURCE)
     if (!trackSource || !entrySource) return
 
-    trackSource.setData(
-      entryCoords.length >= 2
-        ? {
-            type: 'Feature',
-            geometry: {
-              type: 'LineString',
-              coordinates: entryCoords.map((point) => [
-                point.longitude,
-                point.latitude,
-              ]),
-            },
-            properties: {},
-          }
-        : { type: 'FeatureCollection', features: [] },
-    )
-
-    entrySource.setData({
-      type: 'FeatureCollection',
-      features: entryCoords.map((point) => ({
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [point.longitude, point.latitude],
-        },
-        properties: {},
-      })),
-    })
-  }, [mapReady, entryCoords])
+    trackSource.setData(legTrackGeoJson)
+    entrySource.setData(legEntryGeoJson)
+  }, [mapReady, legTrackGeoJson, legEntryGeoJson])
 
   useEffect(() => {
     initialFitDoneRef.current = false
@@ -305,6 +290,7 @@ export function LogEntryPositionMap({
           <LogEntryPositionMap
             trip={trip}
             entries={entries}
+            legs={legs}
             position={position}
             onPositionChange={onPositionChange}
             mapClassName="h-full w-full"

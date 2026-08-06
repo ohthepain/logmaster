@@ -35,6 +35,7 @@ export function LogEntryComposerModal({
   const tripEntries = store.entries.filter(
     (item) => item.tripId === tripId && !item.deleted,
   )
+  const tripLegs = store.legs.filter((leg) => leg.tripId === tripId)
   const entryMedia = entryId
     ? store.media.filter((item) => item.logEntryId === entryId)
     : []
@@ -201,6 +202,7 @@ export function LogEntryComposerModal({
           <LogEntryPositionMap
             trip={trip}
             entries={mapEntries}
+            legs={tripLegs}
             position={draftPosition}
             onPositionChange={handlePositionChange}
             initialViewport="entry-focus"

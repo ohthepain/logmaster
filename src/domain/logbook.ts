@@ -75,6 +75,7 @@ export type Leg = {
   endEventId?: string | null
   startedAt: string
   endedAt?: string | null
+  color: string
   createdAt: string
   updatedAt: string
   synced: boolean

@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { LogEntry, Trip } from '../domain/logbook'
 import {
+  adjacentPositionedEntryPairs,
+  buildLegTrackGeoJson,
   logEntryMapPoint,
   resolveTripLogMapViewport,
 } from './logbook-map-geo'
+import type { Leg } from '../domain/logbook'
 
 const baseEntry = (overrides: Partial<LogEntry>): LogEntry =>
   ({
@@ -85,5 +88,246 @@ describe('resolveTripLogMapViewport', () => {
         { latitude: 48, longitude: -123 },
       ],
     })
+  })
+})
+
+describe('buildLegTrackGeoJson', () => {
+  it('draws chronological segments colored by leg', () => {
+    const legs: Leg[] = [
+      {
+        id: 'leg-1',
+        tripId: 'trip-1',
+        sequence: 0,
+        color: '#7ec8e8',
+        startedAt: '2026-01-01T10:00:00.000Z',
+        createdAt: '2026-01-01T10:00:00.000Z',
+        updatedAt: '2026-01-01T10:00:00.000Z',
+        synced: true,
+      },
+      {
+        id: 'leg-2',
+        tripId: 'trip-1',
+        sequence: 1,
+        color: '#f4a261',
+        startedAt: '2026-01-02T10:00:00.000Z',
+        createdAt: '2026-01-02T10:00:00.000Z',
+        updatedAt: '2026-01-02T10:00:00.000Z',
+        synced: true,
+      },
+    ]
+
+    const geojson = buildLegTrackGeoJson(
+      [
+        baseEntry({
+          id: 'a1',
+          legId: 'leg-1',
+          timestamp: '2026-01-01T10:00:00.000Z',
+          latitude: 48.1,
+          longitude: -123.1,
+        }),
+        baseEntry({
+          id: 'a2',
+          legId: 'leg-1',
+          timestamp: '2026-01-01T11:00:00.000Z',
+          latitude: 48.2,
+          longitude: -123.2,
+        }),
+        baseEntry({
+          id: 'b1',
+          legId: 'leg-2',
+          timestamp: '2026-01-02T10:00:00.000Z',
+          latitude: 49.1,
+          longitude: -124.1,
+        }),
+        baseEntry({
+          id: 'b2',
+          legId: 'leg-2',
+          timestamp: '2026-01-02T11:00:00.000Z',
+          latitude: 49.2,
+          longitude: -124.2,
+        }),
+      ],
+      legs,
+    )
+
+    expect(geojson.features).toHaveLength(3)
+    expect(geojson.features[0]?.properties.color).toBe('#7ec8e8')
+    expect(geojson.features[1]?.properties.color).toBe('#f4a261')
+    expect(geojson.features[2]?.properties.color).toBe('#f4a261')
+  })
+
+  it('does not chord across log entries without positions between', () => {
+    const legs: Leg[] = [
+      {
+        id: 'leg-1',
+        tripId: 'trip-1',
+        sequence: 0,
+        color: '#7ec8e8',
+        startedAt: '2026-01-01T10:00:00.000Z',
+        createdAt: '2026-01-01T10:00:00.000Z',
+        updatedAt: '2026-01-01T10:00:00.000Z',
+        synced: true,
+      },
+      {
+        id: 'leg-2',
+        tripId: 'trip-1',
+        sequence: 1,
+        color: '#f4a261',
+        startedAt: '2026-01-02T10:00:00.000Z',
+        createdAt: '2026-01-02T10:00:00.000Z',
+        updatedAt: '2026-01-02T10:00:00.000Z',
+        synced: true,
+      },
+    ]
+
+    const geojson = buildLegTrackGeoJson(
+      [
+        baseEntry({
+          id: 'start',
+          type: 'START_TRIP',
+          legId: 'leg-1',
+          timestamp: '2026-01-01T10:00:00.000Z',
+          latitude: 48.0,
+          longitude: -123.0,
+        }),
+        baseEntry({
+          id: 'note',
+          legId: 'leg-1',
+          timestamp: '2026-01-01T12:00:00.000Z',
+          latitude: null,
+          longitude: null,
+        }),
+        baseEntry({
+          id: 'future',
+          legId: 'leg-2',
+          timestamp: '2026-01-02T10:00:00.000Z',
+          latitude: 49.0,
+          longitude: -124.0,
+        }),
+      ],
+      legs,
+    )
+
+    expect(geojson.features).toHaveLength(0)
+  })
+
+  it('skips zero-length segments for same-position events at the same time', () => {
+    const geojson = buildLegTrackGeoJson([
+      baseEntry({
+        id: 'hourly-1',
+        timestamp: '2026-01-01T12:00:00.000Z',
+        createdAt: '2026-01-01T12:00:00.000Z',
+        latitude: 48.1,
+        longitude: -123.1,
+      }),
+      baseEntry({
+        id: 'hourly-2',
+        timestamp: '2026-01-01T13:00:00.000Z',
+        createdAt: '2026-01-01T13:00:00.000Z',
+        latitude: 48.2,
+        longitude: -123.2,
+      }),
+      baseEntry({
+        id: 'hourly-3',
+        type: 'HOURLY_LOG',
+        timestamp: '2026-01-01T14:00:00.000Z',
+        createdAt: '2026-01-01T14:00:00.000Z',
+        latitude: 48.3,
+        longitude: -123.3,
+      }),
+      baseEntry({
+        id: 'sails-down',
+        type: 'SAILS_DOWN',
+        timestamp: '2026-01-01T14:00:00.000Z',
+        createdAt: '2026-01-01T14:00:01.000Z',
+        latitude: 48.3,
+        longitude: -123.3,
+      }),
+    ])
+
+    expect(geojson.features).toHaveLength(2)
+    expect(geojson.features[0]?.geometry.coordinates).toEqual([
+      [-123.1, 48.1],
+      [-123.2, 48.2],
+    ])
+    expect(geojson.features[1]?.geometry.coordinates).toEqual([
+      [-123.2, 48.2],
+      [-123.3, 48.3],
+    ])
+  })
+
+  it('does not connect an out-of-order entry ahead of later hourly logs', () => {
+    const geojson = buildLegTrackGeoJson([
+      baseEntry({
+        id: 'sails-down',
+        type: 'SAILS_DOWN',
+        timestamp: '2026-01-01T10:00:00.000Z',
+        createdAt: '2026-01-01T15:00:00.000Z',
+        latitude: 48.3,
+        longitude: -123.3,
+      }),
+      baseEntry({
+        id: 'hourly-1',
+        type: 'HOURLY_LOG',
+        timestamp: '2026-01-01T12:00:00.000Z',
+        createdAt: '2026-01-01T12:00:00.000Z',
+        latitude: 48.1,
+        longitude: -123.1,
+      }),
+      baseEntry({
+        id: 'hourly-2',
+        type: 'HOURLY_LOG',
+        timestamp: '2026-01-01T13:00:00.000Z',
+        createdAt: '2026-01-01T13:00:00.000Z',
+        latitude: 48.2,
+        longitude: -123.2,
+      }),
+      baseEntry({
+        id: 'hourly-3',
+        type: 'HOURLY_LOG',
+        timestamp: '2026-01-01T14:00:00.000Z',
+        createdAt: '2026-01-01T14:00:00.000Z',
+        latitude: 48.3,
+        longitude: -123.3,
+      }),
+    ])
+
+    expect(geojson.features).toHaveLength(2)
+    expect(geojson.features.some((feature) => {
+      const [fromLng, fromLat] = feature.geometry.coordinates[0]!
+      const [toLng, toLat] = feature.geometry.coordinates[1]!
+      return fromLat === 48.3 && fromLng === -123.3 && toLat === 48.1 && toLng === -123.1
+    })).toBe(false)
+  })
+})
+
+describe('adjacentPositionedEntryPairs', () => {
+  it('returns only directly adjacent positioned entries in the log', () => {
+    const pairs = adjacentPositionedEntryPairs([
+      baseEntry({
+        id: 'start',
+        timestamp: '2026-01-01T10:00:00.000Z',
+        latitude: 48.0,
+        longitude: -123.0,
+      }),
+      baseEntry({
+        id: 'mid',
+        timestamp: '2026-01-01T11:00:00.000Z',
+        latitude: 48.5,
+        longitude: -123.5,
+      }),
+      baseEntry({
+        id: 'end',
+        timestamp: '2026-01-01T12:00:00.000Z',
+        latitude: 49.0,
+        longitude: -124.0,
+      }),
+    ])
+
+    expect(pairs).toHaveLength(2)
+    expect(pairs[0]?.[0].id).toBe('start')
+    expect(pairs[0]?.[1].id).toBe('mid')
+    expect(pairs[1]?.[0].id).toBe('mid')
+    expect(pairs[1]?.[1].id).toBe('end')
   })
 })
