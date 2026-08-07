@@ -9,6 +9,7 @@ import { Modal } from "./Modal";
 import { TripCrewPickerModal } from "./TripCrewPickerModal";
 import { TripCoverEditModal } from "./TripCoverEditModal";
 import { TripDetailHero } from "./TripDetailHero";
+import { TripDetailBottomSheet } from "./TripDetailBottomSheet";
 import { TripLegSection } from "./TripLegSection";
 import { NativeRecordingSettings } from "./NativeRecordingSettings";
 import type { Media } from "../domain/logbook";
@@ -194,28 +195,20 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
   return (
     <>
       <DevComponentLabel name="TripDetailPage" />
-      <TripDetailHero
-        trip={trip}
-        cover={cover}
-        mapEntries={tripEntries}
-        mapLegs={tripLegs}
-        busy={busy}
-        onEditCoverClick={() => setCoverEditOpen(true)}
-        onLogEntryClick={
-          trip.status === "IN_PROGRESS" ? () => setCreateEntryOpen(true) : undefined
-        }
-      />
-      <input
-        ref={fileInputRef}
-        id={fileInputId}
-        type="file"
-        accept="image/*"
-        className="sr-only"
-        onChange={(event) => void handlePhotoPick(event.target.files?.[0])}
-      />
+      <div className="relative h-[calc(100dvh-4rem)] w-full overflow-hidden">
+        <TripDetailHero
+          trip={trip}
+          cover={cover}
+          mapEntries={tripEntries}
+          mapLegs={tripLegs}
+          busy={busy}
+          onEditCoverClick={() => setCoverEditOpen(true)}
+          onLogEntryClick={
+            trip.status === "IN_PROGRESS" ? () => setCreateEntryOpen(true) : undefined
+          }
+        />
 
-      <main className="page-wrap px-3 pb-24 pt-4 sm:px-4 sm:pb-28">
-        <div className="mx-auto max-w-3xl space-y-5">
+        <TripDetailBottomSheet>
           {trip.status === "PLANNED" ? (
             <button
               type="button"
@@ -269,10 +262,9 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
                 </button>
               </div>
             )}
-
           </div>
 
-          <div className="border-t border-[var(--line)] pt-4 pb-8">
+          <div className="border-t border-[var(--line)] pt-4">
             <button
               type="button"
               disabled={busy}
@@ -283,8 +275,17 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
               Delete trip
             </button>
           </div>
-        </div>
-      </main>
+        </TripDetailBottomSheet>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        id={fileInputId}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        onChange={(event) => void handlePhotoPick(event.target.files?.[0])}
+      />
 
       <LogEntryCreateModal
         open={createEntryOpen}

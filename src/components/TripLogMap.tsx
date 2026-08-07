@@ -230,6 +230,18 @@ export function TripLogMap({
   }, [interactive]);
 
   useEffect(() => {
+    const container = containerRef.current;
+    const map = mapRef.current;
+    if (!container || !map || !mapReady) return;
+
+    const resize = () => map.resize();
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [mapReady]);
+
+  useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;
 

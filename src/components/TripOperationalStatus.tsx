@@ -15,6 +15,7 @@ import {
 import { cn } from '../lib/cn'
 import { useLogbookStore } from '../stores/logbook'
 import { DevComponentLabel } from './DevComponentLabel'
+import { TRIP_MAP_OVERLAY_SURFACE_CLASS } from '../lib/trip-map-overlay'
 
 /** Map overlay offset — keep in sync with TripDetailHero layout. */
 export const TRIP_OPERATIONAL_OVERLAY_TOP_CLASS = 'top-[3.25rem]' as const
@@ -70,7 +71,7 @@ export function TripOperationalStatus({
   }
 
   return (
-    <div className="relative bg-black/30">
+    <div className={cn('relative', TRIP_MAP_OVERLAY_SURFACE_CLASS)}>
       <DevComponentLabel
         name="TripOperationalStatus"
         className="absolute bottom-0 left-2 z-10 opacity-70"
