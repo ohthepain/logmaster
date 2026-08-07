@@ -1,5 +1,6 @@
 import { LocateFixed, Maximize2, Minus, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { cn } from '../lib/cn'
 
 type SailingMapControlStackProps = {
   onZoomIn: () => void
@@ -7,6 +8,7 @@ type SailingMapControlStackProps = {
   onLocate: () => void
   layers?: ReactNode
   onExpand?: () => void
+  className?: string
 }
 
 export function SailingMapControlStack({
@@ -15,9 +17,15 @@ export function SailingMapControlStack({
   onLocate,
   layers,
   onExpand,
+  className,
 }: SailingMapControlStackProps) {
   return (
-    <div className="sailing-map-controls pointer-events-none absolute right-2.5 top-2.5 z-10">
+    <div
+      className={cn(
+        'sailing-map-controls pointer-events-none absolute right-2.5 top-2.5 z-10',
+        className,
+      )}
+    >
       <div className="pointer-events-auto flex flex-col overflow-visible rounded-md border border-[rgba(126,200,232,0.2)] bg-[rgba(26,51,72,0.94)] shadow-[0_4px_16px_rgba(0,0,0,0.25)]">
         <MapControlButton label="Zoom in" onClick={onZoomIn}>
           <Plus className="size-4" strokeWidth={2.25} />

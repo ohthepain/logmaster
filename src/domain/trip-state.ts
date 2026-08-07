@@ -274,6 +274,10 @@ export function isOperationalToggleOn(
   }
 }
 
+export function operationalToggleOnAtTop(toggle: OperationalToggle): boolean {
+  return toggle !== 'anchor'
+}
+
 export function operationalToggleEntryType(
   toggle: OperationalToggle,
   targetOn: boolean,

@@ -4,6 +4,7 @@ import type { Leg, LogEntry, Trip } from '../domain/logbook'
 import type { TripDetailCoverDisplay } from '../lib/trip-display'
 import { DevComponentLabel } from './DevComponentLabel'
 import { TripLogMap } from './TripLogMap'
+import { TripOperationalStatus, TRIP_OPERATIONAL_OVERLAY_PT_CLASS, TRIP_OPERATIONAL_OVERLAY_TOP_CLASS } from './TripOperationalStatus'
 
 type TripDetailHeroProps = {
   trip: Trip
@@ -12,6 +13,7 @@ type TripDetailHeroProps = {
   mapLegs: Leg[]
   busy: boolean
   onEditCoverClick: () => void
+  onLogEntryClick?: () => void
 }
 
 export function TripDetailHero({
@@ -21,10 +23,12 @@ export function TripDetailHero({
   mapLegs,
   busy,
   onEditCoverClick,
+  onLogEntryClick,
 }: TripDetailHeroProps) {
   const isActiveTrip = trip.status === 'IN_PROGRESS' || trip.status === 'PLANNED'
   const showInteractiveMap = isActiveTrip || cover.kind === 'map'
   const showPhoto = !showInteractiveMap && cover.kind === 'photo' && cover.photoUrl
+  const showOperationalOverlay = showInteractiveMap && trip.status !== 'PLANNED'
 
   return (
     <section className="relative isolate min-h-[min(28rem,72vh)] w-full overflow-hidden bg-[var(--chip-bg)]">
@@ -43,6 +47,9 @@ export function TripDetailHero({
             interactive={isActiveTrip}
             embedded
             showSeamarks={isActiveTrip}
+            controlStackClassName={
+              showOperationalOverlay ? TRIP_OPERATIONAL_OVERLAY_TOP_CLASS : undefined
+            }
           />
         </div>
       ) : showPhoto ? (
@@ -57,7 +64,24 @@ export function TripDetailHero({
         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/35 to-transparent" />
       ) : null}
 
-      <div className="pointer-events-none relative z-10 flex min-h-[min(28rem,72vh)] flex-col px-3 pt-3 sm:px-4">
+      {showOperationalOverlay ? (
+        <div className="pointer-events-auto absolute inset-x-0 top-0 z-20">
+          <TripOperationalStatus
+            tripId={trip.id}
+            trip={trip}
+            entries={mapEntries}
+            onLogEntryClick={onLogEntryClick}
+            logEntryDisabled={busy}
+          />
+        </div>
+      ) : null}
+
+      <div
+        className={[
+          'pointer-events-none relative z-10 flex min-h-[min(28rem,72vh)] flex-col px-3 sm:px-4',
+          showOperationalOverlay ? TRIP_OPERATIONAL_OVERLAY_PT_CLASS : 'pt-3',
+        ].join(' ')}
+      >
         <div className="flex items-start justify-between gap-3">
           <Link
             to="/"

@@ -1,8 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Check, FileText, Sailboat, Trash2, User } from "lucide-react";
+import { Check, Sailboat, Trash2, User } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { LogEntryCard } from "./LogEntryCard";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { LogEntryCreateModal } from "./LogEntryCreateModal";
 import { LogEntryComposerModal } from "./LogEntryComposerModal";
@@ -11,7 +10,6 @@ import { TripCrewPickerModal } from "./TripCrewPickerModal";
 import { TripCoverEditModal } from "./TripCoverEditModal";
 import { TripDetailHero } from "./TripDetailHero";
 import { TripLegSection } from "./TripLegSection";
-import { TripOperationalStatus } from "./TripOperationalStatus";
 import { NativeRecordingSettings } from "./NativeRecordingSettings";
 import type { Media } from "../domain/logbook";
 import type { CrewMember } from "../domain/crew";
@@ -38,7 +36,6 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
   const [createEntryOpen, setCreateEntryOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [coverEditOpen, setCoverEditOpen] = useState(false);
-  const [selectedLegId, setSelectedLegId] = useState<string | null>(null);
 
   useEffect(() => {
     void useLogbookStore.getState().load();
@@ -57,10 +54,6 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
       .catch(() => toast.error("Could not load your crew"));
   }, [tripId]);
 
-  useEffect(() => {
-    setSelectedLegId(null);
-  }, [tripId]);
-
   const tripLegs = useMemo(
     () => store.legs.filter((leg) => leg.tripId === tripId),
     [store.legs, tripId],
@@ -72,12 +65,6 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
         .filter((entry) => entry.tripId === tripId && !entry.deleted)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
     [store.entries, tripId],
-  );
-
-  const entries = useMemo(
-    () =>
-      tripEntries.filter((entry) => !selectedLegId || entry.legId === selectedLegId),
-    [tripEntries, selectedLegId],
   );
 
   const mediaByEntry = useMemo(() => {
@@ -214,6 +201,9 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
         mapLegs={tripLegs}
         busy={busy}
         onEditCoverClick={() => setCoverEditOpen(true)}
+        onLogEntryClick={
+          trip.status === "IN_PROGRESS" ? () => setCreateEntryOpen(true) : undefined
+        }
       />
       <input
         ref={fileInputRef}
@@ -236,48 +226,16 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
               <Sailboat className="size-5" />
               Start trip
             </button>
-          ) : trip.status === "IN_PROGRESS" ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setCreateEntryOpen(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-[var(--btn-bg)] px-4 py-3.5 text-base font-bold text-[var(--btn-text)] shadow-sm transition hover:-translate-y-px disabled:opacity-60"
-            >
-              <FileText className="size-5" />
-              Log entry
-            </button>
           ) : null}
-
-          <TripOperationalStatus tripId={trip.id} trip={trip} entries={tripEntries} />
 
           <TripLegSection
             tripId={trip.id}
-            selectedLegId={selectedLegId}
-            onSelectLeg={setSelectedLegId}
+            tripStatus={trip.status}
+            onOpenEntry={openEntry}
+            mediaByEntry={mediaByEntry}
           />
 
           <NativeRecordingSettings tripInProgress={trip.status === "IN_PROGRESS"} />
-
-          {entries.length === 0 ? (
-            <div className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] px-5 py-10 text-center">
-              <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-                {trip.status === "PLANNED"
-                  ? "Start the trip or log your first entry."
-                  : "No log entries yet. Add the first note or event."}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {entries.map((entry) => (
-                <LogEntryCard
-                  key={entry.id}
-                  entry={entry}
-                  media={mediaByEntry.get(entry.id) ?? []}
-                  onOpen={() => openEntry(entry.id)}
-                />
-              ))}
-            </div>
-          )}
 
           <div className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] p-4 sm:p-5">
             <p className="m-0 text-sm text-[var(--sea-ink-soft)]">Boat: {trip.boatName}</p>
@@ -371,7 +329,7 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
           <div className="space-y-4">
             <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">
               Delete <span className="font-semibold text-[var(--sea-ink)]">{displayName}</span>
-              {entries.length > 0 ? ` and all ${entries.length} log ${entries.length === 1 ? "entry" : "entries"}` : ""}
+              {tripEntries.length > 0 ? ` and all ${tripEntries.length} log ${tripEntries.length === 1 ? "entry" : "entries"}` : ""}
               ? This cannot be undone.
             </p>
             <div className="flex flex-wrap gap-2">

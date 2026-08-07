@@ -44,6 +44,7 @@ type TripLogMapProps = {
   interactive?: boolean;
   embedded?: boolean;
   showSeamarks?: boolean;
+  controlStackClassName?: string;
 };
 
 type LngLat = { longitude: number; latitude: number };
@@ -64,6 +65,7 @@ export function TripLogMap({
   interactive = true,
   embedded = false,
   showSeamarks = true,
+  controlStackClassName,
 }: TripLogMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -377,6 +379,7 @@ export function TripLogMap({
       {mapReady && showControls ? (
         <>
           <SailingMapControlStack
+            className={controlStackClassName}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onLocate={handleLocate}
