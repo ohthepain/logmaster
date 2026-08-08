@@ -13,6 +13,7 @@ import {
   formatSailsState,
   isLogEntryTypeStateActive,
   operationalFieldsFromState,
+  operationalToggleConfirmPrompt,
   operationalToggleEntryType,
   resolveTripOperationalState,
   syncTripOperationalFields,
@@ -174,6 +175,17 @@ describe('operational toggles', () => {
     expect(operationalToggleEntryType('sails', false)).toBe('SAILS_DOWN')
     expect(operationalToggleEntryType('moored', false)).toBe('CAST_OFF')
     expect(operationalToggleEntryType('anchor', true)).toBe('ANCHOR_DROPPED')
+  })
+
+  it('uses short confirm prompts for each toggle action', () => {
+    expect(operationalToggleConfirmPrompt('sails', true)).toBe('Raise sails?')
+    expect(operationalToggleConfirmPrompt('sails', false)).toBe('Drop sails?')
+    expect(operationalToggleConfirmPrompt('engine', true)).toBe('Start engine?')
+    expect(operationalToggleConfirmPrompt('engine', false)).toBe('Stop engine?')
+    expect(operationalToggleConfirmPrompt('moored', true)).toBe('Tie up?')
+    expect(operationalToggleConfirmPrompt('moored', false)).toBe('Cast off?')
+    expect(operationalToggleConfirmPrompt('anchor', true)).toBe('Drop anchor?')
+    expect(operationalToggleConfirmPrompt('anchor', false)).toBe('Weigh anchor?')
   })
 })
 

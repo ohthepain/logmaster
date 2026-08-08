@@ -19,7 +19,7 @@ import { useMapDataLayerSync } from "../lib/use-map-data-layer-sync";
 import { applySailingLogMapTheme, sailingMapLegEntryPaint, sailingMapLegTrackPaint, SailingMapColors } from "../lib/maplibre-sailing-theme";
 import { getGeoJsonSource } from "../lib/maplibre-source";
 import { defaultRasterMapId } from "../lib/map-styles";
-import { centerMapOnCurrentLocation, centerMapOnPoint } from "../lib/sailing-map-viewport";
+import { centerMapOnCurrentLocation, juiceMapFocus, SAILING_MAP_EASE_MS, SAILING_MAP_FIT_MAX_ZOOM, SAILING_MAP_INITIAL_ZOOM } from "../lib/sailing-map-viewport";
 import {
   fetchReversePlaceLookup,
   formatReversePlaceLabel,
@@ -133,7 +133,7 @@ export function TripLogMap({
           container,
           style,
           center: [DEV_FALLBACK_POSITION.longitude, DEV_FALLBACK_POSITION.latitude],
-          zoom: 10,
+          zoom: SAILING_MAP_INITIAL_ZOOM,
           pitch: 0,
           maxPitch: 0,
           attributionControl: false,
@@ -341,20 +341,24 @@ export function TripLogMap({
 
     if (viewportTarget.kind === "current-location") {
       if (!showCurrentPosition || !currentPosition) return;
-      centerMapOnPoint(map, currentPosition, 14);
+      juiceMapFocus(map, currentPosition);
       initialFitDoneRef.current = true;
       return;
     }
 
     if (viewportTarget.kind === "point") {
-      centerMapOnPoint(map, viewportTarget.point, 14);
+      juiceMapFocus(map, viewportTarget.point);
       initialFitDoneRef.current = true;
       return;
     }
 
     const bounds = mapPointsToBounds(viewportTarget.points);
     if (bounds) {
-      map.fitBounds(bounds, { padding: embedded ? 24 : 48, maxZoom: 14, duration: 600 });
+      map.fitBounds(bounds, {
+        padding: embedded ? 24 : 48,
+        maxZoom: SAILING_MAP_FIT_MAX_ZOOM,
+        duration: SAILING_MAP_EASE_MS,
+      });
       initialFitDoneRef.current = true;
     }
   }, [

@@ -22,7 +22,13 @@ import { applySailingLogMapTheme, sailingMapLegEntryPaint, sailingMapLegTrackPai
 import { defaultRasterMapId } from '../lib/map-styles'
 import { installMapDataLayers, queryTappableMapDataFeatures } from '../lib/maplibre-data-layers'
 import { useMapDataLayerSync } from '../lib/use-map-data-layer-sync'
-import { centerMapOnCurrentLocation, centerMapOnPoint } from '../lib/sailing-map-viewport'
+import {
+  centerMapOnCurrentLocation,
+  centerMapOnPoint,
+  juiceMapFocus,
+  SAILING_MAP_FOCUS_ZOOM,
+  SAILING_MAP_LOCATE_ZOOM,
+} from '../lib/sailing-map-viewport'
 import { mapTilerTransformRequest } from '../lib/tiles'
 import { cn } from '../lib/cn'
 import { useAppOptionsStore } from '../stores/app-options'
@@ -238,7 +244,7 @@ export function LogEntryPositionMap({
     if (!map || !mapReady || initialFitDoneRef.current) return
     if (!isValidMapLngLat(position)) return
 
-    centerMapOnPoint(map, position, 14)
+    juiceMapFocus(map, position)
     initialFitDoneRef.current = true
   }, [mapReady, initialViewport, position, trip.id])
 
@@ -254,10 +260,10 @@ export function LogEntryPositionMap({
     const map = mapRef.current
     if (!map) return
     if (initialViewport === 'entry-focus' && isValidMapLngLat(position)) {
-      centerMapOnPoint(map, position, 14)
+      centerMapOnPoint(map, position, SAILING_MAP_FOCUS_ZOOM)
       return
     }
-    void centerMapOnCurrentLocation(map)
+    void centerMapOnCurrentLocation(map, { minZoom: SAILING_MAP_LOCATE_ZOOM })
   }, [initialViewport, position])
 
   const mapShell = (

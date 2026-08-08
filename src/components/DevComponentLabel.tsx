@@ -13,11 +13,11 @@ export function DevComponentLabel({ name, className }: DevComponentLabelProps) {
 
   return (
     <div
-      className={cn('dev-component-label', className)}
+      className={cn('dev-component-label pointer-events-none', className)}
       data-dev-component={name}
       aria-hidden
     >
-      {name}
+      <span className="dev-component-label-text">{name}</span>
     </div>
   )
 }

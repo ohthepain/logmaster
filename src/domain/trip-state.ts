@@ -245,6 +245,15 @@ export function operationalToggleLabel(toggle: OperationalToggle) {
   }
 }
 
+export function operationalToggleTooltip(
+  toggle: OperationalToggle,
+  checked: boolean,
+) {
+  const sides = operationalToggleSideLabels(toggle)
+  const state = checked ? sides.right : sides.left
+  return `${operationalToggleLabel(toggle)} — ${state}`
+}
+
 export function operationalToggleSideLabels(toggle: OperationalToggle) {
   switch (toggle) {
     case 'sails':
@@ -274,8 +283,20 @@ export function isOperationalToggleOn(
   }
 }
 
-export function operationalToggleOnAtTop(toggle: OperationalToggle): boolean {
-  return toggle !== 'anchor'
+export function operationalToggleConfirmPrompt(
+  toggle: OperationalToggle,
+  targetOn: boolean,
+): string {
+  switch (toggle) {
+    case 'sails':
+      return targetOn ? 'Raise sails?' : 'Drop sails?'
+    case 'engine':
+      return targetOn ? 'Start engine?' : 'Stop engine?'
+    case 'moored':
+      return targetOn ? 'Tie up?' : 'Cast off?'
+    case 'anchor':
+      return targetOn ? 'Drop anchor?' : 'Weigh anchor?'
+  }
 }
 
 export function operationalToggleEntryType(

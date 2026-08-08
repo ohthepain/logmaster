@@ -500,8 +500,12 @@ a {
 .dev-component-label {
   display: block;
   width: fit-content;
-  max-width: 100%;
   margin-bottom: 0.25rem;
+  pointer-events: none;
+}
+
+.dev-component-label-text {
+  display: inline-block;
   padding: 0.125rem 0.5rem;
   border: 1px dashed color-mix(in oklab, var(--brand) 45%, transparent);
   border-radius: 0.25rem;
@@ -512,6 +516,11 @@ a {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--brand);
-  pointer-events: none;
-  user-select: none;
+  white-space: nowrap;
+  pointer-events: auto;
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+  cursor: text;
+  touch-action: auto;
 }

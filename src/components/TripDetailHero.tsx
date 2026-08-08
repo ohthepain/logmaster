@@ -1,10 +1,9 @@
-import { Link } from '@tanstack/react-router'
-import { ArrowLeft, Pencil, Sailboat } from 'lucide-react'
+import { Pencil, Sailboat } from 'lucide-react'
 import type { Leg, LogEntry, Trip } from '../domain/logbook'
 import type { TripDetailCoverDisplay } from '../lib/trip-display'
 import { DevComponentLabel } from './DevComponentLabel'
 import { TripLogMap } from './TripLogMap'
-import { TripOperationalStatus, TRIP_OPERATIONAL_OVERLAY_PT_CLASS, TRIP_OPERATIONAL_OVERLAY_TOP_CLASS } from './TripOperationalStatus'
+import { TripOperationalStatus } from './TripOperationalStatus'
 
 type TripDetailHeroProps = {
   trip: Trip
@@ -47,9 +46,6 @@ export function TripDetailHero({
             interactive={isActiveTrip}
             embedded
             showSeamarks={isActiveTrip}
-            controlStackClassName={
-              showOperationalOverlay ? TRIP_OPERATIONAL_OVERLAY_TOP_CLASS : undefined
-            }
           />
         </div>
       ) : showPhoto ? (
@@ -65,42 +61,25 @@ export function TripDetailHero({
       ) : null}
 
       {showOperationalOverlay ? (
-        <div className="pointer-events-auto absolute inset-x-0 top-0 z-20">
-          <TripOperationalStatus
-            tripId={trip.id}
-            trip={trip}
-            entries={mapEntries}
-            onLogEntryClick={onLogEntryClick}
-            logEntryDisabled={busy}
-          />
-        </div>
+        <TripOperationalStatus
+          tripId={trip.id}
+          trip={trip}
+          entries={mapEntries}
+          onLogEntryClick={onLogEntryClick}
+          logEntryDisabled={busy}
+        />
       ) : null}
 
-      <div
-        className={[
-          'pointer-events-none absolute inset-x-0 top-0 z-40 flex flex-col px-3 sm:px-4',
-          showOperationalOverlay ? TRIP_OPERATIONAL_OVERLAY_PT_CLASS : 'pt-3',
-        ].join(' ')}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <Link
-            to="/"
-            className="pointer-events-auto inline-flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-sm no-underline transition hover:bg-black/45"
-            aria-label="Back to trips"
-          >
-            <ArrowLeft className="size-4" />
-          </Link>
-
-          <button
-            type="button"
-            onClick={onEditCoverClick}
-            disabled={busy}
-            className="pointer-events-auto inline-flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45 disabled:opacity-60"
-            aria-label="Edit trip cover"
-          >
-            <Pencil className="size-4" />
-          </button>
-        </div>
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex justify-end px-3 pt-3 sm:px-4">
+        <button
+          type="button"
+          onClick={onEditCoverClick}
+          disabled={busy}
+          className="pointer-events-auto inline-flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45 disabled:opacity-60"
+          aria-label="Edit trip cover"
+        >
+          <Pencil className="size-4" />
+        </button>
       </div>
     </section>
   )

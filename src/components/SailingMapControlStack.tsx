@@ -1,6 +1,12 @@
 import { LocateFixed, Maximize2, Minus, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { cn } from '../lib/cn'
+import {
+  MAP_CHROME_BUTTON_HOVER_CLASS,
+  MAP_CHROME_CELL_CLASS,
+  MAP_CHROME_DIVIDER_CLASS,
+  MAP_CHROME_SURFACE_CLASS,
+} from '../lib/map-chrome'
 
 type SailingMapControlStackProps = {
   onZoomIn: () => void
@@ -22,11 +28,16 @@ export function SailingMapControlStack({
   return (
     <div
       className={cn(
-        'sailing-map-controls pointer-events-none absolute right-2.5 top-2.5 z-10',
+        'sailing-map-controls pointer-events-none absolute right-2.5 top-1/2 z-10 -translate-y-1/2',
         className,
       )}
     >
-      <div className="pointer-events-auto flex flex-col overflow-visible rounded-md border border-[rgba(126,200,232,0.2)] bg-[rgba(26,51,72,0.94)] shadow-[0_4px_16px_rgba(0,0,0,0.25)]">
+      <div
+        className={cn(
+          'pointer-events-auto flex flex-col overflow-visible',
+          MAP_CHROME_SURFACE_CLASS,
+        )}
+      >
         <MapControlButton label="Zoom in" onClick={onZoomIn}>
           <Plus className="size-4" strokeWidth={2.25} />
         </MapControlButton>
@@ -37,7 +48,7 @@ export function SailingMapControlStack({
           <LocateFixed className="size-4" strokeWidth={2.25} />
         </MapControlButton>
         {layers ? (
-          <div className="relative border-t border-[rgba(126,200,232,0.2)]">{layers}</div>
+          <div className={cn('relative', MAP_CHROME_DIVIDER_CLASS)}>{layers}</div>
         ) : null}
         {onExpand ? (
           <MapControlButton label="Open full-screen map" onClick={onExpand} bordered>
@@ -69,9 +80,12 @@ export function MapControlButton({
       aria-expanded={ariaExpanded}
       title={label}
       onClick={onClick}
-      className={`flex h-[29px] w-[29px] items-center justify-center text-white/95 transition hover:bg-[rgba(126,200,232,0.16)] ${
-        bordered ? 'border-t border-[rgba(126,200,232,0.2)]' : ''
-      }`}
+      className={cn(
+        MAP_CHROME_CELL_CLASS,
+        'text-white/95',
+        MAP_CHROME_BUTTON_HOVER_CLASS,
+        bordered && MAP_CHROME_DIVIDER_CLASS,
+      )}
     >
       {children}
     </button>

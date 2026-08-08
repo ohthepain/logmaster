@@ -5,21 +5,29 @@ import { entryTitle, isLogEntryTypeVisible } from '../domain/logbook'
 import type { LogEntry, Trip } from '../domain/logbook'
 import {
   isOperationalToggleOn,
+  operationalToggleConfirmPrompt,
   operationalToggleEntryType,
-  operationalToggleLabel,
-  operationalToggleOnAtTop,
   OPERATIONAL_TOGGLES,
   resolveTripOperationalState,
-  type OperationalToggle,
 } from '../domain/trip-state'
+import type { OperationalToggle } from '../domain/trip-state'
 import { cn } from '../lib/cn'
+import {
+  MAP_CHROME_BUTTON_HOVER_CLASS,
+  MAP_CHROME_DIVIDER_CLASS,
+  MAP_CHROME_OPERATIONAL_CELL_CLASS,
+  MAP_CHROME_SURFACE_CLASS,
+} from '../lib/map-chrome'
 import { useLogbookStore } from '../stores/logbook'
 import { DevComponentLabel } from './DevComponentLabel'
-import { TRIP_MAP_OVERLAY_SURFACE_CLASS } from '../lib/trip-map-overlay'
+import { MapButtonTooltip } from './MapButtonTooltip'
+import { OperationalToggleButton } from './OperationalToggleButton'
+import { TripOperationalConfirmModal } from './TripOperationalConfirmModal'
 
-/** Map overlay offset — keep in sync with TripDetailHero layout. */
-export const TRIP_OPERATIONAL_OVERLAY_TOP_CLASS = 'top-[3.25rem]' as const
-export const TRIP_OPERATIONAL_OVERLAY_PT_CLASS = 'pt-[3.25rem]' as const
+type PendingOperationalConfirm = {
+  toggle: OperationalToggle
+  targetOn: boolean
+}
 
 type TripOperationalStatusProps = {
   tripId: string
@@ -41,13 +49,15 @@ export function TripOperationalStatus({
 }: TripOperationalStatusProps) {
   const addEntry = useLogbookStore((state) => state.addEntry)
   const [busyToggle, setBusyToggle] = useState<OperationalToggle | null>(null)
+  const [pendingConfirm, setPendingConfirm] =
+    useState<PendingOperationalConfirm | null>(null)
 
   if (trip.status === 'PLANNED') return null
 
   const state = resolveTripOperationalState(trip, entries)
   const interactive = trip.status === 'IN_PROGRESS'
 
-  const handleSelect = async (toggle: OperationalToggle, targetOn: boolean) => {
+  const applyToggle = async (toggle: OperationalToggle, targetOn: boolean) => {
     if (!interactive || busyToggle) return
 
     const currentOn = isOperationalToggleOn(toggle, state)
@@ -70,119 +80,107 @@ export function TripOperationalStatus({
     }
   }
 
-  return (
-    <div className={cn('relative', TRIP_MAP_OVERLAY_SURFACE_CLASS)}>
-      <DevComponentLabel
-        name="TripOperationalStatus"
-        className="absolute bottom-0 left-2 z-10 opacity-70"
-      />
-      <div className="relative flex items-center gap-2 px-3 py-1.5 sm:gap-3">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-x-3 gap-y-1.5 sm:gap-x-4">
-          {OPERATIONAL_TOGGLES.map((toggle) => {
-          const checked = isOperationalToggleOn(toggle, state)
-          const pending = busyToggle === toggle
-          const canTurnOn =
-            interactive &&
-            isLogEntryTypeVisible(
-              operationalToggleEntryType(toggle, true),
-              trip,
-              entries,
-            )
-          const canTurnOff =
-            interactive &&
-            isLogEntryTypeVisible(
-              operationalToggleEntryType(toggle, false),
-              trip,
-              entries,
-            )
-          const canToggle =
-            !pending &&
-            (busyToggle === null || busyToggle === toggle) &&
-            interactive &&
-            (checked ? canTurnOff : canTurnOn)
+  const requestToggle = (toggle: OperationalToggle, targetOn: boolean) => {
+    if (!interactive || busyToggle) return
 
-          return (
-            <VerticalToggleSwitch
-              key={toggle}
-              label={operationalToggleLabel(toggle)}
-              checked={checked}
-              onAtTop={operationalToggleOnAtTop(toggle)}
-              pending={pending}
-              disabled={!canToggle}
-              onCheckedChange={(targetOn) => void handleSelect(toggle, targetOn)}
-            />
-          )
-        })}
-        </div>
-        {interactive && onLogEntryClick ? (
-          <button
-            type="button"
-            disabled={logEntryDisabled}
-            onClick={onLogEntryClick}
-            className={cn(
-              'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/35 bg-black/40 px-3 text-xs font-semibold text-white shadow-sm transition',
-              'hover:border-white/70 disabled:cursor-default disabled:opacity-50',
-            )}
-          >
-            <FileText className="size-3.5" />
-            Log
-          </button>
-        ) : null}
-      </div>
-    </div>
-  )
-}
+    const currentOn = isOperationalToggleOn(toggle, state)
+    if (targetOn === currentOn) return
 
-type VerticalToggleSwitchProps = {
-  label: string
-  checked: boolean
-  /** When true, the on/checked state places the thumb at the top. */
-  onAtTop?: boolean
-  pending?: boolean
-  disabled?: boolean
-  onCheckedChange: (checked: boolean) => void
-}
+    const entryType = operationalToggleEntryType(toggle, targetOn)
+    if (!isLogEntryTypeVisible(entryType, trip, entries)) return
 
-function VerticalToggleSwitch({
-  label,
-  checked,
-  onAtTop = true,
-  pending = false,
-  disabled = false,
-  onCheckedChange,
-}: VerticalToggleSwitchProps) {
-  const thumbAtTop = onAtTop ? checked : !checked
+    setPendingConfirm({ toggle, targetOn })
+  }
+
+  const confirmPending = () => {
+    if (!pendingConfirm || busyToggle) return
+    const next = pendingConfirm
+    setPendingConfirm(null)
+    void applyToggle(next.toggle, next.targetOn)
+  }
 
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/80 drop-shadow-sm">
-        {label}
-      </span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        disabled={disabled}
-        onClick={() => onCheckedChange(!checked)}
-        className={cn(
-          'relative h-10 w-[1.35rem] shrink-0 rounded-full border shadow-sm transition-colors',
-          checked
-            ? 'border-white/55 bg-white/30'
-            : 'border-white/35 bg-black/40',
-          !disabled && 'hover:border-white/70',
-          disabled && 'cursor-default opacity-50',
-        )}
-      >
-        <span
-          aria-hidden
-          className={cn(
-            'absolute left-1/2 size-[0.85rem] -translate-x-1/2 rounded-full bg-white shadow transition-[top] duration-200 ease-out',
-            thumbAtTop ? 'top-[3px]' : 'top-[calc(100%-0.85rem-3px)]',
-            pending && 'animate-pulse',
-          )}
+    <>
+      <div className="pointer-events-none absolute left-2.5 top-1/2 z-20 -translate-y-1/2 sm:left-3">
+        <DevComponentLabel
+          name="TripOperationalStatus"
+          className="absolute -left-1 bottom-full mb-1 opacity-70"
         />
-      </button>
-    </div>
+        <div
+          className={cn(
+            'pointer-events-auto flex flex-col overflow-visible',
+            MAP_CHROME_SURFACE_CLASS,
+          )}
+        >
+          {OPERATIONAL_TOGGLES.map((toggle, index) => {
+            const checked = isOperationalToggleOn(toggle, state)
+            const pending = busyToggle === toggle
+            const canTurnOn =
+              interactive &&
+              isLogEntryTypeVisible(
+                operationalToggleEntryType(toggle, true),
+                trip,
+                entries,
+              )
+            const canTurnOff =
+              interactive &&
+              isLogEntryTypeVisible(
+                operationalToggleEntryType(toggle, false),
+                trip,
+                entries,
+              )
+            const canToggle =
+              !pending &&
+              busyToggle === null &&
+              !pendingConfirm &&
+              interactive &&
+              (checked ? canTurnOff : canTurnOn)
+
+            return (
+              <OperationalToggleButton
+                key={toggle}
+                toggle={toggle}
+                checked={checked}
+                pending={pending}
+                disabled={!canToggle}
+                bordered={index > 0}
+                onCheckedChange={(targetOn) => requestToggle(toggle, targetOn)}
+              />
+            )
+          })}
+          {interactive && onLogEntryClick ? (
+            <MapButtonTooltip label="Log entry">
+              <button
+                type="button"
+                disabled={logEntryDisabled || pendingConfirm !== null}
+                onClick={onLogEntryClick}
+                className={cn(
+                  MAP_CHROME_OPERATIONAL_CELL_CLASS,
+                  'text-white/95',
+                  MAP_CHROME_BUTTON_HOVER_CLASS,
+                  MAP_CHROME_DIVIDER_CLASS,
+                  'disabled:cursor-default disabled:opacity-50',
+                )}
+                aria-label="Log entry"
+                title="Log entry"
+              >
+                <FileText className="size-5" strokeWidth={2.25} />
+              </button>
+            </MapButtonTooltip>
+          ) : null}
+        </div>
+      </div>
+
+      {pendingConfirm ? (
+        <TripOperationalConfirmModal
+          prompt={operationalToggleConfirmPrompt(
+            pendingConfirm.toggle,
+            pendingConfirm.targetOn,
+          )}
+          onClose={() => setPendingConfirm(null)}
+          onConfirm={confirmPending}
+        />
+      ) : null}
+    </>
   )
 }
