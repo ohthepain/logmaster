@@ -5,8 +5,9 @@ import { cn } from '../lib/cn'
 import { isDevModeAvailable } from '../lib/dev-mode'
 import { useAppOptionsStore } from '../stores/app-options'
 import { DevComponentLabel } from './DevComponentLabel'
+import { TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS } from '../lib/trip-map-overlay'
 
-export default function DevModeToggle() {
+export default function DevModeToggle({ mapOverlay = false }: { mapOverlay?: boolean }) {
   const devMode = useAppOptionsStore((state) => state.devMode)
   const setDevMode = useAppOptionsStore((state) => state.setDevMode)
   const [open, setOpen] = useState(false)
@@ -40,11 +41,25 @@ export default function DevModeToggle() {
         type="button"
         className={cn(
           'inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.2em] transition',
-          'outline-none focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--header-bg)]',
-          devMode
-            ? 'border-[var(--brand)] bg-[var(--brand)] text-white shadow-sm'
-            : 'border-[var(--chip-line)] bg-transparent text-[var(--sea-ink-soft)] hover:border-[var(--line)] hover:text-[var(--sea-ink)]',
-          open && 'ring-2 ring-[var(--line)]',
+          'outline-none',
+          mapOverlay
+            ? cn(
+                'focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+                devMode
+                  ? 'border-[var(--brand)] bg-[var(--brand)] text-white shadow-sm'
+                  : cn(
+                      TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS,
+                      'text-white/80 hover:border-white/50 hover:text-white',
+                    ),
+                open && 'ring-2 ring-white/30',
+              )
+            : cn(
+                'focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--header-bg)]',
+                devMode
+                  ? 'border-[var(--brand)] bg-[var(--brand)] text-white shadow-sm'
+                  : 'border-[var(--chip-line)] bg-transparent text-[var(--sea-ink-soft)] hover:border-[var(--line)] hover:text-[var(--sea-ink)]',
+                open && 'ring-2 ring-[var(--line)]',
+              ),
         )}
         aria-haspopup="menu"
         aria-expanded={open}

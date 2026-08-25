@@ -15,9 +15,5 @@ export const MAP_CHROME_CELL_CLASS =
 export const MAP_CHROME_OPERATIONAL_CELL_CLASS =
   'flex size-[43.5px] items-center justify-center transition' as const
 
-/**
- * Black-backed PNG icons: screen blend drops opaque black so white/light art
- * reads on the dark chrome surface without re-exporting assets.
- */
-export const MAP_CHROME_ICON_CLASS =
-  'mix-blend-screen contrast-125 brightness-110' as const
+/** Operational map toggles — force icons to full white on dark chrome. */
+export const MAP_CHROME_OPERATIONAL_ICON_CLASS = 'brightness-0 invert' as const

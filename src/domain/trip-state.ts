@@ -24,12 +24,30 @@ export const DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS: TripOperationalFields = {
 }
 
 function initialOperationalState(
-  trip: Pick<Trip, 'status'>,
+  trip: Pick<
+    Trip,
+    'status' | 'sailsUp' | 'engineOn' | 'moored' | 'anchorDown'
+  >,
 ): TripOperationalState {
   if (trip.status === 'IN_PROGRESS') {
     return {
       inProgress: true,
-      ...DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS,
+      sailsUp: trip.sailsUp ?? DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.sailsUp,
+      engineOn:
+        trip.engineOn ?? DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.engineOn,
+      moored: trip.moored ?? DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.moored,
+      anchorDown:
+        trip.anchorDown ?? DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.anchorDown,
+    }
+  }
+
+  if (trip.status === 'PLANNED') {
+    return {
+      inProgress: false,
+      sailsUp: trip.sailsUp ?? null,
+      engineOn: trip.engineOn ?? null,
+      moored: trip.moored ?? null,
+      anchorDown: trip.anchorDown ?? null,
     }
   }
 
@@ -44,9 +62,18 @@ function initialOperationalState(
 
 function applyStartTripDefaults(state: TripOperationalState) {
   state.inProgress = true
-  state.sailsUp = DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.sailsUp
-  state.moored = DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.moored
-  state.anchorDown = DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.anchorDown
+  if (state.sailsUp === null) {
+    state.sailsUp = DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.sailsUp
+  }
+  if (state.engineOn === null) {
+    state.engineOn = DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.engineOn
+  }
+  if (state.moored === null) {
+    state.moored = DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.moored
+  }
+  if (state.anchorDown === null) {
+    state.anchorDown = DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.anchorDown
+  }
 }
 
 const STATE_ENTRY_TYPES = new Set<LogEntryType>([
@@ -63,7 +90,10 @@ const STATE_ENTRY_TYPES = new Set<LogEntryType>([
 ])
 
 export function deriveTripOperationalState(
-  trip: Pick<Trip, 'status'>,
+  trip: Pick<
+    Trip,
+    'status' | 'sailsUp' | 'engineOn' | 'moored' | 'anchorDown'
+  >,
   entries: Pick<LogEntry, 'type' | 'timestamp' | 'deleted'>[],
 ): TripOperationalState {
   const state = initialOperationalState(trip)
@@ -139,7 +169,20 @@ export function resolveTripOperationalState(
     return {
       inProgress: true,
       sailsUp: trip.sailsUp ?? DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.sailsUp,
-      engineOn: trip.engineOn ?? DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.engineOn,
+      engineOn:
+        trip.engineOn ?? DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.engineOn,
+      moored: trip.moored ?? DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.moored,
+      anchorDown:
+        trip.anchorDown ?? DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.anchorDown,
+    }
+  }
+
+  if (trip.status === 'PLANNED') {
+    return {
+      inProgress: false,
+      sailsUp: trip.sailsUp ?? DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.sailsUp,
+      engineOn:
+        trip.engineOn ?? DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.engineOn,
       moored: trip.moored ?? DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.moored,
       anchorDown:
         trip.anchorDown ?? DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS.anchorDown,
@@ -312,5 +355,21 @@ export function operationalToggleEntryType(
       return targetOn ? 'MOORED' : 'CAST_OFF'
     case 'anchor':
       return targetOn ? 'ANCHOR_DROPPED' : 'ANCHOR_WEIGHED'
+  }
+}
+
+export function operationalToggleFieldPatch(
+  toggle: OperationalToggle,
+  targetOn: boolean,
+): Partial<TripOperationalFields> {
+  switch (toggle) {
+    case 'sails':
+      return { sailsUp: targetOn }
+    case 'engine':
+      return { engineOn: targetOn }
+    case 'moored':
+      return { moored: targetOn }
+    case 'anchor':
+      return { anchorDown: targetOn }
   }
 }

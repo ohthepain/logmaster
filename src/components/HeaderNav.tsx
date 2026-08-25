@@ -1,45 +1,50 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { BookOpenText, Map, MapPin } from 'lucide-react'
+import { BookOpenText, MapPin } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 import { cn } from '../lib/cn'
 import {
   resolveHeaderNavSegment,
-  resolveInProgressTrip,
-  type HeaderNavSegment,
+  resolveMapModeTrip,
 } from '../lib/trip-nav'
-import { useLogbookStore } from '../stores/logbook'
 import { DevComponentLabel } from './DevComponentLabel'
+import { TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS } from '../lib/trip-map-overlay'
+import { useLogbookStore } from '../stores/logbook'
 
-const NAV_OPTIONS: {
-  segment: HeaderNavSegment
-  label: string
-  icon: typeof BookOpenText
-}[] = [
-  { segment: 'trips', label: 'Trips', icon: BookOpenText },
-  { segment: 'live-trip', label: 'Trip in progress', icon: MapPin },
-  { segment: 'map', label: 'Map', icon: Map },
-]
-
-function navButtonClass(selected: boolean) {
+function navButtonClass(selected: boolean, mapOverlay: boolean) {
   return cn(
     'flex h-8 w-8 shrink-0 items-center justify-center rounded-sm outline-none no-underline',
-    'transition-[color,background-color,box-shadow] duration-150',
-    'text-[var(--sea-ink-soft)]',
-    'hover:bg-[var(--link-bg-hover)]/90 hover:text-[var(--sea-ink)]',
-    'focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--header-bg)]',
-    selected &&
-      'bg-[var(--chip-bg)] text-[var(--sea-ink)] shadow-sm ring-1 ring-[var(--line)]/80',
+    'transition-[background-color,box-shadow] duration-150',
+    mapOverlay
+      ? cn(
+          'text-white hover:text-white',
+          'hover:bg-white/35',
+          'focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+          selected
+            ? 'bg-white/45 shadow-sm ring-1 ring-white/35'
+            : 'bg-white/20',
+        )
+      : cn(
+          'text-[var(--sea-ink)] hover:text-[var(--sea-ink)]',
+          'hover:bg-[var(--link-bg-hover)]',
+          'focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--header-bg)]',
+          selected
+            ? 'bg-[var(--chip-bg)] shadow-sm ring-1 ring-[var(--line)]/80'
+            : 'bg-[color-mix(in_oklab,var(--chip-bg)_65%,transparent)]',
+        ),
   )
 }
 
-export function HeaderNav({ className }: { className?: string }) {
+export function HeaderNav({
+  className,
+  mapOverlay = false,
+}: {
+  className?: string
+  mapOverlay?: boolean
+}) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const trips = useLogbookStore((state) => state.trips)
-  const inProgressTrip = useMemo(() => resolveInProgressTrip(trips), [trips])
-  const selected = useMemo(
-    () => resolveHeaderNavSegment(pathname, inProgressTrip?.id ?? null),
-    [pathname, inProgressTrip?.id],
-  )
+  const mapTrip = useMemo(() => resolveMapModeTrip(trips), [trips])
+  const selected = useMemo(() => resolveHeaderNavSegment(pathname), [pathname])
 
   useEffect(() => {
     void useLogbookStore.getState().load()
@@ -48,82 +53,77 @@ export function HeaderNav({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'relative inline-flex shrink-0 items-center rounded-md border border-[var(--chip-line)]',
-        'bg-[color-mix(in_oklab,var(--chip-bg)_75%,transparent)] p-0.5 shadow-sm',
+        'relative inline-flex shrink-0 items-center rounded-md border p-0.5 shadow-sm',
+        mapOverlay
+          ? TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS
+          : 'border-[var(--chip-line)] bg-[color-mix(in_oklab,var(--chip-bg)_75%,transparent)]',
         className,
       )}
       role="group"
       aria-label="Main navigation"
     >
       <DevComponentLabel name="HeaderNav" className="absolute -top-5 left-0" />
-      {NAV_OPTIONS.map(({ segment, label, icon: Icon }) => {
-        const isSelected = selected === segment
-
-        if (segment === 'trips') {
-          return (
-            <Link
-              key={segment}
-              to="/trips"
-              className={navButtonClass(isSelected)}
-              aria-current={isSelected ? 'page' : undefined}
-              aria-label={label}
-              title={label}
-            >
-              <Icon className="size-[1.125rem]" strokeWidth={2} aria-hidden />
-            </Link>
-          )
-        }
-
-        if (segment === 'map') {
-          return (
-            <Link
-              key={segment}
-              to="/map"
-              className={navButtonClass(isSelected)}
-              aria-current={isSelected ? 'page' : undefined}
-              aria-label={label}
-              title={label}
-            >
-              <Icon className="size-[1.125rem]" strokeWidth={2} aria-hidden />
-            </Link>
-          )
-        }
-
-        if (!inProgressTrip) {
-          return (
-            <button
-              key={segment}
-              type="button"
-              disabled
-              className={cn(
-                navButtonClass(false),
-                'cursor-not-allowed opacity-45 hover:bg-transparent hover:text-[var(--sea-ink-soft)]',
-              )}
-              aria-label="No trip in progress"
-              title="No trip in progress"
-            >
-              <Icon className="size-[1.125rem]" strokeWidth={2} aria-hidden />
-            </button>
-          )
-        }
-
-        return (
-          <Link
-            key={segment}
-            to="/trips/$tripId"
-            params={{ tripId: inProgressTrip.id }}
-            className={navButtonClass(isSelected)}
-            aria-current={isSelected ? 'page' : undefined}
-            aria-label={label}
-            title={label}
-            onClick={() => {
-              useLogbookStore.getState().selectTrip(inProgressTrip.id)
-            }}
-          >
-            <Icon className="size-[1.125rem]" strokeWidth={2} aria-hidden />
-          </Link>
-        )
-      })}
+      <Link
+        to="/trips"
+        className={navButtonClass(selected === 'trips', mapOverlay)}
+        aria-current={selected === 'trips' ? 'page' : undefined}
+        aria-label="Trips"
+        title="Trips"
+      >
+        <BookOpenText
+          className={cn(
+            'size-[1.125rem]',
+            mapOverlay ? 'text-white' : 'text-[var(--sea-ink)]',
+          )}
+          strokeWidth={2}
+          aria-hidden
+        />
+      </Link>
+      {mapTrip ? (
+        <Link
+          to="/trips/$tripId"
+          params={{ tripId: mapTrip.id }}
+          className={navButtonClass(selected === 'map', mapOverlay)}
+          aria-current={selected === 'map' ? 'page' : undefined}
+          aria-label="Map"
+          title="Map"
+          onClick={() => {
+            useLogbookStore.getState().selectTrip(mapTrip.id)
+          }}
+        >
+          <MapPin
+            className={cn(
+              'size-[1.125rem]',
+              mapOverlay ? 'text-white' : 'text-[var(--sea-ink)]',
+            )}
+            strokeWidth={2}
+            aria-hidden
+          />
+        </Link>
+      ) : (
+        <button
+          type="button"
+          disabled
+          className={cn(
+            navButtonClass(false, mapOverlay),
+            'cursor-not-allowed opacity-45',
+            mapOverlay
+              ? 'hover:bg-white/20'
+              : 'hover:bg-[color-mix(in_oklab,var(--chip-bg)_65%,transparent)]',
+          )}
+          aria-label="No trip for map"
+          title="No trip for map"
+        >
+          <MapPin
+            className={cn(
+              'size-[1.125rem]',
+              mapOverlay ? 'text-white' : 'text-[var(--sea-ink)]',
+            )}
+            strokeWidth={2}
+            aria-hidden
+          />
+        </button>
+      )}
     </div>
   )
 }

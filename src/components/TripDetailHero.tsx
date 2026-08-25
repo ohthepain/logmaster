@@ -27,7 +27,7 @@ export function TripDetailHero({
   const isActiveTrip = trip.status === 'IN_PROGRESS' || trip.status === 'PLANNED'
   const showInteractiveMap = isActiveTrip || cover.kind === 'map'
   const showPhoto = !showInteractiveMap && cover.kind === 'photo' && cover.photoUrl
-  const showOperationalOverlay = showInteractiveMap && trip.status !== 'PLANNED'
+  const showOperationalOverlay = showInteractiveMap
 
   return (
     <section className="absolute inset-0 isolate overflow-hidden bg-[var(--chip-bg)]">
@@ -70,7 +70,7 @@ export function TripDetailHero({
         />
       ) : null}
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex justify-end px-3 pt-3 sm:px-4">
+      <div className="pointer-events-none absolute inset-x-0 top-16 z-40 flex justify-start px-3 sm:px-4">
         <button
           type="button"
           onClick={onEditCoverClick}

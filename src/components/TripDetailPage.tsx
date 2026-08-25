@@ -194,8 +194,11 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
 
   return (
     <>
-      <DevComponentLabel name="TripDetailPage" />
-      <div className="relative h-[calc(100dvh-4rem)] w-full overflow-hidden">
+      <div className="relative h-dvh w-full overflow-hidden">
+        <DevComponentLabel
+          name="TripDetailPage"
+          className="absolute left-3 top-3 z-50 sm:left-4"
+        />
         <TripDetailHero
           trip={trip}
           cover={cover}

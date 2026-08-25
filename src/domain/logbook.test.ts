@@ -84,6 +84,27 @@ describe('deriveTripOperationalState', () => {
     expect(state.moored).toBe(true)
     expect(state.anchorDown).toBe(false)
   })
+
+  it('preserves pre-start settings when START_TRIP is logged', () => {
+    const state = deriveTripOperationalState(
+      {
+        status: 'PLANNED',
+        sailsUp: false,
+        engineOn: null,
+        moored: false,
+        anchorDown: false,
+      },
+      [entry('START_TRIP', '2026-01-01T10:00:00Z')],
+    )
+
+    expect(state).toEqual({
+      inProgress: true,
+      sailsUp: false,
+      engineOn: null,
+      moored: false,
+      anchorDown: false,
+    })
+  })
 })
 
 describe('trip operational persistence helpers', () => {
@@ -137,6 +158,16 @@ describe('trip operational persistence helpers', () => {
   it('uses in-progress defaults when stored trip fields are null', () => {
     expect(resolveTripOperationalState({ status: 'IN_PROGRESS' })).toEqual({
       inProgress: true,
+      sailsUp: false,
+      engineOn: null,
+      moored: true,
+      anchorDown: false,
+    })
+  })
+
+  it('uses departure defaults for planned trips without stored fields', () => {
+    expect(resolveTripOperationalState({ status: 'PLANNED' })).toEqual({
+      inProgress: false,
       sailsUp: false,
       engineOn: null,
       moored: true,

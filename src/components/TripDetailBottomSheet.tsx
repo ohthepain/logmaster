@@ -132,7 +132,6 @@ export function TripDetailBottomSheet({
 
   return (
     <div ref={containerRef} className="pointer-events-none absolute inset-0">
-      <DevComponentLabel name="TripDetailBottomSheet" className="left-2 top-2" />
       <div
         className={cn(
           'pointer-events-auto absolute inset-x-0 bottom-0 z-30 flex flex-col overflow-hidden rounded-t-2xl border-t border-white/25',
@@ -142,6 +141,10 @@ export function TripDetailBottomSheet({
         )}
         style={sheetHeight > 0 ? { height: `${sheetHeight}px` } : undefined}
       >
+        <DevComponentLabel
+          name="TripDetailBottomSheet"
+          className="absolute left-2 top-2 z-40"
+        />
         <div
           className="flex shrink-0 cursor-grab touch-none flex-col active:cursor-grabbing"
           style={{ height: `${dragChromeHeight}px` }}

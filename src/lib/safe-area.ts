@@ -18,7 +18,7 @@ export const BOTTOM_SHEET_DRAG_ZONE_PX = 48;
 export const BOTTOM_SHEET_MIN_INSET_PX = 10;
 
 /** Default collapsed height as a fraction of the trip map area. */
-export const BOTTOM_SHEET_PEEK_RATIO = 0.0;
+export const BOTTOM_SHEET_PEEK_RATIO = 0.16;
 
 export function bottomSheetPeekHeight(containerHeight: number, safeAreaBottom: number): number {
   const inset = Math.max(safeAreaBottom, BOTTOM_SHEET_MIN_INSET_PX);

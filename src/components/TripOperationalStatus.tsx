@@ -7,6 +7,7 @@ import {
   isOperationalToggleOn,
   operationalToggleConfirmPrompt,
   operationalToggleEntryType,
+  operationalToggleFieldPatch,
   OPERATIONAL_TOGGLES,
   resolveTripOperationalState,
 } from '../domain/trip-state'
@@ -48,17 +49,38 @@ export function TripOperationalStatus({
   logEntryDisabled = false,
 }: TripOperationalStatusProps) {
   const addEntry = useLogbookStore((state) => state.addEntry)
+  const updateTrip = useLogbookStore((state) => state.updateTrip)
   const [busyToggle, setBusyToggle] = useState<OperationalToggle | null>(null)
   const [pendingConfirm, setPendingConfirm] =
     useState<PendingOperationalConfirm | null>(null)
 
-  if (trip.status === 'PLANNED') return null
-
   const state = resolveTripOperationalState(trip, entries)
-  const interactive = trip.status === 'IN_PROGRESS'
+  const isPlanned = trip.status === 'PLANNED'
+  const isInProgress = trip.status === 'IN_PROGRESS'
+
+  const applyPlannedToggle = async (
+    toggle: OperationalToggle,
+    targetOn: boolean,
+  ) => {
+    if (!isPlanned || busyToggle) return
+
+    const currentOn = isOperationalToggleOn(toggle, state)
+    if (targetOn === currentOn) return
+
+    setBusyToggle(toggle)
+    try {
+      await updateTrip(tripId, operationalToggleFieldPatch(toggle, targetOn))
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update trip settings',
+      )
+    } finally {
+      setBusyToggle(null)
+    }
+  }
 
   const applyToggle = async (toggle: OperationalToggle, targetOn: boolean) => {
-    if (!interactive || busyToggle) return
+    if (!isInProgress || busyToggle) return
 
     const currentOn = isOperationalToggleOn(toggle, state)
     if (targetOn === currentOn) return
@@ -81,10 +103,17 @@ export function TripOperationalStatus({
   }
 
   const requestToggle = (toggle: OperationalToggle, targetOn: boolean) => {
-    if (!interactive || busyToggle) return
+    if (busyToggle) return
 
     const currentOn = isOperationalToggleOn(toggle, state)
     if (targetOn === currentOn) return
+
+    if (isPlanned) {
+      void applyPlannedToggle(toggle, targetOn)
+      return
+    }
+
+    if (!isInProgress) return
 
     const entryType = operationalToggleEntryType(toggle, targetOn)
     if (!isLogEntryTypeVisible(entryType, trip, entries)) return
@@ -116,24 +145,26 @@ export function TripOperationalStatus({
             const checked = isOperationalToggleOn(toggle, state)
             const pending = busyToggle === toggle
             const canTurnOn =
-              interactive &&
-              isLogEntryTypeVisible(
-                operationalToggleEntryType(toggle, true),
-                trip,
-                entries,
-              )
+              isPlanned ||
+              (isInProgress &&
+                isLogEntryTypeVisible(
+                  operationalToggleEntryType(toggle, true),
+                  trip,
+                  entries,
+                ))
             const canTurnOff =
-              interactive &&
-              isLogEntryTypeVisible(
-                operationalToggleEntryType(toggle, false),
-                trip,
-                entries,
-              )
+              isPlanned ||
+              (isInProgress &&
+                isLogEntryTypeVisible(
+                  operationalToggleEntryType(toggle, false),
+                  trip,
+                  entries,
+                ))
             const canToggle =
               !pending &&
               busyToggle === null &&
               !pendingConfirm &&
-              interactive &&
+              (isPlanned || isInProgress) &&
               (checked ? canTurnOff : canTurnOn)
 
             return (
@@ -148,7 +179,7 @@ export function TripOperationalStatus({
               />
             )
           })}
-          {interactive && onLogEntryClick ? (
+          {isInProgress && onLogEntryClick ? (
             <MapButtonTooltip label="Log entry">
               <button
                 type="button"
@@ -156,15 +187,15 @@ export function TripOperationalStatus({
                 onClick={onLogEntryClick}
                 className={cn(
                   MAP_CHROME_OPERATIONAL_CELL_CLASS,
-                  'text-white/95',
+                  'text-white',
                   MAP_CHROME_BUTTON_HOVER_CLASS,
                   MAP_CHROME_DIVIDER_CLASS,
-                  'disabled:cursor-default disabled:opacity-50',
+                  'disabled:cursor-default',
                 )}
                 aria-label="Log entry"
                 title="Log entry"
               >
-                <FileText className="size-5" strokeWidth={2.25} />
+                <FileText className="size-5 text-white" strokeWidth={2.25} />
               </button>
             </MapButtonTooltip>
           ) : null}

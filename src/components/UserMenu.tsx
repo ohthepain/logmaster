@@ -10,8 +10,9 @@ import { DevComponentLabel } from './DevComponentLabel'
 import { DevHomeStats } from './DevHomeStats'
 import { useIsAdmin } from '../lib/use-admin'
 import { useFtue } from './FtueGate'
+import { TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS } from '../lib/trip-map-overlay'
 
-export function UserMenu() {
+export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
   const session = useSession()
   const user = session.data?.user
   const { resetTutorial } = useFtue()
@@ -53,11 +54,19 @@ export function UserMenu() {
         <button
           type="button"
           className={cn(
-            'flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)]',
-            'text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]',
-            'focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--header-bg)]',
-            'outline-none',
-            open && 'ring-2 ring-[var(--line)]',
+            'flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border transition outline-none',
+            mapOverlay
+              ? cn(
+                  TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS,
+                  'text-white hover:bg-white/10',
+                  'focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+                  open && 'ring-2 ring-white/30',
+                )
+              : cn(
+                  'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] hover:bg-[var(--link-bg-hover)]',
+                  'focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--header-bg)]',
+                  open && 'ring-2 ring-[var(--line)]',
+                ),
           )}
           aria-label={
             user ? `Account: ${user.name || user.email}` : 'Account menu'

@@ -82,6 +82,10 @@ type UpdateTripInput = Partial<
     | 'registration'
     | 'skipper'
     | 'crewMemberIds'
+    | 'sailsUp'
+    | 'engineOn'
+    | 'moored'
+    | 'anchorDown'
   >
 >
 

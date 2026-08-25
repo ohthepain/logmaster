@@ -3,8 +3,8 @@ import type { OperationalToggle } from '../domain/trip-state'
 import {
   MAP_CHROME_BUTTON_HOVER_CLASS,
   MAP_CHROME_DIVIDER_CLASS,
-  MAP_CHROME_ICON_CLASS,
   MAP_CHROME_OPERATIONAL_CELL_CLASS,
+  MAP_CHROME_OPERATIONAL_ICON_CLASS,
 } from '../lib/map-chrome'
 import { cn } from '../lib/cn'
 import { MapButtonTooltip } from './MapButtonTooltip'
@@ -40,7 +40,7 @@ type OperationalToggleButtonProps = {
 export function OperationalToggleButton({
   toggle,
   checked,
-  pending = false,
+  pending: _pending = false,
   disabled = false,
   bordered = false,
   onCheckedChange,
@@ -64,8 +64,7 @@ export function OperationalToggleButton({
           MAP_CHROME_BUTTON_HOVER_CLASS,
           bordered && MAP_CHROME_DIVIDER_CLASS,
           !disabled && 'hover:border-[rgba(126,200,232,0.35)]',
-          disabled && 'cursor-default opacity-50',
-          pending && 'animate-pulse',
+          disabled && 'cursor-default',
         )}
       >
         <img
@@ -75,7 +74,7 @@ export function OperationalToggleButton({
           height={44}
           decoding="async"
           draggable={false}
-          className={cn('size-full object-contain p-0.5', MAP_CHROME_ICON_CLASS)}
+          className={cn('size-full object-contain p-0.5', MAP_CHROME_OPERATIONAL_ICON_CLASS)}
         />
       </button>
     </MapButtonTooltip>
