@@ -1,7 +1,5 @@
 import type { Trip } from '../domain/logbook'
 
-export type HeaderNavSegment = 'trips' | 'map'
-
 export function resolveInProgressTrip(trips: Trip[]): Trip | null {
   return trips.find((trip) => trip.status === 'IN_PROGRESS') ?? null
 }
@@ -22,16 +20,4 @@ export function resolveMapModeTrip(trips: Trip[]): Trip | null {
       new Date(b.completedAt ?? b.updatedAt).getTime() -
       new Date(a.completedAt ?? a.updatedAt).getTime(),
   )[0]
-}
-
-export function resolveHeaderNavSegment(
-  pathname: string,
-): HeaderNavSegment | null {
-  if (pathname === '/map' || /^\/trips\/[^/]+$/.test(pathname)) {
-    return 'map'
-  }
-  if (pathname === '/trips') {
-    return 'trips'
-  }
-  return null
 }

@@ -18,7 +18,7 @@ import { DevComponentLabel } from './DevComponentLabel'
 
 const SNAP_RATIOS = {
   half: 0.48,
-  full: 0.88,
+  full: 1,
 } as const
 
 type SnapName = 'peek' | keyof typeof SNAP_RATIOS

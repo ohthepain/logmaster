@@ -1,12 +1,14 @@
 import { createFileRoute, useLocation, useNavigate } from '@tanstack/react-router'
 import { Sailboat } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { AddButton } from '../../../components/AddButton'
+import { StartTripLauncher } from '../../../components/StartTripLauncher'
 import type { Trip } from '../../../domain/logbook'
 import { cn } from '../../../lib/cn'
 import { formatDateTime } from '../../../lib/logbook-format'
 import { tripCoverPhotoUrl, tripDisplayName } from '../../../lib/trip-display'
+import { useSession } from '../../../lib/auth-client'
 import { useLogbookStore } from '../../../stores/logbook'
 
 type TripsSearch = { startTrip?: boolean }
@@ -24,9 +26,11 @@ export const Route = createFileRoute('/_main/trips/')({
 
 function TripsPage() {
   const store = useLogbookStore()
+  const session = useSession()
   const navigate = useNavigate()
   const location = useLocation()
   const { startTrip: startTripSearch } = Route.useSearch()
+  const [startTripOpen, setStartTripOpen] = useState(false)
 
   useEffect(() => {
     void useLogbookStore.getState().load()
@@ -34,7 +38,8 @@ function TripsPage() {
 
   useEffect(() => {
     if (!startTripSearch) return
-    void navigate({ to: '/', search: { startTrip: true }, replace: true })
+    setStartTripOpen(true)
+    void navigate({ to: '/trips', search: {}, replace: true })
   }, [startTripSearch, navigate])
 
   const openTrip = (tripId: string) => {
@@ -43,7 +48,11 @@ function TripsPage() {
   }
 
   const openStartTrip = () => {
-    void navigate({ to: '/', search: { startTrip: true } })
+    if (!session.data?.user) {
+      void navigate({ to: '/sign-in', search: { redirect: '/trips?startTrip=1' } })
+      return
+    }
+    setStartTripOpen(true)
   }
 
   return (
@@ -80,6 +89,10 @@ function TripsPage() {
           ))}
         </div>
       )}
+      <StartTripLauncher
+        open={startTripOpen}
+        onClose={() => setStartTripOpen(false)}
+      />
     </main>
   )
 }

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { User } from 'lucide-react'
+import { BookOpenText, User } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { signOut, useSession } from '../lib/auth-client'
@@ -135,6 +135,17 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
 
             <DevHomeStats />
 
+            <Link
+              to="/trips"
+              role="menuitem"
+              className="block rounded-xl px-3 py-2 text-sm font-semibold text-[var(--brand)] no-underline outline-none hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20"
+              onClick={() => setOpen(false)}
+            >
+              <span className="inline-flex items-center gap-2">
+                <BookOpenText className="size-4" strokeWidth={2} aria-hidden />
+                Trips
+              </span>
+            </Link>
             <Link
               to="/boats"
               role="menuitem"
