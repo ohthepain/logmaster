@@ -4,6 +4,9 @@ App/output
 App/App/public
 DerivedData
 xcuserdata
+build
+Gemfile.lock
+vendor
 
 # Cordova plugins for Capacitor
 capacitor-cordova-ios-plugins

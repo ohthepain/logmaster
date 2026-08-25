@@ -1,0 +1,33 @@
+default_platform(:ios)
+
+platform :ios do
+  desc 'Build a release .ipa for App Store / TestFlight'
+  lane :build do
+    build_app(
+      project: 'App/App.xcodeproj',
+      scheme: 'App',
+      configuration: 'Release',
+      export_method: 'app-store',
+      output_directory: 'build',
+      output_name: 'logmaster.ipa',
+      xcargs: '-allowProvisioningUpdates DEVELOPMENT_TEAM=RPGSNMH65P',
+      export_options: {
+        method: 'app-store',
+        signingStyle: 'automatic',
+        teamID: 'RPGSNMH65P',
+        uploadSymbols: true,
+        uploadBitcode: false,
+      },
+    )
+  end
+
+  desc 'Upload the latest build to TestFlight'
+  lane :beta do
+    build
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      distribute_external: false,
+      notify_external_testers: false,
+    )
+  end
+end

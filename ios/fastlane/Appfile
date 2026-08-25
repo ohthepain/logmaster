@@ -1,0 +1,5 @@
+app_identifier('live.logmaster.app')
+team_id('RPGSNMH65P')
+
+# Optional: set APPLE_ID in the environment, or sign in via Xcode first.
+apple_id(ENV['APPLE_ID']) if ENV['APPLE_ID']
