@@ -136,8 +136,10 @@ export function TripOperationalStatus({
           className="absolute -left-1 bottom-full mb-1 opacity-70"
         />
         <div
+          data-trip-operational-controls
+          data-map-touch-zone
           className={cn(
-            'pointer-events-auto flex flex-col overflow-visible',
+            'ios-map-touch-target pointer-events-auto flex flex-col overflow-visible',
             MAP_CHROME_SURFACE_CLASS,
           )}
         >

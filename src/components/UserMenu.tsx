@@ -96,7 +96,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
             role="menu"
             aria-label="Account"
             className={cn(
-              'absolute right-0 top-full z-[100] mt-2 min-w-[14rem] rounded-2xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-2xl backdrop-blur-md',
+              'ios-map-touch-target absolute right-0 top-full z-[100] mt-2 min-w-[14rem] rounded-2xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-2xl backdrop-blur-md',
               'ring-1 ring-[var(--line)]/60',
             )}
           >

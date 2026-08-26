@@ -1,0 +1,16 @@
+{
+  "name": "logmaster-apple-map",
+  "version": "1.0.0",
+  "description": "Native Apple MapKit for logmaster iOS",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  },
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  }
+}

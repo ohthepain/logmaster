@@ -133,8 +133,10 @@ export function TripDetailBottomSheet({
   return (
     <div ref={containerRef} className="pointer-events-none absolute inset-0">
       <div
+        data-trip-bottom-sheet
+        data-map-touch-zone
         className={cn(
-          'pointer-events-auto absolute inset-x-0 bottom-0 z-30 flex flex-col overflow-hidden rounded-t-2xl border-t border-white/25',
+          'ios-map-touch-target pointer-events-auto absolute inset-x-0 bottom-0 z-30 flex flex-col overflow-hidden rounded-t-2xl border-t border-white/25',
           TRIP_MAP_OVERLAY_SURFACE_CLASS,
           !dragging && 'transition-[height] duration-200 ease-out',
           className,
@@ -146,7 +148,8 @@ export function TripDetailBottomSheet({
           className="absolute left-2 top-2 z-40"
         />
         <div
-          className="flex shrink-0 cursor-grab touch-none flex-col active:cursor-grabbing"
+          data-map-touch-zone
+          className="ios-map-touch-target flex shrink-0 cursor-grab touch-none flex-col active:cursor-grabbing"
           style={{ height: `${dragChromeHeight}px` }}
           onPointerDown={(event) => {
             event.currentTarget.setPointerCapture(event.pointerId)
@@ -183,8 +186,9 @@ export function TripDetailBottomSheet({
         </div>
 
         <div
+          data-map-touch-zone
           className={cn(
-            'min-h-0 flex-1 overscroll-contain px-3 sm:px-4',
+            'ios-map-touch-target min-h-0 flex-1 overscroll-contain px-3 sm:px-4',
             hasScrollableContent ? 'overflow-y-auto pb-8' : 'overflow-hidden',
           )}
         >

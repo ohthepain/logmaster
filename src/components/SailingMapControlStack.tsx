@@ -28,13 +28,14 @@ export function SailingMapControlStack({
   return (
     <div
       className={cn(
-        'sailing-map-controls pointer-events-none absolute right-2.5 top-1/2 z-10 -translate-y-1/2',
+        'sailing-map-controls pointer-events-none absolute right-2.5 top-1/2 z-20 -translate-y-1/2 sm:right-3',
         className,
       )}
     >
       <div
+        data-map-touch-zone
         className={cn(
-          'pointer-events-auto flex flex-col overflow-visible',
+          'ios-map-touch-target pointer-events-auto flex flex-col overflow-visible',
           MAP_CHROME_SURFACE_CLASS,
         )}
       >
@@ -80,7 +81,11 @@ export function MapControlButton({
       aria-expanded={ariaExpanded}
       title={label}
       onClick={onClick}
+      onPointerUp={(event) => {
+        event.stopPropagation()
+      }}
       className={cn(
+        'ios-map-touch-target touch-manipulation',
         MAP_CHROME_CELL_CLASS,
         'text-white/95',
         MAP_CHROME_BUTTON_HOVER_CLASS,

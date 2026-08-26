@@ -18,6 +18,8 @@ import { fetchCrew } from "../lib/crew-api";
 import { readImageFile } from "../lib/image-file";
 import { formatDateTime, formatPosition } from "../lib/logbook-format";
 import { tripDetailCoverDisplay, tripDisplayName } from "../lib/trip-display";
+import { getNativePlatform } from "../lib/platform";
+import { useIosNativeMapTouchPassthrough } from "../lib/native/ios-map-touch-passthrough";
 import { useLogbookStore, triggerLogbookSyncRetry } from "../stores/logbook";
 
 type TripDetailPageProps = {
@@ -55,6 +57,20 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
       .catch(() => toast.error("Could not load your crew"));
   }, [tripId]);
 
+  useEffect(() => {
+    if (getNativePlatform() !== "ios") return;
+    const { style: htmlStyle } = document.documentElement;
+    const { style: bodyStyle } = document.body;
+    const previousHtmlBackground = htmlStyle.backgroundColor;
+    const previousBodyBackground = bodyStyle.backgroundColor;
+    htmlStyle.backgroundColor = "transparent";
+    bodyStyle.backgroundColor = "transparent";
+    return () => {
+      htmlStyle.backgroundColor = previousHtmlBackground;
+      bodyStyle.backgroundColor = previousBodyBackground;
+    };
+  }, []);
+
   const tripLegs = useMemo(
     () => store.legs.filter((leg) => leg.tripId === tripId),
     [store.legs, tripId],
@@ -66,6 +82,12 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
         .filter((entry) => entry.tripId === tripId && !entry.deleted)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
     [store.entries, tripId],
+  );
+
+  useIosNativeMapTouchPassthrough(
+    getNativePlatform() === "ios" &&
+      trip != null &&
+      (trip.status === "IN_PROGRESS" || trip.status === "PLANNED"),
   );
 
   const mediaByEntry = useMemo(() => {
@@ -194,7 +216,13 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
 
   return (
     <>
-      <div className="relative h-dvh w-full overflow-hidden">
+      <div
+        className={
+          getNativePlatform() === 'ios'
+            ? 'relative h-dvh w-full overflow-hidden bg-transparent'
+            : 'relative h-dvh w-full overflow-hidden'
+        }
+      >
         <DevComponentLabel
           name="TripDetailPage"
           className="absolute left-3 top-3 z-50 sm:left-4"

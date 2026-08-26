@@ -1,3 +1,6 @@
+import { Capacitor } from '@capacitor/core'
+import { Geolocation } from '@capacitor/geolocation'
+
 type PositionSnapshot = {
   latitude: number | null;
   longitude: number | null;
@@ -15,6 +18,7 @@ let cached: PositionSnapshot | null = null;
 let cachedAt = 0;
 let inflight: Promise<PositionSnapshot> | null = null;
 let watchId: number | null = null;
+let nativeWatchId: string | null = null;
 let watchSubscribers = 0;
 let devFallbackLogged = false;
 let insecureContextLogged = false;
@@ -120,7 +124,45 @@ function devFallbackPosition(detail?: string): PositionSnapshot {
   };
 }
 
+async function resolveNativeDevicePosition(): Promise<PositionSnapshot | null> {
+  if (typeof window === 'undefined' || !Capacitor.isNativePlatform()) {
+    return null
+  }
+
+  try {
+    let permissions = await Geolocation.checkPermissions()
+    if (
+      permissions.location === 'prompt' ||
+      permissions.location === 'prompt-with-rationale'
+    ) {
+      permissions = await Geolocation.requestPermissions()
+    }
+    if (permissions.location !== 'granted' && permissions.coarseLocation !== 'granted') {
+      return null
+    }
+
+    const position = await Geolocation.getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 10_000,
+    })
+
+    const heading = position.coords.heading
+    return {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      accuracy: position.coords.accuracy,
+      heading: heading != null && Number.isFinite(heading) ? heading : null,
+      timestamp: new Date(position.timestamp).toISOString(),
+    }
+  } catch {
+    return null
+  }
+}
+
 async function resolveDevicePosition(): Promise<PositionSnapshot> {
+  const nativePosition = await resolveNativeDevicePosition()
+  if (nativePosition) return nativePosition
+
   const override = devOverrideSnapshot();
   if (override) return override;
 
@@ -155,7 +197,33 @@ async function resolveDevicePosition(): Promise<PositionSnapshot> {
   return devFallbackPosition("permission denied or timed out");
 }
 
+async function ensureNativeWatch() {
+  if (nativeWatchId != null || typeof window === "undefined" || !Capacitor.isNativePlatform()) {
+    return;
+  }
+
+  nativeWatchId = await Geolocation.watchPosition(
+    { enableHighAccuracy: true },
+    (position, error) => {
+      if (error || devPositionOverride || !position) return;
+      const heading = position.coords.heading;
+      publish({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        heading: heading != null && Number.isFinite(heading) ? heading : null,
+        timestamp: new Date(position.timestamp).toISOString(),
+      });
+    },
+  );
+}
+
 function ensureWatch() {
+  if (Capacitor.isNativePlatform()) {
+    void ensureNativeWatch();
+    return;
+  }
+
   if (watchId != null || typeof navigator === "undefined") {
     return;
   }
@@ -171,7 +239,16 @@ function ensureWatch() {
 }
 
 function stopWatchIfIdle() {
-  if (watchSubscribers > 0 || watchId == null || typeof navigator === "undefined") {
+  if (watchSubscribers > 0) {
+    return;
+  }
+
+  if (nativeWatchId != null) {
+    void Geolocation.clearWatch({ id: nativeWatchId });
+    nativeWatchId = null;
+  }
+
+  if (watchId == null || typeof navigator === "undefined") {
     return;
   }
   navigator.geolocation.clearWatch(watchId);

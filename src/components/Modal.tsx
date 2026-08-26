@@ -27,8 +27,9 @@ export function Modal({ title, onClose, children, layer = 'base', devComponentNa
 
   return createPortal(
     <div
-      className={`fixed inset-0 ${zClass} flex items-center justify-center bg-[var(--overlay)] p-3 backdrop-blur-sm`}
-      onMouseDown={(event) => {
+      data-blocking-overlay
+      className={`ios-map-touch-target fixed inset-0 ${zClass} flex items-center justify-center bg-[var(--overlay)] p-3 backdrop-blur-sm`}
+      onClick={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
     >
@@ -36,8 +37,8 @@ export function Modal({ title, onClose, children, layer = 'base', devComponentNa
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="w-full max-w-xl rounded-[1.75rem] border border-[var(--panel-border)] bg-[var(--surface-strong)] p-4 shadow-2xl sm:p-6"
-        onMouseDown={(event) => event.stopPropagation()}
+        className="ios-map-touch-target w-full max-w-xl rounded-[1.75rem] border border-[var(--panel-border)] bg-[var(--surface-strong)] p-4 shadow-2xl sm:p-6"
+        onClick={(event) => event.stopPropagation()}
       >
         <DevComponentLabel name={devComponentName} />
         <div className="mb-4 flex items-start justify-between gap-3">

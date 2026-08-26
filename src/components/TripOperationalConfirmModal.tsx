@@ -72,8 +72,9 @@ export function TripOperationalConfirmModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--overlay)] p-3 backdrop-blur-sm"
-      onMouseDown={(event) => {
+      data-blocking-overlay
+      className="ios-map-touch-target fixed inset-0 z-[100] flex items-center justify-center bg-[var(--overlay)] p-3 backdrop-blur-sm"
+      onClick={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
     >
@@ -81,8 +82,8 @@ export function TripOperationalConfirmModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative w-full max-w-sm rounded-[1.75rem] border border-[var(--panel-border)] bg-[var(--surface-strong)] p-4 shadow-2xl sm:p-5"
-        onMouseDown={(event) => event.stopPropagation()}
+        className="ios-map-touch-target relative w-full max-w-sm rounded-[1.75rem] border border-[var(--panel-border)] bg-[var(--surface-strong)] p-4 shadow-2xl sm:p-5"
+        onClick={(event) => event.stopPropagation()}
       >
         <DevComponentLabel name="TripOperationalConfirmModal" />
         <button

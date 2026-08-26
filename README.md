@@ -1,5 +1,18 @@
 # travelmode.live
 
+How to run in the simulator and see the logs:
+Terminal 1
+pnpm dev
+Terminal 2
+pnpm cap:sync:dev
+pnpm cap:ios
+Then Run in Xcode (Cmd+R).
+
+
+old instructions:
+Run in Xcode: npx cap sync ios (doesn't work)
+Run in simulator: pnpm cap:run:ios
+
 Sailing logbook PWA: start a trip, capture notes and media offline,
 and sync the log when connectivity returns.
 

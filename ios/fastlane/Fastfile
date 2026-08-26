@@ -5,11 +5,11 @@ platform :ios do
   lane :build do
     build_app(
       project: 'App/App.xcodeproj',
-      scheme: 'App',
+      scheme: 'Logbook2.0',
       configuration: 'Release',
       export_method: 'app-store',
       output_directory: 'build',
-      output_name: 'logmaster.ipa',
+      output_name: 'Logbook2.0.ipa',
       xcargs: '-allowProvisioningUpdates DEVELOPMENT_TEAM=RPGSNMH65P',
       export_options: {
         method: 'app-store',

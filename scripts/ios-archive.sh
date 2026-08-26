@@ -10,7 +10,7 @@ pnpm cap:sync:prod
 echo "==> Sync iOS app icon"
 node scripts/sync-ios-app-icon.mjs
 
-ARCHIVE_PATH="$ROOT/ios/build/logmaster.xcarchive"
+ARCHIVE_PATH="$ROOT/ios/build/Logbook2.0.xcarchive"
 EXPORT_PATH="$ROOT/ios/build/export"
 EXPORT_OPTIONS="$ROOT/ios/ExportOptions.plist"
 
@@ -19,7 +19,7 @@ mkdir -p "$ROOT/ios/build"
 echo "==> Archive (Release)"
 xcodebuild \
   -project "$ROOT/ios/App/App.xcodeproj" \
-  -scheme App \
+  -scheme Logbook2.0 \
   -configuration Release \
   -destination 'generic/platform=iOS' \
   -archivePath "$ARCHIVE_PATH" \
@@ -35,4 +35,4 @@ xcodebuild \
   -exportOptionsPlist "$EXPORT_OPTIONS" \
   -allowProvisioningUpdates
 
-echo "==> Done: $EXPORT_PATH/logmaster.ipa"
+echo "==> Done: $EXPORT_PATH/Logbook2.0.ipa"

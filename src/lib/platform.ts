@@ -21,3 +21,7 @@ export function getAppPlatform(): AppPlatform {
 export function supportsBackgroundGps() {
   return getNativePlatform() === 'ios' || getNativePlatform() === 'android'
 }
+
+export function usesNativeAppleMap() {
+  return getNativePlatform() === 'ios'
+}

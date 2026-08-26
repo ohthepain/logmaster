@@ -168,7 +168,7 @@ export function TripLegSection({
                   type="button"
                   onClick={() => toggleSection(leg.id)}
                   aria-expanded={expandedSectionIds.has(leg.id)}
-                  className="min-w-0 flex-1 rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-left transition hover:bg-[var(--surface-strong)]"
+                  className="ios-map-touch-target min-w-0 flex-1 touch-manipulation rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-left transition hover:bg-[var(--surface-strong)]"
                 >
                   <span className="flex items-start gap-2">
                     <ChevronDown
@@ -196,7 +196,7 @@ export function TripLegSection({
                   type="button"
                   aria-label={`Edit ${title}`}
                   onClick={() => openEdit(leg)}
-                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]"
+                  className="ios-map-touch-target inline-flex size-8 shrink-0 touch-manipulation items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]"
                 >
                   <Pencil className="size-3.5" />
                 </button>
@@ -205,7 +205,7 @@ export function TripLegSection({
                     type="button"
                     aria-label={`Merge ${title} with previous leg`}
                     onClick={() => void handleMerge(leg)}
-                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]"
+                    className="ios-map-touch-target inline-flex size-8 shrink-0 touch-manipulation items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]"
                   >
                     <Merge className="size-3.5" />
                   </button>
@@ -300,7 +300,7 @@ function LegEntryGroup({
         type="button"
         onClick={onToggle}
         aria-expanded={expanded}
-        className="w-full rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-left transition hover:bg-[var(--surface-strong)]"
+        className="ios-map-touch-target w-full touch-manipulation rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-left transition hover:bg-[var(--surface-strong)]"
       >
         <span className="flex items-start gap-2">
           <ChevronDown

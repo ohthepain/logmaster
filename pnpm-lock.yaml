@@ -83,6 +83,9 @@ importers:
       jszip:
         specifier: ^3.10.1
         version: 3.10.1
+      logmaster-apple-map:
+        specifier: file:plugins/logmaster-apple-map
+        version: file:plugins/logmaster-apple-map(@capacitor/core@8.4.2)
       lucide-react:
         specifier: ^0.545.0
         version: 0.545.0(react@19.2.5)
@@ -4824,6 +4827,11 @@ packages:
 
   lodash@4.18.1:
     resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
+
+  logmaster-apple-map@file:plugins/logmaster-apple-map:
+    resolution: {directory: plugins/logmaster-apple-map, type: directory}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
 
   long@5.3.2:
     resolution: {integrity: sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==}
@@ -12385,6 +12393,10 @@ snapshots:
   lodash.sortby@4.7.0: {}
 
   lodash@4.18.1: {}
+
+  logmaster-apple-map@file:plugins/logmaster-apple-map(@capacitor/core@8.4.2):
+    dependencies:
+      '@capacitor/core': 8.4.2
 
   long@5.3.2: {}
 

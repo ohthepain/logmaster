@@ -132,6 +132,21 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+html.ios-native-map-touch-root,
+body.ios-native-map-touch-root {
+  pointer-events: none;
+  background: transparent !important;
+}
+
+html.ios-native-map-touch-root .ios-map-touch-target,
+body.ios-native-map-touch-root .ios-map-touch-target,
+html.ios-native-map-touch-root [data-map-touch-zone],
+body.ios-native-map-touch-root [data-map-touch-zone],
+html.ios-native-map-touch-root [data-blocking-overlay],
+body.ios-native-map-touch-root [data-blocking-overlay] {
+  pointer-events: auto;
+}
+
 a {
   color: var(--sea-ink);
   text-decoration-color: rgba(0, 0, 0, 0.35);

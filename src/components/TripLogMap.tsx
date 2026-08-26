@@ -1,6 +1,6 @@
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LogEntry, Leg, Trip } from "../domain/logbook";
 import { DEV_FALLBACK_POSITION, setDevPositionOverride, subscribeToDevicePosition } from "../lib/logbook-context";
 import { isDevModeAvailable } from "../lib/dev-mode";
@@ -26,8 +26,10 @@ import {
 } from "../lib/place-reverse-lookup-api";
 import { mapTilerTransformRequest } from "../lib/tiles";
 import { cn } from "../lib/cn";
+import { getNativePlatform } from "../lib/platform";
 import { useAppOptionsStore } from "../stores/app-options";
 import { DevComponentLabel } from "./DevComponentLabel";
+import { TripAppleMapKit, type TripAppleMapKitHandle } from "./TripAppleMapKit";
 import { SailingMapControlStack } from "./SailingMapControlStack";
 import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
 import { SailingMapLayerPanel } from "./SailingMapLayerPanel";
@@ -53,7 +55,29 @@ const ENTRY_SOURCE = "trip-log-entries";
 const TRACK_SOURCE = "trip-log-track";
 const CURRENT_SOURCE = "trip-current-position";
 
-export function TripLogMap({
+export const TripLogMap = forwardRef<TripAppleMapKitHandle, TripLogMapProps>(function TripLogMap(props, ref) {
+  if (getNativePlatform() === "ios" && props.embedded) {
+    return (
+      <TripAppleMapKit
+        ref={ref}
+        trip={props.trip}
+        entries={props.entries}
+        legs={props.legs}
+        focusEntryId={props.focusEntryId}
+        mapClassName={props.mapClassName}
+        showControls={props.showControls}
+        showCurrentPosition={props.showCurrentPosition}
+        interactive={props.interactive}
+        embedded={props.embedded}
+        controlStackClassName={props.controlStackClassName}
+      />
+    );
+  }
+
+  return <TripLogMapMapLibre {...props} />;
+});
+
+function TripLogMapMapLibre({
   trip,
   entries,
   legs = [],

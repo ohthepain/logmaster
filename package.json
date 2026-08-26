@@ -71,6 +71,7 @@
     "hono": "^4.12.14",
     "idb": "^8.0.3",
     "jszip": "^3.10.1",
+    "logmaster-apple-map": "file:plugins/logmaster-apple-map",
     "lucide-react": "^0.545.0",
     "maplibre-gl": "^5.23.0",
     "pg": "^8.20.0",

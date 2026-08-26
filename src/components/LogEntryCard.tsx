@@ -28,7 +28,7 @@ export function LogEntryCard({ entry, media, onOpen }: LogEntryCardProps) {
       <button
         type="button"
         onClick={onOpen}
-        className="w-full text-left"
+        className="ios-map-touch-target w-full touch-manipulation text-left"
         disabled={entry.deleted}
       >
         <div className="flex gap-3">

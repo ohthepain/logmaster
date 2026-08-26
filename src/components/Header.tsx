@@ -54,7 +54,7 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
       )}
     >
       <DevComponentLabel name="Header" className="absolute left-3 top-1 z-10 sm:left-4" />
-      <div className="page-wrap flex min-h-16 items-center justify-between gap-3 px-3 py-2 sm:px-4">
+      <div className="page-wrap ios-map-touch-target flex min-h-16 items-center justify-between gap-3 px-3 py-2 sm:px-4">
         <AppHeaderBrand mapOverlay={mapOverlay} />
         <div className="flex items-center justify-end gap-2">
           <DevModeToggle mapOverlay={mapOverlay} />
