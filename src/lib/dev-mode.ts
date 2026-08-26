@@ -1,4 +1,4 @@
-const STAGING_HOST = 'staging.logmaster.live'
+export const STAGING_HOST = 'staging.logmaster.live'
 
 export function isDevModeAvailable(): boolean {
   if (import.meta.env.DEV) return true

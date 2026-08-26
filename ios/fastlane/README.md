@@ -21,7 +21,7 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 [bundle exec] fastlane ios build
 ```
 
-Build a release .ipa for App Store / TestFlight
+Build a release .ipa (run pnpm cap:sync:staging or cap:sync:prod before archiving)
 
 ### ios beta
 
@@ -29,7 +29,7 @@ Build a release .ipa for App Store / TestFlight
 [bundle exec] fastlane ios beta
 ```
 
-Upload the latest build to TestFlight
+Upload to TestFlight (staging web app — run via pnpm ios:beta)
 
 ----
 

@@ -1,5 +1,9 @@
 app_identifier('live.logmaster.app')
+
+# Developer Portal (code signing)
 team_id('RPGSNMH65P')
 
-# Optional: set APPLE_ID in the environment, or sign in via Xcode first.
-apple_id(ENV['APPLE_ID']) if ENV['APPLE_ID']
+# App Store Connect — "Paul Wilkinson" (selected during TestFlight upload)
+itc_team_id(ENV.fetch('FASTLANE_ITC_TEAM_ID', '13820'))
+
+apple_id(ENV.fetch('APPLE_ID', 'cremoni@gmail.com'))

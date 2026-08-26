@@ -4,6 +4,11 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { signOut, useSession } from '../lib/auth-client'
 import { profilePhotoUrl } from '../lib/profile-api'
+import {
+  formatAppBuildFooter,
+  getAppEnvironmentLabel,
+  getNativeBuildNumber,
+} from '../lib/app-build-info'
 import { cn } from '../lib/cn'
 import { ProfileModal } from './ProfileModal'
 import { DevComponentLabel } from './DevComponentLabel'
@@ -20,6 +25,9 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
   const [open, setOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [photoVersion, setPhotoVersion] = useState(0)
+  const [buildFooter, setBuildFooter] = useState(() =>
+    formatAppBuildFooter(getAppEnvironmentLabel(), null),
+  )
   const rootRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
   const photoSrc = profilePhotoUrl(user?.image, photoVersion)
@@ -28,6 +36,14 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
     setOpen(false)
     setProfileOpen(true)
   }
+
+  useEffect(() => {
+    void getNativeBuildNumber().then((buildNumber) => {
+      setBuildFooter(
+        formatAppBuildFooter(getAppEnvironmentLabel(), buildNumber),
+      )
+    })
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -229,6 +245,14 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                 Sign in
               </Link>
             )}
+
+            <div
+              className="mt-1 border-t border-[var(--line)] px-3 py-2 text-center text-[10px] font-medium uppercase tracking-wider text-[var(--sea-ink-soft)]"
+              role="none"
+              aria-hidden
+            >
+              {buildFooter}
+            </div>
           </div>
         )}
       </div>

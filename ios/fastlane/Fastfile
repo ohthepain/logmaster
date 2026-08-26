@@ -1,5 +1,9 @@
 default_platform(:ios)
 
+def apple_account_username
+  ENV.fetch('APPLE_ID', 'cremoni@gmail.com')
+end
+
 platform :ios do
   desc 'Build a release .ipa (run pnpm cap:sync:staging or cap:sync:prod before archiving)'
   lane :build do
@@ -25,6 +29,7 @@ platform :ios do
   lane :beta do
     build
     upload_to_testflight(
+      username: apple_account_username,
       skip_waiting_for_build_processing: true,
       distribute_external: false,
       notify_external_testers: false,
