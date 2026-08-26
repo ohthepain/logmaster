@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { isNativePlatform } from '../lib/platform'
 
 const UPDATE_CHECK_MS = 60 * 60 * 1000
 
 export function PwaRegister() {
   const toastIdRef = useRef<string | number | null>(null)
+  const isNative = isNativePlatform()
 
   const {
     offlineReady: [offlineReady, setOfflineReady],
@@ -25,7 +27,7 @@ export function PwaRegister() {
   })
 
   useEffect(() => {
-    if (!offlineReady) return
+    if (isNative || !offlineReady) return
 
     toastIdRef.current = toast.message('logmaster is ready offline', {
       description: 'Trips and logs stay on this device when you lose signal.',
@@ -35,7 +37,7 @@ export function PwaRegister() {
   }, [offlineReady, setOfflineReady])
 
   useEffect(() => {
-    if (!needRefresh) return
+    if (isNative || !needRefresh) return
 
     if (toastIdRef.current != null) {
       toast.dismiss(toastIdRef.current)

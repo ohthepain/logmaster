@@ -54,7 +54,10 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
         setCrewMembers(payload.members);
         triggerLogbookSyncRetry();
       })
-      .catch(() => toast.error("Could not load your crew"));
+      .catch((error: unknown) => {
+        if (error instanceof Error && /\((401|403)\)/.test(error.message)) return;
+        toast.error("Could not load your crew");
+      });
   }, [tripId]);
 
   useEffect(() => {

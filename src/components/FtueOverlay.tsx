@@ -48,7 +48,10 @@ export function FtueOverlay({ onComplete }: FtueOverlayProps) {
   const continueLabel = step === lastStep ? "Get started" : "Continue";
 
   return (
-    <div className="ftue-shell fixed inset-0 z-[200] flex flex-col">
+    <div
+      data-blocking-overlay
+      className="ftue-shell ios-map-touch-target fixed inset-0 z-[200] flex flex-col"
+    >
       <DevComponentLabel name="FtueOverlay" className="absolute left-3 top-3 z-20 sm:left-4" />
       <FtueTopoBackground />
 
@@ -67,8 +70,8 @@ export function FtueOverlay({ onComplete }: FtueOverlayProps) {
         </div>
 
         {!showAuthStep ? (
-          <footer className="relative z-10 shrink-0 px-6 pb-8 pt-2 sm:px-8">
-            <button type="button" onClick={goNext} className="ftue-cta">
+          <footer className="ios-map-touch-target relative z-10 shrink-0 px-6 pb-8 pt-2 sm:px-8">
+            <button type="button" onClick={goNext} className="ftue-cta ios-map-touch-target touch-manipulation">
               <Navigation2 className="size-5" strokeWidth={2.5} />
               <span>{continueLabel}</span>
             </button>
@@ -164,7 +167,7 @@ function FtuePwaStep({
         <FtueIosInstallGuide />
       ) : (
         <div className="mt-8">
-          <button type="button" onClick={onInstall} className="ftue-secondary-btn">
+          <button type="button" onClick={onInstall} className="ftue-secondary-btn ios-map-touch-target touch-manipulation">
             <Smartphone className="size-4" />
             Add to home screen
           </button>
@@ -184,7 +187,7 @@ function FtuePwaStep({
 function FtueAuthStep({ onAuthSuccess }: { onAuthSuccess: () => void }) {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col pb-6">
-      <div className="ftue-auth-card rounded-[1.75rem] p-5 sm:p-6">
+      <div className="ftue-auth-card ios-map-touch-target rounded-[1.75rem] p-5 sm:p-6">
         <SignInPanel embedded onAuthSuccess={onAuthSuccess} />
       </div>
     </div>

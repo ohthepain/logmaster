@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { auth, getTrustedOrigins, isGoogleSignInEnabled } from './auth'
+import { getMapTilerApiKeyFromEnv } from '../lib/server-maptiler-key'
 import { logbookRoutes } from './routes/logbook'
 import { boatsRoutes } from './routes/boats'
 import { profileRoutes } from './routes/profile'
@@ -42,6 +43,7 @@ app.get('/health', (c) =>
     service: 'logmaster',
     ts: new Date().toISOString(),
     googleSignIn: isGoogleSignInEnabled(),
+    mapTilerConfigured: Boolean(getMapTilerApiKeyFromEnv()),
   }),
 )
 

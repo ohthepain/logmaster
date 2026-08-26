@@ -11,6 +11,9 @@ export function measureSafeAreaInsetBottom(): number {
   return value;
 }
 
+/** Top offset for toasts and other chrome below Header (safe area + min-h-16 + py-2). */
+export const APP_HEADER_TOP_OFFSET = "calc(env(safe-area-inset-top, 0px) + 5rem)";
+
 /** Drag handle touch target — sits above the system home indicator. */
 export const BOTTOM_SHEET_DRAG_ZONE_PX = 48;
 

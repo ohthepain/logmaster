@@ -25,7 +25,7 @@ platform :ios do
     )
   end
 
-  desc 'Upload to TestFlight (staging web app — run via pnpm ios:beta)'
+  desc 'Upload to TestFlight (production web app — run via pnpm ios:beta)'
   lane :beta do
     build
     upload_to_testflight(

@@ -519,6 +519,15 @@ a {
   pointer-events: none;
 }
 
+/* Sonner — below Dynamic Island + Header (see AppToaster / APP_HEADER_TOP_OFFSET) */
+[data-sonner-toaster][data-y-position='top'] {
+  top: calc(env(safe-area-inset-top, 0px) + 5rem) !important;
+}
+
+.app-toast {
+  max-width: min(24rem, calc(100vw - 1.5rem));
+}
+
 .dev-component-label-text {
   display: inline-block;
   padding: 0.125rem 0.5rem;

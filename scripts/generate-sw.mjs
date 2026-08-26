@@ -1,8 +1,11 @@
+import { access } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { generateSW } from 'workbox-build'
 
 const clientDir = resolve('dist/client')
 const swDest = resolve(clientDir, 'sw.js')
+
+await access(resolve(clientDir, 'offline.html'))
 
 const { count, size, warnings } = await generateSW({
   swDest,

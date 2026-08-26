@@ -19,6 +19,7 @@ const __dirname = path.dirname(__filename)
 const viteClientDir = path.join(__dirname, 'dist', 'client')
 
 const mimeByExt = {
+	'.html': 'text/html; charset=utf-8',
 	'.css': 'text/css; charset=utf-8',
 	'.js': 'application/javascript; charset=utf-8',
 	'.mjs': 'application/javascript; charset=utf-8',
@@ -45,6 +46,16 @@ function getMimeType(filePath) {
 	return mimeByExt[ext] ?? 'application/octet-stream'
 }
 
+function cacheControlForPath(pathname) {
+	if (pathname === '/sw.js' || pathname === '/manifest.webmanifest') {
+		return 'no-cache'
+	}
+	if (pathname.startsWith('/assets/')) {
+		return 'public, max-age=31536000, immutable'
+	}
+	return 'public, max-age=3600'
+}
+
 async function tryServeStaticFile(req) {
 	const url = new URL(req.url)
 	const pathname = url.pathname
@@ -65,12 +76,11 @@ async function tryServeStaticFile(req) {
 
 	try {
 		const data = await fs.readFile(filePath)
-		const isHashed = pathname.startsWith('/assets/')
 		return new Response(data, {
 			status: 200,
 			headers: {
 				'content-type': getMimeType(filePath),
-				'cache-control': isHashed ? 'public, max-age=31536000, immutable' : 'public, max-age=3600',
+				'cache-control': cacheControlForPath(pathname),
 			},
 		})
 	} catch (err) {

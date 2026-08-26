@@ -29,7 +29,7 @@ Build a release .ipa (run pnpm cap:sync:staging or cap:sync:prod before archivin
 [bundle exec] fastlane ios beta
 ```
 
-Upload to TestFlight (staging web app — run via pnpm ios:beta)
+Upload to TestFlight (production web app — run via pnpm ios:beta)
 
 ----
 
