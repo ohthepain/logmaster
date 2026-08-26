@@ -1,7 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouterState } from "@tanstack/react-router";
 import { useSession } from "../lib/auth-client";
 import { clearFtueCompletedLocally, isFtueCompletedLocally, markFtueCompletedLocally } from "../lib/ftue";
+import { setIosMapTouchCaptureSuspended } from "../lib/native/ios-map-touch-suspend";
+import { getNativePlatform } from "../lib/platform";
 import { completeTutorial, fetchProfile, resetTutorial as resetTutorialApi } from "../lib/profile-api";
 import { FtueOverlay } from "./FtueOverlay";
 
@@ -84,6 +87,39 @@ export function FtueGate({ children }: { children: React.ReactNode }) {
     };
   }, [forceShow, skipFtueForRoute, userId]);
 
+  useEffect(() => {
+    const ftueActive = showFtue && !checking && !skipFtueForRoute
+    if (ftueActive) {
+      document.documentElement.setAttribute("data-ftue-active", "1");
+    } else {
+      document.documentElement.removeAttribute("data-ftue-active");
+    }
+
+    if (getNativePlatform() !== "ios") {
+      return () => {
+        document.documentElement.removeAttribute("data-ftue-active");
+      };
+    }
+
+    if (!ftueActive) {
+      void setIosMapTouchCaptureSuspended(false);
+      return () => {
+        document.documentElement.removeAttribute("data-ftue-active");
+      };
+    }
+
+    void setIosMapTouchCaptureSuspended(true);
+    const resync = window.setInterval(() => {
+      void setIosMapTouchCaptureSuspended(true);
+    }, 400);
+
+    return () => {
+      clearInterval(resync);
+      document.documentElement.removeAttribute("data-ftue-active");
+      void setIosMapTouchCaptureSuspended(false);
+    };
+  }, [checking, showFtue, skipFtueForRoute]);
+
   const completeFtue = useCallback(async () => {
     markFtueCompletedLocally();
     setShowFtue(false);
@@ -112,10 +148,17 @@ export function FtueGate({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(() => ({ resetTutorial }), [resetTutorial]);
 
+  const ftueOverlay =
+    !checking && showFtue && !skipFtueForRoute ? (
+      <FtueOverlay onComplete={() => void completeFtue()} />
+    ) : null;
+
   return (
     <FtueContext.Provider value={value}>
       {children}
-      {!checking && showFtue && !skipFtueForRoute && <FtueOverlay onComplete={() => void completeFtue()} />}
+      {typeof document !== "undefined" && ftueOverlay
+        ? createPortal(ftueOverlay, document.body)
+        : null}
     </FtueContext.Provider>
   );
 }

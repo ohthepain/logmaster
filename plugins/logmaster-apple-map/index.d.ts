@@ -46,6 +46,7 @@ export interface LogmasterAppleMapPlugin {
   setOverlays(options: MapOverlays): Promise<void>
   setShowsUserLocation(options: { mapId: string; show: boolean; follow?: boolean }): Promise<void>
   setInteractionEnabled(options: { mapId: string; enabled: boolean }): Promise<void>
+  setTouchCaptureSuspended(options: { suspended: boolean }): Promise<void>
   adjustZoom(options: { mapId: string; factor: number }): Promise<void>
   addListener(
     eventName: 'mapReady',

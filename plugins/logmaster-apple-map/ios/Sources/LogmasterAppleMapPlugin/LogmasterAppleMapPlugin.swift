@@ -17,6 +17,7 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setOverlays", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setShowsUserLocation", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setInteractionEnabled", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setTouchCaptureSuspended", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "adjustZoom", returnType: CAPPluginReturnPromise),
     ]
 
@@ -235,6 +236,26 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
             instance.setInteractionEnabled(enabled)
+            call.resolve()
+        }
+    }
+
+    /// Suspend the native touch-capture layer so full-screen web UI (tutorial, modals) receives taps.
+    @objc func setTouchCaptureSuspended(_ call: CAPPluginCall) {
+        guard let suspended = call.getBool("suspended") else {
+            call.reject("suspended is required")
+            return
+        }
+
+        DispatchQueue.main.async {
+            guard let webView = self.bridge?.webView else {
+                call.resolve()
+                return
+            }
+            let fullScreen = CGRect(origin: .zero, size: webView.bounds.size)
+            for instance in self.maps.values {
+                instance.setTouchCaptureSuspended(suspended, fullScreenPassThrough: fullScreen)
+            }
             call.resolve()
         }
     }

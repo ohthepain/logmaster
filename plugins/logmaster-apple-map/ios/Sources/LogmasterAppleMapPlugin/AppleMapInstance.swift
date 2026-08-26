@@ -238,6 +238,15 @@ final class AppleMapInstance {
         touchForwarder.isUserInteractionEnabled = enabled
     }
 
+    func setTouchCaptureSuspended(_ suspended: Bool, fullScreenPassThrough: CGRect) {
+        if suspended {
+            touchForwarder.isUserInteractionEnabled = false
+            touchForwarder.passThroughRects = [fullScreenPassThrough]
+        } else if interactive {
+            touchForwarder.isUserInteractionEnabled = true
+        }
+    }
+
     func applyPassThroughRects(_ rects: [CGRect]) {
         touchForwarder.passThroughRects = rects
     }

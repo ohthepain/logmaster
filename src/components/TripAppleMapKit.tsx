@@ -3,6 +3,7 @@ import type { Leg, LogEntry, Trip } from "../domain/logbook";
 import type { MapCoordinate } from "../lib/native/logmaster-apple-map";
 import { LogmasterAppleMap } from "../lib/native/logmaster-apple-map";
 import { readMapPassThroughZones } from "../lib/native/apple-map-layout";
+import { IOS_MAP_TOUCH_SYNC_EVENT } from "../lib/native/ios-map-touch-suspend";
 import { DEV_FALLBACK_POSITION, getCurrentPosition, subscribeToDevicePosition } from "../lib/logbook-context";
 import { buildLegEntryPointsGeoJson, buildLegTrackGeoJson, resolveTripLogMapViewport } from "../lib/logbook-map-geo";
 import { cn } from "../lib/cn";
@@ -241,6 +242,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
       observer.observe(node);
     }
     window.addEventListener("resize", syncChrome, { passive: true });
+    window.addEventListener(IOS_MAP_TOUCH_SYNC_EVENT, syncChrome);
     const mutationObserver = new MutationObserver(syncChrome);
     mutationObserver.observe(document.body, { childList: true });
     syncChrome();
@@ -250,6 +252,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
       observer.disconnect();
       mutationObserver.disconnect();
       window.removeEventListener("resize", syncChrome);
+      window.removeEventListener(IOS_MAP_TOUCH_SYNC_EVENT, syncChrome);
     };
   }, [interactive, mapReady, syncInteractionChrome]);
 

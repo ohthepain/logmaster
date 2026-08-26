@@ -50,6 +50,9 @@ export function FtueOverlay({ onComplete }: FtueOverlayProps) {
   return (
     <div
       data-blocking-overlay
+      role="dialog"
+      aria-modal="true"
+      aria-label="Welcome tutorial"
       className="ftue-shell ios-map-touch-target fixed inset-0 z-[200] flex flex-col"
     >
       <DevComponentLabel name="FtueOverlay" className="absolute left-3 top-3 z-20 sm:left-4" />
