@@ -4,6 +4,10 @@ import { toast } from 'sonner'
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { authClient, signIn, signUp } from '../lib/auth-client'
 import { passwordResetCallbackUrl } from '../lib/password-reset-url'
+import {
+  signInWithGoogleNative,
+  supportsNativeGoogleSignIn,
+} from '../lib/native/google-sign-in'
 import { DevComponentLabel } from './DevComponentLabel'
 
 type Tab = 'password' | 'magic'
@@ -61,6 +65,15 @@ export function SignInPanel({
     }
     setLoading(true)
     try {
+      if (supportsNativeGoogleSignIn()) {
+        const signedIn = await signInWithGoogleNative(afterAuthPath)
+        if (signedIn) {
+          toast.success('Signed in')
+          finishAuth()
+        }
+        return
+      }
+
       const result = await signIn.social({
         provider: 'google',
         callbackURL: afterAuthPath,
@@ -78,7 +91,7 @@ export function SignInPanel({
     } finally {
       setLoading(false)
     }
-  }, [afterAuthPath])
+  }, [afterAuthPath, finishAuth])
 
   const openForgotPassword = () => {
     setForgotPasswordEmail(email.trim())

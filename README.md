@@ -48,6 +48,14 @@ Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to `.env` (see `.env.example`)
 
 Then open `/sign-in` and use **Continue with Google**. Restart `pnpm dev` after changing `.env`.
 
+**Native app (TestFlight / App Store):** Web-based Google OAuth opens Safari and fails with `state_mismatch` because the OAuth state cookie lives in the WebView, not the system browser. The iOS/Android shell uses native Google Sign-In instead (`@capawesome/capacitor-google-sign-in`) and passes the ID token to Better Auth — no browser redirect.
+
+1. In Google Cloud Console, create an **iOS** OAuth client for bundle id `live.logmaster.app`.
+2. Set `GOOGLE_IOS_CLIENT_ID` in your environment (or `ios/fastlane/.env` for local archives).
+3. Run `pnpm ios:beta` or `pnpm ios:archive` — `ios:prearchive` writes `GIDClientID` and the URL scheme into `Info.plist`.
+
+The server exposes the web client id at `/api/health` (`googleWebClientId`) for the native plugin; keep `GOOGLE_CLIENT_ID` as the **Web** client id in ECS secrets.
+
 ### Email (Amazon SES)
 
 Auth emails (sign-up verification, password reset, magic link) go through SES when `AWS_SES_FROM_EMAIL`

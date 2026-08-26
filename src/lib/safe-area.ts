@@ -1,3 +1,9 @@
+/** CSS env() for the top safe area (Dynamic Island / status bar). Requires viewport-fit=cover. */
+export const SAFE_AREA_TOP = "env(safe-area-inset-top, 0px)";
+
+/** CSS env() for the bottom safe area (home indicator). Requires viewport-fit=cover. */
+export const SAFE_AREA_BOTTOM = "env(safe-area-inset-bottom, 0px)";
+
 /** Measured bottom safe-area inset (iOS home indicator). Requires viewport-fit=cover. */
 export function measureSafeAreaInsetBottom(): number {
   if (typeof document === "undefined") return 0;

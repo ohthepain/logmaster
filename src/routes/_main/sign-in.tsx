@@ -143,9 +143,9 @@ function SignInPage() {
       </div>
 
       <div className="flex-1 flex min-w-0">
-        <div className="flex-1 flex items-center justify-center bg-[var(--bg-base)] px-6 py-12">
-          <div className="w-full max-w-md">
-            <div className="flex lg:hidden items-center justify-between gap-3 mb-10">
+        <div className="flex-1 flex min-h-0 flex-col overflow-y-auto bg-[var(--bg-base)] px-6 pb-[env(safe-area-inset-bottom,0px)] pt-[env(safe-area-inset-top,0px)] lg:items-center lg:justify-center lg:py-12">
+          <div className="w-full max-w-md mx-auto flex min-h-0 flex-1 flex-col lg:flex-none lg:block">
+            <div className="flex lg:hidden items-center justify-between gap-3 py-4 shrink-0">
               <div className="flex items-center gap-3">
                 <img
                   src="/logmaster_logo_transparent.png"
@@ -161,10 +161,12 @@ function SignInPage() {
               <ThemeToggle />
             </div>
 
-            <SignInPanel
-              afterAuthPath={afterAuthPath}
-              initialForgotOpen={forgotParam === '1'}
-            />
+            <div className="flex flex-1 items-center py-6 min-h-0 lg:py-0">
+              <SignInPanel
+                afterAuthPath={afterAuthPath}
+                initialForgotOpen={forgotParam === '1'}
+              />
+            </div>
           </div>
         </div>
         <div className="hidden lg:flex lg:w-64 lg:shrink-0 lg:flex-col lg:items-end lg:pt-6 lg:pr-6">

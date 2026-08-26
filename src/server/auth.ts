@@ -74,6 +74,11 @@ export function isGoogleSignInEnabled() {
   return google != null
 }
 
+/** Public web client ID — used by native Google Sign-In to obtain ID tokens. */
+export function getGoogleWebClientId() {
+  return process.env.GOOGLE_CLIENT_ID ?? null
+}
+
 export const auth = betterAuth({
   secret,
   baseURL,
