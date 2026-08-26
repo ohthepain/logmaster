@@ -14,7 +14,7 @@ COPY plugins ./plugins
 COPY prisma ./prisma
 COPY prisma.config.ts tsconfig.json vite.config.ts eslint.config.js ./
 COPY server-production.mjs ./
-COPY scripts/generate-sw.mjs ./scripts/generate-sw.mjs
+COPY scripts/generate-sw.mjs scripts/verify-client-build.mjs ./scripts/
 COPY src ./src
 COPY public ./public
 
