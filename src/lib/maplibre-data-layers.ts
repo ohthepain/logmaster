@@ -1,21 +1,22 @@
 import type { FeatureCollection, Point } from 'geojson'
-import maplibregl from 'maplibre-gl'
-import { degreeTilesForBbox } from './geo-feature-tiles'
-import {
+import type maplibregl from 'maplibre-gl'
+import { degreeTilesForBbox,
   appGeoFeatureTileUrl,
   isGeoFeatureCollection,
-  mergeGeoFeatureCollections,
-  type GeoFeatureCollection,
-} from './geo-feature-tiles'
+  mergeGeoFeatureCollections
+  
+ } from './geo-feature-tiles'
+import type {GeoFeatureCollection} from './geo-feature-tiles';
 import {
   MAP_DATA_LAYERS,
   mapDataLayerCircleLayerId,
-  mapDataLayerRenderLayerId,
-  type MapDataLayerDefinition,
-  type MapDataLayerId,
-  type MapDataLayerToggles,
-  type OsmPointDatasetId,
+  mapDataLayerRenderLayerId
+  
+  
+  
+  
 } from './map-data-layers'
+import type {MapDataLayerDefinition, MapDataLayerId, MapDataLayerToggles, OsmPointDatasetId} from './map-data-layers';
 import {
   hazardIconImageExpression,
   hazardIconSizeExpression,
@@ -25,11 +26,13 @@ import {
   enrichOsmPointProperties,
   parseOsmFeatureTags,
 } from './osm-feature-display'
-import { appOsmPointTileUrl, type OsmPointProperties } from './osm-point-tiles'
+import { appOsmPointTileUrl  } from './osm-point-tiles'
+import type {OsmPointProperties} from './osm-point-tiles';
 import {
   OPEN_SEAMAP_SEAMARK_LAYER_ID,
   OPEN_SEAMAP_SEAMARK_SOURCE_ID,
 } from './maplibre-openseamap'
+import { getGeoJsonSource } from './maplibre-source'
 
 type OsmPointFeatureCollection = FeatureCollection<Point, OsmPointProperties>
 
@@ -60,7 +63,7 @@ function mergeOsmCollections(
       byId.set(feature.properties.id, {
         ...feature,
         properties: enrichOsmPointProperties(
-          feature.properties as unknown as Record<string, unknown>,
+          feature.properties,
         ) as unknown as OsmPointProperties,
       })
     }
@@ -366,12 +369,8 @@ export async function refreshMapDataLayersForViewport(
         const payload = await fetchJsonTile(appOsmPointTileUrl(dataset, tile))
         if (isOsmPointCollection(payload)) collections.push(payload)
       }
-      const source = map.getSource(datasetSourceId(dataset)) as
-        | maplibregl.GeoJSONSource
-        | undefined
-      if (source) {
-        source.setData(mergeOsmCollections(collections))
-      }
+      const source = getGeoJsonSource(map, datasetSourceId(dataset))
+      source?.setData(mergeOsmCollections(collections))
     }),
   )
 
@@ -383,12 +382,8 @@ export async function refreshMapDataLayersForViewport(
       const payload = await fetchJsonTile(appGeoFeatureTileUrl(tile, geoResolution))
       if (isGeoFeatureCollection(payload)) collections.push(payload)
     }
-    const source = map.getSource(geoSourceId(geoResolution)) as
-      | maplibregl.GeoJSONSource
-      | undefined
-    if (source) {
-      source.setData(mergeGeoFeatureCollections(collections))
-    }
+    const source = getGeoJsonSource(map, geoSourceId(geoResolution))
+    source?.setData(mergeGeoFeatureCollections(collections))
   }
 }
 
@@ -432,7 +427,7 @@ export function bindMapDataLayerPopups(
     )
     if (!layerDef) return
 
-    const props = hit.properties as Record<string, unknown>
+    const props = hit.properties
     const tags = parseOsmFeatureTags(props.tags)
 
     onSelect({

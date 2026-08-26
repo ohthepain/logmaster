@@ -3,9 +3,10 @@ import { toast } from 'sonner'
 import {
   isBackgroundTrackerRunning,
   startBackgroundTracker,
-  stopBackgroundTracker,
-  type BackgroundPosition,
+  stopBackgroundTracker
+  
 } from '../lib/native/background-tracker'
+import type {BackgroundPosition} from '../lib/native/background-tracker';
 import { supportsBackgroundGps } from '../lib/platform'
 import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore } from '../stores/logbook'

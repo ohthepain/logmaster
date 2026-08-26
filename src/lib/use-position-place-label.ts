@@ -3,9 +3,10 @@ import type { MapLngLat } from './logbook-map-geo'
 import {
   entryPlaceFromData,
   lookupPositionLabel,
-  lookupPositionLabelFromPlace,
-  type LogEntryPlace,
+  lookupPositionLabelFromPlace
+  
 } from './logbook-place'
+import type {LogEntryPlace} from './logbook-place';
 import { formatPosition } from './logbook-format'
 
 export function usePositionPlaceLabel(

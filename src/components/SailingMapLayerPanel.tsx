@@ -1,11 +1,12 @@
 import { Layers } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import {
-  MAP_DATA_LAYERS,
-  type MapDataLayerGroup,
-  type MapDataLayerId,
-  type MapDataLayerToggles,
+  MAP_DATA_LAYERS
+  
+  
+  
 } from '../lib/map-data-layers'
+import type { MapDataLayerGroup, MapDataLayerToggles } from '../lib/map-data-layers'
 import { MapControlButton } from './SailingMapControlStack'
 
 const GROUP_LABELS: Record<MapDataLayerGroup, string> = {
@@ -64,11 +65,11 @@ export function SailingMapLayerPanel({
                           <input
                             type="checkbox"
                             className="mt-0.5"
-                            checked={toggles[layer.id as MapDataLayerId]}
+                            checked={toggles[layer.id]}
                             onChange={(event) =>
                               onChange({
                                 [layer.id]: event.target.checked,
-                              } as Partial<MapDataLayerToggles>)
+                              })
                             }
                           />
                           <span className="min-w-0">

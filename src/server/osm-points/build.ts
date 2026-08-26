@@ -1,12 +1,12 @@
 import { gzipSync } from 'node:zlib'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
-import type { Feature, Geometry } from 'geojson'
 import {
   CANADA_MARINA_BBOX,
   NORTH_AMERICA_MARINA_BBOX,
-  UK_MARINA_BBOX,
-  type MarinaBbox,
+  UK_MARINA_BBOX
+  
 } from '../marinas/bboxes'
+import type {MarinaBbox} from '../marinas/bboxes';
 import { gridCellsForBbox } from '../marinas/grid'
 import { degreeTilesForFeature, parseDegreeTilePrefix } from '../geo-features/tile'
 import type { DegreeTile } from '../geo-features/tile'
@@ -18,9 +18,10 @@ import {
 } from './fetch'
 import {
   mergeOsmPointFeatures,
-  osmPointFeatureCollection,
-  type OsmPointFeature,
+  osmPointFeatureCollection
+  
 } from './schema'
+import type {OsmPointFeature} from './schema';
 
 type TileAccumulator = {
   tile: DegreeTile
@@ -78,7 +79,7 @@ function addFeatureToTiles(
   feature: OsmPointFeature,
   onlyTile: DegreeTile | null,
 ) {
-  for (const tile of degreeTilesForFeature(feature as Feature<Geometry>)) {
+  for (const tile of degreeTilesForFeature(feature)) {
     if (!tileMatches(tile, onlyTile)) continue
     getTileBucket(tiles, tile).features.push(feature)
   }

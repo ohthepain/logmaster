@@ -46,7 +46,7 @@ function trackCoordinatesFromGeoJson(collection: GeoJSON.FeatureCollection): Map
   });
 }
 
-export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKitProps>(function TripAppleMapKit(
+export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKitProps>(function TripAppleMapKitView(
   {
   trip,
   entries,

@@ -1,20 +1,22 @@
-import type { Feature, Geometry, Point } from 'geojson'
+import type { Feature, Geometry } from 'geojson'
 import { S3Client } from '@aws-sdk/client-s3'
 import {
   degreeTileForLonLat,
-  degreeTileFromFloors,
-  type DegreeTile,
+  degreeTileFromFloors
+  
 } from '../../lib/geo-feature-tiles'
+import type {DegreeTile} from '../../lib/geo-feature-tiles';
 import type { MapDataLayerId } from '../../lib/map-data-layers'
 import { OSM_POINT_DATASETS } from '../../lib/map-data-layers'
 import {
   displayNameForOsmLight,
   geonamesPlaceLookupPriority,
   osmPlaceLookupPriority,
-  pickNearestPlace,
-  type PlaceLookupCandidate,
-  type PlaceLookupResult,
+  pickNearestPlace
+  
+  
 } from '../../lib/place-reverse-lookup'
+import type {PlaceLookupCandidate, PlaceLookupResult} from '../../lib/place-reverse-lookup';
 import type { GeoFeatureCollection } from '../geo-features/schema'
 import type { OsmPointFeatureCollection } from '../osm-points/schema'
 import { readS3GzipJson } from './s3-gzip-json'
@@ -58,7 +60,7 @@ function pointCoordinates(
   feature: Feature<Geometry>,
 ): { latitude: number; longitude: number } | null {
   if (feature.geometry.type !== 'Point') return null
-  const [longitude, latitude] = (feature.geometry as Point).coordinates
+  const [longitude, latitude] = (feature.geometry).coordinates
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
   return { latitude, longitude }
 }

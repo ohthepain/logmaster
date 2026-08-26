@@ -29,7 +29,8 @@ import { cn } from "../lib/cn";
 import { getNativePlatform } from "../lib/platform";
 import { useAppOptionsStore } from "../stores/app-options";
 import { DevComponentLabel } from "./DevComponentLabel";
-import { TripAppleMapKit, type TripAppleMapKitHandle } from "./TripAppleMapKit";
+import { TripAppleMapKit  } from "./TripAppleMapKit";
+import type {TripAppleMapKitHandle} from "./TripAppleMapKit";
 import { SailingMapControlStack } from "./SailingMapControlStack";
 import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
 import { SailingMapLayerPanel } from "./SailingMapLayerPanel";
@@ -55,7 +56,7 @@ const ENTRY_SOURCE = "trip-log-entries";
 const TRACK_SOURCE = "trip-log-track";
 const CURRENT_SOURCE = "trip-current-position";
 
-export const TripLogMap = forwardRef<TripAppleMapKitHandle, TripLogMapProps>(function TripLogMap(props, ref) {
+export const TripLogMap = forwardRef<TripAppleMapKitHandle, TripLogMapProps>(function TripLogMapView(props, ref) {
   if (getNativePlatform() === "ios" && props.embedded) {
     return (
       <TripAppleMapKit

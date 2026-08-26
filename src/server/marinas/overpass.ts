@@ -153,7 +153,7 @@ export function primaryOverpassMirrorForCell(
     throw new Error('No Overpass mirrors configured')
   }
   const index = ((cellSlot % urls.length) + urls.length) % urls.length
-  return urls[index]!
+  return urls[index]
 }
 
 /** Visible for tests — configured mirror first, then defaults (deduped, blocklist applied). */
@@ -287,9 +287,9 @@ async function fetchOverpassRace(
   }
   if (urls.length === 1) {
     try {
-      return await fetchOverpassOnce(query, urls[0]!)
+      return await fetchOverpassOnce(query, urls[0])
     } catch (error) {
-      throw formatFetchError(error, urls[0]!)
+      throw formatFetchError(error, urls[0])
     }
   }
 
@@ -300,14 +300,14 @@ async function fetchOverpassRace(
     const controllers = urls.map(() => new AbortController())
 
     for (let index = 0; index < urls.length; index++) {
-      const url = urls[index]!
-      const abortSignal = controllers[index]!.signal
+      const url = urls[index]
+      const abortSignal = controllers[index].signal
       void fetchOverpassOnce(query, url, abortSignal)
         .then((result) => {
           if (settled) return
           settled = true
           for (let j = 0; j < controllers.length; j++) {
-            if (j !== index) controllers[j]!.abort()
+            if (j !== index) controllers[j].abort()
           }
           resolve(result)
         })

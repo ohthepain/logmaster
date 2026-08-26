@@ -15,7 +15,7 @@ export async function enqueueGeoFeaturesBuild(
   const boss = await getBoss()
   const regionId = options.regionId ?? 'europe'
   const region = getMapRegion(regionId)
-  const bbox = options.bbox ?? (region.bbox as GeoFeatureBbox)
+  const bbox = options.bbox ?? (region.bbox)
   const payload: BuildGeoFeaturesPayload = {
     regionId,
     bbox,

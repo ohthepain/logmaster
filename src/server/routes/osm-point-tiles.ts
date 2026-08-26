@@ -1,9 +1,10 @@
 import { GetObjectCommand, NoSuchKey, S3Client } from '@aws-sdk/client-s3'
 import { Hono } from 'hono'
 import {
-  OSM_POINT_DATASETS,
-  type OsmPointDatasetId,
+  OSM_POINT_DATASETS
+  
 } from '../../lib/map-data-layers'
+import type {OsmPointDatasetId} from '../../lib/map-data-layers';
 
 export const osmPointTileRoutes = new Hono()
 

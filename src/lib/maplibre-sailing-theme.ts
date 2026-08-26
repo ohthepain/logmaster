@@ -1,5 +1,7 @@
 import type maplibregl from 'maplibre-gl'
 
+import { prepareFlatSailingBasemap } from './maplibre-sailing-map-setup'
+
 /** Medium nautical palette — readable water/land contrast without near-black crush. */
 export const SailingMapColors = {
   background: '#1a3348',
@@ -66,8 +68,6 @@ function isHiddenBasemapLayer(id: string): boolean {
     id,
   )
 }
-
-import { prepareFlatSailingBasemap } from './maplibre-sailing-map-setup'
 
 /**
  * Restyle a MapTiler vector basemap toward a nautical chart look:

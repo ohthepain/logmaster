@@ -4,11 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "==> Sync Capacitor (production API)"
-pnpm cap:sync:prod
-
-echo "==> Sync iOS app icon"
-node scripts/sync-ios-app-icon.mjs
+# Cap sync (staging or prod) must run before this script — see pnpm ios:archive* in package.json.
 
 ARCHIVE_PATH="$ROOT/ios/build/Logbook2.0.xcarchive"
 EXPORT_PATH="$ROOT/ios/build/export"

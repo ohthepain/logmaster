@@ -26,7 +26,7 @@ describe('dev position override', () => {
 
     const geolocation = {
       getCurrentPosition: vi.fn((_success, error) => {
-        error?.({ code: 1, message: 'denied' } as GeolocationPositionError)
+        error?.({ code: 1, message: 'denied' })
       }),
       watchPosition: vi.fn(),
       clearWatch: vi.fn(),

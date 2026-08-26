@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { LogEntry, Trip } from '../domain/logbook'
+import type { LogEntry, Trip, Leg  } from '../domain/logbook'
 import {
   adjacentPositionedEntryPairs,
   buildLegTrackGeoJson,
   logEntryMapPoint,
   resolveTripLogMapViewport,
 } from './logbook-map-geo'
-import type { Leg } from '../domain/logbook'
 
 const baseEntry = (overrides: Partial<LogEntry>): LogEntry =>
   ({
@@ -294,8 +293,8 @@ describe('buildLegTrackGeoJson', () => {
 
     expect(geojson.features).toHaveLength(2)
     expect(geojson.features.some((feature) => {
-      const [fromLng, fromLat] = feature.geometry.coordinates[0]!
-      const [toLng, toLat] = feature.geometry.coordinates[1]!
+      const [fromLng, fromLat] = feature.geometry.coordinates[0]
+      const [toLng, toLat] = feature.geometry.coordinates[1]
       return fromLat === 48.3 && fromLng === -123.3 && toLat === 48.1 && toLng === -123.1
     })).toBe(false)
   })

@@ -1,5 +1,6 @@
 import maplibregl from 'maplibre-gl'
-import { useEffect, useMemo, useRef, type RefObject } from 'react'
+import { useEffect, useMemo, useRef  } from 'react'
+import type {RefObject} from 'react';
 import type { MapDataLayerToggles } from './map-data-layers'
 import { formatMapFeaturePopupHtml } from './osm-feature-display'
 import {

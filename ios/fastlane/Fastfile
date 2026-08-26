@@ -1,7 +1,7 @@
 default_platform(:ios)
 
 platform :ios do
-  desc 'Build a release .ipa for App Store / TestFlight'
+  desc 'Build a release .ipa (run pnpm cap:sync:staging or cap:sync:prod before archiving)'
   lane :build do
     build_app(
       project: 'App/App.xcodeproj',
@@ -21,7 +21,7 @@ platform :ios do
     )
   end
 
-  desc 'Upload the latest build to TestFlight'
+  desc 'Upload to TestFlight (staging web app — run via pnpm ios:beta)'
   lane :beta do
     build
     upload_to_testflight(

@@ -2,17 +2,19 @@ import type { OsmPointDatasetId } from '../../lib/map-data-layers'
 import type { GridCell } from '../marinas/grid'
 import {
   fetchOverpassElementsForCells,
-  formatMarinaCellLogLine,
-  type FetchMarinasOptions,
-  type MarinaCellResult,
-  type OverpassElement,
+  formatMarinaCellLogLine
+  
+  
+  
 } from '../marinas/overpass'
+import type {FetchMarinasOptions, MarinaCellResult, OverpassElement} from '../marinas/overpass';
 import { kindForTags, overpassQueryForCell } from './queries'
 import {
-  mergeOsmPointFeatures,
-  type OsmPointFeature,
-  type OsmPointType,
+  mergeOsmPointFeatures
+  
+  
 } from './schema'
+import type {OsmPointFeature} from './schema';
 
 function defaultKindForDataset(dataset: OsmPointDatasetId): string {
   if (dataset === 'harbours') return 'harbour'
@@ -57,7 +59,7 @@ export function overpassElementToOsmPoint(
     geometry: { type: 'Point', coordinates: [lon, lat] },
     properties: {
       id: `osm:${element.type}/${element.id}`,
-      osmType: element.type as OsmPointType,
+      osmType: element.type,
       osmId: element.id,
       name: featureName(tags),
       kind,

@@ -3,9 +3,10 @@ import {
   extractJobLog,
   formatJobRunInput,
   formatJobRunResult,
-  shortJobOutputMessage,
-  type AdminJobCatalogId,
+  shortJobOutputMessage
+  
 } from '../../lib/admin-jobs'
+import type {AdminJobCatalogId} from '../../lib/admin-jobs';
 import { getBoss } from './boss'
 import { BUILD_GEO_FEATURES_QUEUE } from './geo-features'
 import type { BuildGeoFeaturesPayload } from './geo-features'
@@ -217,18 +218,18 @@ export async function rerunUnifiedAdminJob(jobId: string): Promise<{
       throw new Error('Cannot re-run a job that is still active')
     }
 
-    const data = job.data as AdminJobPayload
+    const data = job.data
     const sendOptions =
       queue === BUILD_MARINAS_QUEUE
         ? {
             retryLimit: 1,
-            expireInSeconds: marinaJobExpireSeconds(data as BuildMarinasPayload),
+            expireInSeconds: marinaJobExpireSeconds(data),
           }
         : queue === BUILD_OSM_POINTS_QUEUE
           ? {
               retryLimit: 1,
               expireInSeconds: marinaJobExpireSeconds(
-                data as BuildMarinasPayload,
+                data,
               ),
             }
           : { retryLimit: 1 }

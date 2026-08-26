@@ -4,9 +4,10 @@ import { clearDevPositionOverride } from '../lib/device-position'
 import { defaultMapBasemapLayerToggles } from '../lib/maplibre-basemap-layer-toggles'
 import type { MapBasemapLayerToggles } from '../lib/maplibre-basemap-layer-toggles'
 import {
-  defaultMapDataLayerToggles,
-  type MapDataLayerToggles,
+  defaultMapDataLayerToggles
+  
 } from '../lib/map-data-layers'
+import type {MapDataLayerToggles} from '../lib/map-data-layers';
 
 type AppOptions = {
   devMode: boolean

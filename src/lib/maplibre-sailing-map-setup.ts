@@ -36,7 +36,7 @@ export function guardSailingMapAgainstTerrain(map: maplibregl.Map) {
   map.setTerrain = ((options: maplibregl.TerrainSpecification | null) => {
     if (options != null) return map
     return nativeSetTerrain(null)
-  }) as typeof map.setTerrain
+  })
 
   const flatten = () => prepareFlatSailingBasemap(map)
   const onStyleData = (event: maplibregl.MapDataEvent) => {

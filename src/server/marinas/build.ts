@@ -2,19 +2,20 @@ import 'dotenv/config'
 import { pathToFileURL } from 'node:url'
 import { gzipSync } from 'node:zlib'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
-import type { Feature, Geometry } from 'geojson'
 import {
   CANADA_MARINA_BBOX,
-  NORTH_AMERICA_MARINA_BBOX,
-  type MarinaBbox,
+  NORTH_AMERICA_MARINA_BBOX
+  
 } from './bboxes'
+import type {MarinaBbox} from './bboxes';
 import { gridCellsForBbox } from './grid'
 import { fetchMarinasForCells, formatMarinaCellLogLine } from './overpass'
 import {
   marinaFeatureCollection,
-  mergeMarinaFeatures,
-  type MarinaFeature,
+  mergeMarinaFeatures
+  
 } from './schema'
+import type {MarinaFeature} from './schema';
 import { degreeTilesForFeature, parseDegreeTilePrefix } from '../geo-features/tile'
 import type { DegreeTile } from '../geo-features/tile'
 
@@ -187,7 +188,7 @@ function addMarinaToTiles(
   feature: MarinaFeature,
   onlyTile: DegreeTile | null,
 ) {
-  for (const tile of degreeTilesForFeature(feature as Feature<Geometry>)) {
+  for (const tile of degreeTilesForFeature(feature)) {
     if (!tileMatches(tile, onlyTile)) continue
     getTileBucket(tiles, tile).marinas.push(feature)
   }

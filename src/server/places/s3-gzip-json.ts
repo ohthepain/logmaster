@@ -1,5 +1,6 @@
 import { gunzipSync } from 'node:zlib'
-import { GetObjectCommand, NoSuchKey, type S3Client } from '@aws-sdk/client-s3'
+import { GetObjectCommand, NoSuchKey  } from '@aws-sdk/client-s3'
+import type {S3Client} from '@aws-sdk/client-s3';
 
 export async function readS3GzipJson(
   s3: S3Client,

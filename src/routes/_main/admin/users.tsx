@@ -3,9 +3,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import {
   deleteAdminUser,
-  fetchAdminUsers,
-  type AdminUser,
+  fetchAdminUsers
+  
 } from '../../../lib/admin-api'
+import type {AdminUser} from '../../../lib/admin-api';
 import { useSession } from '../../../lib/auth-client'
 import { useIsAdmin } from '../../../lib/use-admin'
 

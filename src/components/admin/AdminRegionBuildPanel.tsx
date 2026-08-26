@@ -7,10 +7,11 @@ import {
   getMapRegion,
   MAP_LAYERS,
   MAP_REGIONS,
-  osmPointsDatasetForBuildLayer,
-  type MapLayerId,
-  type MapRegionId,
+  osmPointsDatasetForBuildLayer
+  
+  
 } from '../../lib/map-regions'
+import type {MapLayerId, MapRegionId} from '../../lib/map-regions';
 
 type QueuedJob = {
   layerId: MapLayerId

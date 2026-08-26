@@ -12,9 +12,10 @@ import {
   formatMarinasRunInput,
   formatMarinasRunResult,
   formatOsmPointsRunInput,
-  formatOsmPointsRunResult,
-  type AdminJobCatalogId,
+  formatOsmPointsRunResult
+  
 } from '../../../../lib/admin-jobs'
+import type {AdminJobCatalogId} from '../../../../lib/admin-jobs';
 
 type JobsSearch = {
   tab?: AdminJobCatalogId
