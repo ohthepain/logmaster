@@ -12,8 +12,11 @@ const { count, size, warnings } = await generateSW({
   globDirectory: clientDir,
   globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,webmanifest}'],
   globIgnores: ['sw.js', 'sw.js.map'],
-  navigateFallback: '/offline.html',
-  navigateFallbackDenylist: [/^\/api\//],
+  navigateFallbackDenylist: [
+    /^\/api\//,
+    /^\/sign-in/,
+    /^\/reset-password/,
+  ],
   maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
   runtimeCaching: [
     {
@@ -25,13 +28,13 @@ const { count, size, warnings } = await generateSW({
       handler: 'NetworkFirst',
       options: {
         cacheName: 'logmaster-pages',
-        networkTimeoutSeconds: 3,
+        networkTimeoutSeconds: 10,
         expiration: {
-          maxEntries: 32,
-          maxAgeSeconds: 60 * 60 * 24,
+          maxEntries: 16,
+          maxAgeSeconds: 60 * 60,
         },
         cacheableResponse: {
-          statuses: [0, 200],
+          statuses: [200],
         },
       },
     },

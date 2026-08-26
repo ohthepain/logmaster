@@ -5,9 +5,21 @@ import { isNativePlatform } from '../lib/platform'
 
 const UPDATE_CHECK_MS = 60 * 60 * 1000
 
-export function PwaRegister() {
+/** Capacitor loads the remote site in a WebView — a service worker causes stale/offline shells. */
+function NativeServiceWorkerCleanup() {
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+    void navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        void registration.unregister()
+      }
+    })
+  }, [])
+  return null
+}
+
+function PwaRegisterWeb() {
   const toastIdRef = useRef<string | number | null>(null)
-  const isNative = isNativePlatform()
 
   const {
     offlineReady: [offlineReady, setOfflineReady],
@@ -27,7 +39,7 @@ export function PwaRegister() {
   })
 
   useEffect(() => {
-    if (isNative || !offlineReady) return
+    if (!offlineReady) return
 
     toastIdRef.current = toast.message('logmaster is ready offline', {
       description: 'Trips and logs stay on this device when you lose signal.',
@@ -37,7 +49,7 @@ export function PwaRegister() {
   }, [offlineReady, setOfflineReady])
 
   useEffect(() => {
-    if (isNative || !needRefresh) return
+    if (!needRefresh) return
 
     if (toastIdRef.current != null) {
       toast.dismiss(toastIdRef.current)
@@ -62,4 +74,9 @@ export function PwaRegister() {
   }, [needRefresh, setNeedRefresh, updateServiceWorker])
 
   return null
+}
+
+export function PwaRegister() {
+  if (isNativePlatform()) return <NativeServiceWorkerCleanup />
+  return <PwaRegisterWeb />
 }

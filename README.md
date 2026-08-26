@@ -56,6 +56,8 @@ Then open `/sign-in` and use **Continue with Google**. Restart `pnpm dev` after 
 
 The server exposes the web client id at `/api/health` (`googleWebClientId`) for the native plugin; keep `GOOGLE_CLIENT_ID` as the **Web** client id in ECS secrets.
 
+**Email links (magic link, password reset):** iOS opens these in the app via Universal Links (`/.well-known/apple-app-site-association` + associated domains in `App.entitlements`). Rebuild the native app after pulling these changes. On Safari, if you still see “You're offline”, unregister the site service worker (Safari → Settings → Advanced → Website Data → logmaster.live → Remove) — a previous service worker may be serving a stale offline shell.
+
 ### Email (Amazon SES)
 
 Auth emails (sign-up verification, password reset, magic link) go through SES when `AWS_SES_FROM_EMAIL`

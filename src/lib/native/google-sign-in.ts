@@ -9,7 +9,7 @@ async function ensureGoogleSignInInitialized() {
   if (!isNativePlatform()) return
   if (!initPromise) {
     initPromise = (async () => {
-      const res = await fetch(apiUrl('/health'))
+      const res = await fetch(apiUrl('/api/health'))
       if (!res.ok) {
         throw new Error('Could not load auth configuration')
       }

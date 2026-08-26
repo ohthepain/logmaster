@@ -210,11 +210,15 @@ export function SignInPanel({
   const nameInputId = embedded ? 'ftue-name' : 'name'
 
   return (
-    <div className="w-full max-w-md">
+    <div
+      className={`w-full max-w-md scroll-mt-[calc(env(safe-area-inset-top,0px)+3rem)]${
+        embedded ? ' pt-2' : ''
+      }`}
+    >
       <DevComponentLabel name="SignInPanel" />
       <div className="mb-8">
         <h2
-          className="text-[var(--sea-ink)] mb-2"
+          className="text-[var(--sea-ink)] mb-2 scroll-mt-[calc(env(safe-area-inset-top,0px)+3rem)]"
           style={{ fontSize: '1.875rem', fontWeight: 700 }}
         >
           {mode === 'sign-in' ? 'Sign in' : 'Create account'}

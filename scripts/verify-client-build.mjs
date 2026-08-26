@@ -5,6 +5,7 @@ const clientDir = resolve('dist/client')
 const assetsDir = resolve(clientDir, 'assets')
 
 await access(resolve(clientDir, 'offline.html'))
+await access(resolve(clientDir, '.well-known/apple-app-site-association'))
 
 const assets = await readdir(assetsDir)
 const stylesCss = assets.find((name) => name.startsWith('styles-') && name.endsWith('.css'))
@@ -13,4 +14,4 @@ if (!stylesCss) {
   process.exit(1)
 }
 
-console.log(`[build] verified client bundle (${stylesCss}, offline.html)`)
+console.log(`[build] verified client bundle (${stylesCss}, offline.html, apple-app-site-association)`)

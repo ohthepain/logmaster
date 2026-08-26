@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "RPGSNMH65P.live.logmaster.app",
+        "paths": [
+          "/api/auth/*",
+          "/sign-in",
+          "/sign-in/*",
+          "/reset-password",
+          "/reset-password/*"
+        ]
+      }
+    ]
+  }
+}

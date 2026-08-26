@@ -60,6 +60,27 @@ async function tryServeStaticFile(req) {
 	const url = new URL(req.url)
 	const pathname = url.pathname
 
+	const wellKnown = {
+		'/.well-known/apple-app-site-association': 'application/json; charset=utf-8',
+		'/.well-known/assetlinks.json': 'application/json; charset=utf-8',
+	}
+	if (wellKnown[pathname]) {
+		const filePath = path.join(viteClientDir, pathname.slice(1))
+		try {
+			const data = await fs.readFile(filePath)
+			return new Response(data, {
+				status: 200,
+				headers: {
+					'content-type': wellKnown[pathname],
+					'cache-control': 'public, max-age=3600',
+				},
+			})
+		} catch (err) {
+			if (err && typeof err === 'object' && 'code' in err && err.code === 'ENOENT') return null
+			throw err
+		}
+	}
+
 	let relPath
 	try {
 		relPath = decodeURIComponent(pathname.slice(1))
