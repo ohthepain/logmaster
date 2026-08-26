@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 COPY pnpm-lock.yaml package.json ./
+COPY plugins ./plugins
 COPY prisma ./prisma
 COPY prisma.config.ts tsconfig.json vite.config.ts eslint.config.js ./
 COPY server-production.mjs ./
