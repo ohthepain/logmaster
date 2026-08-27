@@ -48,8 +48,14 @@ export async function signInWithGoogleNative(callbackURL: string) {
     return true
   } catch (err) {
     const code = (err as { code?: string }).code
+    const message = err instanceof Error ? err.message : String(err)
     if (code === ErrorCode.SignInCanceled) {
       return false
+    }
+    if (/GIDClientID/i.test(message)) {
+      throw new Error(
+        'Native Google Sign-In is not configured in this build. Set GOOGLE_IOS_CLIENT_ID in ios/fastlane/.env and run pnpm ios:beta again.',
+      )
     }
     throw err
   }

@@ -3,6 +3,7 @@ import { useRef } from 'react'
 import type { Leg, LogEntry, Trip } from '../domain/logbook'
 import type { TripDetailCoverDisplay } from '../lib/trip-display'
 import { getNativePlatform } from '../lib/platform'
+import { useAppOptionsStore } from '../stores/app-options'
 import { DevComponentLabel } from './DevComponentLabel'
 import { SailingMapControlStack } from './SailingMapControlStack'
 import { TripLogMap } from './TripLogMap'
@@ -29,6 +30,8 @@ export function TripDetailHero({
   onLogEntryClick,
 }: TripDetailHeroProps) {
   const isActiveTrip = trip.status === 'IN_PROGRESS' || trip.status === 'PLANNED'
+  const recordingTripId = useAppOptionsStore((state) => state.recordingTripId)
+  const showCurrentPosition = isActiveTrip && recordingTripId === trip.id
   const showInteractiveMap = isActiveTrip || cover.kind === 'map'
   const showPhoto = !showInteractiveMap && cover.kind === 'photo' && cover.photoUrl
   const showOperationalOverlay = showInteractiveMap
@@ -56,7 +59,7 @@ export function TripDetailHero({
             mapClassName="absolute inset-0 size-full"
             allowFullscreen={isActiveTrip}
             showControls={isActiveTrip && !useExternalIosMapControls}
-            showCurrentPosition={isActiveTrip}
+            showCurrentPosition={showCurrentPosition}
             interactive={isActiveTrip}
             embedded
             showSeamarks={isActiveTrip}
@@ -97,6 +100,7 @@ export function TripDetailHero({
           type="button"
           onClick={onEditCoverClick}
           disabled={busy}
+          data-map-touch-zone
           className="ios-map-touch-target pointer-events-auto inline-flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45 disabled:opacity-60"
           aria-label="Edit trip cover"
         >

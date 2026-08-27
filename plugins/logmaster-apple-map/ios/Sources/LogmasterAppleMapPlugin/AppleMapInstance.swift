@@ -3,10 +3,46 @@ import MapKit
 import UIKit
 import WebKit
 
+private enum AppleMapCameraMath {
+    static let minDistance: CLLocationDistance = 80
+    static let maxDistance: CLLocationDistance = 20_000_000
+    static let maxPitch: CGFloat = 70
+    static let pitchPointsToDegrees: CGFloat = 0.28
+
+    static func distance(of camera: MKMapCamera) -> CLLocationDistance {
+        if #available(iOS 16.0, *) {
+            return camera.centerCoordinateDistance
+        }
+        return camera.altitude
+    }
+
+    static func setDistance(_ camera: MKMapCamera, _ distance: CLLocationDistance) {
+        let clamped = min(max(distance, minDistance), maxDistance)
+        if #available(iOS 16.0, *) {
+            camera.centerCoordinateDistance = clamped
+        } else {
+            camera.altitude = clamped
+        }
+    }
+
+    static func zoom(_ camera: MKMapCamera, by factor: Double) {
+        guard factor > 0, factor.isFinite else { return }
+        setDistance(camera, distance(of: camera) / factor)
+    }
+
+    /// Drag up (negative y) increases pitch, matching Apple Maps.
+    static func tilt(_ camera: MKMapCamera, byPoints dy: CGFloat) {
+        camera.pitch = min(max(camera.pitch - dy * pitchPointsToDegrees, 0), maxPitch)
+    }
+}
+
 final class MapTouchForwarderView: UIView {
     weak var mapView: MKMapView?
     var passThroughRects: [CGRect] = []
     var onUserInteraction: (() -> Void)?
+
+    private var pinchRecognizer: UIPinchGestureRecognizer?
+    private var twoFingerPanRecognizer: UIPanGestureRecognizer?
 
     private func shouldPassThrough(at point: CGPoint) -> Bool {
         passThroughRects.contains(where: { $0.contains(point) })
@@ -17,10 +53,17 @@ final class MapTouchForwarderView: UIView {
         backgroundColor = .clear
         isMultipleTouchEnabled = true
 
+        let pinch = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+        pinch.cancelsTouchesInView = true
+        pinch.delaysTouchesBegan = false
+        pinch.delegate = self
+        addGestureRecognizer(pinch)
+        pinchRecognizer = pinch
+
         let pan = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
         pan.minimumNumberOfTouches = 1
         pan.maximumNumberOfTouches = 1
-        pan.cancelsTouchesInView = false
+        pan.cancelsTouchesInView = true
         pan.delaysTouchesBegan = false
         pan.delegate = self
         addGestureRecognizer(pan)
@@ -28,16 +71,11 @@ final class MapTouchForwarderView: UIView {
         let twoFingerPan = UIPanGestureRecognizer(target: self, action: #selector(handleTwoFingerPan(_:)))
         twoFingerPan.minimumNumberOfTouches = 2
         twoFingerPan.maximumNumberOfTouches = 2
-        twoFingerPan.cancelsTouchesInView = false
+        twoFingerPan.cancelsTouchesInView = true
         twoFingerPan.delaysTouchesBegan = false
         twoFingerPan.delegate = self
         addGestureRecognizer(twoFingerPan)
-
-        let pinch = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
-        pinch.cancelsTouchesInView = false
-        pinch.delaysTouchesBegan = false
-        pinch.delegate = self
-        addGestureRecognizer(pinch)
+        twoFingerPanRecognizer = twoFingerPan
     }
 
     required init?(coder: NSCoder) {
@@ -54,6 +92,13 @@ final class MapTouchForwarderView: UIView {
         return self
     }
 
+    private func mutateCamera(_ body: (MKMapCamera) -> Void) {
+        guard let mapView else { return }
+        let camera = mapView.camera.copy() as! MKMapCamera
+        body(camera)
+        mapView.setCamera(camera, animated: false)
+    }
+
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
         guard let mapView else { return }
         if gesture.state == .began {
@@ -61,20 +106,21 @@ final class MapTouchForwarderView: UIView {
         }
         guard gesture.state == .changed || gesture.state == .ended else { return }
 
-        let translation = gesture.translation(in: self)
-        gesture.setTranslation(.zero, in: self)
+        let translation = gesture.translation(in: mapView)
+        gesture.setTranslation(.zero, in: mapView)
 
-        var region = mapView.region
-        let span = region.span
-        let width = max(bounds.width, 1)
-        let height = max(bounds.height, 1)
-        region.center.longitude -= Double(translation.x / width) * span.longitudeDelta
-        region.center.latitude += Double(translation.y / height) * span.latitudeDelta
-        mapView.setRegion(region, animated: false)
+        mutateCamera { camera in
+            let centerPoint = CGPoint(x: mapView.bounds.midX, y: mapView.bounds.midY)
+            let shiftedPoint = CGPoint(
+                x: centerPoint.x - translation.x,
+                y: centerPoint.y - translation.y
+            )
+            camera.centerCoordinate = mapView.convert(shiftedPoint, toCoordinateFrom: mapView)
+        }
     }
 
     @objc private func handleTwoFingerPan(_ gesture: UIPanGestureRecognizer) {
-        guard let mapView else { return }
+        guard gesture.numberOfTouches == 2 else { return }
         if gesture.state == .began {
             onUserInteraction?()
         }
@@ -83,12 +129,13 @@ final class MapTouchForwarderView: UIView {
         let translation = gesture.translation(in: self)
         gesture.setTranslation(.zero, in: self)
 
-        // Drag up to zoom in, down to zoom out (matches Apple Maps trackpad-style feel).
-        let zoomFactor = exp(Double(-translation.y) / 180.0)
-        var region = mapView.region
-        region.span.latitudeDelta /= zoomFactor
-        region.span.longitudeDelta /= zoomFactor
-        mapView.setRegion(region, animated: false)
+        if let pinch = pinchRecognizer, pinch.state == .began || pinch.state == .changed {
+            return
+        }
+
+        mutateCamera { camera in
+            AppleMapCameraMath.tilt(camera, byPoints: translation.y)
+        }
     }
 
     @objc private func handlePinch(_ gesture: UIPinchGestureRecognizer) {
@@ -98,12 +145,25 @@ final class MapTouchForwarderView: UIView {
         }
         guard gesture.state == .changed else { return }
 
-        var region = mapView.region
         let scale = max(0.05, min(Double(gesture.scale), 20))
-        region.span.latitudeDelta /= scale
-        region.span.longitudeDelta /= scale
-        mapView.setRegion(region, animated: false)
         gesture.scale = 1
+
+        let pinchPoint = gesture.location(in: mapView)
+        let coordinateUnderPinch = mapView.convert(pinchPoint, toCoordinateFrom: mapView)
+
+        mutateCamera { camera in
+            AppleMapCameraMath.zoom(camera, by: scale)
+        }
+
+        mutateCamera { camera in
+            let newCoordinateUnderPinch = mapView.convert(pinchPoint, toCoordinateFrom: mapView)
+            camera.centerCoordinate = CLLocationCoordinate2D(
+                latitude: camera.centerCoordinate.latitude
+                    + (coordinateUnderPinch.latitude - newCoordinateUnderPinch.latitude),
+                longitude: camera.centerCoordinate.longitude
+                    + (coordinateUnderPinch.longitude - newCoordinateUnderPinch.longitude)
+            )
+        }
     }
 }
 
@@ -117,7 +177,26 @@ extension MapTouchForwarderView: UIGestureRecognizerDelegate {
         _ gestureRecognizer: UIGestureRecognizer,
         shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
     ) -> Bool {
-        true
+        let pair = [gestureRecognizer, otherGestureRecognizer]
+        let pinchAndTilt = pair.contains(where: { $0 === pinchRecognizer })
+            && pair.contains(where: { $0 === twoFingerPanRecognizer })
+        return pinchAndTilt
+    }
+}
+
+struct EntryMarker {
+    let coordinate: CLLocationCoordinate2D
+    let image: UIImage?
+}
+
+final class LogEntryMarkerAnnotation: NSObject, MKAnnotation {
+    var coordinate: CLLocationCoordinate2D
+    let image: UIImage?
+
+    init(coordinate: CLLocationCoordinate2D, image: UIImage?) {
+        self.coordinate = coordinate
+        self.image = image
+        super.init()
     }
 }
 
@@ -134,13 +213,31 @@ final class AppleMapViewDelegate: NSObject, MKMapViewDelegate {
 
         if let circle = overlay as? MKCircle {
             let renderer = MKCircleRenderer(circle: circle)
-            renderer.fillColor = UIColor(red: 235 / 255, green: 69 / 255, blue: 57 / 255, alpha: 0.95)
-            renderer.strokeColor = UIColor.white
+            renderer.fillColor = UIColor.white
+            renderer.strokeColor = UIColor(red: 235 / 255, green: 69 / 255, blue: 57 / 255, alpha: 0.95)
             renderer.lineWidth = 2
             return renderer
         }
 
         return MKOverlayRenderer(overlay: overlay)
+    }
+
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        if annotation is MKUserLocation {
+            return nil
+        }
+        guard let marker = annotation as? LogEntryMarkerAnnotation else {
+            return nil
+        }
+        let identifier = "log-entry-marker"
+        let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+            ?? MKAnnotationView(annotation: marker, reuseIdentifier: identifier)
+        view.annotation = marker
+        view.image = marker.image
+        view.canShowCallout = false
+        view.displayPriority = .required
+        view.collisionMode = .circle
+        return view
     }
 }
 
@@ -150,6 +247,7 @@ final class AppleMapInstance {
     let touchForwarder: MapTouchForwarderView
     var trackOverlay: MKPolyline?
     var entryOverlays: [MKCircle] = []
+    var entryAnnotations: [LogEntryMarkerAnnotation] = []
     var interactive = false
     private weak var webView: WKWebView?
 
@@ -159,7 +257,7 @@ final class AppleMapInstance {
         mapView = MKMapView(frame: .zero)
         mapView.delegate = delegate
         mapView.isRotateEnabled = false
-        mapView.isPitchEnabled = false
+        mapView.isPitchEnabled = true
         mapView.pointOfInterestFilter = MKPointOfInterestFilter(including: [])
         mapView.showsCompass = false
         mapView.overrideUserInterfaceStyle = .light
@@ -188,8 +286,7 @@ final class AppleMapInstance {
         self.webView = webView
         self.interactive = interactive
 
-        webView.scrollView.isScrollEnabled = !interactive
-        webView.scrollView.bounces = !interactive
+        Self.configureHostScrollView(webView, mapInteractive: interactive)
         webView.scrollView.contentOffset = .zero
         webView.scrollView.contentInset = .zero
 
@@ -210,6 +307,28 @@ final class AppleMapInstance {
         }
     }
 
+    private static func configureHostScrollView(_ webView: WKWebView, mapInteractive: Bool) {
+        webView.scrollView.isScrollEnabled = !mapInteractive
+        webView.scrollView.bounces = !mapInteractive
+        webView.scrollView.bouncesZoom = !mapInteractive
+        webView.scrollView.pinchGestureRecognizer?.isEnabled = !mapInteractive
+        if mapInteractive {
+            webView.scrollView.minimumZoomScale = 1
+            webView.scrollView.maximumZoomScale = 1
+        }
+        for recognizer in webView.scrollView.gestureRecognizers ?? [] {
+            if let pan = recognizer as? UIPanGestureRecognizer, pan.minimumNumberOfTouches > 1 {
+                pan.isEnabled = !mapInteractive
+            }
+        }
+    }
+
+    func zoom(by factor: Double) {
+        let camera = mapView.camera.copy() as! MKMapCamera
+        AppleMapCameraMath.zoom(camera, by: factor)
+        mapView.setCamera(camera, animated: false)
+    }
+
     func setFollowUserLocation(_ follow: Bool) {
         guard mapView.showsUserLocation else {
             mapView.setUserTrackingMode(.none, animated: true)
@@ -226,6 +345,7 @@ final class AppleMapInstance {
         mapView.frame = bounds
         mapView.isHidden = false
         if interactive {
+            Self.configureHostScrollView(webView, mapInteractive: true)
             touchForwarder.frame = bounds
         }
     }
@@ -263,13 +383,24 @@ final class AppleMapInstance {
         mapView.addOverlay(polyline)
     }
 
-    func setEntryPoints(_ coordinates: [CLLocationCoordinate2D]) {
+    func setEntryPoints(_ markers: [EntryMarker]) {
+        if !entryAnnotations.isEmpty {
+            mapView.removeAnnotations(entryAnnotations)
+            entryAnnotations = []
+        }
         for circle in entryOverlays {
             mapView.removeOverlay(circle)
         }
         entryOverlays = []
-        for coordinate in coordinates {
-            let circle = MKCircle(center: coordinate, radius: 18)
+
+        for marker in markers {
+            if let image = marker.image {
+                let annotation = LogEntryMarkerAnnotation(coordinate: marker.coordinate, image: image)
+                entryAnnotations.append(annotation)
+                mapView.addAnnotation(annotation)
+                continue
+            }
+            let circle = MKCircle(center: marker.coordinate, radius: 18)
             entryOverlays.append(circle)
             mapView.addOverlay(circle)
         }

@@ -21,6 +21,7 @@ import {
   rebuildLegsForTrip,
   sortLegs,
 } from '../lib/trip-legs'
+import { withHumanEditedFlag } from '../domain/instrument-data'
 import { syncTripOperationalFields } from '../domain/trip-state'
 import { advanceIso } from '../lib/dev-time-travel'
 import { isDevModeAvailable } from '../lib/dev-mode'
@@ -561,6 +562,8 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       data = await attachPlaceToEntryData(data, latitude, longitude)
     }
 
+    data = withHumanEditedFlag(data)
+
     const next = {
       ...current,
       ...patch,
@@ -616,10 +619,30 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       synced: false,
     }
     await putMedia(media)
-    set((state) => ({
-      media: [...state.media, media],
-      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
-    }))
+    const currentData = withHumanEditedFlag(current.data)
+    if (currentData !== current.data) {
+      const nextEntry = {
+        ...current,
+        data: currentData,
+        updatedAt: nowIso(),
+        synced: false,
+      }
+      await putLogEntry(nextEntry)
+      set((state) => ({
+        media: [...state.media, media],
+        entries: sortEntries(
+          state.entries.map((entry) =>
+            entry.id === entryId ? nextEntry : entry,
+          ),
+        ),
+        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      }))
+    } else {
+      set((state) => ({
+        media: [...state.media, media],
+        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      }))
+    }
     void get().syncNow()
     return media
   },

@@ -27,9 +27,11 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>logmaster records GPS in the background during an active trip so your log stays complete even when the screen is off.</string>
+	<string>logmaster records GPS in the background while you are recording a trip, so your log stays complete even when the screen is off.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>logmaster records your position for sailing log entries while you use the app.</string>
+	<string>logmaster records your position while you are recording a trip.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
@@ -58,5 +60,20 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+
+
+
+
+	<key>GIDClientID</key>
+	<string>963979812675-gkj43pho46ujl6c85dc4irf4dkhpncql.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.963979812675-gkj43pho46ujl6c85dc4irf4dkhpncql</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

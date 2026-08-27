@@ -17,10 +17,14 @@ export type MapCoordinate = {
   longitude: number
 }
 
+export type MapEntryPoint = MapCoordinate & {
+  imageDataUrl?: string
+}
+
 export type MapOverlays = {
   mapId: string
   track?: MapCoordinate[]
-  entryPoints?: MapCoordinate[]
+  entryPoints?: MapEntryPoint[]
 }
 
 export type MapCamera = {

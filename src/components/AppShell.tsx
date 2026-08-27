@@ -1,6 +1,7 @@
 import { useRouterState } from '@tanstack/react-router'
 import Header from './Header'
 import { BackgroundTripRecorder } from './BackgroundTripRecorder'
+import { LiveActivityController } from './LiveActivityController'
 import { DevComponentLabel } from './DevComponentLabel'
 import { FtueGate } from './FtueGate'
 import { isTripDetailImmersiveRoute } from '../lib/trip-map-overlay'
@@ -20,6 +21,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       />
       <FtueGate>
         <BackgroundTripRecorder />
+        <LiveActivityController />
         {hideChrome ? (
           children
         ) : (

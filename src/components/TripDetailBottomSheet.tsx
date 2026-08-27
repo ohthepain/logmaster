@@ -34,11 +34,13 @@ function nearestSnap(heightPx: number, snaps: Record<SnapName, number>): number 
 type TripDetailBottomSheetProps = {
   children: ReactNode
   className?: string
+  leadingAction?: ReactNode
 }
 
 export function TripDetailBottomSheet({
   children,
   className,
+  leadingAction,
 }: TripDetailBottomSheetProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null)
@@ -153,6 +155,7 @@ export function TripDetailBottomSheet({
           className="ios-map-touch-target flex shrink-0 cursor-grab touch-none flex-col active:cursor-grabbing"
           style={{ height: `${dragChromeHeight}px` }}
           onPointerDown={(event) => {
+            if ((event.target as HTMLElement).closest('button')) return
             event.currentTarget.setPointerCapture(event.pointerId)
             beginDrag(event.clientY)
           }}
@@ -171,13 +174,20 @@ export function TripDetailBottomSheet({
           aria-label="Drag log panel up or down"
         >
           <div
-            className="flex shrink-0 items-center justify-center"
+            className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center"
             style={{ height: `${BOTTOM_SHEET_DRAG_ZONE_PX}px` }}
           >
+            <div
+              className="flex items-center justify-end pr-3"
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              {leadingAction}
+            </div>
             <div
               className="h-1.5 w-11 rounded-full bg-white/85 shadow-[0_1px_4px_rgba(0,0,0,0.45)]"
               aria-hidden
             />
+            <div />
           </div>
           <div
             className="shrink-0"

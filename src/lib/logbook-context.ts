@@ -27,8 +27,10 @@ export async function getCurrentPosition(options?: {
 export {
   clearDevPositionOverride,
   getDevPositionOverride,
+  isLocationAccessEnabled,
   readDevicePosition,
   setDevPositionOverride,
+  setLocationAccessEnabled,
   subscribeToDevicePosition,
 } from './device-position'
 

@@ -1,11 +1,13 @@
 import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { Leg, LogEntry, Trip } from "../domain/logbook";
-import type { MapCoordinate } from "../lib/native/logmaster-apple-map";
+import type { MapCoordinate, MapEntryPoint } from "../lib/native/logmaster-apple-map";
 import { LogmasterAppleMap } from "../lib/native/logmaster-apple-map";
 import { readMapPassThroughZones } from "../lib/native/apple-map-layout";
 import { IOS_MAP_TOUCH_SYNC_EVENT } from "../lib/native/ios-map-touch-suspend";
 import { DEV_FALLBACK_POSITION, getCurrentPosition, subscribeToDevicePosition } from "../lib/logbook-context";
 import { buildLegEntryPointsGeoJson, buildLegTrackGeoJson, resolveTripLogMapViewport } from "../lib/logbook-map-geo";
+import { renderLogEntryMapMarkerDataUrl } from "../lib/map-log-entry-icons";
+import type { LogEntryMapIconKind, LogEntryMapOutline } from "../lib/log-entry-map-marker";
 import { cn } from "../lib/cn";
 import { DevComponentLabel } from "./DevComponentLabel";
 
@@ -28,13 +30,39 @@ type TripAppleMapKitProps = {
   controlStackClassName?: string;
 };
 
-function coordinatesFromGeoJson(collection: GeoJSON.FeatureCollection): MapCoordinate[] {
-  return collection.features.flatMap((feature) => {
-    if (feature.geometry?.type !== "Point") return [];
+async function entryMarkersFromGeoJson(
+  collection: GeoJSON.FeatureCollection,
+): Promise<MapEntryPoint[]> {
+  const markers: MapEntryPoint[] = [];
+  for (const feature of collection.features) {
+    if (feature.geometry?.type !== "Point") continue;
     const [longitude, latitude] = feature.geometry.coordinates;
-    if (typeof latitude !== "number" || typeof longitude !== "number") return [];
-    return [{ latitude, longitude }];
-  });
+    if (typeof latitude !== "number" || typeof longitude !== "number") continue;
+    const kind = feature.properties?.kind as LogEntryMapIconKind | undefined;
+    const color =
+      typeof feature.properties?.color === "string" ? feature.properties.color : null;
+    const outline = feature.properties?.outline as LogEntryMapOutline | undefined;
+    if (!kind || !color || !outline) {
+      markers.push({ latitude, longitude });
+      continue;
+    }
+    markers.push({
+      latitude,
+      longitude,
+      imageDataUrl: await renderLogEntryMapMarkerDataUrl(kind, color, outline),
+    });
+  }
+  return markers;
+}
+
+function fallbackMapCoordinate(trip: Trip): MapCoordinate {
+  if (trip.startLatitude != null && trip.startLongitude != null) {
+    return { latitude: trip.startLatitude, longitude: trip.startLongitude };
+  }
+  return {
+    latitude: DEV_FALLBACK_POSITION.latitude,
+    longitude: DEV_FALLBACK_POSITION.longitude,
+  };
 }
 
 function trackCoordinatesFromGeoJson(collection: GeoJSON.FeatureCollection): MapCoordinate[] {
@@ -99,7 +127,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
     await LogmasterAppleMap.setOverlays({
       mapId,
       track: trackCoordinatesFromGeoJson(legTrackGeoJson),
-      entryPoints: coordinatesFromGeoJson(legEntryGeoJson),
+      entryPoints: await entryMarkersFromGeoJson(legEntryGeoJson),
     });
   }, [mapId, mapReady, legTrackGeoJson, legEntryGeoJson]);
 
@@ -112,8 +140,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
         initialFitDoneRef.current = true;
         return;
       }
-      const position = currentPositionRef.current;
-      if (!position) return;
+      const position = currentPositionRef.current ?? fallbackMapCoordinate(trip);
       await LogmasterAppleMap.setCamera({
         mapId,
         center: position,
@@ -149,9 +176,16 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
       padding: embedded ? 24 : 48,
     });
     initialFitDoneRef.current = true;
-  }, [embedded, mapId, mapReady, shouldFollowUser, syncUserLocation, viewportTarget]);
+  }, [embedded, mapId, mapReady, shouldFollowUser, syncUserLocation, trip, viewportTarget]);
 
   const bootstrapPosition = useCallback(async () => {
+    if (!showCurrentPosition) {
+      currentPositionRef.current = fallbackMapCoordinate(trip);
+      if (!initialFitDoneRef.current) {
+        await syncViewport();
+      }
+      return;
+    }
     const gps = await getCurrentPosition({ force: true });
     currentPositionRef.current = {
       latitude: gps.latitude ?? DEV_FALLBACK_POSITION.latitude,
@@ -160,7 +194,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
     if (!initialFitDoneRef.current) {
       await syncViewport();
     }
-  }, [syncViewport]);
+  }, [showCurrentPosition, syncViewport, trip]);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,11 +203,6 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
       await LogmasterAppleMap.create({ mapId, interactive });
       if (cancelled) return;
       await LogmasterAppleMap.setVisible({ mapId, visible: true });
-      await LogmasterAppleMap.setShowsUserLocation({
-        mapId,
-        show: showCurrentPosition,
-        follow: shouldFollowUser,
-      });
       setMapReady(true);
     })();
 
@@ -182,7 +211,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
       setMapReady(false);
       void LogmasterAppleMap.destroy({ mapId });
     };
-  }, [interactive, mapId, shouldFollowUser, showCurrentPosition]);
+  }, [interactive, mapId]);
 
   useEffect(() => {
     void syncUserLocation();
@@ -207,7 +236,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
   }, [syncViewport]);
 
   useEffect(() => {
-    if (!mapReady) return;
+    if (!mapReady || !showCurrentPosition) return;
 
     return subscribeToDevicePosition((position) => {
       if (position.latitude == null || position.longitude == null) return;
@@ -219,7 +248,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
         void syncViewport();
       }
     });
-  }, [mapReady, syncViewport, viewportTarget.kind]);
+  }, [mapReady, showCurrentPosition, syncViewport, viewportTarget.kind]);
 
   useEffect(() => {
     if (!mapReady || !interactive) return;
@@ -244,7 +273,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
     window.addEventListener("resize", syncChrome, { passive: true });
     window.addEventListener(IOS_MAP_TOUCH_SYNC_EVENT, syncChrome);
     const mutationObserver = new MutationObserver(syncChrome);
-    mutationObserver.observe(document.body, { childList: true });
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
     syncChrome();
 
     return () => {

@@ -169,3 +169,11 @@ export const sailingMapLegEntryPaint = {
   'circle-stroke-width': 2.5,
   'circle-stroke-color': ['get', 'color'],
 } satisfies maplibregl.CircleLayerSpecification['paint']
+
+export const sailingMapLegEntryIconLayout = {
+  'icon-image': ['get', 'icon'],
+  'icon-size': 1,
+  'icon-allow-overlap': true,
+  'icon-ignore-placement': true,
+  'icon-anchor': 'center',
+} satisfies maplibregl.SymbolLayerSpecification['layout']

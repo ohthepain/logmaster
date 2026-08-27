@@ -190,7 +190,7 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         let track = Self.parseCoordinates(call.getArray("track") as? [[String: Any]] ?? [])
-        let entryPoints = Self.parseCoordinates(call.getArray("entryPoints") as? [[String: Any]] ?? [])
+        let entryPoints = Self.parseEntryMarkers(call.getArray("entryPoints") as? [[String: Any]] ?? [])
 
         DispatchQueue.main.async {
             guard let instance = self.maps[mapId] else {
@@ -273,16 +273,7 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
             instance.setFollowUserLocation(false)
-            var region = instance.mapView.region
-            region.span.latitudeDelta = min(
-                max(region.span.latitudeDelta / factor, 0.0005),
-                180
-            )
-            region.span.longitudeDelta = min(
-                max(region.span.longitudeDelta / factor, 0.0005),
-                360
-            )
-            instance.mapView.setRegion(region, animated: false)
+            instance.zoom(by: factor)
             call.resolve()
         }
     }
@@ -337,5 +328,34 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
         }
+    }
+
+    private static func parseEntryMarkers(_ raw: [[String: Any]]) -> [EntryMarker] {
+        raw.compactMap { item in
+            guard let latitude = item["latitude"] as? Double,
+                  let longitude = item["longitude"] as? Double else {
+                return nil
+            }
+            return EntryMarker(
+                coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
+                image: image(fromDataUrl: item["imageDataUrl"] as? String)
+            )
+        }
+    }
+
+    private static func image(fromDataUrl dataUrl: String?) -> UIImage? {
+        guard let dataUrl, !dataUrl.isEmpty else { return nil }
+        let payload: String
+        if let comma = dataUrl.firstIndex(of: ",") {
+            payload = String(dataUrl[dataUrl.index(after: comma)...])
+        } else {
+            payload = dataUrl
+        }
+        guard let data = Data(base64Encoded: payload, options: [.ignoreUnknownCharacters]),
+              let image = UIImage(data: data),
+              let cgImage = image.cgImage else {
+            return nil
+        }
+        return UIImage(cgImage: cgImage, scale: 2, orientation: .up)
     }
 }

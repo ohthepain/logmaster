@@ -4,7 +4,7 @@ import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "r
 import type { LogEntry, Leg, Trip } from "../domain/logbook";
 import { DEV_FALLBACK_POSITION, setDevPositionOverride, subscribeToDevicePosition } from "../lib/logbook-context";
 import { isDevModeAvailable } from "../lib/dev-mode";
-import { buildLegEntryPointsGeoJson, buildLegTrackGeoJson, mapBrandColor, mapPointsToBounds, resolveTripLogMapViewport } from "../lib/logbook-map-geo";
+import { buildLegEntryPointsGeoJson, buildLegTrackGeoJson, mapBrandColor, mapPointsToBounds, resolveTripLogMapViewport, tripStartMapPoint } from "../lib/logbook-map-geo";
 import { createCurrentPositionMarkerElement } from "../lib/map-current-position-marker";
 import {
   addOpenSeaMapSeamarkOverlay,
@@ -16,7 +16,8 @@ import {
 } from "../lib/maplibre-sailing-map-setup";
 import { installMapDataLayers } from "../lib/maplibre-data-layers";
 import { useMapDataLayerSync } from "../lib/use-map-data-layer-sync";
-import { applySailingLogMapTheme, sailingMapLegEntryPaint, sailingMapLegTrackPaint, SailingMapColors } from "../lib/maplibre-sailing-theme";
+import { applySailingLogMapTheme, sailingMapLegTrackPaint, SailingMapColors } from "../lib/maplibre-sailing-theme";
+import { addLogEntrySymbolLayer, syncLogEntryMapMarkerImages } from "../lib/map-log-entry-icons";
 import { getGeoJsonSource } from "../lib/maplibre-source";
 import { defaultRasterMapId } from "../lib/map-styles";
 import { centerMapOnCurrentLocation, juiceMapFocus, SAILING_MAP_EASE_MS, SAILING_MAP_FIT_MAX_ZOOM, SAILING_MAP_INITIAL_ZOOM } from "../lib/sailing-map-viewport";
@@ -191,12 +192,7 @@ function TripLogMapMapLibre({
             type: "geojson",
             data: { type: "FeatureCollection", features: [] },
           });
-          map.addLayer({
-            id: "trip-log-entry-circles",
-            type: "circle",
-            source: ENTRY_SOURCE,
-            paint: sailingMapLegEntryPaint,
-          });
+          addLogEntrySymbolLayer(map, ENTRY_SOURCE, "trip-log-entry-icons");
 
           map.addSource(CURRENT_SOURCE, {
             type: "geojson",
@@ -271,12 +267,10 @@ function TripLogMapMapLibre({
     if (!map || !mapReady) return;
 
     const trackSource = getGeoJsonSource(map, TRACK_SOURCE);
-    const entrySource = getGeoJsonSource(map, ENTRY_SOURCE);
     const currentSource = getGeoJsonSource(map, CURRENT_SOURCE);
-    if (!trackSource || !entrySource || !currentSource) return;
+    if (!trackSource || !currentSource) return;
 
     trackSource.setData(legTrackGeoJson);
-    entrySource.setData(legEntryGeoJson);
 
     currentSource.setData({
       type: "FeatureCollection",
@@ -294,7 +288,25 @@ function TripLogMapMapLibre({
             ]
           : [],
     });
-  }, [mapReady, legTrackGeoJson, legEntryGeoJson, currentPosition, showCurrentPosition, devDraggablePosition]);
+  }, [mapReady, legTrackGeoJson, currentPosition, showCurrentPosition, devDraggablePosition]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+
+    const entrySource = getGeoJsonSource(map, ENTRY_SOURCE);
+    if (!entrySource) return;
+
+    let cancelled = false;
+    void syncLogEntryMapMarkerImages(map, legEntryGeoJson).then(() => {
+      if (cancelled) return;
+      entrySource.setData(legEntryGeoJson);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mapReady, legEntryGeoJson]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -365,8 +377,19 @@ function TripLogMapMapLibre({
     if (!map || !mapReady || initialFitDoneRef.current) return;
 
     if (viewportTarget.kind === "current-location") {
-      if (!showCurrentPosition || !currentPosition) return;
-      juiceMapFocus(map, currentPosition);
+      if (showCurrentPosition) {
+        if (!currentPosition) return;
+        juiceMapFocus(map, currentPosition);
+        initialFitDoneRef.current = true;
+        return;
+      }
+      juiceMapFocus(
+        map,
+        tripStartMapPoint(trip) ?? {
+          longitude: DEV_FALLBACK_POSITION.longitude,
+          latitude: DEV_FALLBACK_POSITION.latitude,
+        },
+      );
       initialFitDoneRef.current = true;
       return;
     }
@@ -391,6 +414,7 @@ function TripLogMapMapLibre({
     viewportTarget,
     currentPosition,
     showCurrentPosition,
+    trip,
     embedded,
   ]);
 

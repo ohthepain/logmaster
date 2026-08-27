@@ -121,10 +121,12 @@ function kindFilterExpression(kinds: string[]) {
 const APP_MAP_OVERLAY_LAYER_IDS = [
   'trip-log-track-line',
   'trip-log-entry-circles',
+  'trip-log-entry-icons',
   'trip-current-position-halo',
   'trip-current-position-dot',
   'compose-log-track-line',
   'compose-log-entry-circles',
+  'compose-log-entry-icons',
 ] as const
 
 const MAP_FEATURE_QUERY_PAD_PX = 16

@@ -18,7 +18,8 @@ import {
   loadSailingMapStyle,
   scheduleSeamarkTileRefresh,
 } from '../lib/maplibre-sailing-map-setup'
-import { applySailingLogMapTheme, sailingMapLegEntryPaint, sailingMapLegTrackPaint, SailingMapColors } from '../lib/maplibre-sailing-theme'
+import { applySailingLogMapTheme, sailingMapLegTrackPaint, SailingMapColors } from '../lib/maplibre-sailing-theme'
+import { addLogEntrySymbolLayer, syncLogEntryMapMarkerImages } from '../lib/map-log-entry-icons'
 import { defaultRasterMapId } from '../lib/map-styles'
 import { installMapDataLayers, queryTappableMapDataFeatures } from '../lib/maplibre-data-layers'
 import { useMapDataLayerSync } from '../lib/use-map-data-layer-sync'
@@ -147,12 +148,7 @@ export function LogEntryPositionMap({
             type: 'geojson',
             data: { type: 'FeatureCollection', features: [] },
           })
-          map.addLayer({
-            id: 'compose-log-entry-circles',
-            type: 'circle',
-            source: ENTRY_SOURCE,
-            paint: sailingMapLegEntryPaint,
-          })
+          addLogEntrySymbolLayer(map, ENTRY_SOURCE, 'compose-log-entry-icons')
 
           const marker = new maplibregl.Marker({
             element: createDraftMarkerElement(),
@@ -228,12 +224,28 @@ export function LogEntryPositionMap({
     if (!map || !mapReady) return
 
     const trackSource = getGeoJsonSource(map, TRACK_SOURCE)
-    const entrySource = getGeoJsonSource(map, ENTRY_SOURCE)
-    if (!trackSource || !entrySource) return
+    if (!trackSource) return
 
     trackSource.setData(legTrackGeoJson)
-    entrySource.setData(legEntryGeoJson)
-  }, [mapReady, legTrackGeoJson, legEntryGeoJson])
+  }, [mapReady, legTrackGeoJson])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !mapReady) return
+
+    const entrySource = getGeoJsonSource(map, ENTRY_SOURCE)
+    if (!entrySource) return
+
+    let cancelled = false
+    void syncLogEntryMapMarkerImages(map, legEntryGeoJson).then(() => {
+      if (cancelled) return
+      entrySource.setData(legEntryGeoJson)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [mapReady, legEntryGeoJson])
 
   useEffect(() => {
     initialFitDoneRef.current = false

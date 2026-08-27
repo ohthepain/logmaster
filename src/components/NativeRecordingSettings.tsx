@@ -37,15 +37,16 @@ export function NativeRecordingSettings({
             Background recording
           </h2>
           <p className="mt-1 text-sm leading-6 text-[var(--sea-ink-soft)]">
-            While this trip is active, logmaster can record GPS in the background
-            and add auto-tracked hourly log entries you can edit later.
+            While you are recording this trip, logmaster can keep GPS running in
+            the background and add auto-tracked hourly log entries you can edit
+            later.
           </p>
         </div>
       </div>
 
       <label className="flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] px-3 py-3">
         <span className="text-sm font-medium text-[var(--sea-ink)]">
-          Record GPS in background
+          Keep recording when the app is in the background
         </span>
         <input
           type="checkbox"

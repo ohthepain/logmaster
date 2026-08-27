@@ -6,6 +6,12 @@ import {
   sortLogEntriesChronologically,
 } from './logbook-entry-order'
 import { generateLegColor, resolveLegColor } from './leg-colors'
+import {
+  collapseColocatedLogEntries,
+  logEntryMapIconKind,
+  logEntryMapMarkerImageId,
+  logEntryMapOutline,
+} from './log-entry-map-marker'
 
 export type MapLngLat = { longitude: number; latitude: number }
 
@@ -91,12 +97,15 @@ export function buildLegTrackGeoJson(entries: LogEntry[], legs: Leg[] = []) {
 
 export function buildLegEntryPointsGeoJson(entries: LogEntry[], legs: Leg[] = []) {
   const legColors = legColorLookup(legs)
-  const sorted = positionedEntries(entries)
+  const sorted = collapseColocatedLogEntries(positionedEntries(entries))
 
   return {
     type: 'FeatureCollection' as const,
     features: sorted.map((entry, index) => {
       const legId = entry.legId ?? null
+      const color = colorForLegId(legId, legColors, 0)
+      const kind = logEntryMapIconKind(entry)
+      const outline = logEntryMapOutline(entry)
       return {
         type: 'Feature' as const,
         geometry: {
@@ -105,7 +114,11 @@ export function buildLegEntryPointsGeoJson(entries: LogEntry[], legs: Leg[] = []
         },
         properties: {
           index: index + 1,
-          color: colorForLegId(legId, legColors, 0),
+          entryId: entry.id,
+          color,
+          kind,
+          outline,
+          icon: logEntryMapMarkerImageId(kind, color, outline),
         },
       }
     }),

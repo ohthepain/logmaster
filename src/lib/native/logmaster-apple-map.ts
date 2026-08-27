@@ -1,5 +1,12 @@
 import { registerPlugin } from '@capacitor/core'
-import type { LogmasterAppleMapPlugin } from 'logmaster-apple-map'
+import type {
+  FitCoordinatesOptions,
+  LogmasterAppleMapPlugin,
+  MapCamera,
+  MapCoordinate,
+  MapLayout,
+  MapOverlays,
+} from 'logmaster-apple-map'
 
 export const LogmasterAppleMap =
   registerPlugin<LogmasterAppleMapPlugin>('LogmasterAppleMap')
@@ -10,4 +17,8 @@ export type {
   MapCoordinate,
   MapLayout,
   MapOverlays,
-} from 'logmaster-apple-map'
+}
+
+export type MapEntryPoint = MapCoordinate & {
+  imageDataUrl?: string
+}

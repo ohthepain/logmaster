@@ -76,8 +76,9 @@ export default function DevModeToggle({ mapOverlay = false }: { mapOverlay?: boo
           id={menuId}
           role="menu"
           aria-label="Dev"
+          data-map-touch-zone
           className={cn(
-            'absolute right-0 top-full z-[100] mt-2 min-w-[12rem] rounded-2xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-2xl backdrop-blur-md',
+            'ios-map-touch-target absolute right-0 top-full z-[100] mt-2 min-w-[12rem] rounded-2xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-2xl backdrop-blur-md',
             'ring-1 ring-[var(--line)]/60',
           )}
         >

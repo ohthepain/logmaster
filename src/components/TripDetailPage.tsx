@@ -10,6 +10,7 @@ import { TripCrewPickerModal } from "./TripCrewPickerModal";
 import { TripCoverEditModal } from "./TripCoverEditModal";
 import { TripDetailHero } from "./TripDetailHero";
 import { TripDetailBottomSheet } from "./TripDetailBottomSheet";
+import { TripRecordButton } from "./TripRecordButton";
 import { TripLegSection } from "./TripLegSection";
 import { NativeRecordingSettings } from "./NativeRecordingSettings";
 import type { Media } from "../domain/logbook";
@@ -20,13 +21,15 @@ import { formatDateTime, formatPosition } from "../lib/logbook-format";
 import { tripDetailCoverDisplay, tripDisplayName } from "../lib/trip-display";
 import { getNativePlatform } from "../lib/platform";
 import { useIosNativeMapTouchPassthrough } from "../lib/native/ios-map-touch-passthrough";
+import { useAppOptionsStore } from "../stores/app-options";
 import { useLogbookStore, triggerLogbookSyncRetry } from "../stores/logbook";
 
 type TripDetailPageProps = {
   tripId: string;
+  startFromLiveActivity?: boolean;
 };
 
-export function TripDetailPage({ tripId }: TripDetailPageProps) {
+export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDetailPageProps) {
   const navigate = useNavigate();
   const store = useLogbookStore();
   const trip = store.trips.find((item) => item.id === tripId) ?? null;
@@ -39,6 +42,7 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
   const [createEntryOpen, setCreateEntryOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [coverEditOpen, setCoverEditOpen] = useState(false);
+  const liveActivityStartHandledRef = useRef(false);
 
   useEffect(() => {
     void useLogbookStore.getState().load();
@@ -47,6 +51,46 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
   useEffect(() => {
     useLogbookStore.getState().selectTrip(tripId);
   }, [tripId]);
+
+  useEffect(() => {
+    if (!startFromLiveActivity || !store.booted || !trip) return;
+    if (liveActivityStartHandledRef.current) return;
+    liveActivityStartHandledRef.current = true;
+
+    // Clear the command URL first so an app reload cannot execute it twice.
+    void navigate({
+      to: "/trips/$tripId",
+      params: { tripId },
+      search: { liveActivity: undefined },
+      replace: true,
+    });
+
+    void (async () => {
+      setBusy(true);
+      try {
+        if (trip.status === "PLANNED") {
+          await useLogbookStore.getState().addEntry({
+            tripId,
+            type: "START_TRIP",
+          });
+        }
+        const current = useLogbookStore
+          .getState()
+          .trips.find((item) => item.id === tripId);
+        if (current?.status === "IN_PROGRESS") {
+          useAppOptionsStore.getState().setRecordingTripId(tripId);
+        }
+        toast.success("Trip started");
+      } catch (error) {
+        liveActivityStartHandledRef.current = false;
+        toast.error(
+          error instanceof Error ? error.message : "Failed to start trip",
+        );
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, [navigate, startFromLiveActivity, store.booted, trip, tripId]);
 
   useEffect(() => {
     void fetchCrew()
@@ -242,7 +286,11 @@ export function TripDetailPage({ tripId }: TripDetailPageProps) {
           }
         />
 
-        <TripDetailBottomSheet>
+        <TripDetailBottomSheet
+          leadingAction={
+            trip.status === "IN_PROGRESS" ? <TripRecordButton tripId={trip.id} /> : null
+          }
+        >
           {trip.status === "PLANNED" ? (
             <button
               type="button"

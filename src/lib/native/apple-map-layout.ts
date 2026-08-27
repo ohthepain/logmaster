@@ -9,7 +9,6 @@ export type MapPassThroughZone = {
 
 const MIN_SIZE = 1
 const ZONE_PADDING_PX = 12
-const MAP_CONTROL_EDGE_PX = 80
 
 const MAP_TOUCH_ZONE_SELECTOR = [
   '[data-map-touch-zone]',
@@ -51,15 +50,7 @@ export function readMapPassThroughZones(): MapPassThroughZone[] {
 
   const header = document.querySelector('header')
   if (header) {
-    const rect = header.getBoundingClientRect()
-    const menu = document.querySelector('[role="menu"][aria-label="Account"]')
-    const menuBottom = menu?.getBoundingClientRect().bottom ?? rect.bottom + 16
-    zones.push({
-      x: rect.left,
-      y: rect.top,
-      width: Math.max(MIN_SIZE, rect.width),
-      height: Math.max(MIN_SIZE, Math.max(rect.height + 240, menuBottom - rect.top)),
-    })
+    pushZone(zones, header.getBoundingClientRect())
   }
 
   const viewportH = window.innerHeight
@@ -94,28 +85,5 @@ export function readMapPassThroughZones(): MapPassThroughZone[] {
     pushZone(zones, node.getBoundingClientRect())
   }
 
-  pushFallbackChromeZones(zones, viewportH)
-
   return zones
-}
-
-function pushFallbackChromeZones(zones: MapPassThroughZone[], viewportH: number) {
-  zones.push({
-    x: 0,
-    y: 0,
-    width: MAP_CONTROL_EDGE_PX,
-    height: viewportH,
-  })
-  zones.push({
-    x: Math.max(0, window.innerWidth - MAP_CONTROL_EDGE_PX),
-    y: 0,
-    width: MAP_CONTROL_EDGE_PX,
-    height: viewportH,
-  })
-  zones.push({
-    x: 0,
-    y: Math.round(viewportH * 0.45),
-    width: window.innerWidth,
-    height: Math.round(viewportH * 0.55),
-  })
 }

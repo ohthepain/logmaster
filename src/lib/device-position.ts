@@ -20,6 +20,7 @@ let inflight: Promise<PositionSnapshot> | null = null;
 let watchId: number | null = null;
 let nativeWatchId: string | null = null;
 let watchSubscribers = 0;
+let locationAccessEnabled = false;
 let devFallbackLogged = false;
 let insecureContextLogged = false;
 
@@ -124,8 +125,29 @@ function devFallbackPosition(detail?: string): PositionSnapshot {
   };
 }
 
+export function isLocationAccessEnabled() {
+  return locationAccessEnabled;
+}
+
+/** Start or stop GPS access. Permission prompts only happen while this is enabled. */
+export function setLocationAccessEnabled(enabled: boolean) {
+  if (locationAccessEnabled === enabled) return;
+  locationAccessEnabled = enabled;
+  if (enabled) {
+    if (watchSubscribers > 0) {
+      ensureWatch();
+    }
+    return;
+  }
+  stopWatches();
+}
+
 async function resolveNativeDevicePosition(): Promise<PositionSnapshot | null> {
-  if (typeof window === 'undefined' || !Capacitor.isNativePlatform()) {
+  if (
+    !locationAccessEnabled ||
+    typeof window === 'undefined' ||
+    !Capacitor.isNativePlatform()
+  ) {
     return null
   }
 
@@ -160,11 +182,16 @@ async function resolveNativeDevicePosition(): Promise<PositionSnapshot | null> {
 }
 
 async function resolveDevicePosition(): Promise<PositionSnapshot> {
-  const nativePosition = await resolveNativeDevicePosition()
-  if (nativePosition) return nativePosition
-
   const override = devOverrideSnapshot();
   if (override) return override;
+
+  if (!locationAccessEnabled) {
+    if (cached) return cloneCached(cached);
+    return devFallbackPosition("recording paused");
+  }
+
+  const nativePosition = await resolveNativeDevicePosition()
+  if (nativePosition) return nativePosition
 
   if (typeof navigator === "undefined") {
     return devFallbackPosition("not supported");
@@ -198,7 +225,12 @@ async function resolveDevicePosition(): Promise<PositionSnapshot> {
 }
 
 async function ensureNativeWatch() {
-  if (nativeWatchId != null || typeof window === "undefined" || !Capacitor.isNativePlatform()) {
+  if (
+    !locationAccessEnabled ||
+    nativeWatchId != null ||
+    typeof window === "undefined" ||
+    !Capacitor.isNativePlatform()
+  ) {
     return;
   }
 
@@ -219,6 +251,10 @@ async function ensureNativeWatch() {
 }
 
 function ensureWatch() {
+  if (!locationAccessEnabled) {
+    return;
+  }
+
   if (Capacitor.isNativePlatform()) {
     void ensureNativeWatch();
     return;
@@ -238,11 +274,7 @@ function ensureWatch() {
   );
 }
 
-function stopWatchIfIdle() {
-  if (watchSubscribers > 0) {
-    return;
-  }
-
+function stopWatches() {
   if (nativeWatchId != null) {
     void Geolocation.clearWatch({ id: nativeWatchId });
     nativeWatchId = null;
@@ -255,9 +287,21 @@ function stopWatchIfIdle() {
   watchId = null;
 }
 
+function stopWatchIfIdle() {
+  if (watchSubscribers > 0 && locationAccessEnabled) {
+    return;
+  }
+  stopWatches();
+}
+
 export async function readDevicePosition(options?: { force?: boolean }): Promise<PositionSnapshot> {
   const override = devOverrideSnapshot();
   if (override) return override;
+
+  if (!locationAccessEnabled) {
+    if (cached) return cloneCached(cached);
+    return devFallbackPosition("recording paused");
+  }
 
   if (!options?.force && isFresh() && cached) {
     return cloneCached(cached);
@@ -286,7 +330,7 @@ export function subscribeToDevicePosition(listener: PositionListener) {
 
   if (cached) {
     listener(cached);
-  } else {
+  } else if (locationAccessEnabled) {
     void readDevicePosition();
   }
 

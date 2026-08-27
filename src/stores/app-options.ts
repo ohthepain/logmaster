@@ -1,6 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { clearDevPositionOverride } from '../lib/device-position'
+import {
+  clearDevPositionOverride,
+  setLocationAccessEnabled,
+} from '../lib/device-position'
 import { defaultMapBasemapLayerToggles } from '../lib/maplibre-basemap-layer-toggles'
 import type { MapBasemapLayerToggles } from '../lib/maplibre-basemap-layer-toggles'
 import {
@@ -23,6 +26,9 @@ type AppOptions = {
   /** Native app: record GPS in background while a trip is in progress. */
   backgroundTripRecording: boolean
   setBackgroundTripRecording: (enabled: boolean) => void
+  /** Trip currently recording GPS. Location permission is only requested for this trip. */
+  recordingTripId: string | null
+  setRecordingTripId: (tripId: string | null) => void
   /** Minimum minutes between auto-tracked log entries. */
   autoTrackIntervalMinutes: number
   setAutoTrackIntervalMinutes: (minutes: number) => void
@@ -62,6 +68,11 @@ export const useAppOptionsStore = create<AppOptions>()(
       backgroundTripRecording: true,
       setBackgroundTripRecording: (enabled) =>
         set({ backgroundTripRecording: enabled }),
+      recordingTripId: null,
+      setRecordingTripId: (tripId) => {
+        setLocationAccessEnabled(Boolean(tripId))
+        set({ recordingTripId: tripId })
+      },
       autoTrackIntervalMinutes: 30,
       setAutoTrackIntervalMinutes: (minutes) =>
         set({
@@ -83,6 +94,11 @@ export const useAppOptionsStore = create<AppOptions>()(
           mapDataLayerToggles: { ...s.mapDataLayerToggles, ...next },
         })),
     }),
-    { name: 'travelmode-app-options' },
+    {
+      name: 'travelmode-app-options',
+      onRehydrateStorage: () => (state) => {
+        setLocationAccessEnabled(Boolean(state?.recordingTripId))
+      },
+    },
   ),
 )
