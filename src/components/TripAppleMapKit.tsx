@@ -272,25 +272,10 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
   }, [trip.id, selectedEntryId]);
 
   useEffect(() => {
-    if (!mapReady || !onEntrySelect) return;
+    if (!mapReady) return;
 
     let cancelled = false;
-    let removeSelectedListener: (() => void) | undefined;
     let removePreviewListener: (() => void) | undefined;
-
-    void LogmasterAppleMap.addListener("entrySelected", (event) => {
-      if (cancelled || event.mapId !== mapId) return;
-      setEntryPreview(null);
-      onEntrySelect(event.entryId);
-    }).then((handle) => {
-      if (cancelled) {
-        void handle.remove();
-        return;
-      }
-      removeSelectedListener = () => {
-        void handle.remove();
-      };
-    });
 
     void LogmasterAppleMap.addListener("entryPreview", (event) => {
       if (cancelled || event.mapId !== mapId) return;
@@ -312,8 +297,38 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
 
     return () => {
       cancelled = true;
-      removeSelectedListener?.();
       removePreviewListener?.();
+    };
+  }, [mapId, mapReady]);
+
+  useEffect(() => {
+    if (!mapReady || !interactive) return;
+    void syncInteractionChrome();
+  }, [entryPreview, interactive, mapReady, syncInteractionChrome]);
+
+  useEffect(() => {
+    if (!mapReady || !onEntrySelect) return;
+
+    let cancelled = false;
+    let removeSelectedListener: (() => void) | undefined;
+
+    void LogmasterAppleMap.addListener("entrySelected", (event) => {
+      if (cancelled || event.mapId !== mapId) return;
+      setEntryPreview(null);
+      onEntrySelect(event.entryId);
+    }).then((handle) => {
+      if (cancelled) {
+        void handle.remove();
+        return;
+      }
+      removeSelectedListener = () => {
+        void handle.remove();
+      };
+    });
+
+    return () => {
+      cancelled = true;
+      removeSelectedListener?.();
     };
   }, [mapId, mapReady, onEntrySelect]);
 
@@ -455,7 +470,6 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
           x={entryPreview.x}
           y={entryPreview.y}
           pinned={entryPreview.pinned}
-          onSelect={onEntrySelect}
           onMediaClick={(entryId) => onEntrySelect?.(entryId)}
           onDismiss={() => setEntryPreview(null)}
         />

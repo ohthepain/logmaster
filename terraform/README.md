@@ -164,6 +164,8 @@ Optional third-party values can be pulled from existing account-level Secrets Ma
 1. Set `google_client_id_secret_arn` and `google_client_secret_secret_arn` in `environments/{env}/terraform.tfvars` and `terraform apply`, or
 2. Run `./scripts/set-google-oauth-secrets.sh staging` (reads from local `.env`, updates the app secret, forces ECS redeploy).
 
+**Map tiles on deploy:** ECS reads `MAPTILER_API_KEY` from the same app secret. If it is empty, `/api/map-style-vector` and `/api/map-tiles/...` return **503** and the map shows “Map style failed (503)”. Either set `maptiler_api_key_secret_arn` in tfvars and `terraform apply`, or run `./scripts/set-maptiler-secrets.sh production` (reads `MAPTILER_API_KEY` or `VITE_MAPTILER_API_KEY` from `.env`, updates the secret, redeploys).
+
 In Google Cloud, add redirect URIs for each environment:
 
 - `https://staging.logmaster.live/api/auth/callback/google`

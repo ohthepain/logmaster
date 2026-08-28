@@ -250,10 +250,8 @@ function TripLogMapMapLibre({
             onEntrySelectRef.current?.(entryId);
           });
           map.on("mouseenter", ENTRY_LAYER, (event) => {
-            if (!map) return;
             const entryId = event.features?.[0]?.properties?.entryId;
             if (typeof entryId !== "string" || !entryId) return;
-            map.getCanvas().style.cursor = onEntrySelectRef.current ? "pointer" : "";
             setHoveredEntry({
               entryId,
               x: event.point.x,
@@ -264,17 +262,16 @@ function TripLogMapMapLibre({
           map.on("mousemove", ENTRY_LAYER, (event) => {
             const entryId = event.features?.[0]?.properties?.entryId;
             if (typeof entryId !== "string" || !entryId) return;
-            setHoveredEntry({
-              entryId,
-              x: event.point.x,
-              y: event.point.y,
-              pinned: false,
-            });
-          });
-          map.on("mouseleave", ENTRY_LAYER, () => {
-            if (!map) return;
-            map.getCanvas().style.cursor = "";
-            setHoveredEntry(null);
+            setHoveredEntry((current) =>
+              current?.entryId === entryId
+                ? { ...current, x: event.point.x, y: event.point.y }
+                : {
+                    entryId,
+                    x: event.point.x,
+                    y: event.point.y,
+                    pinned: false,
+                  },
+            );
           });
 
           map.addSource(CURRENT_SOURCE, {
@@ -332,6 +329,12 @@ function TripLogMapMapLibre({
       setMapReady(false);
     };
   }, [interactive]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    map.getCanvas().style.cursor = hoveredEntry ? "pointer" : "";
+  }, [hoveredEntry, mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -553,6 +556,7 @@ function TripLogMapMapLibre({
     <div
       className="relative h-full min-h-0 w-full overflow-hidden"
       style={{ backgroundColor: SailingMapColors.background }}
+      onMouseLeave={() => setHoveredEntry(null)}
     >
       {!embedded ? (
         <DevComponentLabel name="TripLogMap" className="absolute left-2 top-2 z-10" />
@@ -565,7 +569,6 @@ function TripLogMapMapLibre({
           x={hoveredEntry.x}
           y={hoveredEntry.y}
           pinned={hoveredEntry.pinned}
-          onSelect={onEntrySelectRef.current ?? undefined}
           onMediaClick={(entryId) => onEntrySelectRef.current?.(entryId)}
         />
       ) : null}

@@ -29,8 +29,11 @@ type DragState = {
   startTimeMs: number
   startZoom: number
   windowDurationMs: number
-  mode: 'position' | 'zoom' | null
 }
+
+const DRAG_ACTIVATION_PX = 5
+const ZOOM_DRAG_PX = 6
+const SCRUB_DRAG_PX = 6
 
 type TripPlaybackOverlayProps = {
   trip: Trip
@@ -297,7 +300,6 @@ export function TripPlaybackOverlay({
                 startTimeMs: currentTimeMs,
                 startZoom: timeZoom,
                 windowDurationMs: windowRange.durationMs,
-                mode: null,
               }
               setPlaying(false)
               setMediaPinned(false)
@@ -307,13 +309,11 @@ export function TripPlaybackOverlay({
               if (!drag || drag.pointerId !== event.pointerId) return
               const dx = event.clientX - drag.startX
               const dy = event.clientY - drag.startY
-              if (!drag.mode && Math.max(Math.abs(dx), Math.abs(dy)) >= 5) {
-                drag.mode = Math.abs(dx) >= Math.abs(dy) ? 'position' : 'zoom'
-              }
-              if (drag.mode === 'position') {
+              if (Math.abs(dx) >= SCRUB_DRAG_PX) {
                 setTimeFromClientX(event.clientX, drag)
-              } else if (drag.mode === 'zoom') {
-                const nextZoom = clamp(drag.startZoom * Math.exp(-dy / 72), 1, MAX_TIME_ZOOM)
+              }
+              if (Math.abs(dy) >= ZOOM_DRAG_PX) {
+                const nextZoom = clamp(drag.startZoom * Math.exp(-dy / 288), 1, MAX_TIME_ZOOM)
                 setTimeZoom(nextZoom)
                 setWindowCenterMs(currentTimeMs)
               }
@@ -322,7 +322,11 @@ export function TripPlaybackOverlay({
               const drag = dragRef.current
               if (!drag || drag.pointerId !== event.pointerId) return
               event.currentTarget.releasePointerCapture(event.pointerId)
-              if (drag.mode === null) setTimeFromClientX(event.clientX, drag)
+              const dx = event.clientX - drag.startX
+              const dy = event.clientY - drag.startY
+              if (Math.max(Math.abs(dx), Math.abs(dy)) < DRAG_ACTIVATION_PX) {
+                setTimeFromClientX(event.clientX, drag)
+              }
               const previewEntry = chronologicalEntries.find((entry) => entry.id === mediaEntryId)
               if (previewEntry && isVideoMedia(previewEntry, mediaByEntry.get(previewEntry.id) ?? [])) {
                 setMediaPinned(true)
