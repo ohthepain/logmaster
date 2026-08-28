@@ -7,6 +7,7 @@ import {
   MAP_CHROME_DIVIDER_CLASS,
   MAP_CHROME_SURFACE_CLASS,
 } from '../lib/map-chrome'
+import { MapButtonTooltip } from './MapButtonTooltip'
 
 type SailingMapControlStackProps = {
   onZoomIn: () => void
@@ -77,24 +78,26 @@ export function MapControlButton({
   'aria-expanded'?: boolean
 }) {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-expanded={ariaExpanded}
-      title={label}
-      onClick={onClick}
-      onPointerUp={(event) => {
-        event.stopPropagation()
-      }}
-      className={cn(
-        'ios-map-touch-target touch-manipulation',
-        MAP_CHROME_CELL_CLASS,
-        'text-white/95',
-        MAP_CHROME_BUTTON_HOVER_CLASS,
-        bordered && MAP_CHROME_DIVIDER_CLASS,
-      )}
-    >
-      {children}
-    </button>
+    <MapButtonTooltip label={label} side="left">
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={ariaExpanded}
+        title={label}
+        onClick={onClick}
+        onPointerUp={(event) => {
+          event.stopPropagation()
+        }}
+        className={cn(
+          'ios-map-touch-target touch-manipulation',
+          MAP_CHROME_CELL_CLASS,
+          'text-white/95',
+          MAP_CHROME_BUTTON_HOVER_CLASS,
+          bordered && MAP_CHROME_DIVIDER_CLASS,
+        )}
+      >
+        {children}
+      </button>
+    </MapButtonTooltip>
   )
 }

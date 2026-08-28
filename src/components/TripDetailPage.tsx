@@ -9,7 +9,7 @@ import { LogEntryComposerModal } from "./LogEntryComposerModal";
 import { Modal } from "./Modal";
 import { TripCrewPickerModal } from "./TripCrewPickerModal";
 import { TripCoverEditModal } from "./TripCoverEditModal";
-import { TripDetailHero } from "./TripDetailHero";
+import { TripDetailHero, type CompletedTripPanel } from "./TripDetailHero";
 import { TripDetailBottomSheet } from "./TripDetailBottomSheet";
 import { TripRecordButton } from "./TripRecordButton";
 import { TripLegSection } from "./TripLegSection";
@@ -52,6 +52,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [coverEditOpen, setCoverEditOpen] = useState(false);
   const [replayOpen, setReplayOpen] = useState(false);
+  const [completedTripPanel, setCompletedTripPanel] = useState<CompletedTripPanel>("map");
   const liveActivityStartHandledRef = useRef(false);
 
   useEffect(() => {
@@ -60,6 +61,10 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
 
   useEffect(() => {
     useLogbookStore.getState().selectTrip(tripId);
+  }, [tripId]);
+
+  useEffect(() => {
+    setCompletedTripPanel("map");
   }, [tripId]);
 
   useEffect(() => {
@@ -380,6 +385,8 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
           busy={busy}
           selectedEntryId={selectedEntryId}
           onEntrySelect={openEntry}
+          completedTripPanel={completedTripPanel}
+          onCompletedTripPanelChange={trip.status === "COMPLETED" ? setCompletedTripPanel : undefined}
           onEditCoverClick={() => setCoverEditOpen(true)}
           onLogEntryClick={
             trip.status === "IN_PROGRESS" ? () => setCreateEntryOpen(true) : undefined
@@ -470,6 +477,40 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
             </button>
           </div>
         </TripDetailBottomSheet> : null}
+
+        {trip.status === "COMPLETED" && completedTripPanel === "log" ? (
+          <TripDetailBottomSheet>
+            <TripLegSection
+              tripId={trip.id}
+              tripStatus={trip.status}
+              onOpenEntry={openEntry}
+              mediaByEntry={mediaByEntry}
+            />
+
+            <div className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] p-4 sm:p-5">
+              <p className="m-0 text-sm text-[var(--sea-ink-soft)]">Boat: {trip.boatName}</p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <MetaLine label="Started" value={formatDateTime(trip.startedAt)} />
+                <MetaLine label="Status" value={trip.status.replace("_", " ")} />
+                <MetaLine label="Position" value={formatPosition(trip.startLatitude, trip.startLongitude)} />
+                <MetaLine label="Country" value={trip.startCountry ?? "Unknown"} />
+                {trip.skipper ? <MetaLine label="Skipper" value={trip.skipper} icon={User} /> : null}
+              </div>
+            </div>
+
+            <div className="border-t border-[var(--line)] pt-4">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setDeleteConfirmOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:text-red-800 disabled:opacity-60 dark:text-red-300"
+              >
+                <Trash2 className="size-4" />
+                Delete trip
+              </button>
+            </div>
+          </TripDetailBottomSheet>
+        ) : null}
       </div>
 
       <input

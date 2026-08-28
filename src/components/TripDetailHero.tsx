@@ -1,4 +1,4 @@
-import { Pencil, RotateCw, Sailboat } from 'lucide-react'
+import { List, Map, Pencil, RotateCw, Sailboat } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
 import type { TripDetailCoverDisplay } from '../lib/trip-display'
@@ -10,7 +10,10 @@ import { TripLogMap } from './TripLogMap'
 import type { TripAppleMapKitHandle } from './TripAppleMapKit'
 import { TripOperationalStatus } from './TripOperationalStatus'
 import { TripPlaybackOverlay } from './TripPlaybackOverlay'
+import { TripMapChromeButton } from './TripMapChromeButton'
 import { tripPlaybackPositionAt, tripPlaybackRange } from '../lib/trip-playback'
+
+export type CompletedTripPanel = 'map' | 'log'
 
 type TripDetailHeroProps = {
   trip: Trip
@@ -21,6 +24,8 @@ type TripDetailHeroProps = {
   busy: boolean
   selectedEntryId?: string | null
   onEntrySelect?: (entryId: string) => void
+  completedTripPanel?: CompletedTripPanel
+  onCompletedTripPanelChange?: (panel: CompletedTripPanel) => void
   onEditCoverClick: () => void
   onLogEntryClick?: () => void
   onReplayTestClick?: () => void
@@ -35,6 +40,8 @@ export function TripDetailHero({
   busy,
   selectedEntryId = null,
   onEntrySelect,
+  completedTripPanel = 'map',
+  onCompletedTripPanelChange,
   onEditCoverClick,
   onLogEntryClick,
   onReplayTestClick,
@@ -59,6 +66,8 @@ export function TripDetailHero({
     [isPlayback, mapEntries, playbackTimeMs],
   )
 
+  const showPlaybackOverlay = isPlayback && completedTripPanel === 'map'
+
   useEffect(() => {
     setPlaybackTimeMs(playbackRange.startMs)
   }, [playbackRange.startMs, trip.id])
@@ -82,6 +91,7 @@ export function TripDetailHero({
             legs={mapLegs}
             selectedEntryId={selectedEntryId}
             onEntrySelect={onEntrySelect}
+            mediaByEntry={mediaByEntry}
             mapClassName="absolute inset-0 size-full"
             allowFullscreen={isActiveTrip}
             showControls={!useExternalIosMapControls}
@@ -113,7 +123,7 @@ export function TripDetailHero({
         />
       ) : null}
 
-      {isPlayback ? (
+      {showPlaybackOverlay ? (
         <TripPlaybackOverlay
           trip={trip}
           entries={mapEntries}
@@ -134,27 +144,45 @@ export function TripDetailHero({
       ) : null}
 
       <div className="pointer-events-none absolute inset-x-0 top-16 z-40 flex justify-start gap-2 px-3 sm:px-4">
-        <button
-          type="button"
+        <TripMapChromeButton
+          label="Edit trip cover"
           onClick={onEditCoverClick}
           disabled={busy}
-          data-map-touch-zone
-          className="ios-map-touch-target pointer-events-auto inline-flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45 disabled:opacity-60"
-          aria-label="Edit trip cover"
+          tooltipSide="bottom"
         >
           <Pencil className="size-4" />
-        </button>
+        </TripMapChromeButton>
+        {isPlayback && onCompletedTripPanelChange ? (
+          completedTripPanel === 'map' ? (
+            <TripMapChromeButton
+              label="Log entries"
+              onClick={() => onCompletedTripPanelChange('log')}
+              disabled={busy}
+              tooltipSide="bottom"
+            >
+              <List className="size-4" />
+            </TripMapChromeButton>
+          ) : (
+            <TripMapChromeButton
+              label="Map & playback"
+              onClick={() => onCompletedTripPanelChange('map')}
+              disabled={busy}
+              active
+              tooltipSide="bottom"
+            >
+              <Map className="size-4" />
+            </TripMapChromeButton>
+          )
+        ) : null}
         {onReplayTestClick ? (
-          <button
-            type="button"
+          <TripMapChromeButton
+            label="Start auto-test replay"
             onClick={onReplayTestClick}
             disabled={busy}
-            data-map-touch-zone
-            className="ios-map-touch-target pointer-events-auto inline-flex size-10 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-sm transition hover:bg-black/45 disabled:opacity-60"
-            aria-label="Start auto-test replay"
+            tooltipSide="bottom"
           >
             <RotateCw className="size-4" />
-          </button>
+          </TripMapChromeButton>
         ) : null}
       </div>
     </section>

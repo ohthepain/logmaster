@@ -56,6 +56,14 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
                     "entryId": entryId,
                 ])
             }
+            instance.onEntryPreview = { [weak self] entryId, point in
+                self?.notifyListeners("entryPreview", data: [
+                    "mapId": mapId,
+                    "entryId": entryId,
+                    "x": point.x,
+                    "y": point.y,
+                ])
+            }
             self.maps[mapId] = instance
             self.scheduleLayoutRetry(for: mapId, attempt: 0) {
                 call.resolve()

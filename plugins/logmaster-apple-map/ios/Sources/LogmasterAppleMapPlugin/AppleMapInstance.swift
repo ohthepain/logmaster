@@ -46,10 +46,12 @@ final class MapTouchForwarderView: UIView {
     var passThroughRects: [CGRect] = []
     var onUserInteraction: (() -> Void)?
     var onEntryTap: ((String) -> Void)?
+    var onEntryPreview: ((String, CGPoint) -> Void)?
     var entryIdAtPoint: ((CGPoint) -> String?)?
 
     private var pinchRecognizer: UIPinchGestureRecognizer?
     private var twoFingerPanRecognizer: UIPanGestureRecognizer?
+    private var longPressRecognizer: UILongPressGestureRecognizer?
 
     private func shouldPassThrough(at point: CGPoint) -> Bool {
         passThroughRects.contains(where: { $0.contains(point) })
@@ -84,10 +86,19 @@ final class MapTouchForwarderView: UIView {
         addGestureRecognizer(twoFingerPan)
         twoFingerPanRecognizer = twoFingerPan
 
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        longPress.minimumPressDuration = 0.35
+        longPress.cancelsTouchesInView = false
+        longPress.delaysTouchesBegan = false
+        longPress.delegate = self
+        addGestureRecognizer(longPress)
+        longPressRecognizer = longPress
+
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
         tap.cancelsTouchesInView = false
         tap.delaysTouchesBegan = false
         tap.delegate = self
+        tap.require(toFail: longPress)
         addGestureRecognizer(tap)
     }
 
@@ -112,10 +123,19 @@ final class MapTouchForwarderView: UIView {
         mapView.setCamera(camera, animated: false)
     }
 
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began, let mapView else { return }
+        let point = gesture.location(in: mapView)
+        guard !shouldPassThrough(at: gesture.location(in: self)) else { return }
+        if let entryId = entryIdAtPoint?(point) {
+            onEntryPreview?(entryId, point)
+        }
+    }
+
     @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
         guard gesture.state == .ended, let mapView else { return }
         let point = gesture.location(in: mapView)
-        guard !shouldPassThrough(gesture.location(in: self)) else { return }
+        guard !shouldPassThrough(at: gesture.location(in: self)) else { return }
         if let entryId = entryIdAtPoint?(point) {
             onEntryTap?(entryId)
         }
@@ -221,7 +241,7 @@ struct EntryMarker {
     let image: UIImage?
 }
 
-private struct EntryCircleMarker {
+fileprivate struct EntryCircleMarker {
     let overlay: MKCircle
     let entryId: String
 }
@@ -328,6 +348,7 @@ final class AppleMapInstance {
     var playbackAnnotation: PlaybackBoatAnnotation?
     var selectedEntryId: String?
     var onEntrySelected: ((String) -> Void)?
+    var onEntryPreview: ((String, CGPoint) -> Void)?
     var interactive = false
     private weak var webView: WKWebView?
 
@@ -353,6 +374,9 @@ final class AppleMapInstance {
         }
         touchForwarder.onEntryTap = { [weak self] entryId in
             self?.onEntrySelected?(entryId)
+        }
+        touchForwarder.onEntryPreview = { [weak self] entryId, point in
+            self?.onEntryPreview?(entryId, point)
         }
         delegate.entryMarkerScale = { [weak self] marker in
             marker.entryId == self?.selectedEntryId

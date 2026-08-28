@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from "react";
-import type { Leg, LogEntry, Trip } from "../domain/logbook";
+import type { Leg, LogEntry, Media, Trip } from "../domain/logbook";
 import type { MapCoordinate, MapEntryPoint } from "../lib/native/logmaster-apple-map";
 import { LogmasterAppleMap } from "../lib/native/logmaster-apple-map";
 import { readMapPassThroughZones } from "../lib/native/apple-map-layout";
@@ -11,6 +11,10 @@ import type { LogEntryMapIconKind, LogEntryMapOutline } from "../lib/log-entry-m
 import type { TripPlaybackPosition } from "../lib/trip-playback";
 import { cn } from "../lib/cn";
 import { DevComponentLabel } from "./DevComponentLabel";
+import {
+  LogEntryMapMarkerHoverTarget,
+  type MapEntryPreviewState,
+} from "./LogEntryMapMarkerHoverTarget";
 
 export type TripAppleMapKitHandle = {
   zoomIn: () => void;
@@ -25,6 +29,7 @@ type TripAppleMapKitProps = {
   focusEntryId?: string | null;
   selectedEntryId?: string | null;
   onEntrySelect?: (entryId: string) => void;
+  mediaByEntry?: Map<string, Media[]>;
   mapClassName?: string;
   showControls?: boolean;
   showCurrentPosition?: boolean;
@@ -91,6 +96,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
   focusEntryId = null,
   selectedEntryId = null,
   onEntrySelect,
+  mediaByEntry,
   mapClassName,
   showControls: _showControls = true,
   showCurrentPosition = true,
@@ -106,6 +112,13 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
   const userControlledViewportRef = useRef(false);
   const currentPositionRef = useRef<MapCoordinate | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [entryPreview, setEntryPreview] = useState<MapEntryPreviewState | null>(null);
+
+  const entriesById = useMemo(
+    () => new Map(entries.map((entry) => [entry.id, entry])),
+    [entries],
+  );
+  const previewEntry = entryPreview ? entriesById.get(entryPreview.entryId) ?? null : null;
 
   const legTrackGeoJson = useMemo(() => buildLegTrackGeoJson(entries, legs), [entries, legs]);
   const legEntryGeoJson = useMemo(() => buildLegEntryPointsGeoJson(entries, legs), [entries, legs]);
@@ -255,27 +268,52 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
   }, [syncSelectedEntry]);
 
   useEffect(() => {
+    setEntryPreview(null);
+  }, [trip.id, selectedEntryId]);
+
+  useEffect(() => {
     if (!mapReady || !onEntrySelect) return;
 
     let cancelled = false;
-    let removeListener: (() => void) | undefined;
+    let removeSelectedListener: (() => void) | undefined;
+    let removePreviewListener: (() => void) | undefined;
 
     void LogmasterAppleMap.addListener("entrySelected", (event) => {
       if (cancelled || event.mapId !== mapId) return;
+      setEntryPreview(null);
       onEntrySelect(event.entryId);
     }).then((handle) => {
       if (cancelled) {
         void handle.remove();
         return;
       }
-      removeListener = () => {
+      removeSelectedListener = () => {
+        void handle.remove();
+      };
+    });
+
+    void LogmasterAppleMap.addListener("entryPreview", (event) => {
+      if (cancelled || event.mapId !== mapId) return;
+      setEntryPreview({
+        entryId: event.entryId,
+        x: event.x,
+        y: event.y,
+        pinned: true,
+      });
+    }).then((handle) => {
+      if (cancelled) {
+        void handle.remove();
+        return;
+      }
+      removePreviewListener = () => {
         void handle.remove();
       };
     });
 
     return () => {
       cancelled = true;
-      removeListener?.();
+      removeSelectedListener?.();
+      removePreviewListener?.();
     };
   }, [mapId, mapReady, onEntrySelect]);
 
@@ -410,6 +448,18 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
     <div className="relative h-full min-h-0 w-full overflow-hidden bg-transparent">
       {!embedded ? <DevComponentLabel name="TripAppleMapKit" className="absolute left-2 top-2 z-10" /> : null}
       <div className={cn("pointer-events-none bg-transparent", mapClassName)} aria-hidden />
+      {previewEntry && entryPreview ? (
+        <LogEntryMapMarkerHoverTarget
+          entry={previewEntry}
+          media={mediaByEntry?.get(previewEntry.id) ?? []}
+          x={entryPreview.x}
+          y={entryPreview.y}
+          pinned={entryPreview.pinned}
+          onSelect={onEntrySelect}
+          onMediaClick={(entryId) => onEntrySelect?.(entryId)}
+          onDismiss={() => setEntryPreview(null)}
+        />
+      ) : null}
     </div>
   );
 });

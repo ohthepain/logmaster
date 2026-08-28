@@ -1,7 +1,7 @@
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { LogEntry, Leg, Trip } from "../domain/logbook";
+import type { LogEntry, Leg, Trip, Media } from "../domain/logbook";
 import { DEV_FALLBACK_POSITION, setDevPositionOverride, subscribeToDevicePosition } from "../lib/logbook-context";
 import { isDevModeAvailable } from "../lib/dev-mode";
 import { buildLegEntryPointsGeoJson, buildLegTrackGeoJson, mapBrandColor, mapPointsToBounds, resolveTripLogMapViewport, tripStartMapPoint } from "../lib/logbook-map-geo";
@@ -36,6 +36,10 @@ import { SailingMapControlStack } from "./SailingMapControlStack";
 import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
 import { SailingMapLayerPanel } from "./SailingMapLayerPanel";
 import type { TripPlaybackPosition } from "../lib/trip-playback";
+import {
+  LogEntryMapMarkerHoverTarget,
+  type MapEntryPreviewState,
+} from "./LogEntryMapMarkerHoverTarget";
 
 const ENTRY_LAYER = "trip-log-entry-icons";
 
@@ -46,6 +50,7 @@ type TripLogMapProps = {
   focusEntryId?: string | null;
   selectedEntryId?: string | null;
   onEntrySelect?: (entryId: string) => void;
+  mediaByEntry?: Map<string, Media[]>;
   mapClassName?: string;
   allowFullscreen?: boolean;
   showControls?: boolean;
@@ -90,6 +95,7 @@ export const TripLogMap = forwardRef<TripAppleMapKitHandle, TripLogMapProps>(fun
         focusEntryId={props.focusEntryId}
         selectedEntryId={props.selectedEntryId}
         onEntrySelect={props.onEntrySelect}
+        mediaByEntry={props.mediaByEntry}
         mapClassName={props.mapClassName}
         showControls={props.showControls}
         showCurrentPosition={props.showCurrentPosition}
@@ -111,6 +117,7 @@ function TripLogMapMapLibre({
   focusEntryId = null,
   selectedEntryId = null,
   onEntrySelect,
+  mediaByEntry,
   mapClassName = "h-56 w-full sm:h-64",
   allowFullscreen = true,
   showControls = true,
@@ -137,6 +144,13 @@ function TripLogMapMapLibre({
   const [mapError, setMapError] = useState<string | null>(null);
   const [currentPosition, setCurrentPosition] = useState<LngLat | null>(null);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [hoveredEntry, setHoveredEntry] = useState<MapEntryPreviewState | null>(null);
+
+  const entriesById = useMemo(
+    () => new Map(entries.map((entry) => [entry.id, entry])),
+    [entries],
+  );
+  const hoveredEntryRecord = hoveredEntry ? entriesById.get(hoveredEntry.entryId) ?? null : null;
 
   useMapDataLayerSync(mapRef, mapReady, mapDataLayerToggles, {
     enablePopups: interactive,
@@ -232,15 +246,35 @@ function TripLogMapMapLibre({
           map.on("click", ENTRY_LAYER, (event) => {
             const entryId = event.features?.[0]?.properties?.entryId;
             if (typeof entryId !== "string" || !entryId) return;
+            setHoveredEntry(null);
             onEntrySelectRef.current?.(entryId);
           });
-          map.on("mouseenter", ENTRY_LAYER, () => {
+          map.on("mouseenter", ENTRY_LAYER, (event) => {
             if (!map) return;
+            const entryId = event.features?.[0]?.properties?.entryId;
+            if (typeof entryId !== "string" || !entryId) return;
             map.getCanvas().style.cursor = onEntrySelectRef.current ? "pointer" : "";
+            setHoveredEntry({
+              entryId,
+              x: event.point.x,
+              y: event.point.y,
+              pinned: false,
+            });
+          });
+          map.on("mousemove", ENTRY_LAYER, (event) => {
+            const entryId = event.features?.[0]?.properties?.entryId;
+            if (typeof entryId !== "string" || !entryId) return;
+            setHoveredEntry({
+              entryId,
+              x: event.point.x,
+              y: event.point.y,
+              pinned: false,
+            });
           });
           map.on("mouseleave", ENTRY_LAYER, () => {
             if (!map) return;
             map.getCanvas().style.cursor = "";
+            setHoveredEntry(null);
           });
 
           map.addSource(CURRENT_SOURCE, {
@@ -524,6 +558,17 @@ function TripLogMapMapLibre({
         <DevComponentLabel name="TripLogMap" className="absolute left-2 top-2 z-10" />
       ) : null}
       <div ref={containerRef} className={cn("sailing-map", mapClassName)} />
+      {hoveredEntryRecord && hoveredEntry ? (
+        <LogEntryMapMarkerHoverTarget
+          entry={hoveredEntryRecord}
+          media={mediaByEntry?.get(hoveredEntryRecord.id) ?? []}
+          x={hoveredEntry.x}
+          y={hoveredEntry.y}
+          pinned={hoveredEntry.pinned}
+          onSelect={onEntrySelectRef.current ?? undefined}
+          onMediaClick={(entryId) => onEntrySelectRef.current?.(entryId)}
+        />
+      ) : null}
       {mapReady && showControls ? (
         <>
           <SailingMapControlStack
@@ -578,6 +623,7 @@ function TripLogMapMapLibre({
           focusEntryId={focusEntryId}
           selectedEntryId={selectedEntryId}
           onEntrySelect={onEntrySelect}
+          mediaByEntry={mediaByEntry}
           mapClassName="h-full w-full"
           allowFullscreen={false}
           playbackPosition={playbackPosition}

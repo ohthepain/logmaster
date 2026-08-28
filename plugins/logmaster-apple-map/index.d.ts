@@ -72,4 +72,8 @@ export interface LogmasterAppleMapPlugin {
     eventName: 'entrySelected',
     listenerFunc: (data: { mapId: string; entryId: string }) => void,
   ): Promise<PluginListenerHandle>
+  addListener(
+    eventName: 'entryPreview',
+    listenerFunc: (data: { mapId: string; entryId: string; x: number; y: number }) => void,
+  ): Promise<PluginListenerHandle>
 }
