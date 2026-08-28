@@ -7,6 +7,7 @@ struct LogmasterActivityAttributes: ActivityAttributes {
         let symbol: String
         let timestamp: Date
         let autoCreatedUnedited: Bool
+        let legColor: String
     }
 
     struct ContentState: Codable, Hashable {

@@ -23,7 +23,7 @@ import {
 } from '../lib/trip-legs'
 import { withHumanEditedFlag } from '../domain/instrument-data'
 import { syncTripOperationalFields } from '../domain/trip-state'
-import { advanceIso } from '../lib/dev-time-travel'
+import { advanceIso, effectiveTimeTravelIso } from '../lib/dev-time-travel'
 import { isDevModeAvailable } from '../lib/dev-mode'
 import { sortLogEntriesChronologically } from '../lib/logbook-entry-order'
 import {
@@ -463,6 +463,8 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       devMode,
       devTimeTravelEnabled,
       devLogEntryDraftTimeIso,
+      devTimeTravelAnchorRealIso,
+      devTripReplay,
       setDevLogEntryDraftTimeIso,
     } = useAppOptionsStore.getState()
     const useDraftTimestamp =
@@ -472,7 +474,12 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       isDevModeAvailable() &&
       devLogEntryDraftTimeIso != null
     const timestamp = useDraftTimestamp
-      ? devLogEntryDraftTimeIso
+      ? devTripReplay
+        ? effectiveTimeTravelIso(
+            devLogEntryDraftTimeIso,
+            devTimeTravelAnchorRealIso,
+          )
+        : devLogEntryDraftTimeIso
       : (input.timestamp ?? context.timestamp)
     const entryData = await attachPlaceToEntryData(
       input.data,

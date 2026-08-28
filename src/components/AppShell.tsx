@@ -3,6 +3,7 @@ import Header from './Header'
 import { BackgroundTripRecorder } from './BackgroundTripRecorder'
 import { LiveActivityController } from './LiveActivityController'
 import { DevComponentLabel } from './DevComponentLabel'
+import { DevTripReplayController } from './DevTripReplayController'
 import { FtueGate } from './FtueGate'
 import { isTripDetailImmersiveRoute } from '../lib/trip-map-overlay'
 
@@ -20,6 +21,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className="pointer-events-none fixed bottom-2 left-2 z-[9999]"
       />
       <FtueGate>
+        <DevTripReplayController />
         <BackgroundTripRecorder />
         <LiveActivityController />
         {hideChrome ? (

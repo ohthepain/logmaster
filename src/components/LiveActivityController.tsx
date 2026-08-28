@@ -13,6 +13,7 @@ export function LiveActivityController() {
   const booted = useLogbookStore((state) => state.booted)
   const trips = useLogbookStore((state) => state.trips)
   const entries = useLogbookStore((state) => state.entries)
+  const legs = useLogbookStore((state) => state.legs)
   const [fallbackLocationName, setFallbackLocationName] = useState('Locating…')
   const trip = useMemo(() => selectLiveActivityTrip(trips), [trips])
 
@@ -38,11 +39,12 @@ export function LiveActivityController() {
         ? buildLiveActivitySnapshot({
             trip,
             entries,
+            legs,
             fallbackLocationName,
             appOrigin: getAppOrigin(),
           })
         : null,
-    [entries, fallbackLocationName, trip],
+    [entries, fallbackLocationName, legs, trip],
   )
 
   useEffect(() => {

@@ -12,15 +12,27 @@ import {
 } from '../lib/map-data-layers'
 import type {MapDataLayerToggles} from '../lib/map-data-layers';
 
+export type DevTripReplay = {
+  sourceTripId: string
+  targetTripId: string
+  targetStartedAt: string
+  realStartedAt: string
+}
+
 type AppOptions = {
   devMode: boolean
   setDevMode: (v: boolean) => void
   /** Dev mode: remembered entry time for the log-entry create modal only. */
   devLogEntryDraftTimeIso: string | null
   setDevLogEntryDraftTimeIso: (iso: string | null) => void
+  /** Real clock time when the time-travel value was selected. */
+  devTimeTravelAnchorRealIso: string | null
   /** Dev mode: when on, new log entries use devLogEntryDraftTimeIso. */
   devTimeTravelEnabled: boolean
   setDevTimeTravelEnabled: (enabled: boolean) => void
+  /** Active real-time replay of a completed trip. */
+  devTripReplay: DevTripReplay | null
+  setDevTripReplay: (replay: DevTripReplay | null) => void
   lastTripBoatId: string | null
   setLastTripBoatId: (boatId: string | null) => void
   /** Native app: record GPS in background while a trip is in progress. */
@@ -45,24 +57,40 @@ type AppOptions = {
 
 export const useAppOptionsStore = create<AppOptions>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       devMode: false,
       devLogEntryDraftTimeIso: null,
+      devTimeTravelAnchorRealIso: null,
       devTimeTravelEnabled: false,
+      devTripReplay: null,
       setDevMode: (v) => {
         if (!v) {
+          const replayTargetId = get().devTripReplay?.targetTripId
+          const recordingTripId =
+            get().recordingTripId === replayTargetId
+              ? null
+              : get().recordingTripId
           clearDevPositionOverride()
+          setLocationAccessEnabled(Boolean(recordingTripId))
           set({
             devMode: v,
             devLogEntryDraftTimeIso: null,
+            devTimeTravelAnchorRealIso: null,
             devTimeTravelEnabled: false,
+            devTripReplay: null,
+            recordingTripId,
           })
           return
         }
         set({ devMode: v })
       },
-      setDevLogEntryDraftTimeIso: (iso) => set({ devLogEntryDraftTimeIso: iso }),
+      setDevLogEntryDraftTimeIso: (iso) =>
+        set({
+          devLogEntryDraftTimeIso: iso,
+          devTimeTravelAnchorRealIso: iso ? new Date().toISOString() : null,
+        }),
       setDevTimeTravelEnabled: (enabled) => set({ devTimeTravelEnabled: enabled }),
+      setDevTripReplay: (devTripReplay) => set({ devTripReplay }),
       lastTripBoatId: null,
       setLastTripBoatId: (boatId) => set({ lastTripBoatId: boatId }),
       backgroundTripRecording: true,

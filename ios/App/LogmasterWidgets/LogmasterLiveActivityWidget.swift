@@ -11,12 +11,16 @@ struct LogmasterLiveActivityWidget: Widget {
         ActivityConfiguration(for: LogmasterActivityAttributes.self) { context in
             LogmasterActivityContent(context: context)
                 .widgetURL(URL(string: context.state.deepLinkURL))
-                .activityBackgroundTint(Color(red: 0.035, green: 0.12, blue: 0.17))
+                .activityBackgroundTint(Color(red: 0.82, green: 0.82, blue: 0.84))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    VesselIcon(sailsUp: context.state.sailsUp)
+                    if context.state.mode == "stationary" {
+                        ResumeRecordingLink(urlString: context.state.deepLinkURL)
+                    } else {
+                        VesselIcon(sailsUp: context.state.sailsUp)
+                    }
                 }
                 DynamicIslandExpandedRegion(.center) {
                     Text(context.state.locationName)
@@ -24,7 +28,11 @@ struct LogmasterLiveActivityWidget: Widget {
                         .lineLimit(1)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    TrailingStatus(state: context.state)
+                    if context.state.mode == "stationary" {
+                        StationaryStatusPill(kind: context.state.stationaryKind)
+                    } else {
+                        TrailingStatus(state: context.state)
+                    }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     ExpandedBottom(state: context.state)
@@ -79,8 +87,17 @@ private struct MediumActivityContent: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 13) {
-                topRow
-                secondRow
+                if state.mode == "stationary" {
+                    StationaryHeader(state: state)
+                    Text(state.locationName)
+                        .font(.headline)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity)
+                    EntryRow(entries: state.recentEntries)
+                } else {
+                    topRow
+                    secondRow
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 14)
@@ -90,7 +107,7 @@ private struct MediumActivityContent: View {
                 StationaryDuration(state: state)
             }
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(Color(red: 0.10, green: 0.11, blue: 0.13))
     }
 
     @ViewBuilder
@@ -125,27 +142,58 @@ private struct MediumActivityContent: View {
     }
 }
 
+private struct StationaryHeader: View {
+    let state: LogmasterActivityAttributes.ContentState
+
+    var body: some View {
+        HStack {
+            ResumeRecordingLink(urlString: state.deepLinkURL)
+            Spacer()
+            StationaryStatusPill(kind: state.stationaryKind)
+        }
+    }
+}
+
+private struct StationaryStatusPill: View {
+    let kind: String?
+
+    var body: some View {
+        Text(kind == "anchored" ? "Anchored" : "Moored")
+            .font(.caption2.bold())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 6)
+            .background(Color(red: 0.08, green: 0.38, blue: 0.23), in: Capsule())
+    }
+}
+
 private struct SmallActivityContent: View {
     let state: LogmasterActivityAttributes.ContentState
 
     var body: some View {
         VStack(spacing: 9) {
-            Text(state.locationName)
-                .font(.headline)
-                .lineLimit(1)
-            switch state.mode {
-            case "moving":
-                HStack {
-                    VesselIcon(sailsUp: state.sailsUp)
-                    Spacer()
-                    CompassCountdown(state: state)
-                }
-                HourProgress(state: state)
-            case "stationary":
-                EntryRow(entries: Array(state.recentEntries.suffix(4)))
+            if state.mode == "stationary" {
+                StationaryHeader(state: state)
+                Text(state.locationName)
+                    .font(.headline)
+                    .lineLimit(1)
+                EntryRow(entries: state.recentEntries, compact: true)
                 StationaryDuration(state: state, compact: true)
-            default:
-                StartTripLink(urlString: state.deepLinkURL)
+            } else {
+                Text(state.locationName)
+                    .font(.headline)
+                    .lineLimit(1)
+                switch state.mode {
+                case "moving":
+                    HStack {
+                        VesselIcon(sailsUp: state.sailsUp)
+                        Spacer()
+                        CompassCountdown(state: state)
+                    }
+                    HourProgress(state: state)
+                default:
+                    StartTripLink(urlString: state.deepLinkURL)
+                }
             }
         }
         .padding(12)
@@ -206,30 +254,47 @@ private struct HourProgress: View {
 
 private struct EntryRow: View {
     let entries: [LogmasterActivityAttributes.EntrySummary]
+    var compact = false
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 0) {
             if entries.isEmpty {
                 Text("No log entries yet")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(.secondary)
             } else {
-                ForEach(entries, id: \.id) { entry in
+                ForEach(entries.indices, id: \.self) { index in
+                    let entry = entries[index]
+                    if index > entries.startIndex {
+                        Rectangle()
+                            .fill(Color(logmasterHex: entry.legColor))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 2)
+                    }
                     ZStack {
+                        Circle()
+                            .fill(.white.opacity(0.78))
                         if entry.autoCreatedUnedited {
                             Circle()
                                 .stroke(
-                                    .white.opacity(0.8),
-                                    style: StrokeStyle(lineWidth: 1.5, dash: [3, 3])
+                                    Color(logmasterHex: entry.legColor),
+                                    style: StrokeStyle(
+                                        lineWidth: compact ? 1.5 : 2,
+                                        dash: compact ? [2.5, 2] : [3, 2.5]
+                                    )
                                 )
                         } else {
                             Circle()
-                                .stroke(.white.opacity(0.8), lineWidth: 1.5)
+                                .stroke(
+                                    Color(logmasterHex: entry.legColor),
+                                    lineWidth: compact ? 1.5 : 2
+                                )
                         }
                         Image(systemName: entry.symbol)
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: compact ? 10 : 12, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.16, green: 0.17, blue: 0.19))
                     }
-                    .frame(width: 31, height: 31)
+                    .frame(width: compact ? 27 : 35, height: compact ? 27 : 35)
                 }
             }
         }
@@ -244,17 +309,37 @@ private struct StationaryDuration: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: state.stationaryKind == "anchored" ? "anchor" : "link")
+                .foregroundStyle(.white.opacity(0.62))
             if let since = state.stationarySince {
                 Text(state.stationaryKind == "anchored" ? "Anchored" : "Moored")
+                    .foregroundStyle(.white.opacity(0.62))
                 Text(timerInterval: since...Date.distantFuture, countsDown: false)
                     .monospacedDigit()
+                    .foregroundStyle(.white)
             }
         }
         .font(compact ? .caption2.weight(.semibold) : .caption.weight(.semibold))
         .frame(maxWidth: .infinity)
         .padding(.vertical, compact ? 7 : 10)
-        .background(Color.black.opacity(0.35))
+        .background(Color(red: 0.25, green: 0.25, blue: 0.26))
         .accessibilityElement(children: .combine)
+    }
+}
+
+private extension Color {
+    init(logmasterHex hex: String) {
+        let cleaned = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var value: UInt64 = 0
+        Scanner(string: cleaned).scanHexInt64(&value)
+        if cleaned.count == 6 {
+            self.init(
+                red: Double((value >> 16) & 0xff) / 255,
+                green: Double((value >> 8) & 0xff) / 255,
+                blue: Double(value & 0xff) / 255
+            )
+        } else {
+            self = .cyan
+        }
     }
 }
 
@@ -272,6 +357,29 @@ private struct StartTripLink: View {
                     .background(.red, in: Capsule())
             }
             .accessibilityHint("Opens logmaster and begins recording")
+        }
+    }
+}
+
+private struct ResumeRecordingLink: View {
+    let urlString: String
+
+    var body: some View {
+        if let url = URL(string: urlString) {
+            Link(destination: url) {
+                ZStack {
+                    Circle()
+                        .fill(.white.opacity(0.75))
+                    Circle()
+                        .stroke(Color.black.opacity(0.14), lineWidth: 1)
+                    Circle()
+                        .fill(.red)
+                        .frame(width: 13, height: 13)
+                }
+                .frame(width: 30, height: 30)
+            }
+            .accessibilityLabel("Resume trip recording")
+            .accessibilityHint("Opens logmaster and resumes recording")
         }
     }
 }

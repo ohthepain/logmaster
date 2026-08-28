@@ -24,6 +24,7 @@ export function BackgroundTripRecorder() {
     (state) => state.backgroundTripRecording,
   )
   const recordingTripId = useAppOptionsStore((state) => state.recordingTripId)
+  const devTripReplay = useAppOptionsStore((state) => state.devTripReplay)
   const setRecordingTripId = useAppOptionsStore(
     (state) => state.setRecordingTripId,
   )
@@ -57,7 +58,8 @@ export function BackgroundTripRecorder() {
       const shouldTrack = Boolean(
         activeTripId &&
           backgroundTripRecording &&
-          recordingTripId === activeTripId,
+          recordingTripId === activeTripId &&
+          devTripReplay?.targetTripId !== activeTripId,
       )
 
       if (!shouldTrack) {
@@ -121,6 +123,7 @@ export function BackgroundTripRecorder() {
     autoTrackIntervalMinutes,
     autoTrackMinDistanceMeters,
     backgroundTripRecording,
+    devTripReplay?.targetTripId,
     recordingTripId,
   ])
 

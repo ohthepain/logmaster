@@ -68,7 +68,8 @@ final class LogmasterLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
                 id: id,
                 symbol: symbol,
                 timestamp: timestamp,
-                autoCreatedUnedited: bool(entry["autoCreatedUnedited"])
+                autoCreatedUnedited: bool(entry["autoCreatedUnedited"]),
+                legColor: entry["legColor"] as? String ?? "#7ec8e8"
             )
         }
 

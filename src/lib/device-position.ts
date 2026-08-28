@@ -36,19 +36,32 @@ function isFresh() {
   return cached != null && Date.now() - cachedAt < CACHE_TTL_MS;
 }
 
-let devPositionOverride: Pick<PositionSnapshot, 'latitude' | 'longitude'> | null = null;
+let devPositionOverride: Pick<
+  PositionSnapshot,
+  'latitude' | 'longitude' | 'accuracy' | 'heading'
+> | null = null;
 
 export function setDevPositionOverride(position: {
   latitude: number;
   longitude: number;
+  accuracy?: number | null;
+  heading?: number | null;
 } | null) {
-  devPositionOverride = position;
-  if (!position) return;
+  devPositionOverride = position
+    ? {
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracy: position.accuracy ?? null,
+        heading: position.heading ?? null,
+      }
+    : null;
+  if (!devPositionOverride) return;
+  const override = devPositionOverride;
   publish({
-    latitude: position.latitude,
-    longitude: position.longitude,
-    accuracy: null,
-    heading: null,
+    latitude: override.latitude,
+    longitude: override.longitude,
+    accuracy: override.accuracy,
+    heading: override.heading,
     timestamp: freshTimestamp(),
   });
 }

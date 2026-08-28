@@ -2,6 +2,18 @@ export function realNowIso(): string {
   return new Date().toISOString()
 }
 
+export function effectiveTimeTravelIso(
+  valueIso: string,
+  anchorRealIso: string | null,
+  realNowMs = Date.now(),
+): string {
+  const valueMs = Date.parse(valueIso)
+  const anchorMs = anchorRealIso ? Date.parse(anchorRealIso) : Number.NaN
+  if (Number.isNaN(valueMs)) return new Date(realNowMs).toISOString()
+  if (Number.isNaN(anchorMs)) return new Date(valueMs).toISOString()
+  return new Date(valueMs + Math.max(0, realNowMs - anchorMs)).toISOString()
+}
+
 export function advanceIso(iso: string, deltaMs: number): string {
   const baseMs = Date.parse(iso)
   if (Number.isNaN(baseMs)) return realNowIso()

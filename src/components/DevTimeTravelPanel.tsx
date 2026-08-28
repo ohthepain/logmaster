@@ -17,6 +17,7 @@ type DevTimeTravelPanelProps = {
   valueIso: string
   onChange: (iso: string) => void
   tripStartedAt?: string | null
+  replayActive?: boolean
 }
 
 export function DevTimeTravelPanel({
@@ -25,6 +26,7 @@ export function DevTimeTravelPanel({
   valueIso,
   onChange,
   tripStartedAt,
+  replayActive = false,
 }: DevTimeTravelPanelProps) {
   const localValue = isoToDatetimeLocalValue(valueIso)
 
@@ -52,7 +54,9 @@ export function DevTimeTravelPanel({
       </div>
       <p className="m-0 text-xs leading-5 text-[var(--sea-ink-soft)]">
         {enabled
-          ? 'New log entries will use the time below instead of now.'
+          ? replayActive
+            ? 'The replay and new log entries follow this moving fake clock.'
+            : 'New log entries will use the time below instead of now.'
           : 'Turn on to set a custom timestamp for the next log entry.'}
       </p>
       <fieldset

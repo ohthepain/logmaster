@@ -1,0 +1,15 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "Home" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - generic [ref=e5]:
+        - button "Dev menu" [ref=e7]: DEV
+        - group "Color scheme" [ref=e10]:
+          - button "Light" [ref=e11]
+          - button "Dark" [ref=e18]
+          - button "System (match device)" [pressed] [ref=e21]
+        - button "Profile menu" [ref=e25]
+  - main [ref=e29]:
+    - paragraph [ref=e30]: Loading map…
+  - region "Notifications alt+T"

@@ -1,9 +1,12 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { DevComponentLabel } from '../../../components/DevComponentLabel'
 import { DevTimeTravelPanel } from '../../../components/DevTimeTravelPanel'
 import { isDevModeAvailable } from '../../../lib/dev-mode'
-import { realNowIso } from '../../../lib/dev-time-travel'
+import {
+  effectiveTimeTravelIso,
+  realNowIso,
+} from '../../../lib/dev-time-travel'
 import { resolveInProgressTrip } from '../../../lib/trip-nav'
 import { useAppOptionsStore } from '../../../stores/app-options'
 import { useLogbookStore } from '../../../stores/logbook'
@@ -26,6 +29,11 @@ function DevTimeTravelPage() {
   const setDevLogEntryDraftTimeIso = useAppOptionsStore(
     (state) => state.setDevLogEntryDraftTimeIso,
   )
+  const devTimeTravelAnchorRealIso = useAppOptionsStore(
+    (state) => state.devTimeTravelAnchorRealIso,
+  )
+  const devTripReplay = useAppOptionsStore((state) => state.devTripReplay)
+  const [realNowMs, setRealNowMs] = useState(() => Date.now())
   const trips = useLogbookStore((state) => state.trips)
   const inProgressTrip = useMemo(() => resolveInProgressTrip(trips), [trips])
 
@@ -46,6 +54,12 @@ function DevTimeTravelPage() {
     setDevLogEntryDraftTimeIso,
   ])
 
+  useEffect(() => {
+    if (!devTripReplay || !devTimeTravelEnabled) return
+    const intervalId = window.setInterval(() => setRealNowMs(Date.now()), 1_000)
+    return () => window.clearInterval(intervalId)
+  }, [devTimeTravelEnabled, devTripReplay])
+
   if (!isDevModeAvailable()) {
     return (
       <main className="page-wrap px-3 py-8 sm:px-4">
@@ -57,7 +71,16 @@ function DevTimeTravelPage() {
     )
   }
 
-  const valueIso = devLogEntryDraftTimeIso ?? inProgressTrip?.startedAt ?? realNowIso()
+  const baseValueIso =
+    devLogEntryDraftTimeIso ?? inProgressTrip?.startedAt ?? realNowIso()
+  const valueIso =
+    devTripReplay && devTimeTravelEnabled && devLogEntryDraftTimeIso
+      ? effectiveTimeTravelIso(
+          devLogEntryDraftTimeIso,
+          devTimeTravelAnchorRealIso,
+          realNowMs,
+        )
+      : baseValueIso
 
   return (
     <main className="page-wrap px-3 pb-24 pt-4 sm:px-4 sm:pb-28">
@@ -68,8 +91,9 @@ function DevTimeTravelPage() {
             Time travel
           </h1>
           <p className="m-0 mt-3 text-sm leading-7 text-[var(--sea-ink-soft)]">
-            Set the timestamp for the next log entry you create. Real time is
-            unchanged everywhere else.
+            {devTripReplay
+              ? 'Move the fake clock to jump to the matching point in the running trip replay.'
+              : 'Set the timestamp for the next log entry you create. Real time is unchanged everywhere else.'}
           </p>
         </div>
 
@@ -86,6 +110,7 @@ function DevTimeTravelPage() {
             valueIso={valueIso}
             onChange={setDevLogEntryDraftTimeIso}
             tripStartedAt={inProgressTrip?.startedAt}
+            replayActive={Boolean(devTripReplay)}
           />
         )}
 
