@@ -3,6 +3,11 @@ import MapKit
 import UIKit
 import WebKit
 
+private enum AppleMapEntryMarkerStyle {
+    static let hitRadius: CGFloat = 28
+    static let selectedScale: CGFloat = 1.35
+}
+
 private enum AppleMapCameraMath {
     static let minDistance: CLLocationDistance = 80
     static let maxDistance: CLLocationDistance = 20_000_000
@@ -40,6 +45,8 @@ final class MapTouchForwarderView: UIView {
     weak var mapView: MKMapView?
     var passThroughRects: [CGRect] = []
     var onUserInteraction: (() -> Void)?
+    var onEntryTap: ((String) -> Void)?
+    var entryIdAtPoint: ((CGPoint) -> String?)?
 
     private var pinchRecognizer: UIPinchGestureRecognizer?
     private var twoFingerPanRecognizer: UIPanGestureRecognizer?
@@ -76,6 +83,12 @@ final class MapTouchForwarderView: UIView {
         twoFingerPan.delegate = self
         addGestureRecognizer(twoFingerPan)
         twoFingerPanRecognizer = twoFingerPan
+
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
+        tap.cancelsTouchesInView = false
+        tap.delaysTouchesBegan = false
+        tap.delegate = self
+        addGestureRecognizer(tap)
     }
 
     required init?(coder: NSCoder) {
@@ -99,23 +112,41 @@ final class MapTouchForwarderView: UIView {
         mapView.setCamera(camera, animated: false)
     }
 
+    @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
+        guard gesture.state == .ended, let mapView else { return }
+        let point = gesture.location(in: mapView)
+        guard !shouldPassThrough(gesture.location(in: self)) else { return }
+        if let entryId = entryIdAtPoint?(point) {
+            onEntryTap?(entryId)
+        }
+    }
+
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
         guard let mapView else { return }
         if gesture.state == .began {
             onUserInteraction?()
+            if let webView = mapView.superview as? WKWebView {
+                webView.scrollView.contentOffset = .zero
+            }
         }
-        guard gesture.state == .changed || gesture.state == .ended else { return }
+        guard gesture.state == .changed else { return }
 
-        let translation = gesture.translation(in: mapView)
-        gesture.setTranslation(.zero, in: mapView)
+        let translation = gesture.translation(in: self)
+        gesture.setTranslation(.zero, in: self)
+
+        let width = max(bounds.width, 1)
+        let height = max(bounds.height, 1)
+        let mapRect = mapView.visibleMapRect
+        let deltaX = Double(translation.x / width) * mapRect.size.width
+        let deltaY = Double(translation.y / height) * mapRect.size.height
 
         mutateCamera { camera in
-            let centerPoint = CGPoint(x: mapView.bounds.midX, y: mapView.bounds.midY)
-            let shiftedPoint = CGPoint(
-                x: centerPoint.x - translation.x,
-                y: centerPoint.y - translation.y
+            let centerPoint = MKMapPoint(camera.centerCoordinate)
+            let shifted = MKMapPoint(
+                x: centerPoint.x - deltaX,
+                y: centerPoint.y - deltaY
             )
-            camera.centerCoordinate = mapView.convert(shiftedPoint, toCoordinateFrom: mapView)
+            camera.centerCoordinate = shifted.coordinate
         }
     }
 
@@ -185,22 +216,49 @@ extension MapTouchForwarderView: UIGestureRecognizerDelegate {
 }
 
 struct EntryMarker {
+    let entryId: String
     let coordinate: CLLocationCoordinate2D
     let image: UIImage?
 }
 
+private struct EntryCircleMarker {
+    let overlay: MKCircle
+    let entryId: String
+}
+
+struct PlaybackMarker {
+    let coordinate: CLLocationCoordinate2D
+    let heading: Double
+}
+
 final class LogEntryMarkerAnnotation: NSObject, MKAnnotation {
+    let entryId: String
     var coordinate: CLLocationCoordinate2D
     let image: UIImage?
 
-    init(coordinate: CLLocationCoordinate2D, image: UIImage?) {
+    init(entryId: String, coordinate: CLLocationCoordinate2D, image: UIImage?) {
+        self.entryId = entryId
         self.coordinate = coordinate
         self.image = image
         super.init()
     }
 }
 
+final class PlaybackBoatAnnotation: NSObject, MKAnnotation {
+    @objc dynamic var coordinate: CLLocationCoordinate2D
+    var heading: Double
+
+    init(coordinate: CLLocationCoordinate2D, heading: Double) {
+        self.coordinate = coordinate
+        self.heading = heading
+        super.init()
+    }
+}
+
 final class AppleMapViewDelegate: NSObject, MKMapViewDelegate {
+    var selectedEntryId: String?
+    var entryMarkerScale: (LogEntryMarkerAnnotation) -> CGFloat = { _ in 1 }
+
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
         if let polyline = overlay as? MKPolyline {
             let renderer = MKPolylineRenderer(polyline: polyline)
@@ -227,7 +285,22 @@ final class AppleMapViewDelegate: NSObject, MKMapViewDelegate {
             return nil
         }
         guard let marker = annotation as? LogEntryMarkerAnnotation else {
-            return nil
+            guard let boat = annotation as? PlaybackBoatAnnotation else { return nil }
+            let identifier = "playback-boat-marker"
+            let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+                ?? MKAnnotationView(annotation: boat, reuseIdentifier: identifier)
+            view.annotation = boat
+            view.image = UIImage(systemName: "sailboat.fill")?
+                .withTintColor(UIColor(red: 235 / 255, green: 69 / 255, blue: 57 / 255, alpha: 1), renderingMode: .alwaysOriginal)
+            view.backgroundColor = .white
+            view.layer.cornerRadius = 15
+            view.layer.borderWidth = 1.5
+            view.layer.borderColor = UIColor.black.withAlphaComponent(0.65).cgColor
+            view.bounds = CGRect(x: 0, y: 0, width: 30, height: 30)
+            view.transform = CGAffineTransform(rotationAngle: CGFloat(boat.heading * .pi / 180))
+            view.displayPriority = .required
+            view.collisionMode = .circle
+            return view
         }
         let identifier = "log-entry-marker"
         let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
@@ -235,8 +308,11 @@ final class AppleMapViewDelegate: NSObject, MKMapViewDelegate {
         view.annotation = marker
         view.image = marker.image
         view.canShowCallout = false
-        view.displayPriority = .required
+        view.displayPriority = marker.entryId == selectedEntryId ? .required : .defaultHigh
         view.collisionMode = .circle
+        let scale = entryMarkerScale(marker)
+        view.transform = CGAffineTransform(scaleX: scale, y: scale)
+        view.layer.zPosition = marker.entryId == selectedEntryId ? 100 : 0
         return view
     }
 }
@@ -247,7 +323,11 @@ final class AppleMapInstance {
     let touchForwarder: MapTouchForwarderView
     var trackOverlay: MKPolyline?
     var entryOverlays: [MKCircle] = []
+    var entryCircleMarkers: [EntryCircleMarker] = []
     var entryAnnotations: [LogEntryMarkerAnnotation] = []
+    var playbackAnnotation: PlaybackBoatAnnotation?
+    var selectedEntryId: String?
+    var onEntrySelected: ((String) -> Void)?
     var interactive = false
     private weak var webView: WKWebView?
 
@@ -267,6 +347,17 @@ final class AppleMapInstance {
         touchForwarder.mapView = mapView
         touchForwarder.onUserInteraction = { [weak self] in
             self?.setFollowUserLocation(false)
+        }
+        touchForwarder.entryIdAtPoint = { [weak self] point in
+            self?.entryId(at: point)
+        }
+        touchForwarder.onEntryTap = { [weak self] entryId in
+            self?.onEntrySelected?(entryId)
+        }
+        delegate.entryMarkerScale = { [weak self] marker in
+            marker.entryId == self?.selectedEntryId
+                ? AppleMapEntryMarkerStyle.selectedScale
+                : 1
         }
 
         if #available(iOS 16.0, *) {
@@ -308,16 +399,20 @@ final class AppleMapInstance {
     }
 
     private static func configureHostScrollView(_ webView: WKWebView, mapInteractive: Bool) {
-        webView.scrollView.isScrollEnabled = !mapInteractive
-        webView.scrollView.bounces = !mapInteractive
-        webView.scrollView.bouncesZoom = !mapInteractive
-        webView.scrollView.pinchGestureRecognizer?.isEnabled = !mapInteractive
+        let scrollView = webView.scrollView
+        scrollView.isScrollEnabled = !mapInteractive
+        scrollView.bounces = !mapInteractive
+        scrollView.bouncesZoom = !mapInteractive
+        scrollView.panGestureRecognizer.isEnabled = !mapInteractive
+        scrollView.pinchGestureRecognizer?.isEnabled = !mapInteractive
         if mapInteractive {
-            webView.scrollView.minimumZoomScale = 1
-            webView.scrollView.maximumZoomScale = 1
+            scrollView.minimumZoomScale = 1
+            scrollView.maximumZoomScale = 1
+            scrollView.contentOffset = .zero
+            scrollView.contentInset = .zero
         }
-        for recognizer in webView.scrollView.gestureRecognizers ?? [] {
-            if let pan = recognizer as? UIPanGestureRecognizer, pan.minimumNumberOfTouches > 1 {
+        for recognizer in scrollView.gestureRecognizers ?? [] {
+            if let pan = recognizer as? UIPanGestureRecognizer, pan !== scrollView.panGestureRecognizer {
                 pan.isEnabled = !mapInteractive
             }
         }
@@ -383,6 +478,48 @@ final class AppleMapInstance {
         mapView.addOverlay(polyline)
     }
 
+    func setSelectedEntryId(_ entryId: String?) {
+        selectedEntryId = entryId
+        delegate.selectedEntryId = entryId
+        refreshEntryAnnotationViews()
+    }
+
+    func entryId(at point: CGPoint) -> String? {
+        let hitRadius = AppleMapEntryMarkerStyle.hitRadius
+        var nearestId: String?
+        var nearestDistance = hitRadius
+
+        for annotation in entryAnnotations {
+            let markerPoint = mapView.convert(annotation.coordinate, toPointTo: mapView)
+            let distance = hypot(markerPoint.x - point.x, markerPoint.y - point.y)
+            if distance <= nearestDistance {
+                nearestDistance = distance
+                nearestId = annotation.entryId
+            }
+        }
+
+        for marker in entryCircleMarkers {
+            let markerPoint = mapView.convert(marker.overlay.coordinate, toPointTo: mapView)
+            let distance = hypot(markerPoint.x - point.x, markerPoint.y - point.y)
+            if distance <= nearestDistance {
+                nearestDistance = distance
+                nearestId = marker.entryId
+            }
+        }
+
+        return nearestId
+    }
+
+    private func refreshEntryAnnotationViews() {
+        for annotation in entryAnnotations {
+            guard let view = mapView.view(for: annotation) else { continue }
+            let scale = delegate.entryMarkerScale(annotation)
+            view.transform = CGAffineTransform(scaleX: scale, y: scale)
+            view.layer.zPosition = annotation.entryId == selectedEntryId ? 100 : 0
+            view.displayPriority = annotation.entryId == selectedEntryId ? .required : .defaultHigh
+        }
+    }
+
     func setEntryPoints(_ markers: [EntryMarker]) {
         if !entryAnnotations.isEmpty {
             mapView.removeAnnotations(entryAnnotations)
@@ -392,17 +529,50 @@ final class AppleMapInstance {
             mapView.removeOverlay(circle)
         }
         entryOverlays = []
+        entryCircleMarkers = []
 
         for marker in markers {
             if let image = marker.image {
-                let annotation = LogEntryMarkerAnnotation(coordinate: marker.coordinate, image: image)
+                let annotation = LogEntryMarkerAnnotation(
+                    entryId: marker.entryId,
+                    coordinate: marker.coordinate,
+                    image: image
+                )
                 entryAnnotations.append(annotation)
                 mapView.addAnnotation(annotation)
                 continue
             }
             let circle = MKCircle(center: marker.coordinate, radius: 18)
             entryOverlays.append(circle)
+            entryCircleMarkers.append(EntryCircleMarker(overlay: circle, entryId: marker.entryId))
             mapView.addOverlay(circle)
         }
+        refreshEntryAnnotationViews()
+    }
+
+    func setPlaybackPosition(_ marker: PlaybackMarker?) {
+        guard let marker else {
+            if let playbackAnnotation {
+                mapView.removeAnnotation(playbackAnnotation)
+                self.playbackAnnotation = nil
+            }
+            return
+        }
+
+        if let annotation = playbackAnnotation {
+            annotation.coordinate = marker.coordinate
+            annotation.heading = marker.heading
+            if let view = mapView.view(for: annotation) {
+                view.transform = CGAffineTransform(rotationAngle: CGFloat(marker.heading * .pi / 180))
+            }
+            return
+        }
+
+        let annotation = PlaybackBoatAnnotation(
+            coordinate: marker.coordinate,
+            heading: marker.heading
+        )
+        playbackAnnotation = annotation
+        mapView.addAnnotation(annotation)
     }
 }

@@ -8,6 +8,7 @@ import { DEV_FALLBACK_POSITION, getCurrentPosition, subscribeToDevicePosition } 
 import { buildLegEntryPointsGeoJson, buildLegTrackGeoJson, resolveTripLogMapViewport } from "../lib/logbook-map-geo";
 import { renderLogEntryMapMarkerDataUrl } from "../lib/map-log-entry-icons";
 import type { LogEntryMapIconKind, LogEntryMapOutline } from "../lib/log-entry-map-marker";
+import type { TripPlaybackPosition } from "../lib/trip-playback";
 import { cn } from "../lib/cn";
 import { DevComponentLabel } from "./DevComponentLabel";
 
@@ -22,12 +23,15 @@ type TripAppleMapKitProps = {
   entries: LogEntry[];
   legs?: Leg[];
   focusEntryId?: string | null;
+  selectedEntryId?: string | null;
+  onEntrySelect?: (entryId: string) => void;
   mapClassName?: string;
   showControls?: boolean;
   showCurrentPosition?: boolean;
   interactive?: boolean;
   embedded?: boolean;
   controlStackClassName?: string;
+  playbackPosition?: TripPlaybackPosition | null;
 };
 
 async function entryMarkersFromGeoJson(
@@ -38,15 +42,19 @@ async function entryMarkersFromGeoJson(
     if (feature.geometry?.type !== "Point") continue;
     const [longitude, latitude] = feature.geometry.coordinates;
     if (typeof latitude !== "number" || typeof longitude !== "number") continue;
+    const entryId =
+      typeof feature.properties?.entryId === "string" ? feature.properties.entryId : null;
+    if (!entryId) continue;
     const kind = feature.properties?.kind as LogEntryMapIconKind | undefined;
     const color =
       typeof feature.properties?.color === "string" ? feature.properties.color : null;
     const outline = feature.properties?.outline as LogEntryMapOutline | undefined;
     if (!kind || !color || !outline) {
-      markers.push({ latitude, longitude });
+      markers.push({ entryId, latitude, longitude });
       continue;
     }
     markers.push({
+      entryId,
       latitude,
       longitude,
       imageDataUrl: await renderLogEntryMapMarkerDataUrl(kind, color, outline),
@@ -81,12 +89,15 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
   entries,
   legs = [],
   focusEntryId = null,
+  selectedEntryId = null,
+  onEntrySelect,
   mapClassName,
   showControls: _showControls = true,
   showCurrentPosition = true,
   interactive = true,
   embedded = false,
   controlStackClassName: _controlStackClassName,
+  playbackPosition = null,
 }: TripAppleMapKitProps,
   ref,
 ) {
@@ -130,6 +141,14 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
       entryPoints: await entryMarkersFromGeoJson(legEntryGeoJson),
     });
   }, [mapId, mapReady, legTrackGeoJson, legEntryGeoJson]);
+
+  const syncSelectedEntry = useCallback(async () => {
+    if (!mapReady) return;
+    await LogmasterAppleMap.setSelectedEntry({
+      mapId,
+      selectedEntryId,
+    });
+  }, [mapId, mapReady, selectedEntryId]);
 
   const syncViewport = useCallback(async () => {
     if (!mapReady || initialFitDoneRef.current) return;
@@ -230,6 +249,43 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
   useEffect(() => {
     void syncOverlays();
   }, [syncOverlays]);
+
+  useEffect(() => {
+    void syncSelectedEntry();
+  }, [syncSelectedEntry]);
+
+  useEffect(() => {
+    if (!mapReady || !onEntrySelect) return;
+
+    let cancelled = false;
+    let removeListener: (() => void) | undefined;
+
+    void LogmasterAppleMap.addListener("entrySelected", (event) => {
+      if (cancelled || event.mapId !== mapId) return;
+      onEntrySelect(event.entryId);
+    }).then((handle) => {
+      if (cancelled) {
+        void handle.remove();
+        return;
+      }
+      removeListener = () => {
+        void handle.remove();
+      };
+    });
+
+    return () => {
+      cancelled = true;
+      removeListener?.();
+    };
+  }, [mapId, mapReady, onEntrySelect]);
+
+  useEffect(() => {
+    if (!mapReady) return
+    void LogmasterAppleMap.setPlaybackPosition({
+      mapId,
+      position: playbackPosition,
+    })
+  }, [mapId, mapReady, playbackPosition])
 
   useEffect(() => {
     void syncViewport();

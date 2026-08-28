@@ -12,6 +12,7 @@ import {
 
 export const LOG_ENTRY_MAP_MARKER_SIZE = 64
 export const LOG_ENTRY_MAP_MARKER_PIXEL_RATIO = 2
+export const LOG_ENTRY_MAP_SELECTED_ICON_SCALE = 1.35
 
 const GLYPH_ASSETS: Partial<Record<LogEntryMapIconKind, string>> = {
   'anchor-dropped': '/buttons/anchor-down-white.png',
@@ -528,14 +529,39 @@ export function addLogEntrySymbolLayer(
   map: maplibregl.Map,
   sourceId: string,
   layerId: string,
+  selectedEntryId: string | null = null,
 ) {
   if (map.getLayer(layerId)) return
   map.addLayer({
     id: layerId,
     type: 'symbol',
     source: sourceId,
-    layout: sailingMapLegEntryIconLayout,
+    layout: {
+      ...sailingMapLegEntryIconLayout,
+      'icon-size': logEntryMapIconSizeExpression(selectedEntryId),
+    },
   })
+}
+
+export function logEntryMapIconSizeExpression(
+  selectedEntryId: string | null,
+): maplibregl.ExpressionSpecification | number {
+  if (!selectedEntryId) return 1
+  return [
+    'case',
+    ['==', ['get', 'entryId'], selectedEntryId],
+    LOG_ENTRY_MAP_SELECTED_ICON_SCALE,
+    1,
+  ]
+}
+
+export function syncLogEntryMapIconSelection(
+  map: maplibregl.Map,
+  layerId: string,
+  selectedEntryId: string | null,
+) {
+  if (!map.getLayer(layerId)) return
+  map.setLayoutProperty(layerId, 'icon-size', logEntryMapIconSizeExpression(selectedEntryId))
 }
 
 function markerSpecsFromGeoJson(

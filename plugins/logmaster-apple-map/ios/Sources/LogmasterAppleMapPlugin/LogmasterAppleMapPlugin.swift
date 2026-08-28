@@ -15,6 +15,8 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setCamera", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "fitCoordinates", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setOverlays", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setSelectedEntry", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setPlaybackPosition", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setShowsUserLocation", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setInteractionEnabled", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setTouchCaptureSuspended", returnType: CAPPluginReturnPromise),
@@ -48,6 +50,12 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
 
             let instance = AppleMapInstance()
             instance.attach(to: webView, interactive: interactive)
+            instance.onEntrySelected = { [weak self] entryId in
+                self?.notifyListeners("entrySelected", data: [
+                    "mapId": mapId,
+                    "entryId": entryId,
+                ])
+            }
             self.maps[mapId] = instance
             self.scheduleLayoutRetry(for: mapId, attempt: 0) {
                 call.resolve()
@@ -203,6 +211,22 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+    @objc func setSelectedEntry(_ call: CAPPluginCall) {
+        guard let mapId = call.getString("mapId") else {
+            call.reject("mapId is required")
+            return
+        }
+
+        DispatchQueue.main.async {
+            guard let instance = self.maps[mapId] else {
+                call.reject("Map not found")
+                return
+            }
+            instance.setSelectedEntryId(call.getString("selectedEntryId"))
+            call.resolve()
+        }
+    }
+
     @objc func setShowsUserLocation(_ call: CAPPluginCall) {
         guard let mapId = call.getString("mapId"),
               let show = call.getBool("show") else {
@@ -219,6 +243,32 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             instance.mapView.showsUserLocation = show
             instance.setFollowUserLocation(follow)
+            call.resolve()
+        }
+    }
+
+    @objc func setPlaybackPosition(_ call: CAPPluginCall) {
+        guard let mapId = call.getString("mapId") else {
+            call.reject("mapId is required")
+            return
+        }
+
+        var marker: PlaybackMarker?
+        if let position = call.getObject("position"),
+           let latitude = position["latitude"] as? Double,
+           let longitude = position["longitude"] as? Double {
+            marker = PlaybackMarker(
+                coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
+                heading: position["heading"] as? Double ?? 0
+            )
+        }
+
+        DispatchQueue.main.async {
+            guard let instance = self.maps[mapId] else {
+                call.reject("Map not found")
+                return
+            }
+            instance.setPlaybackPosition(marker)
             call.resolve()
         }
     }
@@ -332,11 +382,13 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private static func parseEntryMarkers(_ raw: [[String: Any]]) -> [EntryMarker] {
         raw.compactMap { item in
-            guard let latitude = item["latitude"] as? Double,
+            guard let entryId = item["entryId"] as? String, !entryId.isEmpty,
+                  let latitude = item["latitude"] as? Double,
                   let longitude = item["longitude"] as? Double else {
                 return nil
             }
             return EntryMarker(
+                entryId: entryId,
                 coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
                 image: image(fromDataUrl: item["imageDataUrl"] as? String)
             )

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Check, RotateCw, Sailboat, Trash2, User } from "lucide-react";
+import { Check, Sailboat, Trash2, User } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DevComponentLabel } from "./DevComponentLabel";
@@ -142,14 +142,16 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
     [store.entries, tripId],
   );
 
-  const devMode = useAppOptionsStore((state) => state.devMode);
   const devTripReplay = useAppOptionsStore((state) => state.devTripReplay);
+  const devMode = useAppOptionsStore((state) => state.devMode);
   const inProgressTrip = store.trips.find((item) => item.status === "IN_PROGRESS");
 
   useIosNativeMapTouchPassthrough(
     getNativePlatform() === "ios" &&
       trip != null &&
-      (trip.status === "IN_PROGRESS" || trip.status === "PLANNED"),
+      (trip.status === "IN_PROGRESS" ||
+        trip.status === "PLANNED" ||
+        trip.status === "COMPLETED"),
   );
 
   const mediaByEntry = useMemo(() => {
@@ -374,14 +376,22 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
           cover={cover}
           mapEntries={tripEntries}
           mapLegs={tripLegs}
+          mediaByEntry={mediaByEntry}
           busy={busy}
+          selectedEntryId={selectedEntryId}
+          onEntrySelect={openEntry}
           onEditCoverClick={() => setCoverEditOpen(true)}
           onLogEntryClick={
             trip.status === "IN_PROGRESS" ? () => setCreateEntryOpen(true) : undefined
           }
+          onReplayTestClick={
+            trip.status === "COMPLETED" && devMode && isDevModeAvailable()
+              ? () => setReplayOpen(true)
+              : undefined
+          }
         />
 
-        <TripDetailBottomSheet
+        {trip.status !== "COMPLETED" ? <TripDetailBottomSheet
           leadingAction={
             trip.status === "IN_PROGRESS" ? (
               <TripRecordButton
@@ -446,19 +456,6 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
               </div>
             )}
 
-            {trip.status === "COMPLETED" && devMode && isDevModeAvailable() ? (
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setReplayOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-full border border-dashed border-[var(--brand)]/60 bg-[color-mix(in_oklab,var(--brand-muted)_35%,var(--chip-bg))] px-4 py-2.5 text-sm font-semibold text-[var(--brand)] disabled:opacity-60"
-                >
-                  <RotateCw className="size-4" />
-                  Auto-test replay
-                </button>
-              </div>
-            ) : null}
           </div>
 
           <div className="border-t border-[var(--line)] pt-4">
@@ -472,7 +469,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
               Delete trip
             </button>
           </div>
-        </TripDetailBottomSheet>
+        </TripDetailBottomSheet> : null}
       </div>
 
       <input

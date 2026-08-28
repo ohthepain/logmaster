@@ -18,6 +18,7 @@ export type MapCoordinate = {
 }
 
 export type MapEntryPoint = MapCoordinate & {
+  entryId: string
   imageDataUrl?: string
 }
 
@@ -27,11 +28,20 @@ export type MapOverlays = {
   entryPoints?: MapEntryPoint[]
 }
 
+export type MapSelectedEntry = {
+  mapId: string
+  selectedEntryId?: string | null
+}
+
 export type MapCamera = {
   mapId: string
   center: MapCoordinate
   spanLatitude?: number
   spanLongitude?: number
+}
+
+export type MapPlaybackPosition = MapCoordinate & {
+  heading: number
 }
 
 export type FitCoordinatesOptions = {
@@ -48,6 +58,8 @@ export interface LogmasterAppleMapPlugin {
   setCamera(options: MapCamera): Promise<void>
   fitCoordinates(options: FitCoordinatesOptions): Promise<void>
   setOverlays(options: MapOverlays): Promise<void>
+  setSelectedEntry(options: MapSelectedEntry): Promise<void>
+  setPlaybackPosition(options: { mapId: string; position?: MapPlaybackPosition | null }): Promise<void>
   setShowsUserLocation(options: { mapId: string; show: boolean; follow?: boolean }): Promise<void>
   setInteractionEnabled(options: { mapId: string; enabled: boolean }): Promise<void>
   setTouchCaptureSuspended(options: { suspended: boolean }): Promise<void>
@@ -55,5 +67,9 @@ export interface LogmasterAppleMapPlugin {
   addListener(
     eventName: 'mapReady',
     listenerFunc: (data: { mapId: string }) => void,
+  ): Promise<PluginListenerHandle>
+  addListener(
+    eventName: 'entrySelected',
+    listenerFunc: (data: { mapId: string; entryId: string }) => void,
   ): Promise<PluginListenerHandle>
 }

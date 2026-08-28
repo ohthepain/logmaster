@@ -17,7 +17,7 @@ import {
 import { installMapDataLayers } from "../lib/maplibre-data-layers";
 import { useMapDataLayerSync } from "../lib/use-map-data-layer-sync";
 import { applySailingLogMapTheme, sailingMapLegTrackPaint, SailingMapColors } from "../lib/maplibre-sailing-theme";
-import { addLogEntrySymbolLayer, syncLogEntryMapMarkerImages } from "../lib/map-log-entry-icons";
+import { addLogEntrySymbolLayer, syncLogEntryMapMarkerImages, syncLogEntryMapIconSelection } from "../lib/map-log-entry-icons";
 import { getGeoJsonSource } from "../lib/maplibre-source";
 import { defaultRasterMapId } from "../lib/map-styles";
 import { centerMapOnCurrentLocation, juiceMapFocus, SAILING_MAP_EASE_MS, SAILING_MAP_FIT_MAX_ZOOM, SAILING_MAP_INITIAL_ZOOM } from "../lib/sailing-map-viewport";
@@ -35,12 +35,17 @@ import type {TripAppleMapKitHandle} from "./TripAppleMapKit";
 import { SailingMapControlStack } from "./SailingMapControlStack";
 import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
 import { SailingMapLayerPanel } from "./SailingMapLayerPanel";
+import type { TripPlaybackPosition } from "../lib/trip-playback";
+
+const ENTRY_LAYER = "trip-log-entry-icons";
 
 type TripLogMapProps = {
   trip: Trip;
   entries: LogEntry[];
   legs?: Leg[];
   focusEntryId?: string | null;
+  selectedEntryId?: string | null;
+  onEntrySelect?: (entryId: string) => void;
   mapClassName?: string;
   allowFullscreen?: boolean;
   showControls?: boolean;
@@ -49,6 +54,8 @@ type TripLogMapProps = {
   embedded?: boolean;
   showSeamarks?: boolean;
   controlStackClassName?: string;
+  playbackPosition?: TripPlaybackPosition | null;
+  playbackMode?: boolean;
 };
 
 type LngLat = { longitude: number; latitude: number };
@@ -56,6 +63,21 @@ type LngLat = { longitude: number; latitude: number };
 const ENTRY_SOURCE = "trip-log-entries";
 const TRACK_SOURCE = "trip-log-track";
 const CURRENT_SOURCE = "trip-current-position";
+
+function createPlaybackBoatMarkerElement() {
+  const root = document.createElement("div");
+  root.className = "trip-playback-boat-marker";
+  root.setAttribute("aria-label", "Playback boat position");
+  root.style.cssText = "width:36px;height:44px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));";
+  root.innerHTML = `
+    <div data-boat-heading style="width:30px;height:38px;transform-origin:50% 50%;transition:transform 80ms linear">
+      <svg viewBox="0 0 30 38" width="30" height="38" aria-hidden="true">
+        <path d="M15 2 26 27c-3.2 5.7-7 8.5-11 8.5S7.2 32.7 4 27L15 2Z" fill="#fff" stroke="#101010" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M15 7v23M8.5 26.5h13" fill="none" stroke="#eb4539" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>`;
+  return root;
+}
 
 export const TripLogMap = forwardRef<TripAppleMapKitHandle, TripLogMapProps>(function TripLogMapView(props, ref) {
   if (getNativePlatform() === "ios" && props.embedded) {
@@ -66,12 +88,15 @@ export const TripLogMap = forwardRef<TripAppleMapKitHandle, TripLogMapProps>(fun
         entries={props.entries}
         legs={props.legs}
         focusEntryId={props.focusEntryId}
+        selectedEntryId={props.selectedEntryId}
+        onEntrySelect={props.onEntrySelect}
         mapClassName={props.mapClassName}
         showControls={props.showControls}
         showCurrentPosition={props.showCurrentPosition}
         interactive={props.interactive}
         embedded={props.embedded}
         controlStackClassName={props.controlStackClassName}
+        playbackPosition={props.playbackPosition}
       />
     );
   }
@@ -84,6 +109,8 @@ function TripLogMapMapLibre({
   entries,
   legs = [],
   focusEntryId = null,
+  selectedEntryId = null,
+  onEntrySelect,
   mapClassName = "h-56 w-full sm:h-64",
   allowFullscreen = true,
   showControls = true,
@@ -92,10 +119,14 @@ function TripLogMapMapLibre({
   embedded = false,
   showSeamarks = true,
   controlStackClassName,
+  playbackPosition = null,
+  playbackMode = false,
 }: TripLogMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const onEntrySelectRef = useRef(onEntrySelect);
   const currentPositionMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const playbackBoatMarkerRef = useRef<maplibregl.Marker | null>(null);
   const initialFitDoneRef = useRef(false);
   const devMode = useAppOptionsStore((state) => state.devMode);
   const mapDataLayerToggles = useAppOptionsStore((state) => state.mapDataLayerToggles);
@@ -118,6 +149,10 @@ function TripLogMapMapLibre({
     () => resolveTripLogMapViewport(trip, entries, { focusEntryId }),
     [trip, entries, focusEntryId],
   );
+
+  useEffect(() => {
+    onEntrySelectRef.current = onEntrySelect;
+  }, [onEntrySelect]);
 
   useEffect(() => {
     if (!showCurrentPosition) {
@@ -192,7 +227,21 @@ function TripLogMapMapLibre({
             type: "geojson",
             data: { type: "FeatureCollection", features: [] },
           });
-          addLogEntrySymbolLayer(map, ENTRY_SOURCE, "trip-log-entry-icons");
+          addLogEntrySymbolLayer(map, ENTRY_SOURCE, ENTRY_LAYER, selectedEntryId);
+
+          map.on("click", ENTRY_LAYER, (event) => {
+            const entryId = event.features?.[0]?.properties?.entryId;
+            if (typeof entryId !== "string" || !entryId) return;
+            onEntrySelectRef.current?.(entryId);
+          });
+          map.on("mouseenter", ENTRY_LAYER, () => {
+            if (!map) return;
+            map.getCanvas().style.cursor = onEntrySelectRef.current ? "pointer" : "";
+          });
+          map.on("mouseleave", ENTRY_LAYER, () => {
+            if (!map) return;
+            map.getCanvas().style.cursor = "";
+          });
 
           map.addSource(CURRENT_SOURCE, {
             type: "geojson",
@@ -249,6 +298,12 @@ function TripLogMapMapLibre({
       setMapReady(false);
     };
   }, [interactive]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    syncLogEntryMapIconSelection(map, ENTRY_LAYER, selectedEntryId);
+  }, [mapReady, selectedEntryId]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -369,6 +424,34 @@ function TripLogMapMapLibre({
   }, [mapReady, devDraggablePosition, currentPosition]);
 
   useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !playbackPosition) {
+      playbackBoatMarkerRef.current?.remove();
+      playbackBoatMarkerRef.current = null;
+      return;
+    }
+
+    let marker = playbackBoatMarkerRef.current;
+    if (!marker) {
+      marker = new maplibregl.Marker({
+        element: createPlaybackBoatMarkerElement(),
+        anchor: "center",
+      });
+      marker
+        .setLngLat([playbackPosition.longitude, playbackPosition.latitude])
+        .addTo(map);
+      playbackBoatMarkerRef.current = marker;
+    }
+    marker.setLngLat([playbackPosition.longitude, playbackPosition.latitude]);
+    const heading = marker.getElement().querySelector<HTMLElement>("[data-boat-heading]");
+    if (heading) heading.style.transform = `rotate(${playbackPosition.heading}deg)`;
+
+    return () => {
+      // The next playback frame reuses the marker. Map teardown removes it separately.
+    };
+  }, [mapReady, playbackPosition]);
+
+  useEffect(() => {
     initialFitDoneRef.current = false;
   }, [trip.id, focusEntryId, viewportTarget.kind]);
 
@@ -447,13 +530,13 @@ function TripLogMapMapLibre({
             className={controlStackClassName}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
-            onLocate={handleLocate}
-            layers={
+            onLocate={playbackMode ? undefined : handleLocate}
+            layers={playbackMode ? undefined : (
               <SailingMapLayerPanel
                 toggles={mapDataLayerToggles}
                 onChange={setMapDataLayerToggles}
               />
-            }
+            )}
             onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}
           />
         </>
@@ -493,8 +576,12 @@ function TripLogMapMapLibre({
           entries={entries}
           legs={legs}
           focusEntryId={focusEntryId}
+          selectedEntryId={selectedEntryId}
+          onEntrySelect={onEntrySelect}
           mapClassName="h-full w-full"
           allowFullscreen={false}
+          playbackPosition={playbackPosition}
+          playbackMode={playbackMode}
         />
       </SailingMapFullscreenModal>
     ) : null;

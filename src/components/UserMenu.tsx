@@ -557,7 +557,7 @@ function PhotoMontage({ items }: { items: MontageItem[] }) {
           <div
             key={item.id}
             className={cn(
-              'absolute flex size-[4.7rem] items-center justify-center overflow-hidden rounded-2xl border-[3px] border-[var(--surface-strong)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)] shadow-md',
+              'absolute flex size-[7rem] items-center justify-center overflow-hidden rounded-2xl border-[3px] border-[var(--surface-strong)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)] shadow-md',
               transforms[index],
             )}
             title={item.label}
@@ -593,11 +593,11 @@ function CrewMontage({ crew }: { crew: CrewPayload | null }) {
         <Avatar
           key={member.id}
           src={member.imageUrl}
-          className="size-12 rounded-full border-[3px] border-[var(--surface-strong)] shadow-sm sm:size-14"
+          className="size-18 rounded-full border-[3px] border-[var(--surface-strong)] shadow-sm sm:size-21"
         />
       ))}
       {extraCount > 0 ? (
-        <div className="z-10 flex size-12 items-center justify-center rounded-full border-[3px] border-[var(--surface-strong)] bg-[var(--chip-bg)] text-xs font-bold text-[var(--sea-ink)] shadow-sm sm:size-14">
+        <div className="z-10 flex size-18 items-center justify-center rounded-full border-[3px] border-[var(--surface-strong)] bg-[var(--chip-bg)] text-xs font-bold text-[var(--sea-ink)] shadow-sm sm:size-21">
           +{extraCount}
         </div>
       ) : null}
