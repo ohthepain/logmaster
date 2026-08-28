@@ -11,10 +11,8 @@ import type { LogEntryMapIconKind, LogEntryMapOutline } from "../lib/log-entry-m
 import type { TripPlaybackPosition } from "../lib/trip-playback";
 import { cn } from "../lib/cn";
 import { DevComponentLabel } from "./DevComponentLabel";
-import {
-  LogEntryMapMarkerHoverTarget,
-  type MapEntryPreviewState,
-} from "./LogEntryMapMarkerHoverTarget";
+import { LogEntryMapMarkerHoverTarget } from "./LogEntryMapMarkerHoverTarget";
+import type { MapEntryPreviewState } from "./LogEntryMapMarkerHoverTarget";
 
 export type TripAppleMapKitHandle = {
   zoomIn: () => void;

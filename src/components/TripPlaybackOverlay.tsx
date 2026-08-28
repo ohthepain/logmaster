@@ -21,6 +21,8 @@ import { cn } from '../lib/cn'
 const MAX_TIME_ZOOM = 16
 const PRESENTATION_LENGTH_MS = 120_000
 const SPEEDS = [0.5, 1, 2, 4] as const
+const TIMELINE_TRACK_TOP_PX = 48
+const TIMELINE_HEIGHT_PX = 76
 
 type DragState = {
   pointerId: number
@@ -29,9 +31,10 @@ type DragState = {
   startTimeMs: number
   startZoom: number
   windowDurationMs: number
+  startedOnEntryId: string | null
+  didDrag: boolean
 }
 
-const DRAG_ACTIVATION_PX = 5
 const ZOOM_DRAG_PX = 6
 const SCRUB_DRAG_PX = 6
 
@@ -213,6 +216,13 @@ export function TripPlaybackOverlay({
     setMediaPinned(false)
   }
 
+  const openEntryAtTime = (entry: LogEntry) => {
+    const media = mediaByEntry.get(entry.id) ?? []
+    const hasMedia = media.length > 0 || isVideoLogEntry(entry)
+    if (hasMedia) openEntryMedia(entry)
+    else moveToEntry(entry)
+  }
+
   return (
     <>
       {mediaEntry ? (
@@ -289,10 +299,12 @@ export function TripPlaybackOverlay({
 
           <div
             ref={timelineRef}
-            className="relative h-[76px] touch-none select-none"
+            className="relative touch-none select-none"
+            style={{ height: TIMELINE_HEIGHT_PX }}
             onPointerDown={(event) => {
-              if ((event.target as HTMLElement).closest('button')) return
+              if ((event.target as HTMLElement).closest('[data-playback-control]')) return
               event.currentTarget.setPointerCapture(event.pointerId)
+              const entryButton = (event.target as HTMLElement).closest('[data-entry-id]')
               dragRef.current = {
                 pointerId: event.pointerId,
                 startX: event.clientX,
@@ -300,6 +312,8 @@ export function TripPlaybackOverlay({
                 startTimeMs: currentTimeMs,
                 startZoom: timeZoom,
                 windowDurationMs: windowRange.durationMs,
+                startedOnEntryId: entryButton?.getAttribute('data-entry-id') ?? null,
+                didDrag: false,
               }
               setPlaying(false)
               setMediaPinned(false)
@@ -310,9 +324,11 @@ export function TripPlaybackOverlay({
               const dx = event.clientX - drag.startX
               const dy = event.clientY - drag.startY
               if (Math.abs(dx) >= SCRUB_DRAG_PX) {
+                drag.didDrag = true
                 setTimeFromClientX(event.clientX, drag)
               }
               if (Math.abs(dy) >= ZOOM_DRAG_PX) {
+                drag.didDrag = true
                 const nextZoom = clamp(drag.startZoom * Math.exp(-dy / 288), 1, MAX_TIME_ZOOM)
                 setTimeZoom(nextZoom)
                 setWindowCenterMs(currentTimeMs)
@@ -322,10 +338,13 @@ export function TripPlaybackOverlay({
               const drag = dragRef.current
               if (!drag || drag.pointerId !== event.pointerId) return
               event.currentTarget.releasePointerCapture(event.pointerId)
-              const dx = event.clientX - drag.startX
-              const dy = event.clientY - drag.startY
-              if (Math.max(Math.abs(dx), Math.abs(dy)) < DRAG_ACTIVATION_PX) {
-                setTimeFromClientX(event.clientX, drag)
+              if (!drag.didDrag) {
+                if (drag.startedOnEntryId) {
+                  const entry = chronologicalEntries.find((item) => item.id === drag.startedOnEntryId)
+                  if (entry) openEntryAtTime(entry)
+                } else {
+                  setTimeFromClientX(event.clientX, drag)
+                }
               }
               const previewEntry = chronologicalEntries.find((entry) => entry.id === mediaEntryId)
               if (previewEntry && isVideoMedia(previewEntry, mediaByEntry.get(previewEntry.id) ?? [])) {
@@ -340,12 +359,15 @@ export function TripPlaybackOverlay({
               if (!mediaPinned) setMediaEntryId(null)
             }}
           >
-            <div className="absolute inset-x-0 top-[48px] h-1 rounded-full bg-white/25" />
+            <div
+              className="absolute inset-x-0 h-1 rounded-full bg-white/25"
+              style={{ top: TIMELINE_TRACK_TOP_PX }}
+            />
             {[0, 0.25, 0.5, 0.75, 1].map((fraction) => (
               <div
                 key={fraction}
-                className="absolute top-[44px] h-3 w-px bg-white/50"
-                style={{ left: `${fraction * 100}%` }}
+                className="absolute h-3 w-px bg-white/50"
+                style={{ left: `${fraction * 100}%`, top: TIMELINE_TRACK_TOP_PX - 4 }}
               />
             ))}
 
@@ -358,33 +380,28 @@ export function TripPlaybackOverlay({
               const thumbnail =
                 media.find((item) => item.thumbnailUrl)?.thumbnailUrl ??
                 (entryIsVideo ? null : mediaSource(media))
-              const hasMedia = media.length > 0 || isVideoLogEntry(entry)
               return (
                 <button
                   key={entry.id}
                   type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    if (hasMedia) openEntryMedia(entry)
-                    else moveToEntry(entry)
-                  }}
-                  className="absolute top-0 z-10 -translate-x-1/2 touch-manipulation"
-                  style={{ left: `${left}%` }}
+                  data-entry-id={entry.id}
+                  className="absolute top-0 z-10 flex -translate-x-1/2 touch-manipulation flex-col items-center"
+                  style={{ left: `${left}%`, height: TIMELINE_TRACK_TOP_PX }}
                   aria-label={`${entryTitle(entry.type)} at ${formatClock(timeMs)}`}
                 >
                   {thumbnail ? (
-                    <span className="relative block size-10 overflow-hidden rounded-lg border-2 border-white bg-black shadow-md">
+                    <span className="relative block size-10 shrink-0 overflow-hidden rounded-lg border-2 border-white bg-black shadow-md">
                       <img src={thumbnail} alt="" className="size-full object-cover" />
                       {entryIsVideo ? (
                         <Play className="absolute left-1/2 top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 drop-shadow" fill="currentColor" />
                       ) : null}
                     </span>
                   ) : (
-                    <span className="flex size-8 items-center justify-center rounded-full border border-white/40 bg-black/70 text-sm shadow-md">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/40 bg-black/70 text-sm shadow-md">
                       {entryIcon(entry.type)}
                     </span>
                   )}
-                  <span className="mx-auto block h-2 w-px bg-white/70" />
+                  <span className="w-px flex-1 bg-white/70" aria-hidden />
                 </button>
               )
             })}
@@ -399,9 +416,10 @@ export function TripPlaybackOverlay({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" data-playback-control>
             <button
               type="button"
+              data-playback-control
               onClick={() => {
                 setPlaying(false)
                 onCurrentTimeChange(range.startMs)
@@ -415,6 +433,7 @@ export function TripPlaybackOverlay({
             </button>
             <button
               type="button"
+              data-playback-control
               onClick={() => skipEntry(-1)}
               className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
               aria-label="Previous log entry"
@@ -423,6 +442,7 @@ export function TripPlaybackOverlay({
             </button>
             <button
               type="button"
+              data-playback-control
               onClick={() => {
                 if (currentTimeMs >= range.endMs) {
                   onCurrentTimeChange(range.startMs)
@@ -437,6 +457,7 @@ export function TripPlaybackOverlay({
             </button>
             <button
               type="button"
+              data-playback-control
               onClick={() => skipEntry(1)}
               className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
               aria-label="Next log entry"
@@ -444,7 +465,10 @@ export function TripPlaybackOverlay({
               <ChevronRight className="size-5" />
             </button>
 
-            <label className="ml-1 flex min-w-0 flex-1 items-center gap-2 text-[11px] font-semibold text-white/75">
+            <label
+              data-playback-control
+              className="ml-1 flex min-w-0 flex-1 items-center gap-2 text-[11px] font-semibold text-white/75"
+            >
               <span className="shrink-0">{SPEEDS[speedIndex]}×</span>
               <input
                 type="range"

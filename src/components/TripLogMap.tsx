@@ -36,10 +36,8 @@ import { SailingMapControlStack } from "./SailingMapControlStack";
 import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
 import { SailingMapLayerPanel } from "./SailingMapLayerPanel";
 import type { TripPlaybackPosition } from "../lib/trip-playback";
-import {
-  LogEntryMapMarkerHoverTarget,
-  type MapEntryPreviewState,
-} from "./LogEntryMapMarkerHoverTarget";
+import { LogEntryMapMarkerHoverTarget } from "./LogEntryMapMarkerHoverTarget";
+import type { MapEntryPreviewState } from "./LogEntryMapMarkerHoverTarget";
 
 const ENTRY_LAYER = "trip-log-entry-icons";
 
