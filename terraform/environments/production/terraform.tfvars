@@ -26,4 +26,4 @@ ses_configuration_set = "logmaster-live"
 # Optional: existing Secrets Manager ARNs for third-party credentials
 # google_client_id_secret_arn     = "arn:aws:secretsmanager:eu-central-1:ACCOUNT_ID:secret:..."
 # google_client_secret_secret_arn = "arn:aws:secretsmanager:eu-central-1:ACCOUNT_ID:secret:..."
-# maptiler_api_key_secret_arn     = "arn:aws:secretsmanager:eu-central-1:ACCOUNT_ID:secret:..."
+maptiler_api_key_secret_arn     = "arn:aws:secretsmanager:eu-central-1:320205321328:secret:maptiler-api-key-QqfHsd"
