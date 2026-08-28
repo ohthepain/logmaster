@@ -10,17 +10,17 @@
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="1: Switch to ios build lane" time="8.1e-05">
+      <testcase classname="fastlane.lanes" name="1: Switch to ios build lane" time="0.000199">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="2: build_app" time="46.336471">
+      <testcase classname="fastlane.lanes" name="2: build_app" time="66.64174">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="3: upload_to_testflight" time="85.661145">
+      <testcase classname="fastlane.lanes" name="3: upload_to_testflight" time="90.496495">
         
       </testcase>
     

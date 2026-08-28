@@ -7,10 +7,13 @@ import {
 } from 'react'
 import type {ReactNode} from 'react';
 import {
+  APP_HEADER_INNER_HEIGHT_PX,
   bottomSheetDragChromeHeight,
+  bottomSheetFullHeight,
   bottomSheetPeekHeight,
   BOTTOM_SHEET_DRAG_ZONE_PX,
   BOTTOM_SHEET_MIN_INSET_PX,
+  measureAppHeaderHeight,
   measureSafeAreaInsetBottom,
 } from '../lib/safe-area'
 import { cn } from '../lib/cn'
@@ -19,10 +22,9 @@ import { DevComponentLabel } from './DevComponentLabel'
 
 const SNAP_RATIOS = {
   half: 0.48,
-  full: 1,
 } as const
 
-type SnapName = 'peek' | keyof typeof SNAP_RATIOS
+type SnapName = 'peek' | 'half' | 'full'
 
 function nearestSnap(heightPx: number, snaps: Record<SnapName, number>): number {
   const values = Object.values(snaps)
@@ -46,6 +48,7 @@ export function TripDetailBottomSheet({
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null)
   const heightRef = useRef(0)
   const [containerHeight, setContainerHeight] = useState(0)
+  const [headerHeight, setHeaderHeight] = useState(APP_HEADER_INNER_HEIGHT_PX)
   const [safeAreaBottom, setSafeAreaBottom] = useState(0)
   const [sheetHeight, setSheetHeight] = useState(0)
   const [dragging, setDragging] = useState(false)
@@ -55,12 +58,13 @@ export function TripDetailBottomSheet({
   const snapHeights = useMemo(() => {
     if (containerHeight <= 0) return null
     const peek = bottomSheetPeekHeight(containerHeight, safeAreaBottom)
+    const full = bottomSheetFullHeight(containerHeight, headerHeight, peek)
     return {
       peek,
-      half: Math.round(containerHeight * SNAP_RATIOS.half),
-      full: Math.round(containerHeight * SNAP_RATIOS.full),
+      half: Math.min(full, Math.round(containerHeight * SNAP_RATIOS.half)),
+      full,
     }
-  }, [containerHeight, safeAreaBottom])
+  }, [containerHeight, headerHeight, safeAreaBottom])
 
   const hasScrollableContent = sheetHeight > dragChromeHeight + 4
 
@@ -76,6 +80,19 @@ export function TripDetailBottomSheet({
   }, [])
 
   useEffect(() => {
+    const readHeader = () => setHeaderHeight(measureAppHeaderHeight())
+    readHeader()
+    const header = document.querySelector('[data-app-header]')
+    const observer = header ? new ResizeObserver(readHeader) : null
+    if (header) observer?.observe(header)
+    window.addEventListener('resize', readHeader)
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', readHeader)
+    }
+  }, [])
+
+  useEffect(() => {
     const node = containerRef.current
     if (!node) return
 
@@ -84,13 +101,13 @@ export function TripDetailBottomSheet({
     const updateSize = () => {
       const nextHeight = node.clientHeight
       const peek = bottomSheetPeekHeight(nextHeight, safeAreaBottom)
+      const max = bottomSheetFullHeight(nextHeight, headerHeight, peek)
       setContainerHeight(nextHeight)
       setSheetHeight((previous) => {
         if (previous <= 0) return peek
-        if (lastContainerHeight <= 0) return previous
+        if (lastContainerHeight <= 0) return Math.min(max, Math.max(peek, previous))
         const ratio = previous / lastContainerHeight
         const scaled = Math.round(ratio * nextHeight)
-        const max = Math.round(nextHeight * SNAP_RATIOS.full)
         return Math.min(max, Math.max(peek, scaled))
       })
       lastContainerHeight = nextHeight
@@ -104,7 +121,7 @@ export function TripDetailBottomSheet({
       observer.disconnect()
       window.removeEventListener('resize', updateSize)
     }
-  }, [safeAreaBottom])
+  }, [headerHeight, safeAreaBottom])
 
   const beginDrag = (clientY: number) => {
     if (!snapHeights) return
@@ -153,6 +170,11 @@ export function TripDetailBottomSheet({
         <div
           data-map-touch-zone
           className="ios-map-touch-target flex shrink-0 cursor-grab touch-none flex-col active:cursor-grabbing"
+          role="slider"
+          aria-orientation="vertical"
+          aria-valuemin={snapHeights?.peek ?? 0}
+          aria-valuemax={snapHeights?.full ?? 0}
+          aria-valuenow={Math.round(sheetHeight)}
           style={{ height: `${dragChromeHeight}px` }}
           onPointerDown={(event) => {
             if ((event.target as HTMLElement).closest('button')) return
@@ -174,11 +196,11 @@ export function TripDetailBottomSheet({
           aria-label="Drag log panel up or down"
         >
           <div
-            className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center"
+            className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center px-3"
             style={{ height: `${BOTTOM_SHEET_DRAG_ZONE_PX}px` }}
           >
             <div
-              className="flex items-center justify-end pr-3"
+              className="flex items-center justify-start gap-2"
               onPointerDown={(event) => event.stopPropagation()}
             >
               {leadingAction}

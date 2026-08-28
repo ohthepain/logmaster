@@ -288,7 +288,13 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
 
         <TripDetailBottomSheet
           leadingAction={
-            trip.status === "IN_PROGRESS" ? <TripRecordButton tripId={trip.id} /> : null
+            trip.status === "IN_PROGRESS" ? (
+              <TripRecordButton
+                tripId={trip.id}
+                logEntryDisabled={busy}
+                onLogEntryClick={() => setCreateEntryOpen(true)}
+              />
+            ) : null
           }
         >
           {trip.status === "PLANNED" ? (
