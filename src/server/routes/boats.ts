@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { defaultBoatPhoto } from '../../domain/boat'
+import { DEFAULT_BOAT_ICON_ID, isBoatIconId } from '../../lib/boat-icons'
 import { prisma } from '../db'
 import { getSessionUserId } from '../session'
 import {
@@ -53,6 +54,7 @@ function serializeBoat(boat: {
   id: string
   userId: string
   name: string
+  iconId: string
   createdAt: Date
   updatedAt: Date
   photos: Array<{
@@ -74,6 +76,7 @@ function serializeBoat(boat: {
     id: boat.id,
     userId: boat.userId,
     name: boat.name,
+    iconId: isBoatIconId(boat.iconId) ? boat.iconId : DEFAULT_BOAT_ICON_ID,
     createdAt: boat.createdAt.toISOString(),
     updatedAt: boat.updatedAt.toISOString(),
     photos,
@@ -118,12 +121,16 @@ boatsRoutes.post('/', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const body = (await c.req.json().catch(() => ({}))) as { name?: string }
+  const body = (await c.req.json().catch(() => ({}))) as {
+    name?: string
+    iconId?: string
+  }
   const name = body.name?.trim()
   if (!name) return c.json({ error: 'Name is required' }, 400)
+  const iconId = isBoatIconId(body.iconId) ? body.iconId : DEFAULT_BOAT_ICON_ID
 
   const boat = await db.boat.create({
-    data: { userId, name },
+    data: { userId, name, iconId },
     include: { photos: true },
   })
 
@@ -138,6 +145,44 @@ boatsRoutes.get('/:boatId', async (c) => {
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   return c.json({ boat: serializeBoat(boat) })
+})
+
+boatsRoutes.patch('/:boatId', async (c) => {
+  const userId = await requireUserId(c)
+  if (!userId) return unauthorized()
+
+  const boat = await getOwnedBoat(userId, c.req.param('boatId'))
+  if (!boat) return c.json({ error: 'Boat not found' }, 404)
+
+  const body = (await c.req.json().catch(() => ({}))) as {
+    name?: string
+    iconId?: string
+  }
+
+  const data: { name?: string; iconId?: string; updatedAt: Date } = {
+    updatedAt: new Date(),
+  }
+  if (body.name !== undefined) {
+    const name = body.name.trim()
+    if (!name) return c.json({ error: 'Name is required' }, 400)
+    data.name = name
+  }
+  if (body.iconId !== undefined) {
+    if (!isBoatIconId(body.iconId)) {
+      return c.json({ error: 'Invalid iconId' }, 400)
+    }
+    data.iconId = body.iconId
+  }
+
+  const updated = await db.boat.update({
+    where: { id: boat.id },
+    data,
+    include: {
+      photos: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
+    },
+  })
+
+  return c.json({ boat: serializeBoat(updated) })
 })
 
 boatsRoutes.delete('/:boatId', async (c) => {

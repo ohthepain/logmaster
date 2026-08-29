@@ -2,7 +2,10 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { toast } from 'sonner'
 import type { Boat } from '../domain/boat'
+import type { BoatIconId } from '../lib/boat-icons'
+import { DEFAULT_BOAT_ICON_ID } from '../lib/boat-icons'
 import { createBoat } from '../lib/boats-api'
+import { BoatIconSelector } from './BoatIconSelector'
 import { Modal } from './Modal'
 
 type AddBoatModalProps = {
@@ -13,6 +16,7 @@ type AddBoatModalProps = {
 
 export function AddBoatModal({ open, onClose, onCreated }: AddBoatModalProps) {
   const [name, setName] = useState('')
+  const [iconId, setIconId] = useState<BoatIconId>(DEFAULT_BOAT_ICON_ID)
   const [loading, setLoading] = useState(false)
 
   if (!open) return null
@@ -20,6 +24,7 @@ export function AddBoatModal({ open, onClose, onCreated }: AddBoatModalProps) {
   const handleClose = () => {
     if (loading) return
     setName('')
+    setIconId(DEFAULT_BOAT_ICON_ID)
     onClose()
   }
 
@@ -32,9 +37,10 @@ export function AddBoatModal({ open, onClose, onCreated }: AddBoatModalProps) {
     }
     setLoading(true)
     try {
-      const boat = await createBoat(trimmed)
+      const boat = await createBoat(trimmed, iconId)
       toast.success(`${boat.name} created`)
       setName('')
+      setIconId(DEFAULT_BOAT_ICON_ID)
       onCreated?.(boat)
       onClose()
     } catch (e) {
@@ -59,6 +65,13 @@ export function AddBoatModal({ open, onClose, onCreated }: AddBoatModalProps) {
             className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
           />
         </label>
+
+        <BoatIconSelector
+          value={iconId}
+          onChange={setIconId}
+          disabled={loading}
+          pickerLayer="overlay"
+        />
 
         <div className="flex flex-wrap gap-2">
           <button

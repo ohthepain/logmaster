@@ -35,6 +35,7 @@ function toTrip(data: Record<string, unknown>) {
         : null,
     boatId: (data.boatId as string | null | undefined) ?? null,
     boatPhotoUrl: (data.boatPhotoUrl as string | null | undefined) ?? null,
+    boatIconId: (data.boatIconId as string | null | undefined) ?? null,
     startedAt,
     completedAt: parseDate(data.completedAt),
     startLatitude: (data.startLatitude as number | null | undefined) ?? null,

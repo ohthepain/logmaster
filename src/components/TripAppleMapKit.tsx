@@ -7,6 +7,8 @@ import { IOS_MAP_TOUCH_SYNC_EVENT } from "../lib/native/ios-map-touch-suspend";
 import { DEV_FALLBACK_POSITION, getCurrentPosition, subscribeToDevicePosition } from "../lib/logbook-context";
 import { buildLegEntryPointsGeoJson, buildLegTrackGeoJson, resolveTripLogMapViewport } from "../lib/logbook-map-geo";
 import { renderLogEntryMapMarkerDataUrl } from "../lib/map-log-entry-icons";
+import { loadBoatIconDataUrl } from "../lib/boat-icons";
+import { resolveBoatMapHeading } from "../lib/map-boat-marker";
 import type { LogEntryMapIconKind, LogEntryMapOutline } from "../lib/log-entry-map-marker";
 import type { TripPlaybackPosition } from "../lib/trip-playback";
 import { cn } from "../lib/cn";
@@ -35,6 +37,7 @@ type TripAppleMapKitProps = {
   embedded?: boolean;
   controlStackClassName?: string;
   playbackPosition?: TripPlaybackPosition | null;
+  boatIconId?: string | null;
 };
 
 async function entryMarkersFromGeoJson(
@@ -102,13 +105,16 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
   embedded = false,
   controlStackClassName: _controlStackClassName,
   playbackPosition = null,
+  boatIconId = null,
 }: TripAppleMapKitProps,
   ref,
 ) {
   const mapId = useId().replace(/:/g, "");
   const initialFitDoneRef = useRef(false);
   const userControlledViewportRef = useRef(false);
-  const currentPositionRef = useRef<MapCoordinate | null>(null);
+  const currentPositionRef = useRef<MapCoordinate & { heading?: number | null } | null>(null);
+  const previousLivePositionRef = useRef<MapCoordinate | null>(null);
+  const [boatIconDataUrl, setBoatIconDataUrl] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [entryPreview, setEntryPreview] = useState<MapEntryPreviewState | null>(null);
 
@@ -131,10 +137,46 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
     if (!mapReady) return;
     await LogmasterAppleMap.setShowsUserLocation({
       mapId,
-      show: showCurrentPosition,
-      follow: shouldFollowUser && !userControlledViewportRef.current,
+      show: false,
+      follow: false,
     });
-  }, [mapId, mapReady, shouldFollowUser, showCurrentPosition]);
+  }, [mapId, mapReady]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadBoatIconDataUrl(boatIconId)
+      .then((dataUrl) => {
+        if (!cancelled) setBoatIconDataUrl(dataUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setBoatIconDataUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [boatIconId]);
+
+  const syncBoatMarker = useCallback(async () => {
+    if (!mapReady) return;
+
+    const livePosition =
+      showCurrentPosition && !playbackPosition ? currentPositionRef.current : null;
+    const position = playbackPosition ?? livePosition;
+    if (!position) {
+      await LogmasterAppleMap.setPlaybackPosition({ mapId, position: null });
+      return;
+    }
+
+    await LogmasterAppleMap.setPlaybackPosition({
+      mapId,
+      position: {
+        latitude: position.latitude,
+        longitude: position.longitude,
+        heading: "heading" in position ? position.heading ?? 0 : 0,
+        imageDataUrl: boatIconDataUrl ?? undefined,
+      },
+    });
+  }, [boatIconDataUrl, mapId, mapReady, playbackPosition, showCurrentPosition]);
 
   const syncInteractionChrome = useCallback(async () => {
     if (!mapReady || !interactive) return;
@@ -165,11 +207,6 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
     if (!mapReady || initialFitDoneRef.current) return;
 
     if (viewportTarget.kind === "current-location") {
-      if (shouldFollowUser) {
-        await syncUserLocation();
-        initialFitDoneRef.current = true;
-        return;
-      }
       const position = currentPositionRef.current ?? fallbackMapCoordinate(trip);
       await LogmasterAppleMap.setCamera({
         mapId,
@@ -206,25 +243,37 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
       padding: embedded ? 24 : 48,
     });
     initialFitDoneRef.current = true;
-  }, [embedded, mapId, mapReady, shouldFollowUser, syncUserLocation, trip, viewportTarget]);
+  }, [embedded, mapId, mapReady, trip, viewportTarget]);
 
   const bootstrapPosition = useCallback(async () => {
     if (!showCurrentPosition) {
       currentPositionRef.current = fallbackMapCoordinate(trip);
+      previousLivePositionRef.current = null;
       if (!initialFitDoneRef.current) {
         await syncViewport();
       }
       return;
     }
     const gps = await getCurrentPosition({ force: true });
-    currentPositionRef.current = {
+    const nextPosition = {
       latitude: gps.latitude ?? DEV_FALLBACK_POSITION.latitude,
       longitude: gps.longitude ?? DEV_FALLBACK_POSITION.longitude,
+      heading: resolveBoatMapHeading(
+        gps.heading,
+        previousLivePositionRef.current,
+        {
+          latitude: gps.latitude ?? DEV_FALLBACK_POSITION.latitude,
+          longitude: gps.longitude ?? DEV_FALLBACK_POSITION.longitude,
+        },
+      ),
     };
+    previousLivePositionRef.current = nextPosition;
+    currentPositionRef.current = nextPosition;
+    await syncBoatMarker();
     if (!initialFitDoneRef.current) {
       await syncViewport();
     }
-  }, [showCurrentPosition, syncViewport, trip]);
+  }, [showCurrentPosition, syncBoatMarker, syncViewport, trip]);
 
   useEffect(() => {
     let cancelled = false;
@@ -331,12 +380,8 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
   }, [mapId, mapReady, onEntrySelect]);
 
   useEffect(() => {
-    if (!mapReady) return
-    void LogmasterAppleMap.setPlaybackPosition({
-      mapId,
-      position: playbackPosition,
-    })
-  }, [mapId, mapReady, playbackPosition])
+    void syncBoatMarker();
+  }, [syncBoatMarker]);
 
   useEffect(() => {
     void syncViewport();
@@ -347,15 +392,46 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
 
     return subscribeToDevicePosition((position) => {
       if (position.latitude == null || position.longitude == null) return;
-      currentPositionRef.current = {
+      const nextPosition = {
         latitude: position.latitude,
         longitude: position.longitude,
+        heading: resolveBoatMapHeading(
+          position.heading,
+          previousLivePositionRef.current,
+          { latitude: position.latitude, longitude: position.longitude },
+        ),
       };
+      previousLivePositionRef.current = nextPosition;
+      currentPositionRef.current = nextPosition;
+      void syncBoatMarker();
+      if (
+        shouldFollowUser &&
+        !userControlledViewportRef.current &&
+        viewportTarget.kind === "current-location"
+      ) {
+        void LogmasterAppleMap.setCamera({
+          mapId,
+          center: {
+            latitude: position.latitude,
+            longitude: position.longitude,
+          },
+          spanLatitude: 0.06,
+          spanLongitude: 0.06,
+        });
+      }
       if (viewportTarget.kind === "current-location" && !initialFitDoneRef.current) {
         void syncViewport();
       }
     });
-  }, [mapReady, showCurrentPosition, syncViewport, viewportTarget.kind]);
+  }, [
+    mapId,
+    mapReady,
+    shouldFollowUser,
+    showCurrentPosition,
+    syncBoatMarker,
+    syncViewport,
+    viewportTarget.kind,
+  ]);
 
   useEffect(() => {
     if (!mapReady || !interactive) return;

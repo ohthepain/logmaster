@@ -7,6 +7,12 @@ import { isDevModeAvailable } from "../lib/dev-mode";
 import { buildLegEntryPointsGeoJson, buildLegTrackGeoJson, mapBrandColor, mapPointsToBounds, resolveTripLogMapViewport, tripStartMapPoint } from "../lib/logbook-map-geo";
 import { createCurrentPositionMarkerElement } from "../lib/map-current-position-marker";
 import {
+  createBoatMapMarkerElementForIconId,
+  resolveBoatMapHeading,
+  updateBoatMapMarkerElement,
+} from "../lib/map-boat-marker";
+import { boatIconSrc } from "../lib/boat-icons";
+import {
   addOpenSeaMapSeamarkOverlay,
   bindSeamarkTileRefreshOnViewChange,
   finalizeSailingMapLayers,
@@ -59,28 +65,14 @@ type TripLogMapProps = {
   controlStackClassName?: string;
   playbackPosition?: TripPlaybackPosition | null;
   playbackMode?: boolean;
+  boatIconId?: string | null;
 };
 
-type LngLat = { longitude: number; latitude: number };
+type LngLat = { longitude: number; latitude: number; heading?: number | null };
 
 const ENTRY_SOURCE = "trip-log-entries";
 const TRACK_SOURCE = "trip-log-track";
 const CURRENT_SOURCE = "trip-current-position";
-
-function createPlaybackBoatMarkerElement() {
-  const root = document.createElement("div");
-  root.className = "trip-playback-boat-marker";
-  root.setAttribute("aria-label", "Playback boat position");
-  root.style.cssText = "width:36px;height:44px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));";
-  root.innerHTML = `
-    <div data-boat-heading style="width:30px;height:38px;transform-origin:50% 50%;transition:transform 80ms linear">
-      <svg viewBox="0 0 30 38" width="30" height="38" aria-hidden="true">
-        <path d="M15 2 26 27c-3.2 5.7-7 8.5-11 8.5S7.2 32.7 4 27L15 2Z" fill="#fff" stroke="#101010" stroke-width="2" stroke-linejoin="round"/>
-        <path d="M15 7v23M8.5 26.5h13" fill="none" stroke="#eb4539" stroke-width="2.5" stroke-linecap="round"/>
-      </svg>
-    </div>`;
-  return root;
-}
 
 export const TripLogMap = forwardRef<TripAppleMapKitHandle, TripLogMapProps>(function TripLogMapView(props, ref) {
   if (getNativePlatform() === "ios" && props.embedded) {
@@ -101,6 +93,7 @@ export const TripLogMap = forwardRef<TripAppleMapKitHandle, TripLogMapProps>(fun
         embedded={props.embedded}
         controlStackClassName={props.controlStackClassName}
         playbackPosition={props.playbackPosition}
+        boatIconId={props.boatIconId}
       />
     );
   }
@@ -126,12 +119,16 @@ function TripLogMapMapLibre({
   controlStackClassName,
   playbackPosition = null,
   playbackMode = false,
+  boatIconId = null,
 }: TripLogMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const onEntrySelectRef = useRef(onEntrySelect);
   const currentPositionMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const liveBoatMarkerRef = useRef<maplibregl.Marker | null>(null);
   const playbackBoatMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const previousLivePositionRef = useRef<LngLat | null>(null);
+  const boatIconSrcValue = boatIconSrc(boatIconId);
   const initialFitDoneRef = useRef(false);
   const devMode = useAppOptionsStore((state) => state.devMode);
   const mapDataLayerToggles = useAppOptionsStore((state) => state.mapDataLayerToggles);
@@ -169,6 +166,7 @@ function TripLogMapMapLibre({
   useEffect(() => {
     if (!showCurrentPosition) {
       setCurrentPosition(null);
+      previousLivePositionRef.current = null;
     }
   }, [showCurrentPosition]);
 
@@ -179,13 +177,21 @@ function TripLogMapMapLibre({
         setCurrentPosition({
           longitude: DEV_FALLBACK_POSITION.longitude,
           latitude: DEV_FALLBACK_POSITION.latitude,
+          heading: 0,
         });
         return;
       }
-      setCurrentPosition({
+      const nextPosition = {
         longitude: position.longitude,
         latitude: position.latitude,
-      });
+        heading: resolveBoatMapHeading(
+          position.heading,
+          previousLivePositionRef.current,
+          { latitude: position.latitude, longitude: position.longitude },
+        ),
+      };
+      previousLivePositionRef.current = nextPosition;
+      setCurrentPosition(nextPosition);
     });
   }, [showCurrentPosition]);
 
@@ -364,21 +370,9 @@ function TripLogMapMapLibre({
 
     currentSource.setData({
       type: "FeatureCollection",
-      features:
-        showCurrentPosition && currentPosition && !devDraggablePosition
-          ? [
-              {
-                type: "Feature",
-                geometry: {
-                  type: "Point",
-                  coordinates: [currentPosition.longitude, currentPosition.latitude],
-                },
-                properties: {},
-              },
-            ]
-          : [],
+      features: [],
     });
-  }, [mapReady, legTrackGeoJson, currentPosition, showCurrentPosition, devDraggablePosition]);
+  }, [mapReady, legTrackGeoJson]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -460,6 +454,47 @@ function TripLogMapMapLibre({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !mapReady || playbackPosition) {
+      liveBoatMarkerRef.current?.remove();
+      liveBoatMarkerRef.current = null;
+      return;
+    }
+    if (!showCurrentPosition || !currentPosition || devDraggablePosition) {
+      liveBoatMarkerRef.current?.remove();
+      liveBoatMarkerRef.current = null;
+      return;
+    }
+
+    let marker = liveBoatMarkerRef.current;
+    if (!marker) {
+      marker = new maplibregl.Marker({
+        element: createBoatMapMarkerElementForIconId(boatIconId, currentPosition.heading),
+        anchor: "center",
+      });
+      marker
+        .setLngLat([currentPosition.longitude, currentPosition.latitude])
+        .addTo(map);
+      liveBoatMarkerRef.current = marker;
+      return;
+    }
+
+    marker.setLngLat([currentPosition.longitude, currentPosition.latitude]);
+    updateBoatMapMarkerElement(marker.getElement(), {
+      iconSrc: boatIconSrcValue,
+      heading: currentPosition.heading,
+    });
+  }, [
+    mapReady,
+    showCurrentPosition,
+    currentPosition,
+    devDraggablePosition,
+    playbackPosition,
+    boatIconId,
+    boatIconSrcValue,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || !mapReady || !playbackPosition) {
       playbackBoatMarkerRef.current?.remove();
       playbackBoatMarkerRef.current = null;
@@ -469,22 +504,22 @@ function TripLogMapMapLibre({
     let marker = playbackBoatMarkerRef.current;
     if (!marker) {
       marker = new maplibregl.Marker({
-        element: createPlaybackBoatMarkerElement(),
+        element: createBoatMapMarkerElementForIconId(boatIconId, playbackPosition.heading),
         anchor: "center",
       });
       marker
         .setLngLat([playbackPosition.longitude, playbackPosition.latitude])
         .addTo(map);
       playbackBoatMarkerRef.current = marker;
+      return;
     }
-    marker.setLngLat([playbackPosition.longitude, playbackPosition.latitude]);
-    const heading = marker.getElement().querySelector<HTMLElement>("[data-boat-heading]");
-    if (heading) heading.style.transform = `rotate(${playbackPosition.heading}deg)`;
 
-    return () => {
-      // The next playback frame reuses the marker. Map teardown removes it separately.
-    };
-  }, [mapReady, playbackPosition]);
+    marker.setLngLat([playbackPosition.longitude, playbackPosition.latitude]);
+    updateBoatMapMarkerElement(marker.getElement(), {
+      iconSrc: boatIconSrcValue,
+      heading: playbackPosition.heading,
+    });
+  }, [mapReady, playbackPosition, boatIconId, boatIconSrcValue]);
 
   useEffect(() => {
     initialFitDoneRef.current = false;

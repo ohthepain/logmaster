@@ -267,6 +267,7 @@ struct EntryCircleMarker {
 struct PlaybackMarker {
     let coordinate: CLLocationCoordinate2D
     let heading: Double
+    let image: UIImage?
 }
 
 final class LogEntryMarkerAnnotation: NSObject, MKAnnotation {
@@ -285,10 +286,12 @@ final class LogEntryMarkerAnnotation: NSObject, MKAnnotation {
 final class PlaybackBoatAnnotation: NSObject, MKAnnotation {
     @objc dynamic var coordinate: CLLocationCoordinate2D
     var heading: Double
+    var image: UIImage?
 
-    init(coordinate: CLLocationCoordinate2D, heading: Double) {
+    init(coordinate: CLLocationCoordinate2D, heading: Double, image: UIImage?) {
         self.coordinate = coordinate
         self.heading = heading
+        self.image = image
         super.init()
     }
 }
@@ -328,13 +331,21 @@ final class AppleMapViewDelegate: NSObject, MKMapViewDelegate {
             let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
                 ?? MKAnnotationView(annotation: boat, reuseIdentifier: identifier)
             view.annotation = boat
-            view.image = UIImage(systemName: "sailboat.fill")?
-                .withTintColor(UIColor(red: 235 / 255, green: 69 / 255, blue: 57 / 255, alpha: 1), renderingMode: .alwaysOriginal)
-            view.backgroundColor = .white
-            view.layer.cornerRadius = 15
-            view.layer.borderWidth = 1.5
-            view.layer.borderColor = UIColor.black.withAlphaComponent(0.65).cgColor
-            view.bounds = CGRect(x: 0, y: 0, width: 30, height: 30)
+            if let image = boat.image {
+                view.image = image
+                view.backgroundColor = .clear
+                view.layer.cornerRadius = 0
+                view.layer.borderWidth = 0
+                view.bounds = CGRect(x: 0, y: 0, width: 32, height: 40)
+            } else {
+                view.image = UIImage(systemName: "sailboat.fill")?
+                    .withTintColor(UIColor(red: 235 / 255, green: 69 / 255, blue: 57 / 255, alpha: 1), renderingMode: .alwaysOriginal)
+                view.backgroundColor = .white
+                view.layer.cornerRadius = 15
+                view.layer.borderWidth = 1.5
+                view.layer.borderColor = UIColor.black.withAlphaComponent(0.65).cgColor
+                view.bounds = CGRect(x: 0, y: 0, width: 30, height: 30)
+            }
             view.transform = CGAffineTransform(rotationAngle: CGFloat(boat.heading * .pi / 180))
             view.displayPriority = .required
             view.collisionMode = .circle
@@ -604,7 +615,15 @@ final class AppleMapInstance {
         if let annotation = playbackAnnotation {
             annotation.coordinate = marker.coordinate
             annotation.heading = marker.heading
+            annotation.image = marker.image
             if let view = mapView.view(for: annotation) {
+                if let image = marker.image {
+                    view.image = image
+                    view.backgroundColor = .clear
+                    view.layer.cornerRadius = 0
+                    view.layer.borderWidth = 0
+                    view.bounds = CGRect(x: 0, y: 0, width: 32, height: 40)
+                }
                 view.transform = CGAffineTransform(rotationAngle: CGFloat(marker.heading * .pi / 180))
             }
             return
@@ -612,7 +631,8 @@ final class AppleMapInstance {
 
         let annotation = PlaybackBoatAnnotation(
             coordinate: marker.coordinate,
-            heading: marker.heading
+            heading: marker.heading,
+            image: marker.image
         )
         playbackAnnotation = annotation
         mapView.addAnnotation(annotation)

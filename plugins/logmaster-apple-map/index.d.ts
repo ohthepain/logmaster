@@ -42,6 +42,7 @@ export type MapCamera = {
 
 export type MapPlaybackPosition = MapCoordinate & {
   heading: number
+  imageDataUrl?: string
 }
 
 export type FitCoordinatesOptions = {

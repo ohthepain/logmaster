@@ -6,10 +6,14 @@ import type { Boat, BoatPhoto } from '../../../domain/boat'
 import {
   deleteBoatPhoto,
   fetchBoat,
+  updateBoat,
   updateBoatPhoto,
   uploadBoatPhoto,
 } from '../../../lib/boats-api'
+import type { BoatIconId } from '../../../lib/boat-icons'
+import { isBoatIconId } from '../../../lib/boat-icons'
 import { cn } from '../../../lib/cn'
+import { BoatIconSelector } from '../../../components/BoatIconSelector'
 
 export const Route = createFileRoute('/_main/boats/$boatId')({
   component: BoatDetailPage,
@@ -21,6 +25,7 @@ function BoatDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [savingIcon, setSavingIcon] = useState(false)
   const [activePhoto, setActivePhoto] = useState<BoatPhoto | null>(null)
   const [captionDraft, setCaptionDraft] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -116,6 +121,20 @@ function BoatDetailPage() {
     }
   }
 
+  const handleIconChange = async (nextIconId: BoatIconId) => {
+    if (!boat || boat.iconId === nextIconId) return
+    setSavingIcon(true)
+    try {
+      const updated = await updateBoat(boat.id, { iconId: nextIconId })
+      setBoat(updated)
+      toast.success('Map icon updated')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update icon')
+    } finally {
+      setSavingIcon(false)
+    }
+  }
+
   const handleDeletePhoto = async () => {
     if (!activePhoto) return
     if (!window.confirm('Delete this photo?')) return
@@ -175,6 +194,14 @@ function BoatDetailPage() {
       <h1 className="brand-title m-0 text-[2.35rem] leading-none sm:text-[2.75rem]">
         {boat.name}
       </h1>
+
+      <div className="mt-6 max-w-md">
+        <BoatIconSelector
+          value={isBoatIconId(boat.iconId) ? boat.iconId : 'medium'}
+          onChange={(iconId) => void handleIconChange(iconId)}
+          disabled={savingIcon}
+        />
+      </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
         <input

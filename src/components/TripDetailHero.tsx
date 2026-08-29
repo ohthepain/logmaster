@@ -97,6 +97,7 @@ export function TripDetailHero({
             showSeamarks={isActiveTrip}
             playbackPosition={playbackPosition}
             playbackMode={isPlayback}
+            boatIconId={trip.boatIconId}
           />
         </div>
       ) : showPhoto ? (

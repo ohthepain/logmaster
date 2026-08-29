@@ -183,6 +183,7 @@ export function StartTripLauncher({ open, onClose }: StartTripLauncherProps) {
         boatName: startForm.boatName,
         boatId: selectedBoatId,
         boatPhotoUrl: boatPhoto?.imageUrl ?? null,
+        boatIconId: selectedBoat?.iconId ?? null,
         registration: startForm.registration,
         skipper: skipper?.name,
         skipperKey: effectiveSkipperKey || null,

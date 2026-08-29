@@ -48,6 +48,7 @@ type NewTripInput = {
   boatName: string
   boatId?: string | null
   boatPhotoUrl?: string | null
+  boatIconId?: string | null
   registration?: string
   skipper?: string
   skipperKey?: string | null
@@ -299,6 +300,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       boatName: input.boatName.trim(),
       boatId: input.boatId ?? null,
       boatPhotoUrl: input.boatPhotoUrl ?? null,
+      boatIconId: input.boatIconId ?? null,
       registration: input.registration?.trim() || null,
       skipper: input.skipper?.trim() || null,
       skipperKey: input.skipperKey ?? null,

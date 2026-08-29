@@ -267,7 +267,8 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
            let longitude = position["longitude"] as? Double {
             marker = PlaybackMarker(
                 coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
-                heading: position["heading"] as? Double ?? 0
+                heading: position["heading"] as? Double ?? 0,
+                image: Self.image(fromDataUrl: position["imageDataUrl"] as? String)
             )
         }
 

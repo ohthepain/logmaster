@@ -296,6 +296,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
         boatName: trip.boatName,
         boatId: trip.boatId,
         boatPhotoUrl: trip.boatPhotoUrl,
+        boatIconId: trip.boatIconId,
         registration: trip.registration ?? undefined,
         skipper: trip.skipper ?? undefined,
         skipperKey: trip.skipperKey,

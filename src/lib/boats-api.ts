@@ -1,4 +1,5 @@
 import type { Boat } from '../domain/boat'
+import type { BoatIconId } from './boat-icons'
 import { apiUrl } from './app-origin'
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -29,10 +30,24 @@ export async function fetchBoat(boatId: string): Promise<Boat> {
   return data.boat
 }
 
-export async function createBoat(name: string): Promise<Boat> {
+export async function createBoat(
+  name: string,
+  iconId?: BoatIconId,
+): Promise<Boat> {
   const data = await api<{ boat: Boat }>('/api/boats', {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, iconId }),
+  })
+  return data.boat
+}
+
+export async function updateBoat(
+  boatId: string,
+  patch: { name?: string; iconId?: BoatIconId },
+): Promise<Boat> {
+  const data = await api<{ boat: Boat }>(`/api/boats/${boatId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
   })
   return data.boat
 }

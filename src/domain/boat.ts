@@ -1,3 +1,5 @@
+import type { BoatIconId } from '../lib/boat-icons'
+
 export type BoatPhoto = {
   id: string
   boatId: string
@@ -15,6 +17,7 @@ export type Boat = {
   id: string
   userId: string
   name: string
+  iconId: BoatIconId
   createdAt: string
   updatedAt: string
   photos: BoatPhoto[]
@@ -22,7 +25,7 @@ export type Boat = {
 
 export type BoatSummary = Pick<
   Boat,
-  'id' | 'name' | 'createdAt' | 'updatedAt'
+  'id' | 'name' | 'iconId' | 'createdAt' | 'updatedAt'
 > & {
   photos: BoatPhoto[]
   defaultPhoto: BoatPhoto | null

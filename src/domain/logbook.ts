@@ -52,6 +52,7 @@ export type Trip = {
   coverKind?: TripCoverKind | null
   boatId?: string | null
   boatPhotoUrl?: string | null
+  boatIconId?: string | null
   startedAt: string
   completedAt?: string | null
   startLatitude?: number | null
