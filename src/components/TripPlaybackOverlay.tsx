@@ -1,6 +1,7 @@
 import {
   ChevronLeft,
   ChevronRight,
+  List,
   Pause,
   Play,
   RotateCcw,
@@ -16,11 +17,13 @@ import {
   tripPlaybackRange,
   tripPlaybackWindow,
 } from '../lib/trip-playback'
+import { computePlaybackTimelineTicks } from '../lib/trip-playback-timeline-ticks'
 import { cn } from '../lib/cn'
+import { PLAYBACK_SPEEDS, PlaybackSpeedControl } from './PlaybackSpeedControl'
 
 const MAX_TIME_ZOOM = 16
 const PRESENTATION_LENGTH_MS = 120_000
-const SPEEDS = [0.5, 1, 2, 4] as const
+const DEFAULT_SPEED_INDEX = PLAYBACK_SPEEDS.indexOf(1)
 const TIMELINE_TRACK_TOP_PX = 48
 const TIMELINE_HEIGHT_PX = 76
 
@@ -44,6 +47,7 @@ type TripPlaybackOverlayProps = {
   mediaByEntry: Map<string, Media[]>
   currentTimeMs: number
   onCurrentTimeChange: (timeMs: number) => void
+  onShowLogEntries?: () => void
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -85,6 +89,7 @@ export function TripPlaybackOverlay({
   mediaByEntry,
   currentTimeMs,
   onCurrentTimeChange,
+  onShowLogEntries,
 }: TripPlaybackOverlayProps) {
   const timelineRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
@@ -99,11 +104,15 @@ export function TripPlaybackOverlay({
   const [timeZoom, setTimeZoom] = useState(1)
   const [windowCenterMs, setWindowCenterMs] = useState(currentTimeMs)
   const [playing, setPlaying] = useState(false)
-  const [speedIndex, setSpeedIndex] = useState(1)
+  const [speedIndex, setSpeedIndex] = useState(DEFAULT_SPEED_INDEX)
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null)
   const [mediaEntryId, setMediaEntryId] = useState<string | null>(null)
   const [mediaPinned, setMediaPinned] = useState(false)
   const windowRange = tripPlaybackWindow(range, windowCenterMs, timeZoom)
+  const timelineTicks = useMemo(
+    () => computePlaybackTimelineTicks(windowRange, range.startMs),
+    [range.startMs, windowRange],
+  )
   const currentPercent = clamp(
     ((currentTimeMs - windowRange.startMs) / windowRange.durationMs) * 100,
     0,
@@ -130,7 +139,7 @@ export function TripPlaybackOverlay({
     let animationFrame = 0
     let previousFrame = performance.now()
     const tripMsPerRealMs =
-      range.durationMs / (PRESENTATION_LENGTH_MS / SPEEDS[speedIndex])
+      range.durationMs / (PRESENTATION_LENGTH_MS / PLAYBACK_SPEEDS[speedIndex])
 
     const animate = (now: number) => {
       const elapsed = now - previousFrame
@@ -363,12 +372,33 @@ export function TripPlaybackOverlay({
               className="absolute inset-x-0 h-1 rounded-full bg-white/25"
               style={{ top: TIMELINE_TRACK_TOP_PX }}
             />
-            {[0, 0.25, 0.5, 0.75, 1].map((fraction) => (
+            {timelineTicks.map((tick) => (
               <div
-                key={fraction}
-                className="absolute h-3 w-px bg-white/50"
-                style={{ left: `${fraction * 100}%`, top: TIMELINE_TRACK_TOP_PX - 4 }}
-              />
+                key={`${tick.kind}-${tick.timeMs}`}
+                className="pointer-events-none absolute -translate-x-1/2"
+                style={{ left: `${tick.percent}%`, top: TIMELINE_TRACK_TOP_PX }}
+              >
+                <div
+                  className={
+                    tick.kind === 'day'
+                      ? 'absolute bottom-0 left-1/2 h-4 w-px -translate-x-1/2 bg-white/70'
+                      : tick.kind === 'hour'
+                        ? 'absolute bottom-0 left-1/2 h-3 w-px -translate-x-1/2 bg-white/55'
+                        : 'absolute bottom-0 left-1/2 h-2 w-px -translate-x-1/2 bg-white/35'
+                  }
+                />
+                {tick.label ? (
+                  <span
+                    className={
+                      tick.kind === 'day'
+                        ? 'absolute left-1/2 top-1.5 max-w-none -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold leading-none text-white/80'
+                        : 'absolute left-1/2 top-1.5 max-w-none -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold leading-none text-white/55'
+                    }
+                  >
+                    {tick.label}
+                  </span>
+                ) : null}
+              </div>
             ))}
 
             {chronologicalEntries.map((entry) => {
@@ -416,7 +446,22 @@ export function TripPlaybackOverlay({
             </div>
           </div>
 
-          <div className="flex items-center gap-2" data-playback-control>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center" data-playback-control>
+            <div className="justify-self-start">
+              {onShowLogEntries ? (
+                <button
+                  type="button"
+                  data-playback-control
+                  onClick={onShowLogEntries}
+                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
+                  aria-label="Log entries"
+                >
+                  <List className="size-4" />
+                </button>
+              ) : null}
+            </div>
+
+            <div className="flex items-center gap-2">
             <button
               type="button"
               data-playback-control
@@ -465,22 +510,8 @@ export function TripPlaybackOverlay({
               <ChevronRight className="size-5" />
             </button>
 
-            <label
-              data-playback-control
-              className="ml-1 flex min-w-0 flex-1 items-center gap-2 text-[11px] font-semibold text-white/75"
-            >
-              <span className="shrink-0">{SPEEDS[speedIndex]}×</span>
-              <input
-                type="range"
-                min={0}
-                max={SPEEDS.length - 1}
-                step={1}
-                value={speedIndex}
-                onChange={(event) => setSpeedIndex(Number(event.target.value))}
-                className="min-w-0 flex-1 accent-[var(--brand)]"
-                aria-label="Playback speed"
-              />
-            </label>
+            <PlaybackSpeedControl speedIndex={speedIndex} onSpeedIndexChange={setSpeedIndex} />
+            </div>
           </div>
         </div>
       </section>

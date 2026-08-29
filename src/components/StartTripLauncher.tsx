@@ -133,7 +133,7 @@ export function StartTripLauncher({ open, onClose }: StartTripLauncherProps) {
         setCrewMembers(payload.members)
         triggerLogbookSyncRetry()
       })
-      .catch(() => toast.error('Could not load your crew'))
+      .catch(() => {})
       .finally(() => setCrewLoading(false))
   }, [user])
 

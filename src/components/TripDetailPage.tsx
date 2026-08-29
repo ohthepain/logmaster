@@ -115,10 +115,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
         setCrewMembers(payload.members);
         triggerLogbookSyncRetry();
       })
-      .catch((error: unknown) => {
-        if (error instanceof Error && /\((401|403)\)/.test(error.message)) return;
-        toast.error("Could not load your crew");
-      });
+      .catch(() => {});
   }, [tripId]);
 
   useEffect(() => {

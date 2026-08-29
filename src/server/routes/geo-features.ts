@@ -1,13 +1,9 @@
 import 'dotenv/config'
-import { GetObjectCommand, NoSuchKey, S3Client } from '@aws-sdk/client-s3'
 import { Hono } from 'hono'
+import { s3Client } from '../lib/s3-client'
+import { serveS3GeoJsonTile } from '../lib/s3-geojson-tile-response'
 
 export const geoFeatureRoutes = new Hono()
-
-const s3 = new S3Client({
-  region:
-    process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'us-east-1',
-})
 
 function isTilePart(value: string, hemisphere: 'lat' | 'lon'): boolean {
   return hemisphere === 'lat'
@@ -37,31 +33,5 @@ geoFeatureRoutes.get('/:lat/:lon/v1/tiles/:file', async (c) => {
   }
 
   const key = `${lat}/${lon}/v1/tiles/${file}`
-  try {
-    const response = await s3.send(
-      new GetObjectCommand({ Bucket: bucket, Key: key }),
-    )
-    const bytes = await response.Body?.transformToByteArray()
-    if (!bytes) return c.text('Missing geo feature tile body', 502)
-
-    return new Response(new Uint8Array(bytes), {
-      headers: {
-        'Cache-Control': 'public, max-age=86400, s-maxage=86400',
-        'Content-Type': response.ContentType ?? 'application/geo+json',
-        'Content-Encoding': response.ContentEncoding ?? 'gzip',
-      },
-    })
-  } catch (error) {
-    if (
-      error instanceof NoSuchKey ||
-      (typeof error === 'object' &&
-        error != null &&
-        'name' in error &&
-        (error as { name?: string }).name === 'NoSuchKey')
-    ) {
-      return c.text('Geo feature tile not found', 404)
-    }
-    console.warn('[geo-features] S3 error', key, error)
-    return c.text('Upstream error', 502)
-  }
+  return serveS3GeoJsonTile(s3Client, bucket, key, 'geo-features')
 })

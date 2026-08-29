@@ -4,10 +4,9 @@ import {
   Scripts,
   createFileRoute,
 } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { TanStackDevtools } from '@tanstack/react-devtools'
 import { AppShell } from '../../components/AppShell'
 import { AppToaster } from '../../components/AppToaster'
+import { DevTanStackDevtools } from '../../components/DevTanStackDevtools'
 import { NativeAppLinks } from '../../components/NativeAppLinks'
 import { PwaRegister } from '../../components/PwaRegister'
 
@@ -31,15 +30,7 @@ function MainLayout() {
           <Outlet />
         </AppShell>
         <AppToaster />
-        <TanStackDevtools
-          config={{ position: 'bottom-right' }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
+        <DevTanStackDevtools />
         <Scripts />
       </body>
     </html>
