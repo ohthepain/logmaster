@@ -21,6 +21,7 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setInteractionEnabled", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setTouchCaptureSuspended", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "adjustZoom", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "snapshotMap", returnType: CAPPluginReturnPromise),
     ]
 
     private var maps: [String: AppleMapInstance] = [:]
@@ -161,7 +162,6 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        let padding = call.getDouble("padding") ?? 48
         let coordinates = Self.parseCoordinates(raw)
         guard !coordinates.isEmpty else {
             call.reject("coordinates must not be empty")
@@ -188,12 +188,24 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
             var mutable = coordinates
             let polyline = MKPolyline(coordinates: &mutable, count: mutable.count)
             let rect = polyline.boundingMapRect
-            let edge = UIEdgeInsets(
-                top: padding,
-                left: padding,
-                bottom: padding,
-                right: padding
-            )
+            let edge: UIEdgeInsets
+            if let padding = call.getDouble("padding") {
+                edge = UIEdgeInsets(
+                    top: padding,
+                    left: padding,
+                    bottom: padding,
+                    right: padding
+                )
+            } else {
+                let paddingFraction = call.getDouble("paddingFraction") ?? 0.1
+                let viewBounds = instance.mapView.bounds
+                edge = UIEdgeInsets(
+                    top: viewBounds.height * paddingFraction,
+                    left: viewBounds.width * paddingFraction,
+                    bottom: viewBounds.height * paddingFraction,
+                    right: viewBounds.width * paddingFraction
+                )
+            }
             instance.mapView.setVisibleMapRect(rect, edgePadding: edge, animated: true)
             call.resolve()
         }
@@ -334,6 +346,32 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
             instance.setFollowUserLocation(false)
             instance.zoom(by: factor)
             call.resolve()
+        }
+    }
+
+    @objc func snapshotMap(_ call: CAPPluginCall) {
+        guard let mapId = call.getString("mapId") else {
+            call.reject("mapId is required")
+            return
+        }
+
+        DispatchQueue.main.async {
+            guard let instance = self.maps[mapId] else {
+                call.reject("Map not found")
+                return
+            }
+            instance.applyHostBounds()
+            let mapView = instance.mapView
+            let renderer = UIGraphicsImageRenderer(bounds: mapView.bounds)
+            let image = renderer.image { _ in
+                mapView.drawHierarchy(in: mapView.bounds, afterScreenUpdates: true)
+            }
+            guard let jpeg = image.jpegData(compressionQuality: 0.82) else {
+                call.reject("Could not encode map snapshot")
+                return
+            }
+            let base64 = jpeg.base64EncodedString()
+            call.resolve(["dataUrl": "data:image/jpeg;base64,\(base64)"])
         }
     }
 

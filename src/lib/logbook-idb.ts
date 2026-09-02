@@ -1,6 +1,7 @@
 import { openDB } from 'idb'
 import type { DBSchema } from 'idb'
 import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
+import type { TripTrack } from '../domain/trip-track'
 
 interface LogbookDB extends DBSchema {
   [key: string]: any
@@ -19,6 +20,11 @@ interface LogbookDB extends DBSchema {
     value: LogEntry
     indexes: { tripId: string; synced: boolean; updatedAt: string }
   }
+  tripTracks: {
+    key: string
+    value: TripTrack
+    indexes: { tripId: string; synced: boolean; updatedAt: string }
+  }
   media: {
     key: string
     value: Media
@@ -27,7 +33,7 @@ interface LogbookDB extends DBSchema {
 }
 
 const DB_NAME = 'logmaster'
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 const PENDING_DELETED_TRIPS_KEY = 'logmaster-pending-trip-deletes'
 const PENDING_TRIP_SYNC_KEY = 'logmaster-pending-trip-sync'
@@ -120,19 +126,29 @@ export async function getLogbookDb() {
           legs.createIndex('updatedAt', 'updatedAt')
         }
       }
+
+      if (oldVersion < 3) {
+        if (!db.objectStoreNames.contains('tripTracks')) {
+          const tripTracks = db.createObjectStore('tripTracks', { keyPath: 'id' })
+          tripTracks.createIndex('tripId', 'tripId')
+          tripTracks.createIndex('synced', 'synced')
+          tripTracks.createIndex('updatedAt', 'updatedAt')
+        }
+      }
     },
   })
 }
 
 export async function loadLogbookSnapshot() {
   const db = await getLogbookDb()
-  const [trips, legs, logEntries, media] = await Promise.all([
+  const [trips, legs, logEntries, tripTracks, media] = await Promise.all([
     db.getAll('trips'),
     db.getAll('legs'),
     db.getAll('logEntries'),
+    db.getAll('tripTracks'),
     db.getAll('media'),
   ])
-  return { trips, legs, logEntries, media }
+  return { trips, legs, logEntries, tripTracks, media }
 }
 
 export async function putTrip(trip: Trip) {
@@ -148,6 +164,11 @@ export async function putLeg(leg: Leg) {
 export async function putLogEntry(entry: LogEntry) {
   const db = await getLogbookDb()
   await db.put('logEntries', entry)
+}
+
+export async function putTripTrack(track: TripTrack) {
+  const db = await getLogbookDb()
+  await db.put('tripTracks', track)
 }
 
 export async function putMedia(item: Media) {
@@ -170,6 +191,11 @@ export async function deleteLogEntry(id: string) {
   await db.delete('logEntries', id)
 }
 
+export async function deleteTripTrack(id: string) {
+  const db = await getLogbookDb()
+  await db.delete('tripTracks', id)
+}
+
 export async function deleteMedia(id: string) {
   const db = await getLogbookDb()
   await db.delete('media', id)
@@ -181,22 +207,25 @@ export async function clearLogbook() {
     db.clear('trips'),
     db.clear('legs'),
     db.clear('logEntries'),
+    db.clear('tripTracks'),
     db.clear('media'),
   ])
 }
 
 export async function getUnsyncedSnapshot() {
   const db = await getLogbookDb()
-  const [trips, legs, logEntries, media] = await Promise.all([
+  const [trips, legs, logEntries, tripTracks, media] = await Promise.all([
     db.getAllFromIndex('trips', 'updatedAt'),
     db.getAllFromIndex('legs', 'synced'),
     db.getAllFromIndex('logEntries', 'synced'),
+    db.getAllFromIndex('tripTracks', 'synced'),
     db.getAllFromIndex('media', 'synced'),
   ])
   return {
     trips: trips.filter((trip) => trip.status !== 'PLANNED'),
     legs: legs.filter((leg) => !leg.synced),
     logEntries: logEntries.filter((entry) => !entry.synced),
+    tripTracks: tripTracks.filter((track) => !track.synced),
     media: media.filter((item) => !item.synced),
   }
 }

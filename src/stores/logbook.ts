@@ -7,6 +7,7 @@ import type {
   Trip,
   TripStatus,
 } from '../domain/logbook'
+import type { TripTrack } from '../domain/trip-track'
 import { captureLogbookContext } from '../lib/logbook-context'
 import { attachPlaceToEntryData } from '../lib/logbook-place'
 import { defaultTripTitle } from '../lib/trip-display'
@@ -26,6 +27,8 @@ import { syncTripOperationalFields } from '../domain/trip-state'
 import { advanceIso, effectiveTimeTravelIso } from '../lib/dev-time-travel'
 import { isDevModeAvailable } from '../lib/dev-mode'
 import { sortLogEntriesChronologically } from '../lib/logbook-entry-order'
+import { buildTripFromGpx } from '../lib/gpx-trip-import'
+import { GpxImportError } from '../lib/gpx-import'
 import {
   addPendingDeletedTripId,
   addPendingTripId,
@@ -33,11 +36,13 @@ import {
   deleteLogEntry,
   deleteMedia,
   deleteTrip as deleteTripFromIdb,
+  deleteTripTrack,
   loadLogbookSnapshot,
   putLeg,
   putLogEntry,
   putMedia,
   putTrip,
+  putTripTrack,
   removePendingTripIds,
 } from '../lib/logbook-idb'
 import { useAppOptionsStore } from './app-options'
@@ -97,6 +102,7 @@ type LogbookState = {
   trips: Trip[]
   legs: Leg[]
   entries: LogEntry[]
+  tracks: TripTrack[]
   media: Media[]
   activeTripId: string | null
   selectedTripId: string | null
@@ -121,6 +127,10 @@ type LogbookState = {
     media: Omit<Media, 'id' | 'createdAt' | 'updatedAt' | 'synced'>,
   ) => Promise<Media | null>
   syncNow: () => Promise<boolean>
+  importTripFromGpx: (
+    gpxXml: string,
+    options?: { boatName?: string; fileName?: string },
+  ) => Promise<Trip>
 }
 
 function nowIso() {
@@ -162,6 +172,7 @@ function applySnapshot(set: (partial: Partial<LogbookState>) => void, snapshot: 
     trips: sortedTrips,
     legs: sortedLegs,
     entries: sortedEntries,
+    tracks: snapshot.tripTracks ?? [],
     media: snapshot.media,
     activeTripId,
     selectedTripId: nextSelected,
@@ -261,6 +272,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
   trips: [],
   legs: [],
   entries: [],
+  tracks: [],
   media: [],
   activeTripId: null,
   selectedTripId: null,
@@ -370,6 +382,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
 
   deleteTrip: async (tripId) => {
     const entries = get().entries.filter((entry) => entry.tripId === tripId)
+    const tripTracks = get().tracks.filter((track) => track.tripId === tripId)
     const tripLegs = get().legs.filter((leg) => leg.tripId === tripId)
     const entryIds = new Set(entries.map((entry) => entry.id))
     const media = get().media.filter((item) => entryIds.has(item.logEntryId))
@@ -380,6 +393,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     await Promise.all([
       ...tripLegs.map((leg) => deleteLeg(leg.id)),
       ...entries.map((entry) => deleteLogEntry(entry.id)),
+      ...tripTracks.map((track) => deleteTripTrack(track.id)),
       ...media.map((item) => deleteMedia(item.id)),
     ])
 
@@ -395,6 +409,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
         trips,
         legs: state.legs.filter((leg) => leg.tripId !== tripId),
         entries: state.entries.filter((entry) => entry.tripId !== tripId),
+        tracks: state.tracks.filter((track) => track.tripId !== tripId),
         media: state.media.filter((item) => !entryIds.has(item.logEntryId)),
         selectedTripId: nextSelected,
         activeTripId:
@@ -654,6 +669,55 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     }
     void get().syncNow()
     return media
+  },
+
+  importTripFromGpx: async (gpxXml, options) => {
+    let imported: ReturnType<typeof buildTripFromGpx>
+    try {
+      imported = buildTripFromGpx(gpxXml, options)
+    } catch (error) {
+      if (error instanceof GpxImportError) throw error
+      throw new GpxImportError(
+        error instanceof Error ? error.message : 'Could not import GPX file',
+      )
+    }
+
+    const { trip, entries, track } = imported
+    const { legs, entries: entriesWithLegs } = rebuildLegsForTrip(
+      trip.id,
+      entries,
+      [],
+    )
+
+    await putTrip(trip)
+    await putTripTrack(track)
+    await Promise.all(entriesWithLegs.map((entry) => putLogEntry(entry)))
+    await persistLegsAndEntries(
+      legs.filter((leg) => leg.tripId === trip.id),
+      entriesWithLegs.filter((entry) => entry.tripId === trip.id),
+    )
+    addPendingTripId(trip.id)
+
+    set((state) => ({
+      trips: sortTrips([trip, ...state.trips]),
+      legs: [...state.legs.filter((leg) => leg.tripId !== trip.id), ...legs.filter((leg) => leg.tripId === trip.id)],
+      entries: sortEntries([...state.entries, ...entriesWithLegs]),
+      tracks: [...state.tracks, track],
+      selectedTripId: trip.id,
+      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+    }))
+
+    await flushLogbookSync(get)
+    try {
+      await assertSyncedWhenOnline(get)
+    } catch (error) {
+      set({
+        syncMessage:
+          error instanceof Error ? error.message : 'Could not sync to server',
+      })
+    }
+
+    return trip
   },
 
   syncNow: async () => {

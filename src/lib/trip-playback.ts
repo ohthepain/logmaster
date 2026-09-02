@@ -1,9 +1,15 @@
 import type { LogEntry, Trip } from '../domain/logbook'
+import type { TripTrack } from '../domain/trip-track'
 import { normalizeBearing360, wrapDegrees180 } from './angle'
 import {
   entryHasMapPosition,
   sortLogEntriesChronologically,
 } from './logbook-entry-order'
+import {
+  tripPlaybackPositionFromTrackSamples,
+  tripPlaybackRangeFromTrackSamples,
+  tripTrackSamplesForTrip,
+} from './trip-track-playback'
 
 export type TripPlaybackPosition = {
   latitude: number
@@ -24,9 +30,27 @@ function validDateMs(value: string | null | undefined): number | null {
 }
 
 export function tripPlaybackRange(
-  trip: Pick<Trip, 'startedAt' | 'completedAt'>,
+  trip: Pick<Trip, 'id' | 'startedAt' | 'completedAt'>,
   entries: LogEntry[],
+  tracks: TripTrack[] = [],
 ): TripPlaybackRange {
+  const trackSamples = tripTrackSamplesForTrip(trip.id, tracks)
+  if (trackSamples.length > 0) {
+    const trackRange = tripPlaybackRangeFromTrackSamples(trackSamples)
+    const startedAt = validDateMs(trip.startedAt)
+    const completedAt = validDateMs(trip.completedAt)
+    const startMs = Math.min(
+      trackRange.startMs,
+      ...[startedAt].filter((time): time is number => time != null),
+    )
+    const endMs = Math.max(
+      trackRange.endMs,
+      ...[completedAt, startedAt].filter((time): time is number => time != null),
+    )
+    const safeEnd = Math.max(startMs + 1, endMs)
+    return { startMs, endMs: safeEnd, durationMs: safeEnd - startMs }
+  }
+
   const entryTimes = entries
     .filter((entry) => !entry.deleted)
     .map((entry) => validDateMs(entry.timestamp))
@@ -68,9 +92,16 @@ function entryHeading(entry: LogEntry): number | null {
 }
 
 export function tripPlaybackPositionAt(
+  tripId: string,
   entries: LogEntry[],
   timeMs: number,
+  tracks: TripTrack[] = [],
 ): TripPlaybackPosition | null {
+  const trackSamples = tripTrackSamplesForTrip(tripId, tracks)
+  if (trackSamples.length > 0) {
+    return tripPlaybackPositionFromTrackSamples(trackSamples, timeMs)
+  }
+
   const positioned = sortLogEntriesChronologically(entries).filter(entryHasMapPosition)
   if (positioned.length === 0) return null
 

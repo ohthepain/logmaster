@@ -17,7 +17,46 @@ export const SAILING_MAP_LOCATE_ZOOM = 13
 /** Cap fitBounds so map-cover tracks stay at overview scale. */
 export const SAILING_MAP_FIT_MAX_ZOOM = SAILING_MAP_INITIAL_ZOOM
 
+/** Screen margin when fitting a trip track on first load (each edge). */
+export const TRIP_TRACK_FIT_MARGIN_FRACTION = 0.1
+
+/** Allow short trips to zoom in; overview cap stays on {@link SAILING_MAP_FIT_MAX_ZOOM}. */
+export const TRIP_TRACK_FIT_MAX_ZOOM = 16
+
 export const SAILING_MAP_EASE_MS = 750
+
+export type ViewportSize = {
+  width: number
+  height: number
+}
+
+export function tripTrackFitPadding(size: ViewportSize) {
+  const width = Math.max(size.width, 1)
+  const height = Math.max(size.height, 1)
+  const horizontal = Math.round(width * TRIP_TRACK_FIT_MARGIN_FRACTION)
+  const vertical = Math.round(height * TRIP_TRACK_FIT_MARGIN_FRACTION)
+  return {
+    top: vertical,
+    bottom: vertical,
+    left: horizontal,
+    right: horizontal,
+  }
+}
+
+export function fitMapToTripTrack(
+  map: maplibregl.Map,
+  bounds: [[number, number], [number, number]],
+) {
+  const container = map.getContainer()
+  map.fitBounds(bounds, {
+    padding: tripTrackFitPadding({
+      width: container.clientWidth,
+      height: container.clientHeight,
+    }),
+    maxZoom: TRIP_TRACK_FIT_MAX_ZOOM,
+    duration: SAILING_MAP_EASE_MS,
+  })
+}
 
 export function centerMapOnPoint(
   map: maplibregl.Map,

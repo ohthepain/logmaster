@@ -48,7 +48,10 @@ export type MapPlaybackPosition = MapCoordinate & {
 export type FitCoordinatesOptions = {
   mapId: string
   coordinates: MapCoordinate[]
+  /** Uniform edge padding in points (legacy). */
   padding?: number
+  /** Fraction of the map view used as margin on each edge (default 0.1). */
+  paddingFraction?: number
 }
 
 export interface LogmasterAppleMapPlugin {
@@ -65,6 +68,7 @@ export interface LogmasterAppleMapPlugin {
   setInteractionEnabled(options: { mapId: string; enabled: boolean }): Promise<void>
   setTouchCaptureSuspended(options: { suspended: boolean }): Promise<void>
   adjustZoom(options: { mapId: string; factor: number }): Promise<void>
+  snapshotMap(options: { mapId: string }): Promise<{ dataUrl: string }>
   addListener(
     eventName: 'mapReady',
     listenerFunc: (data: { mapId: string }) => void,

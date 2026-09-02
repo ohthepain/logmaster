@@ -39,6 +39,7 @@ export function LogEntryComposerModal({
     (item) => item.tripId === tripId && !item.deleted,
   )
   const tripLegs = store.legs.filter((leg) => leg.tripId === tripId)
+  const tripTracks = store.tracks.filter((track) => track.tripId === tripId)
   const entryMedia = entryId
     ? store.media.filter((item) => item.logEntryId === entryId)
     : []
@@ -213,6 +214,7 @@ export function LogEntryComposerModal({
             trip={trip}
             entries={mapEntries}
             legs={tripLegs}
+            tracks={tripTracks}
             position={draftPosition}
             onPositionChange={handlePositionChange}
             initialViewport="entry-focus"

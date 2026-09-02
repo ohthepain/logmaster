@@ -16,6 +16,7 @@ const emptySnapshot = {
   trips: [baseTrip],
   legs: [],
   logEntries: [],
+  tripTracks: [],
   media: [],
 }
 
@@ -55,6 +56,7 @@ describe('hasPendingSync', () => {
       trips: [],
       legs: [],
       logEntries: [],
+      tripTracks: [],
       media: [],
       deletedTripIds: [baseTrip.id],
     }

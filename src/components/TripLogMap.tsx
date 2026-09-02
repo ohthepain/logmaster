@@ -1,7 +1,8 @@
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { LogEntry, Leg, Trip, Media } from "../domain/logbook";
+import type { TripTrack } from "../domain/trip-track";
 import { DEV_FALLBACK_POSITION, setDevPositionOverride, subscribeToDevicePosition } from "../lib/logbook-context";
 import { isDevModeAvailable } from "../lib/dev-mode";
 import { buildLegEntryPointsGeoJson, buildLegTrackGeoJson, mapBrandColor, mapPointsToBounds, resolveTripLogMapViewport, tripStartMapPoint } from "../lib/logbook-map-geo";
@@ -26,7 +27,9 @@ import { applySailingLogMapTheme, sailingMapLegTrackPaint, SailingMapColors } fr
 import { addLogEntrySymbolLayer, syncLogEntryMapMarkerImages, syncLogEntryMapIconSelection } from "../lib/map-log-entry-icons";
 import { getGeoJsonSource } from "../lib/maplibre-source";
 import { defaultRasterMapId } from "../lib/map-styles";
-import { centerMapOnCurrentLocation, juiceMapFocus, SAILING_MAP_EASE_MS, SAILING_MAP_FIT_MAX_ZOOM, SAILING_MAP_INITIAL_ZOOM } from "../lib/sailing-map-viewport";
+import { centerMapOnCurrentLocation, fitMapToTripTrack, juiceMapFocus, SAILING_MAP_INITIAL_ZOOM } from "../lib/sailing-map-viewport";
+import { captureMaplibreSnapshot, withCaptureTimeout } from "../lib/map-cover-capture";
+import type { TripMapHandle } from "../lib/trip-map-handle";
 import {
   fetchReversePlaceLookup,
   formatReversePlaceLabel,
@@ -37,7 +40,6 @@ import { getNativePlatform } from "../lib/platform";
 import { useAppOptionsStore } from "../stores/app-options";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { TripAppleMapKit  } from "./TripAppleMapKit";
-import type {TripAppleMapKitHandle} from "./TripAppleMapKit";
 import { SailingMapControlStack } from "./SailingMapControlStack";
 import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
 import { SailingMapLayerPanel } from "./SailingMapLayerPanel";
@@ -51,6 +53,7 @@ type TripLogMapProps = {
   trip: Trip;
   entries: LogEntry[];
   legs?: Leg[];
+  tracks?: TripTrack[];
   focusEntryId?: string | null;
   selectedEntryId?: string | null;
   onEntrySelect?: (entryId: string) => void;
@@ -66,6 +69,7 @@ type TripLogMapProps = {
   playbackPosition?: TripPlaybackPosition | null;
   playbackMode?: boolean;
   boatIconId?: string | null;
+  onInitialViewportSettled?: () => void;
 };
 
 type LngLat = { longitude: number; latitude: number; heading?: number | null };
@@ -74,7 +78,7 @@ const ENTRY_SOURCE = "trip-log-entries";
 const TRACK_SOURCE = "trip-log-track";
 const CURRENT_SOURCE = "trip-current-position";
 
-export const TripLogMap = forwardRef<TripAppleMapKitHandle, TripLogMapProps>(function TripLogMapView(props, ref) {
+export const TripLogMap = forwardRef<TripMapHandle, TripLogMapProps>(function TripLogMapView(props, ref) {
   if (getNativePlatform() === "ios" && props.embedded) {
     return (
       <TripAppleMapKit
@@ -82,6 +86,7 @@ export const TripLogMap = forwardRef<TripAppleMapKitHandle, TripLogMapProps>(fun
         trip={props.trip}
         entries={props.entries}
         legs={props.legs}
+        tracks={props.tracks}
         focusEntryId={props.focusEntryId}
         selectedEntryId={props.selectedEntryId}
         onEntrySelect={props.onEntrySelect}
@@ -94,17 +99,20 @@ export const TripLogMap = forwardRef<TripAppleMapKitHandle, TripLogMapProps>(fun
         controlStackClassName={props.controlStackClassName}
         playbackPosition={props.playbackPosition}
         boatIconId={props.boatIconId}
+        onInitialViewportSettled={props.onInitialViewportSettled}
       />
     );
   }
 
-  return <TripLogMapMapLibre {...props} />;
+  return <TripLogMapMapLibre ref={ref} {...props} />;
 });
 
-function TripLogMapMapLibre({
+const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function TripLogMapMapLibreView(
+  {
   trip,
   entries,
   legs = [],
+  tracks = [],
   focusEntryId = null,
   selectedEntryId = null,
   onEntrySelect,
@@ -120,7 +128,10 @@ function TripLogMapMapLibre({
   playbackPosition = null,
   playbackMode = false,
   boatIconId = null,
-}: TripLogMapProps) {
+  onInitialViewportSettled,
+  }: TripLogMapProps,
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const onEntrySelectRef = useRef(onEntrySelect);
@@ -130,6 +141,7 @@ function TripLogMapMapLibre({
   const previousLivePositionRef = useRef<LngLat | null>(null);
   const boatIconSrcValue = boatIconSrc(boatIconId);
   const initialFitDoneRef = useRef(false);
+  const initialViewportNotifiedRef = useRef(false);
   const devMode = useAppOptionsStore((state) => state.devMode);
   const mapDataLayerToggles = useAppOptionsStore((state) => state.mapDataLayerToggles);
   const setMapDataLayerToggles = useAppOptionsStore((state) => state.setMapDataLayerToggles);
@@ -152,11 +164,47 @@ function TripLogMapMapLibre({
     seamarksAllowed: showSeamarks,
   });
 
-  const legTrackGeoJson = useMemo(() => buildLegTrackGeoJson(entries, legs), [entries, legs]);
+  const legTrackGeoJson = useMemo(
+    () => buildLegTrackGeoJson(entries, legs, tracks),
+    [entries, legs, tracks],
+  );
   const legEntryGeoJson = useMemo(() => buildLegEntryPointsGeoJson(entries, legs), [entries, legs]);
   const viewportTarget = useMemo(
-    () => resolveTripLogMapViewport(trip, entries, { focusEntryId }),
-    [trip, entries, focusEntryId],
+    () => resolveTripLogMapViewport(trip, entries, { focusEntryId, tracks }),
+    [trip, entries, focusEntryId, tracks],
+  );
+
+  const notifyInitialViewportSettled = useCallback(() => {
+    if (initialViewportNotifiedRef.current) return;
+    initialViewportNotifiedRef.current = true;
+    onInitialViewportSettled?.();
+  }, [onInitialViewportSettled]);
+
+  const settleInitialViewport = useCallback(
+    (map: maplibregl.Map) => {
+      map.once("idle", () => notifyInitialViewportSettled());
+    },
+    [notifyInitialViewportSettled],
+  );
+
+  const captureMapSnapshot = useCallback(async () => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return null;
+    return withCaptureTimeout(captureMaplibreSnapshot(map));
+  }, [mapReady]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      zoomIn: () => mapRef.current?.zoomIn({ duration: 200 }),
+      zoomOut: () => mapRef.current?.zoomOut({ duration: 200 }),
+      locate: () => {
+        const map = mapRef.current;
+        if (map) void centerMapOnCurrentLocation(map);
+      },
+      captureMapSnapshot,
+    }),
+    [captureMapSnapshot],
   );
 
   useEffect(() => {
@@ -217,6 +265,7 @@ function TripLogMapMapLibre({
           maxPitch: 0,
           attributionControl: false,
           interactive,
+          canvasContextAttributes: { preserveDrawingBuffer: true },
           transformRequest: (url) => mapTilerTransformRequest(url),
         });
 
@@ -523,6 +572,7 @@ function TripLogMapMapLibre({
 
   useEffect(() => {
     initialFitDoneRef.current = false;
+    initialViewportNotifiedRef.current = false;
   }, [trip.id, focusEntryId, viewportTarget.kind]);
 
   useEffect(() => {
@@ -534,6 +584,7 @@ function TripLogMapMapLibre({
         if (!currentPosition) return;
         juiceMapFocus(map, currentPosition);
         initialFitDoneRef.current = true;
+        settleInitialViewport(map);
         return;
       }
       juiceMapFocus(
@@ -544,23 +595,22 @@ function TripLogMapMapLibre({
         },
       );
       initialFitDoneRef.current = true;
+      settleInitialViewport(map);
       return;
     }
 
     if (viewportTarget.kind === "point") {
       juiceMapFocus(map, viewportTarget.point);
       initialFitDoneRef.current = true;
+      settleInitialViewport(map);
       return;
     }
 
     const bounds = mapPointsToBounds(viewportTarget.points);
     if (bounds) {
-      map.fitBounds(bounds, {
-        padding: embedded ? 24 : 48,
-        maxZoom: SAILING_MAP_FIT_MAX_ZOOM,
-        duration: SAILING_MAP_EASE_MS,
-      });
+      fitMapToTripTrack(map, bounds);
       initialFitDoneRef.current = true;
+      settleInitialViewport(map);
     }
   }, [
     mapReady,
@@ -568,7 +618,7 @@ function TripLogMapMapLibre({
     currentPosition,
     showCurrentPosition,
     trip,
-    embedded,
+    settleInitialViewport,
   ]);
 
   const handleZoomIn = useCallback(() => {
@@ -692,4 +742,4 @@ function TripLogMapMapLibre({
       {fullscreenModal}
     </>
   );
-}
+});

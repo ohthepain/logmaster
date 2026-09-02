@@ -4,7 +4,9 @@ import {
   adjacentPositionedEntryPairs,
   buildLegEntryPointsGeoJson,
   buildLegTrackGeoJson,
+  ensureMinimumMapBoundsSpan,
   logEntryMapPoint,
+  mapPointsToBounds,
   resolveTripLogMapViewport,
 } from './logbook-map-geo'
 
@@ -88,6 +90,27 @@ describe('resolveTripLogMapViewport', () => {
         { latitude: 48, longitude: -123 },
       ],
     })
+  })
+})
+
+describe('mapPointsToBounds', () => {
+  it('expands thin tracks so fitBounds does not over-zoom', () => {
+    const bounds = mapPointsToBounds([
+      { latitude: 48.0, longitude: -123.0 },
+      { latitude: 48.0, longitude: -122.5 },
+    ])
+    expect(bounds).not.toBeNull()
+    expect(bounds![1][1] - bounds![0][1]).toBeGreaterThan(0)
+  })
+})
+
+describe('ensureMinimumMapBoundsSpan', () => {
+  it('adds latitude span to east-west lines', () => {
+    const expanded = ensureMinimumMapBoundsSpan([
+      [-123, 48],
+      [-122.5, 48],
+    ])
+    expect(expanded[1][1] - expanded[0][1]).toBeGreaterThan(0)
   })
 })
 

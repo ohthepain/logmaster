@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Check, Sailboat, Trash2, User } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useCallback } from "react";
 import { toast } from "sonner";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { DevTripReplayModal } from "./DevTripReplayModal";
@@ -11,6 +11,7 @@ import { TripCrewPickerModal } from "./TripCrewPickerModal";
 import { TripCoverEditModal } from "./TripCoverEditModal";
 import { TripDetailHero } from "./TripDetailHero";
 import type { CompletedTripPanel } from "./TripDetailHero";
+import type { TripMapHandle } from "../lib/trip-map-handle";
 import { TripDetailBottomSheet } from "./TripDetailBottomSheet";
 import { TripRecordButton } from "./TripRecordButton";
 import { TripLegSection } from "./TripLegSection";
@@ -44,6 +45,8 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
   const store = useLogbookStore();
   const trip = store.trips.find((item) => item.id === tripId) ?? null;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const heroMapRef = useRef<TripMapHandle>(null);
+  const autoMapCoverAttemptedRef = useRef<string | null>(null);
   const fileInputId = useId();
   const [busy, setBusy] = useState(false);
   const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
@@ -137,6 +140,11 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
     [store.legs, tripId],
   );
 
+  const tripTracks = useMemo(
+    () => store.tracks.filter((track) => track.tripId === tripId),
+    [store.tracks, tripId],
+  );
+
   const tripEntries = useMemo(
     () =>
       store.entries
@@ -167,6 +175,29 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
     return map;
   }, [store.media]);
 
+  const saveMapAsCover = useCallback(async () => {
+    const coverPhotoDataUrl = await heroMapRef.current?.captureMapSnapshot();
+    if (!coverPhotoDataUrl) {
+      throw new Error("Could not capture the map");
+    }
+    await useLogbookStore.getState().updateTrip(tripId, {
+      coverKind: "photo",
+      coverPhotoDataUrl,
+    });
+  }, [tripId]);
+
+  const handleInitialMapViewportSettled = useCallback(() => {
+    const currentTrip = useLogbookStore.getState().trips.find((item) => item.id === tripId);
+    if (currentTrip?.coverPhotoDataUrl) return;
+    if (autoMapCoverAttemptedRef.current === tripId) return;
+    autoMapCoverAttemptedRef.current = tripId;
+    void saveMapAsCover().catch(() => {});
+  }, [saveMapAsCover, tripId]);
+
+  useEffect(() => {
+    autoMapCoverAttemptedRef.current = null;
+  }, [tripId]);
+
   if (!store.booted) {
     return (
       <main className="page-wrap px-3 py-8 sm:px-4">
@@ -190,6 +221,24 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
 
   const cover = tripDetailCoverDisplay(trip);
   const displayName = tripDisplayName(trip);
+  const showMapCoverOption =
+    trip.status === "IN_PROGRESS" ||
+    trip.status === "PLANNED" ||
+    trip.status === "COMPLETED";
+
+  const handleUseCurrentMapCover = async () => {
+    setCoverEditOpen(false);
+    setBusy(true);
+    try {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await saveMapAsCover();
+      toast.success("Trip cover updated from map");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to capture map cover");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handlePhotoPick = async (file: File | undefined) => {
     if (!file || !file.type.startsWith("image/")) return;
@@ -376,10 +425,12 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
           className="absolute left-3 top-3 z-50 sm:left-4"
         />
         <TripDetailHero
+          ref={heroMapRef}
           trip={trip}
           cover={cover}
           mapEntries={tripEntries}
           mapLegs={tripLegs}
+          mapTracks={tripTracks}
           mediaByEntry={mediaByEntry}
           busy={busy}
           selectedEntryId={selectedEntryId}
@@ -387,6 +438,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
           completedTripPanel={completedTripPanel}
           onCompletedTripPanelChange={trip.status === "COMPLETED" ? setCompletedTripPanel : undefined}
           onEditCoverClick={() => setCoverEditOpen(true)}
+          onInitialMapViewportSettled={handleInitialMapViewportSettled}
           onLogEntryClick={
             trip.status === "IN_PROGRESS" ? () => setCreateEntryOpen(true) : undefined
           }
@@ -549,6 +601,8 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
         onClose={() => setCoverEditOpen(false)}
         onChoosePhoto={handleChoosePhotoCover}
         onChooseMap={() => void handleChooseMapCover()}
+        onUseCurrentMap={() => void handleUseCurrentMapCover()}
+        showUseCurrentMap={showMapCoverOption}
         onRemoveCover={() => void handleRemoveCover()}
       />
 

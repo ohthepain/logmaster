@@ -136,9 +136,31 @@ model Trip {
 
   logEntries     LogEntry[]
   legs           Leg[]
+  tripTracks     TripTrack[]
 
   @@index([status, startedAt])
   @@map("trip")
+}
+
+model TripTrack {
+  id          String   @id @default(cuid())
+  tripId      String
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  legId       String?
+  source      String
+  kind        String   @default("position")
+  encoding    String   @default("delta-v1")
+  payload     Json
+  sampleCount Int
+  startedAt   DateTime
+  endedAt     DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  synced      Boolean  @default(false)
+
+  @@index([tripId, startedAt])
+  @@index([synced, updatedAt])
+  @@map("trip_track")
 }
 
 model DeletedTrip {

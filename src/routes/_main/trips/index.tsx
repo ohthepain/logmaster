@@ -1,9 +1,14 @@
 import { createFileRoute, useLocation, useNavigate } from '@tanstack/react-router'
 import { Sailboat } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { AddButton } from '../../../components/AddButton'
+import {
+  GpxImportButton,
+  type GpxImportButtonHandle,
+} from '../../../components/GpxImportButton'
 import { StartTripLauncher } from '../../../components/StartTripLauncher'
+import { TripActionsMenu } from '../../../components/TripActionsMenu'
 import type { Trip } from '../../../domain/logbook'
 import { cn } from '../../../lib/cn'
 import { formatDateTime } from '../../../lib/logbook-format'
@@ -31,6 +36,12 @@ function TripsPage() {
   const location = useLocation()
   const { startTrip: startTripSearch } = Route.useSearch()
   const [startTripOpen, setStartTripOpen] = useState(false)
+  const gpxImportRef = useRef<GpxImportButtonHandle>(null)
+
+  const handleImportedTrip = (tripId: string) => {
+    store.selectTrip(tripId)
+    void navigate({ to: '/trips/$tripId', params: { tripId } })
+  }
 
   useEffect(() => {
     void useLogbookStore.getState().load()
@@ -61,15 +72,20 @@ function TripsPage() {
         <h1 className="brand-title m-0 text-[2.35rem] leading-none sm:text-[2.75rem]">
           Trips
         </h1>
-        <AddButton onClick={openStartTrip} aria-label="Add trip" />
+        <div className="flex items-center gap-2">
+          <GpxImportButton ref={gpxImportRef} onImported={handleImportedTrip} />
+          <AddButton onClick={openStartTrip} aria-label="Add trip" />
+        </div>
       </div>
 
       {store.trips.length === 0 ? (
         <EmptyState
           title="No trips yet"
-          description="Start a sailing session to create the first trip and begin logging locally."
+          description="Start a sailing session or import a GPX track to create your first trip."
           actionLabel="Add trip"
           onAction={openStartTrip}
+          secondaryActionLabel="Import GPX"
+          onSecondaryAction={() => gpxImportRef.current?.open()}
           icon={Sailboat}
         />
       ) : (
@@ -110,63 +126,72 @@ function TripCard({
 }) {
   const coverPhoto = tripCoverPhotoUrl(trip)
   const name = tripDisplayName(trip)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <div
       className={cn(
-        'w-full overflow-hidden rounded-[1.4rem] border text-left transition hover:-translate-y-[1px]',
+        'relative w-full rounded-[1.4rem] border transition hover:-translate-y-[1px]',
+        menuOpen && 'z-30',
         active
           ? 'border-[var(--active-border)] bg-[var(--active-panel)] shadow-sm'
           : 'border-[var(--panel-border)] bg-[var(--panel)]',
       )}
     >
-      <div className="flex gap-4 p-4">
-        <div className="size-16 shrink-0 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)]">
-          {coverPhoto ? (
-            <img src={coverPhoto} alt="" className="size-full object-cover" />
-          ) : (
-            <div className="flex size-full items-center justify-center text-[var(--sea-ink-soft)]">
-              <Sailboat className="size-7" strokeWidth={1.5} />
+      <button type="button" onClick={onSelect} className="w-full text-left">
+        <div className="flex gap-4 p-4">
+          <div className="size-16 shrink-0 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)]">
+            {coverPhoto ? (
+              <img src={coverPhoto} alt="" className="size-full object-cover" />
+            ) : (
+              <div className="flex size-full items-center justify-center text-[var(--sea-ink-soft)]">
+                <Sailboat className="size-7" strokeWidth={1.5} />
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3 pr-24">
+              <div className="min-w-0">
+                <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--kicker)]">
+                  {trip.status.replace('_', ' ')}
+                </p>
+                <h3 className="m-0 mt-1 truncate text-lg font-bold text-[var(--sea-ink)]">
+                  {name}
+                </h3>
+                <p className="m-0 mt-1 text-sm text-[var(--sea-ink-soft)]">
+                  {trip.status === 'PLANNED'
+                    ? `Created ${formatDateTime(trip.createdAt)}`
+                    : formatDateTime(trip.startedAt)}
+                  {trip.completedAt
+                    ? ` · completed ${formatDateTime(trip.completedAt)}`
+                    : ''}
+                </p>
+              </div>
             </div>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--kicker)]">
-                {trip.status.replace('_', ' ')}
-              </p>
-              <h3 className="m-0 mt-1 truncate text-lg font-bold text-[var(--sea-ink)]">
-                {name}
-              </h3>
-              <p className="m-0 mt-1 text-sm text-[var(--sea-ink-soft)]">
-                {trip.status === 'PLANNED'
-                  ? `Created ${formatDateTime(trip.createdAt)}`
-                  : formatDateTime(trip.startedAt)}
-                {trip.completedAt
-                  ? ` · completed ${formatDateTime(trip.completedAt)}`
-                  : ''}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--surface)] px-3 py-2 text-right">
-              <p className="m-0 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--sea-ink-soft)]">
-                Entries
-              </p>
-              <p className="m-0 text-xl font-bold text-[var(--sea-ink)]">
-                {entryCount}
-              </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--sea-ink-soft)]">
+              {trip.boatName !== name && <Badge>{trip.boatName}</Badge>}
+              {trip.startCountry && <Badge>{trip.startCountry}</Badge>}
+              {trip.skipper && <Badge>{trip.skipper}</Badge>}
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--sea-ink-soft)]">
-            {trip.boatName !== name && <Badge>{trip.boatName}</Badge>}
-            {trip.startCountry && <Badge>{trip.startCountry}</Badge>}
-            {trip.skipper && <Badge>{trip.skipper}</Badge>}
-          </div>
         </div>
+      </button>
+      <div className="absolute right-4 top-4 z-10 flex items-start gap-2">
+        <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--surface)] px-3 py-2 text-right">
+          <p className="m-0 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--sea-ink-soft)]">
+            Entries
+          </p>
+          <p className="m-0 text-xl font-bold text-[var(--sea-ink)]">
+            {entryCount}
+          </p>
+        </div>
+        <TripActionsMenu
+          trip={trip}
+          entryCount={entryCount}
+          onOpenChange={setMenuOpen}
+        />
       </div>
-    </button>
+    </div>
   )
 }
 
@@ -175,12 +200,16 @@ function EmptyState({
   description,
   actionLabel,
   onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
   icon: Icon,
 }: {
   title: string
   description: string
   actionLabel: string
   onAction: () => void
+  secondaryActionLabel?: string
+  onSecondaryAction?: () => void
   icon: typeof Sailboat
 }) {
   return (
@@ -192,13 +221,24 @@ function EmptyState({
       <p className="mx-auto mt-2 max-w-lg text-sm leading-7 text-[var(--sea-ink-soft)]">
         {description}
       </p>
-      <button
-        type="button"
-        onClick={onAction}
-        className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)]"
-      >
-        {actionLabel}
-      </button>
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={onAction}
+          className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)]"
+        >
+          {actionLabel}
+        </button>
+        {secondaryActionLabel && onSecondaryAction ? (
+          <button
+            type="button"
+            onClick={onSecondaryAction}
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)]"
+          >
+            {secondaryActionLabel}
+          </button>
+        ) : null}
+      </div>
     </div>
   )
 }

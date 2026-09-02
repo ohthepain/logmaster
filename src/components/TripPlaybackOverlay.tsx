@@ -10,6 +10,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { entryIcon, entryTitle } from '../domain/logbook'
 import type { LogEntry, Media, Trip } from '../domain/logbook'
+import type { TripTrack } from '../domain/trip-track'
 import { formatDateTime } from '../lib/logbook-format'
 import { compareLogEntriesChronologically } from '../lib/logbook-entry-order'
 import { isVideoLogEntry } from '../lib/log-entry-map-marker'
@@ -44,6 +45,7 @@ const SCRUB_DRAG_PX = 6
 type TripPlaybackOverlayProps = {
   trip: Trip
   entries: LogEntry[]
+  tracks?: TripTrack[]
   mediaByEntry: Map<string, Media[]>
   currentTimeMs: number
   onCurrentTimeChange: (timeMs: number) => void
@@ -86,6 +88,7 @@ function formatDuration(durationMs: number) {
 export function TripPlaybackOverlay({
   trip,
   entries,
+  tracks = [],
   mediaByEntry,
   currentTimeMs,
   onCurrentTimeChange,
@@ -98,8 +101,8 @@ export function TripPlaybackOverlay({
     [entries],
   )
   const range = useMemo(
-    () => tripPlaybackRange(trip, chronologicalEntries),
-    [chronologicalEntries, trip],
+    () => tripPlaybackRange(trip, chronologicalEntries, tracks),
+    [chronologicalEntries, tracks, trip],
   )
   const [timeZoom, setTimeZoom] = useState(1)
   const [windowCenterMs, setWindowCenterMs] = useState(currentTimeMs)

@@ -1,4 +1,4 @@
-import { Image, Map, Trash2 } from 'lucide-react'
+import { Image, Map, Trash2, Camera } from 'lucide-react'
 import type { TripDetailCoverDisplay } from '../lib/trip-display'
 import { Modal } from './Modal'
 import { cn } from '../lib/cn'
@@ -10,7 +10,9 @@ type TripCoverEditModalProps = {
   onClose: () => void
   onChoosePhoto: () => void
   onChooseMap: () => void
+  onUseCurrentMap: () => void
   onRemoveCover: () => void
+  showUseCurrentMap?: boolean
 }
 
 export function TripCoverEditModal({
@@ -20,7 +22,9 @@ export function TripCoverEditModal({
   onClose,
   onChoosePhoto,
   onChooseMap,
+  onUseCurrentMap,
   onRemoveCover,
+  showUseCurrentMap = false,
 }: TripCoverEditModalProps) {
   if (!open) return null
 
@@ -56,6 +60,16 @@ export function TripCoverEditModal({
           disabled={busy}
           onClick={onChooseMap}
         />
+        {showUseCurrentMap ? (
+          <CoverOption
+            icon={Camera}
+            title="Use current map"
+            description="Save what the map is showing now as the trip cover photo"
+            selected={false}
+            disabled={busy}
+            onClick={onUseCurrentMap}
+          />
+        ) : null}
       </div>
 
       {hasCover ? (

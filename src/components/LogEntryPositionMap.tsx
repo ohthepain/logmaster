@@ -2,6 +2,7 @@ import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { LogEntry, Leg, Trip } from '../domain/logbook'
+import type { TripTrack } from '../domain/trip-track'
 import { DEV_FALLBACK_POSITION } from '../lib/logbook-context'
 import {
   buildLegEntryPointsGeoJson,
@@ -43,6 +44,7 @@ type LogEntryPositionMapProps = {
   trip: Trip
   entries: LogEntry[]
   legs?: Leg[]
+  tracks?: TripTrack[]
   position: MapLngLat | null
   onPositionChange: (position: MapLngLat) => void
   initialViewport?: 'current-location' | 'entry-focus'
@@ -58,6 +60,7 @@ export function LogEntryPositionMap({
   trip,
   entries,
   legs = [],
+  tracks = [],
   position,
   onPositionChange,
   initialViewport = 'current-location',
@@ -80,8 +83,8 @@ export function LogEntryPositionMap({
   })
 
   const legTrackGeoJson = useMemo(
-    () => buildLegTrackGeoJson(entries, legs),
-    [entries, legs],
+    () => buildLegTrackGeoJson(entries, legs, tracks),
+    [entries, legs, tracks],
   )
   const legEntryGeoJson = useMemo(
     () => buildLegEntryPointsGeoJson(entries, legs),

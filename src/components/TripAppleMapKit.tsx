@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { Leg, LogEntry, Media, Trip } from "../domain/logbook";
+import type { TripTrack } from "../domain/trip-track";
 import type { MapCoordinate, MapEntryPoint } from "../lib/native/logmaster-apple-map";
 import { LogmasterAppleMap } from "../lib/native/logmaster-apple-map";
 import { readMapPassThroughZones } from "../lib/native/apple-map-layout";
@@ -11,21 +12,22 @@ import { loadBoatIconDataUrl } from "../lib/boat-icons";
 import { resolveBoatMapHeading } from "../lib/map-boat-marker";
 import type { LogEntryMapIconKind, LogEntryMapOutline } from "../lib/log-entry-map-marker";
 import type { TripPlaybackPosition } from "../lib/trip-playback";
+import { TRIP_TRACK_FIT_MARGIN_FRACTION, SAILING_MAP_EASE_MS } from "../lib/sailing-map-viewport";
+import { downscaleJpegDataUrl, withCaptureTimeout } from "../lib/map-cover-capture";
 import { cn } from "../lib/cn";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { LogEntryMapMarkerHoverTarget } from "./LogEntryMapMarkerHoverTarget";
 import type { MapEntryPreviewState } from "./LogEntryMapMarkerHoverTarget";
 
-export type TripAppleMapKitHandle = {
-  zoomIn: () => void;
-  zoomOut: () => void;
-  locate: () => void;
-};
+import type { TripMapHandle } from '../lib/trip-map-handle'
+
+export type TripAppleMapKitHandle = TripMapHandle
 
 type TripAppleMapKitProps = {
   trip: Trip;
   entries: LogEntry[];
   legs?: Leg[];
+  tracks?: TripTrack[];
   focusEntryId?: string | null;
   selectedEntryId?: string | null;
   onEntrySelect?: (entryId: string) => void;
@@ -38,6 +40,7 @@ type TripAppleMapKitProps = {
   controlStackClassName?: string;
   playbackPosition?: TripPlaybackPosition | null;
   boatIconId?: string | null;
+  onInitialViewportSettled?: () => void;
 };
 
 async function entryMarkersFromGeoJson(
@@ -94,6 +97,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
   trip,
   entries,
   legs = [],
+  tracks = [],
   focusEntryId = null,
   selectedEntryId = null,
   onEntrySelect,
@@ -106,11 +110,13 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
   controlStackClassName: _controlStackClassName,
   playbackPosition = null,
   boatIconId = null,
+  onInitialViewportSettled,
 }: TripAppleMapKitProps,
   ref,
 ) {
   const mapId = useId().replace(/:/g, "");
   const initialFitDoneRef = useRef(false);
+  const initialViewportNotifiedRef = useRef(false);
   const userControlledViewportRef = useRef(false);
   const currentPositionRef = useRef<MapCoordinate & { heading?: number | null } | null>(null);
   const previousLivePositionRef = useRef<MapCoordinate | null>(null);
@@ -124,12 +130,27 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
   );
   const previewEntry = entryPreview ? entriesById.get(entryPreview.entryId) ?? null : null;
 
-  const legTrackGeoJson = useMemo(() => buildLegTrackGeoJson(entries, legs), [entries, legs]);
+  const legTrackGeoJson = useMemo(
+    () => buildLegTrackGeoJson(entries, legs, tracks),
+    [entries, legs, tracks],
+  );
   const legEntryGeoJson = useMemo(() => buildLegEntryPointsGeoJson(entries, legs), [entries, legs]);
   const viewportTarget = useMemo(
-    () => resolveTripLogMapViewport(trip, entries, { focusEntryId }),
-    [trip, entries, focusEntryId],
+    () => resolveTripLogMapViewport(trip, entries, { focusEntryId, tracks }),
+    [trip, entries, focusEntryId, tracks],
   );
+
+  const notifyInitialViewportSettled = useCallback(() => {
+    if (initialViewportNotifiedRef.current) return;
+    initialViewportNotifiedRef.current = true;
+    onInitialViewportSettled?.();
+  }, [onInitialViewportSettled]);
+
+  useEffect(() => {
+    initialFitDoneRef.current = false;
+    initialViewportNotifiedRef.current = false;
+    userControlledViewportRef.current = false;
+  }, [trip.id, focusEntryId, viewportTarget.kind]);
 
   const shouldFollowUser = interactive && showCurrentPosition && viewportTarget.kind === "current-location";
 
@@ -215,6 +236,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
         spanLongitude: 0.06,
       });
       initialFitDoneRef.current = true;
+      window.setTimeout(() => notifyInitialViewportSettled(), SAILING_MAP_EASE_MS);
       return;
     }
 
@@ -229,6 +251,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
         spanLongitude: 0.06,
       });
       initialFitDoneRef.current = true;
+      window.setTimeout(() => notifyInitialViewportSettled(), SAILING_MAP_EASE_MS);
       return;
     }
 
@@ -240,10 +263,25 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
         latitude: point.latitude,
         longitude: point.longitude,
       })),
-      padding: embedded ? 24 : 48,
+      paddingFraction: TRIP_TRACK_FIT_MARGIN_FRACTION,
     });
     initialFitDoneRef.current = true;
-  }, [embedded, mapId, mapReady, trip, viewportTarget]);
+    window.setTimeout(() => notifyInitialViewportSettled(), SAILING_MAP_EASE_MS);
+  }, [mapId, mapReady, notifyInitialViewportSettled, trip, viewportTarget]);
+
+  const captureMapSnapshot = useCallback(async () => {
+    if (!mapReady) return null;
+    try {
+      const dataUrl = await withCaptureTimeout(
+        LogmasterAppleMap.snapshotMap({ mapId }).then((result) =>
+          downscaleJpegDataUrl(result.dataUrl),
+        ),
+      );
+      return dataUrl;
+    } catch {
+      return null;
+    }
+  }, [mapId, mapReady]);
 
   const bootstrapPosition = useCallback(async () => {
     if (!showCurrentPosition) {
@@ -298,6 +336,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
 
   useEffect(() => {
     initialFitDoneRef.current = false;
+    initialViewportNotifiedRef.current = false;
     userControlledViewportRef.current = false;
   }, [trip.id, focusEntryId, viewportTarget.kind]);
 
@@ -529,8 +568,9 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
       zoomIn: handleZoomIn,
       zoomOut: handleZoomOut,
       locate: handleLocate,
+      captureMapSnapshot,
     }),
-    [handleZoomIn, handleZoomOut, handleLocate],
+    [captureMapSnapshot, handleZoomIn, handleZoomOut, handleLocate],
   );
 
   return (

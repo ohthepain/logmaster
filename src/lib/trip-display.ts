@@ -47,12 +47,13 @@ export function tripDetailCoverDisplay(
 export function tripCoverPhotoUrl(
   trip: Pick<Trip, 'coverKind' | 'coverPhotoDataUrl' | 'boatPhotoUrl'>,
 ): string | null {
+  if (trip.coverPhotoDataUrl) return trip.coverPhotoDataUrl
   const coverKind = resolveTripCoverKind(trip)
   if (coverKind === 'map') return null
   if (coverKind === 'photo') {
-    return trip.coverPhotoDataUrl ?? trip.boatPhotoUrl ?? null
+    return trip.boatPhotoUrl ?? null
   }
-  return trip.coverPhotoDataUrl ?? trip.boatPhotoUrl ?? null
+  return trip.boatPhotoUrl ?? null
 }
 
 export function tripHeroTitle(

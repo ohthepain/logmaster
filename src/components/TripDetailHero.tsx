@@ -1,14 +1,16 @@
 import { Map, Pencil, RotateCw, Sailboat } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { Leg, LogEntry, Media, Trip } from "../domain/logbook";
+import type { TripTrack } from "../domain/trip-track";
 import type { TripDetailCoverDisplay } from "../lib/trip-display";
+import type { TripMapHandle } from "../lib/trip-map-handle";
 import { getNativePlatform } from "../lib/platform";
 import { useAppOptionsStore } from "../stores/app-options";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { SailingMapControlStack } from "./SailingMapControlStack";
 import { TripLogMap } from "./TripLogMap";
-import type { TripAppleMapKitHandle } from "./TripAppleMapKit";
 import { TripOperationalStatus } from "./TripOperationalStatus";
+import { TripPlaybackInfoPanel } from "./TripPlaybackInfoPanel";
 import { TripPlaybackOverlay } from "./TripPlaybackOverlay";
 import { TripMapChromeButton } from "./TripMapChromeButton";
 import { tripPlaybackPositionAt, tripPlaybackRange } from "../lib/trip-playback";
@@ -20,6 +22,7 @@ type TripDetailHeroProps = {
   cover: TripDetailCoverDisplay;
   mapEntries: LogEntry[];
   mapLegs: Leg[];
+  mapTracks?: TripTrack[];
   mediaByEntry: Map<string, Media[]>;
   busy: boolean;
   selectedEntryId?: string | null;
@@ -29,13 +32,16 @@ type TripDetailHeroProps = {
   onEditCoverClick: () => void;
   onLogEntryClick?: () => void;
   onReplayTestClick?: () => void;
+  onInitialMapViewportSettled?: () => void;
 };
 
-export function TripDetailHero({
+export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(function TripDetailHero(
+  {
   trip,
   cover,
   mapEntries,
   mapLegs,
+  mapTracks = [],
   mediaByEntry,
   busy,
   selectedEntryId = null,
@@ -45,7 +51,10 @@ export function TripDetailHero({
   onEditCoverClick,
   onLogEntryClick,
   onReplayTestClick,
-}: TripDetailHeroProps) {
+  onInitialMapViewportSettled,
+}: TripDetailHeroProps,
+  ref,
+) {
   const isActiveTrip = trip.status === "IN_PROGRESS" || trip.status === "PLANNED";
   const isPlayback = trip.status === "COMPLETED";
   const recordingTripId = useAppOptionsStore((state) => state.recordingTripId);
@@ -54,12 +63,18 @@ export function TripDetailHero({
   const showPhoto = !showInteractiveMap && cover.kind === "photo" && cover.photoUrl;
   const showOperationalOverlay = isActiveTrip;
   const useExternalIosMapControls = getNativePlatform() === "ios" && showInteractiveMap;
-  const mapRef = useRef<TripAppleMapKitHandle>(null);
-  const playbackRange = useMemo(() => tripPlaybackRange(trip, mapEntries), [mapEntries, trip]);
+  const mapRef = useRef<TripMapHandle>(null);
+  const playbackRange = useMemo(
+    () => tripPlaybackRange(trip, mapEntries, mapTracks),
+    [mapEntries, mapTracks, trip],
+  );
   const [playbackTimeMs, setPlaybackTimeMs] = useState(playbackRange.startMs);
   const playbackPosition = useMemo(
-    () => (isPlayback ? tripPlaybackPositionAt(mapEntries, playbackTimeMs) : null),
-    [isPlayback, mapEntries, playbackTimeMs],
+    () =>
+      isPlayback
+        ? tripPlaybackPositionAt(trip.id, mapEntries, playbackTimeMs, mapTracks)
+        : null,
+    [isPlayback, mapEntries, mapTracks, playbackTimeMs, trip.id],
   );
 
   const showPlaybackOverlay = isPlayback && completedTripPanel === "map";
@@ -67,6 +82,18 @@ export function TripDetailHero({
   useEffect(() => {
     setPlaybackTimeMs(playbackRange.startMs);
   }, [playbackRange.startMs, trip.id]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      zoomIn: () => mapRef.current?.zoomIn(),
+      zoomOut: () => mapRef.current?.zoomOut(),
+      locate: () => mapRef.current?.locate(),
+      captureMapSnapshot: async () =>
+        (await mapRef.current?.captureMapSnapshot()) ?? null,
+    }),
+    [],
+  );
 
   return (
     <section
@@ -85,6 +112,7 @@ export function TripDetailHero({
             trip={trip}
             entries={mapEntries}
             legs={mapLegs}
+            tracks={mapTracks}
             selectedEntryId={selectedEntryId}
             onEntrySelect={onEntrySelect}
             mediaByEntry={mediaByEntry}
@@ -98,6 +126,7 @@ export function TripDetailHero({
             playbackPosition={playbackPosition}
             playbackMode={isPlayback}
             boatIconId={trip.boatIconId}
+            onInitialViewportSettled={onInitialMapViewportSettled}
           />
         </div>
       ) : showPhoto ? (
@@ -124,6 +153,7 @@ export function TripDetailHero({
         <TripPlaybackOverlay
           trip={trip}
           entries={mapEntries}
+          tracks={mapTracks}
           mediaByEntry={mediaByEntry}
           currentTimeMs={playbackTimeMs}
           onCurrentTimeChange={setPlaybackTimeMs}
@@ -162,21 +192,32 @@ export function TripDetailHero({
         />
       ) : null}
 
-      <div className="pointer-events-none absolute inset-x-0 top-16 z-40 flex justify-start gap-2 px-3 sm:px-4">
-        <TripMapChromeButton label="Edit trip cover" onClick={onEditCoverClick} disabled={busy} tooltipSide="bottom">
-          <Pencil className="size-4" />
-        </TripMapChromeButton>
-        {onReplayTestClick ? (
-          <TripMapChromeButton
-            label="Start auto-test replay"
-            onClick={onReplayTestClick}
-            disabled={busy}
-            tooltipSide="bottom"
-          >
-            <RotateCw className="size-4" />
+      <div className="pointer-events-none absolute inset-x-0 top-16 z-40 flex flex-col items-start gap-2 px-3 sm:px-4">
+        <div className="flex justify-start gap-2">
+          <TripMapChromeButton label="Edit trip cover" onClick={onEditCoverClick} disabled={busy} tooltipSide="bottom">
+            <Pencil className="size-4" />
           </TripMapChromeButton>
+          {onReplayTestClick ? (
+            <TripMapChromeButton
+              label="Start auto-test replay"
+              onClick={onReplayTestClick}
+              disabled={busy}
+              tooltipSide="bottom"
+            >
+              <RotateCw className="size-4" />
+            </TripMapChromeButton>
+          ) : null}
+        </div>
+        {showPlaybackOverlay ? (
+          <TripPlaybackInfoPanel
+            tripId={trip.id}
+            tracks={mapTracks}
+            entries={mapEntries}
+            currentTimeMs={playbackTimeMs}
+            playbackPosition={playbackPosition}
+          />
         ) : null}
       </div>
     </section>
   );
-}
+});

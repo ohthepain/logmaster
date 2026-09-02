@@ -1,4 +1,5 @@
-import type { Leg, LogEntry, Trip } from '../domain/logbook'
+import type { LogEntry, Leg, Trip } from '../domain/logbook'
+import type { TripTrack } from '../domain/trip-track'
 import {
   entryCreatedAtMs,
   entryHasMapPosition,
@@ -12,6 +13,7 @@ import {
   logEntryMapMarkerImageId,
   logEntryMapOutline,
 } from './log-entry-map-marker'
+import { buildTripTracksGeoJson, trackSampleMapPoints } from './trip-track-geo'
 
 export type MapLngLat = { longitude: number; latitude: number }
 
@@ -69,11 +71,16 @@ export function adjacentPositionedEntryPairs(
   return pairs
 }
 
-export function buildLegTrackGeoJson(entries: LogEntry[], legs: Leg[] = []) {
+export function buildLegTrackGeoJson(
+  entries: LogEntry[],
+  legs: Leg[] = [],
+  tracks: TripTrack[] = [],
+) {
+  const trackFeatures = buildTripTracksGeoJson(tracks, legs).features
   const legColors = legColorLookup(legs)
   const pairs = adjacentPositionedEntryPairs(entries)
 
-  const features = pairs.map(([from, to], segmentIndex) => {
+  const entryFeatures = pairs.map(([from, to], segmentIndex) => {
     const legId = to.legId ?? from.legId ?? null
     return {
       type: 'Feature' as const,
@@ -92,7 +99,10 @@ export function buildLegTrackGeoJson(entries: LogEntry[], legs: Leg[] = []) {
     }
   })
 
-  return { type: 'FeatureCollection' as const, features }
+  return {
+    type: 'FeatureCollection' as const,
+    features: [...trackFeatures, ...entryFeatures],
+  }
 }
 
 export function buildLegEntryPointsGeoJson(entries: LogEntry[], legs: Leg[] = []) {
@@ -157,7 +167,7 @@ export type TripLogMapViewportTarget =
 export function resolveTripLogMapViewport(
   trip: Pick<Trip, 'status' | 'startLatitude' | 'startLongitude'>,
   entries: LogEntry[],
-  options?: { focusEntryId?: string | null },
+  options?: { focusEntryId?: string | null; tracks?: TripTrack[] },
 ): TripLogMapViewportTarget {
   if (trip.status === 'IN_PROGRESS' || trip.status === 'PLANNED') {
     return { kind: 'current-location' }
@@ -169,7 +179,10 @@ export function resolveTripLogMapViewport(
     if (point) return { kind: 'point', point }
   }
 
-  const fitPoints = [...logEntryMapPoints(entries)]
+  const fitPoints = [
+    ...logEntryMapPoints(entries),
+    ...trackSampleMapPoints(options?.tracks ?? []),
+  ]
   const start = tripStartMapPoint(trip as Trip)
   if (start) fitPoints.push(start)
 
@@ -206,10 +219,32 @@ export function mapPointsToBounds(points: MapLngLat[]) {
   }
   // MapLibre fitBounds throws when bounds have zero area (single point).
   if (west === east && south === north) return null
+  return ensureMinimumMapBoundsSpan([
+    [west, south],
+    [east, north],
+  ])
+}
+
+/** Avoid over-zooming when a track is nearly a line or point cluster. */
+export function ensureMinimumMapBoundsSpan(
+  bounds: [[number, number], [number, number]],
+  minSpanDegrees = 0.002,
+): [[number, number], [number, number]] {
+  let [[west, south], [east, north]] = bounds
+  const latMid = (north + south) / 2
+  const lonMid = (west + east) / 2
+  if (north - south < minSpanDegrees) {
+    south = latMid - minSpanDegrees / 2
+    north = latMid + minSpanDegrees / 2
+  }
+  if (east - west < minSpanDegrees) {
+    west = lonMid - minSpanDegrees / 2
+    east = lonMid + minSpanDegrees / 2
+  }
   return [
     [west, south],
     [east, north],
-  ] as [[number, number], [number, number]]
+  ]
 }
 
 export function mapBrandColor() {
