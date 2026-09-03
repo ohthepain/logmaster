@@ -63,6 +63,8 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
   const recordingTripId = useAppOptionsStore((state) => state.recordingTripId);
   const mapDataLayerToggles = useAppOptionsStore((state) => state.mapDataLayerToggles);
   const setMapDataLayerToggles = useAppOptionsStore((state) => state.setMapDataLayerToggles);
+  const mapLogEntryLayerToggles = useAppOptionsStore((state) => state.mapLogEntryLayerToggles);
+  const setMapLogEntryLayerToggles = useAppOptionsStore((state) => state.setMapLogEntryLayerToggles);
   const showCurrentPosition = isActiveTrip && recordingTripId === trip.id;
   const showInteractiveMap = isActiveTrip || isPlayback || cover.kind === "map";
   const showPhoto = !showInteractiveMap && cover.kind === "photo" && cover.photoUrl;
@@ -164,6 +166,8 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
               <SailingMapLayerPanel
                 toggles={mapDataLayerToggles}
                 onChange={setMapDataLayerToggles}
+                logEntryToggles={mapLogEntryLayerToggles}
+                onLogEntryChange={setMapLogEntryLayerToggles}
               />
             ) : undefined
           }
@@ -204,6 +208,8 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
                   <SailingMapLayerPanel
                     toggles={mapDataLayerToggles}
                     onChange={setMapDataLayerToggles}
+                    logEntryToggles={mapLogEntryLayerToggles}
+                    onLogEntryChange={setMapLogEntryLayerToggles}
                   />
                 ) : undefined
               }
@@ -220,7 +226,9 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
           mediaByEntry={mediaByEntry}
           currentTimeMs={playbackTimeMs}
           onCurrentTimeChange={setPlaybackTimeMs}
-          onShowLogEntries={onCompletedTripPanelChange ? () => onCompletedTripPanelChange("log") : undefined}
+          onShowLogEntries={
+            onCompletedTripPanelChange ? () => onCompletedTripPanelChange('log') : undefined
+          }
         />
       ) : null}
 

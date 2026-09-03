@@ -21,12 +21,18 @@ import {
 import { computePlaybackTimelineTicks } from '../lib/trip-playback-timeline-ticks'
 import { cn } from '../lib/cn'
 import { PLAYBACK_SPEEDS, PlaybackSpeedControl } from './PlaybackSpeedControl'
+import {
+  TripPlaybackInstrumentGraph,
+  TripPlaybackViewSelector,
+  usePlaybackViewState,
+} from './TripPlaybackDataPanel'
 
 const MAX_TIME_ZOOM = 16
 const PRESENTATION_LENGTH_MS = 120_000
 const DEFAULT_SPEED_INDEX = PLAYBACK_SPEEDS.indexOf(1)
-const TIMELINE_TRACK_TOP_PX = 48
-const TIMELINE_HEIGHT_PX = 76
+const TIMELINE_ENTRY_ROW_PX = 48
+const TIMELINE_GRAPH_ROW_PX = 44
+const TIMELINE_TRACK_SECTION_PX = 28
 
 type DragState = {
   pointerId: number
@@ -96,6 +102,9 @@ export function TripPlaybackOverlay({
 }: TripPlaybackOverlayProps) {
   const timelineRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
+  const currentTimeRef = useRef(currentTimeMs)
+  const wasPlayingRef = useRef(false)
+  currentTimeRef.current = currentTimeMs
   const chronologicalEntries = useMemo(
     () => [...entries].filter((entry) => !entry.deleted).sort(compareLogEntriesChronologically),
     [entries],
@@ -111,7 +120,21 @@ export function TripPlaybackOverlay({
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null)
   const [mediaEntryId, setMediaEntryId] = useState<string | null>(null)
   const [mediaPinned, setMediaPinned] = useState(false)
-  const windowRange = tripPlaybackWindow(range, windowCenterMs, timeZoom)
+  const {
+    options: panelOptions,
+    viewState,
+    togglePanel,
+    showTimelineEntries,
+    enabledGraphPanelIds,
+    showInstrumentGraph,
+  } = usePlaybackViewState(trip.id, tracks, chronologicalEntries)
+  const effectiveWindowCenterMs = playing ? currentTimeMs : windowCenterMs
+  const windowRange = tripPlaybackWindow(range, effectiveWindowCenterMs, timeZoom)
+  const graphTopPx = showTimelineEntries ? TIMELINE_ENTRY_ROW_PX : 0
+  const timelineTrackTopPx =
+    (showTimelineEntries ? TIMELINE_ENTRY_ROW_PX : 0) +
+    (showInstrumentGraph ? TIMELINE_GRAPH_ROW_PX + 4 : showTimelineEntries ? 0 : 22)
+  const timelineHeightPx = timelineTrackTopPx + TIMELINE_TRACK_SECTION_PX
   const timelineTicks = useMemo(
     () => computePlaybackTimelineTicks(windowRange, range.startMs),
     [range.startMs, windowRange],
@@ -134,8 +157,15 @@ export function TripPlaybackOverlay({
     (mediaIsVideo ? null : mediaSource(mediaItems))
 
   useEffect(() => {
-    onCurrentTimeChange(clamp(currentTimeMs, range.startMs, range.endMs))
-  }, [currentTimeMs, onCurrentTimeChange, range.endMs, range.startMs])
+    if (wasPlayingRef.current && !playing) {
+      setWindowCenterMs(currentTimeMs)
+    }
+    wasPlayingRef.current = playing
+  }, [currentTimeMs, playing])
+
+  useEffect(() => {
+    setWindowCenterMs(currentTimeMs)
+  }, [range.startMs, trip.id])
 
   useEffect(() => {
     if (!playing) return
@@ -147,9 +177,12 @@ export function TripPlaybackOverlay({
     const animate = (now: number) => {
       const elapsed = now - previousFrame
       previousFrame = now
-      const next = Math.min(range.endMs, currentTimeMs + elapsed * tripMsPerRealMs)
+      const next = Math.min(
+        range.endMs,
+        currentTimeRef.current + elapsed * tripMsPerRealMs,
+      )
+      currentTimeRef.current = next
       onCurrentTimeChange(next)
-      setWindowCenterMs(next)
       if (next >= range.endMs) {
         setPlaying(false)
         return
@@ -159,7 +192,7 @@ export function TripPlaybackOverlay({
 
     animationFrame = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(animationFrame)
-  }, [currentTimeMs, onCurrentTimeChange, playing, range.durationMs, range.endMs, speedIndex])
+  }, [onCurrentTimeChange, playing, range.durationMs, range.endMs, speedIndex])
 
   const updateEntryAtTime = (timeMs: number, thresholdMs: number) => {
     let nearest: LogEntry | null = null
@@ -194,7 +227,7 @@ export function TripPlaybackOverlay({
     const delta = ((clientX - drag.startX) / width) * drag.windowDurationMs
     const next = clamp(drag.startTimeMs + delta, range.startMs, range.endMs)
     onCurrentTimeChange(next)
-    const visible = tripPlaybackWindow(range, windowCenterMs, timeZoom)
+    const visible = tripPlaybackWindow(range, effectiveWindowCenterMs, timeZoom)
     const visiblePercent = (next - visible.startMs) / visible.durationMs
     if (visiblePercent < 0.12 || visiblePercent > 0.88) setWindowCenterMs(next)
     updateEntryAtTime(next, (visible.durationMs / width) * 28)
@@ -312,7 +345,7 @@ export function TripPlaybackOverlay({
           <div
             ref={timelineRef}
             className="relative touch-none select-none"
-            style={{ height: TIMELINE_HEIGHT_PX }}
+            style={{ height: timelineHeightPx }}
             onPointerDown={(event) => {
               if ((event.target as HTMLElement).closest('[data-playback-control]')) return
               event.currentTarget.setPointerCapture(event.pointerId)
@@ -371,15 +404,30 @@ export function TripPlaybackOverlay({
               if (!mediaPinned) setMediaEntryId(null)
             }}
           >
+            {showInstrumentGraph ? (
+              <div
+                className="absolute inset-x-0 px-0"
+                style={{ top: graphTopPx, height: TIMELINE_GRAPH_ROW_PX }}
+              >
+                <TripPlaybackInstrumentGraph
+                  tripId={trip.id}
+                  tracks={tracks}
+                  enabledGraphPanelIds={enabledGraphPanelIds}
+                  windowRange={windowRange}
+                  currentTimeMs={currentTimeMs}
+                />
+              </div>
+            ) : null}
+
             <div
               className="absolute inset-x-0 h-1 rounded-full bg-white/25"
-              style={{ top: TIMELINE_TRACK_TOP_PX }}
+              style={{ top: timelineTrackTopPx }}
             />
             {timelineTicks.map((tick) => (
               <div
                 key={`${tick.kind}-${tick.timeMs}`}
                 className="pointer-events-none absolute -translate-x-1/2"
-                style={{ left: `${tick.percent}%`, top: TIMELINE_TRACK_TOP_PX }}
+                style={{ left: `${tick.percent}%`, top: timelineTrackTopPx }}
               >
                 <div
                   className={
@@ -404,40 +452,42 @@ export function TripPlaybackOverlay({
               </div>
             ))}
 
-            {chronologicalEntries.map((entry) => {
-              const timeMs = new Date(entry.timestamp).getTime()
-              if (timeMs < windowRange.startMs || timeMs > windowRange.endMs) return null
-              const left = ((timeMs - windowRange.startMs) / windowRange.durationMs) * 100
-              const media = mediaByEntry.get(entry.id) ?? []
-              const entryIsVideo = isVideoMedia(entry, media)
-              const thumbnail =
-                media.find((item) => item.thumbnailUrl)?.thumbnailUrl ??
-                (entryIsVideo ? null : mediaSource(media))
-              return (
-                <button
-                  key={entry.id}
-                  type="button"
-                  data-entry-id={entry.id}
-                  className="absolute top-0 z-10 flex -translate-x-1/2 touch-manipulation flex-col items-center"
-                  style={{ left: `${left}%`, height: TIMELINE_TRACK_TOP_PX }}
-                  aria-label={`${entryTitle(entry.type)} at ${formatClock(timeMs)}`}
-                >
-                  {thumbnail ? (
-                    <span className="relative block size-10 shrink-0 overflow-hidden rounded-lg border-2 border-white bg-black shadow-md">
-                      <img src={thumbnail} alt="" className="size-full object-cover" />
-                      {entryIsVideo ? (
-                        <Play className="absolute left-1/2 top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 drop-shadow" fill="currentColor" />
-                      ) : null}
-                    </span>
-                  ) : (
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/40 bg-black/70 text-sm shadow-md">
-                      {entryIcon(entry.type)}
-                    </span>
-                  )}
-                  <span className="w-px flex-1 bg-white/70" aria-hidden />
-                </button>
-              )
-            })}
+            {showTimelineEntries
+              ? chronologicalEntries.map((entry) => {
+                  const timeMs = new Date(entry.timestamp).getTime()
+                  if (timeMs < windowRange.startMs || timeMs > windowRange.endMs) return null
+                  const left = ((timeMs - windowRange.startMs) / windowRange.durationMs) * 100
+                  const media = mediaByEntry.get(entry.id) ?? []
+                  const entryIsVideo = isVideoMedia(entry, media)
+                  const thumbnail =
+                    media.find((item) => item.thumbnailUrl)?.thumbnailUrl ??
+                    (entryIsVideo ? null : mediaSource(media))
+                  return (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      data-entry-id={entry.id}
+                      className="absolute top-0 z-10 flex -translate-x-1/2 touch-manipulation flex-col items-center"
+                      style={{ left: `${left}%`, height: timelineTrackTopPx }}
+                      aria-label={`${entryTitle(entry.type)} at ${formatClock(timeMs)}`}
+                    >
+                      {thumbnail ? (
+                        <span className="relative block size-10 shrink-0 overflow-hidden rounded-lg border-2 border-white bg-black shadow-md">
+                          <img src={thumbnail} alt="" className="size-full object-cover" />
+                          {entryIsVideo ? (
+                            <Play className="absolute left-1/2 top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 drop-shadow" fill="currentColor" />
+                          ) : null}
+                        </span>
+                      ) : (
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/40 bg-black/70 text-sm shadow-md">
+                          {entryIcon(entry.type)}
+                        </span>
+                      )}
+                      <span className="w-px flex-1 bg-white/70" aria-hidden />
+                    </button>
+                  )
+                })
+              : null}
 
             <div
               className="pointer-events-none absolute inset-y-0 z-20 w-px bg-[var(--brand)] shadow-[0_0_8px_rgba(235,69,57,0.7)]"
@@ -449,7 +499,7 @@ export function TripPlaybackOverlay({
             </div>
           </div>
 
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center" data-playback-control>
+          <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center" data-playback-control>
             <div className="justify-self-start">
               {onShowLogEntries ? (
                 <button
@@ -457,7 +507,8 @@ export function TripPlaybackOverlay({
                   data-playback-control
                   onClick={onShowLogEntries}
                   className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
-                  aria-label="Log entries"
+                  aria-label="Log entries list"
+                  title="Log entries list"
                 >
                   <List className="size-4" />
                 </button>
@@ -514,6 +565,14 @@ export function TripPlaybackOverlay({
             </button>
 
             <PlaybackSpeedControl speedIndex={speedIndex} onSpeedIndexChange={setSpeedIndex} />
+            </div>
+
+            <div className="justify-self-end">
+              <TripPlaybackViewSelector
+                options={panelOptions}
+                viewState={viewState}
+                onToggle={togglePanel}
+              />
             </div>
           </div>
         </div>

@@ -27,8 +27,8 @@ import { syncTripOperationalFields } from '../domain/trip-state'
 import { advanceIso, effectiveTimeTravelIso } from '../lib/dev-time-travel'
 import { isDevModeAvailable } from '../lib/dev-mode'
 import { sortLogEntriesChronologically } from '../lib/logbook-entry-order'
-import { buildTripFromGpx } from '../lib/gpx-trip-import'
-import { GpxImportError } from '../lib/gpx-import'
+import { buildTripFromGpxFiles } from '../lib/gpx-trip-import'
+import { GpxImportError, type GpxImportFile } from '../lib/gpx-import'
 import {
   addPendingDeletedTripId,
   addPendingTripId,
@@ -131,6 +131,13 @@ type LogbookState = {
     gpxXml: string,
     options?: { boatName?: string; fileName?: string },
   ) => Promise<Trip>
+  importTripFromGpxFiles: (
+    files: GpxImportFile[],
+    options?: { boatName?: string },
+  ) => Promise<Trip>
+  autoMapCoverTripIds: string[]
+  requestAutoMapCover: (tripId: string) => void
+  clearAutoMapCoverRequest: (tripId: string) => void
 }
 
 function nowIso() {
@@ -281,6 +288,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
   syncQueued: false,
   online: typeof navigator === 'undefined' ? true : navigator.onLine,
   syncMessage: null,
+  autoMapCoverTripIds: [],
 
   load: async () => {
     const snapshot = await bootstrapLogbook()
@@ -672,9 +680,15 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
   },
 
   importTripFromGpx: async (gpxXml, options) => {
-    let imported: ReturnType<typeof buildTripFromGpx>
+    return get().importTripFromGpxFiles([{ gpxXml, fileName: options?.fileName }], {
+      boatName: options?.boatName,
+    })
+  },
+
+  importTripFromGpxFiles: async (files, options) => {
+    let imported: ReturnType<typeof buildTripFromGpxFiles>
     try {
-      imported = buildTripFromGpx(gpxXml, options)
+      imported = buildTripFromGpxFiles(files, options)
     } catch (error) {
       if (error instanceof GpxImportError) throw error
       throw new GpxImportError(
@@ -682,27 +696,24 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       )
     }
 
-    const { trip, entries, track } = imported
-    const { legs, entries: entriesWithLegs } = rebuildLegsForTrip(
-      trip.id,
-      entries,
-      [],
-    )
+    const { trip, entries, tracks, legs: tripLegs } = imported
 
     await putTrip(trip)
-    await putTripTrack(track)
-    await Promise.all(entriesWithLegs.map((entry) => putLogEntry(entry)))
+    await Promise.all(tracks.map((track) => putTripTrack(track)))
+    await Promise.all(entries.map((entry) => putLogEntry(entry)))
     await persistLegsAndEntries(
-      legs.filter((leg) => leg.tripId === trip.id),
-      entriesWithLegs.filter((entry) => entry.tripId === trip.id),
+      tripLegs,
+      entries.filter((entry) => entry.tripId === trip.id),
     )
     addPendingTripId(trip.id)
 
+    get().requestAutoMapCover(trip.id)
+
     set((state) => ({
       trips: sortTrips([trip, ...state.trips]),
-      legs: [...state.legs.filter((leg) => leg.tripId !== trip.id), ...legs.filter((leg) => leg.tripId === trip.id)],
-      entries: sortEntries([...state.entries, ...entriesWithLegs]),
-      tracks: [...state.tracks, track],
+      legs: [...state.legs.filter((leg) => leg.tripId !== trip.id), ...tripLegs],
+      entries: sortEntries([...state.entries, ...entries]),
+      tracks: [...state.tracks, ...tracks],
       selectedTripId: trip.id,
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
@@ -718,6 +729,20 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     }
 
     return trip
+  },
+
+  requestAutoMapCover: (tripId) => {
+    set((state) => ({
+      autoMapCoverTripIds: state.autoMapCoverTripIds.includes(tripId)
+        ? state.autoMapCoverTripIds
+        : [...state.autoMapCoverTripIds, tripId],
+    }))
+  },
+
+  clearAutoMapCoverRequest: (tripId) => {
+    set((state) => ({
+      autoMapCoverTripIds: state.autoMapCoverTripIds.filter((id) => id !== tripId),
+    }))
   },
 
   syncNow: async () => {

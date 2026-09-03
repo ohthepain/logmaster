@@ -13,7 +13,11 @@ import { TripActionsMenu } from '../../../components/TripActionsMenu'
 import type { Trip } from '../../../domain/logbook'
 import { cn } from '../../../lib/cn'
 import { formatDateTime } from '../../../lib/logbook-format'
-import { tripCoverPhotoUrl, tripDisplayName } from '../../../lib/trip-display'
+import {
+  tripCoverPhotoUrl,
+  tripDisplayName,
+  tripListStatusKicker,
+} from '../../../lib/trip-display'
 import { useSession } from '../../../lib/auth-client'
 import { useLogbookStore } from '../../../stores/logbook'
 
@@ -128,6 +132,7 @@ function TripCard({
 }) {
   const coverPhoto = tripCoverPhotoUrl(trip)
   const name = tripDisplayName(trip)
+  const statusKicker = tripListStatusKicker(trip)
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
@@ -154,19 +159,25 @@ function TripCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3 pr-24">
               <div className="min-w-0">
-                <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--kicker)]">
-                  {trip.status.replace('_', ' ')}
-                </p>
-                <h3 className="m-0 mt-1 truncate text-lg font-bold text-[var(--sea-ink)]">
+                {statusKicker ? (
+                  <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--kicker)]">
+                    {statusKicker}
+                  </p>
+                ) : null}
+                <h3
+                  className={cn(
+                    'm-0 truncate text-lg font-bold text-[var(--sea-ink)]',
+                    statusKicker && 'mt-1',
+                  )}
+                >
                   {name}
                 </h3>
                 <p className="m-0 mt-1 text-sm text-[var(--sea-ink-soft)]">
                   {trip.status === 'PLANNED'
                     ? `Created ${formatDateTime(trip.createdAt)}`
-                    : formatDateTime(trip.startedAt)}
-                  {trip.completedAt
-                    ? ` · completed ${formatDateTime(trip.completedAt)}`
-                    : ''}
+                    : trip.status === 'COMPLETED' && trip.completedAt
+                      ? `${formatDateTime(trip.startedAt)} → ${formatDateTime(trip.completedAt)}`
+                      : formatDateTime(trip.startedAt)}
                 </p>
               </div>
             </div>

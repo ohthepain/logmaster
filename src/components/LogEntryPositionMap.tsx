@@ -78,6 +78,8 @@ export function LogEntryPositionMap({
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
   const mapDataLayerToggles = useAppOptionsStore((state) => state.mapDataLayerToggles)
   const setMapDataLayerToggles = useAppOptionsStore((state) => state.setMapDataLayerToggles)
+  const mapLogEntryLayerToggles = useAppOptionsStore((state) => state.mapLogEntryLayerToggles)
+  const setMapLogEntryLayerToggles = useAppOptionsStore((state) => state.setMapLogEntryLayerToggles)
 
   useMapDataLayerSync(mapRef, mapReady, mapDataLayerToggles, {
     enablePopups: true,
@@ -88,8 +90,11 @@ export function LogEntryPositionMap({
     [entries, legs, tracks],
   )
   const legEntryGeoJson = useMemo(
-    () => buildLegEntryPointsGeoJson(entries, legs),
-    [entries, legs],
+    () =>
+      buildLegEntryPointsGeoJson(entries, legs, {
+        entryLayerToggles: mapLogEntryLayerToggles,
+      }),
+    [entries, legs, mapLogEntryLayerToggles],
   )
 
   useEffect(() => {
@@ -300,6 +305,8 @@ export function LogEntryPositionMap({
               <SailingMapLayerPanel
                 toggles={mapDataLayerToggles}
                 onChange={setMapDataLayerToggles}
+                logEntryToggles={mapLogEntryLayerToggles}
+                onLogEntryChange={setMapLogEntryLayerToggles}
               />
             }
             onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}

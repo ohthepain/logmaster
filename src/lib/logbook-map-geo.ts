@@ -13,6 +13,11 @@ import {
   logEntryMapMarkerImageId,
   logEntryMapOutline,
 } from './log-entry-map-marker'
+import {
+  defaultMapLogEntryLayerToggles,
+  filterEntriesForMapLogLayers,
+  type MapLogEntryLayerToggles,
+} from './map-log-entry-layers'
 import { buildTripTracksGeoJson, trackSampleMapPoints } from './trip-track-geo'
 
 export type MapLngLat = { longitude: number; latitude: number }
@@ -105,9 +110,16 @@ export function buildLegTrackGeoJson(
   }
 }
 
-export function buildLegEntryPointsGeoJson(entries: LogEntry[], legs: Leg[] = []) {
+export function buildLegEntryPointsGeoJson(
+  entries: LogEntry[],
+  legs: Leg[] = [],
+  options?: { entryLayerToggles?: MapLogEntryLayerToggles },
+) {
+  const toggles = options?.entryLayerToggles ?? defaultMapLogEntryLayerToggles()
   const legColors = legColorLookup(legs)
-  const sorted = collapseColocatedLogEntries(positionedEntries(entries))
+  const sorted = collapseColocatedLogEntries(
+    positionedEntries(filterEntriesForMapLogLayers(entries, toggles)),
+  )
 
   return {
     type: 'FeatureCollection' as const,

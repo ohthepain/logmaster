@@ -15,6 +15,7 @@ import type { TripPlaybackPosition } from "../lib/trip-playback";
 import { TRIP_TRACK_FIT_MARGIN_FRACTION, SAILING_MAP_EASE_MS } from "../lib/sailing-map-viewport";
 import { downscaleJpegDataUrl, withCaptureTimeout } from "../lib/map-cover-capture";
 import { cn } from "../lib/cn";
+import { useAppOptionsStore } from "../stores/app-options";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { LogEntryMapMarkerHoverTarget } from "./LogEntryMapMarkerHoverTarget";
 import type { MapEntryPreviewState } from "./LogEntryMapMarkerHoverTarget";
@@ -124,6 +125,8 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
   const [mapReady, setMapReady] = useState(false);
   const [entryPreview, setEntryPreview] = useState<MapEntryPreviewState | null>(null);
 
+  const mapLogEntryLayerToggles = useAppOptionsStore((state) => state.mapLogEntryLayerToggles);
+
   const entriesById = useMemo(
     () => new Map(entries.map((entry) => [entry.id, entry])),
     [entries],
@@ -134,11 +137,19 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
     () => buildLegTrackGeoJson(entries, legs, tracks),
     [entries, legs, tracks],
   );
-  const legEntryGeoJson = useMemo(() => buildLegEntryPointsGeoJson(entries, legs), [entries, legs]);
+  const legEntryGeoJson = useMemo(
+    () =>
+      buildLegEntryPointsGeoJson(entries, legs, {
+        entryLayerToggles: mapLogEntryLayerToggles,
+      }),
+    [entries, legs, mapLogEntryLayerToggles],
+  );
   const viewportTarget = useMemo(
     () => resolveTripLogMapViewport(trip, entries, { focusEntryId, tracks }),
     [trip, entries, focusEntryId, tracks],
   );
+  const viewportPointCount =
+    viewportTarget.kind === "fit-track" ? viewportTarget.points.length : 0;
 
   const notifyInitialViewportSettled = useCallback(() => {
     if (initialViewportNotifiedRef.current) return;
@@ -150,7 +161,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
     initialFitDoneRef.current = false;
     initialViewportNotifiedRef.current = false;
     userControlledViewportRef.current = false;
-  }, [trip.id, focusEntryId, viewportTarget.kind]);
+  }, [trip.id, focusEntryId, viewportTarget.kind, viewportPointCount]);
 
   const shouldFollowUser = interactive && showCurrentPosition && viewportTarget.kind === "current-location";
 
@@ -338,7 +349,7 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
     initialFitDoneRef.current = false;
     initialViewportNotifiedRef.current = false;
     userControlledViewportRef.current = false;
-  }, [trip.id, focusEntryId, viewportTarget.kind]);
+  }, [trip.id, focusEntryId, viewportTarget.kind, viewportPointCount]);
 
   useEffect(() => {
     if (!mapReady) return;

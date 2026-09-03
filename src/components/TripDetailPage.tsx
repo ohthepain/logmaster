@@ -184,15 +184,53 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
       coverKind: "photo",
       coverPhotoDataUrl,
     });
+    useLogbookStore.getState().clearAutoMapCoverRequest(tripId);
   }, [tripId]);
 
+  const tryAutoMapCover = useCallback(
+    async (options?: { force?: boolean }) => {
+      const currentTrip = useLogbookStore.getState().trips.find((item) => item.id === tripId);
+      if (currentTrip?.coverPhotoDataUrl) {
+        useLogbookStore.getState().clearAutoMapCoverRequest(tripId);
+        return true;
+      }
+      if (!options?.force && autoMapCoverAttemptedRef.current === tripId) {
+        return false;
+      }
+
+      try {
+        await saveMapAsCover();
+        autoMapCoverAttemptedRef.current = tripId;
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [saveMapAsCover, tripId],
+  );
+
   const handleInitialMapViewportSettled = useCallback(() => {
-    const currentTrip = useLogbookStore.getState().trips.find((item) => item.id === tripId);
-    if (currentTrip?.coverPhotoDataUrl) return;
-    if (autoMapCoverAttemptedRef.current === tripId) return;
-    autoMapCoverAttemptedRef.current = tripId;
-    void saveMapAsCover().catch(() => {});
-  }, [saveMapAsCover, tripId]);
+    void tryAutoMapCover();
+  }, [tryAutoMapCover]);
+
+  const wantsAutoMapCover = store.autoMapCoverTripIds.includes(tripId);
+  const hasPositionTrack = tripTracks.some((track) => track.kind === "position");
+
+  useEffect(() => {
+    if (!trip || trip.coverPhotoDataUrl) return;
+    if (!hasPositionTrack && !wantsAutoMapCover) return;
+
+    const delays = wantsAutoMapCover ? [0, 500, 1500, 3000] : [0];
+    const timers = delays.map((delay) =>
+      window.setTimeout(() => {
+        void tryAutoMapCover({ force: wantsAutoMapCover });
+      }, delay),
+    );
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [trip, hasPositionTrack, wantsAutoMapCover, tryAutoMapCover, tripId, tripTracks.length]);
 
   useEffect(() => {
     autoMapCoverAttemptedRef.current = null;

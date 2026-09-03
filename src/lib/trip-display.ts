@@ -5,6 +5,14 @@ export function tripDisplayName(trip: Pick<Trip, 'title' | 'boatName'>): string 
   return title || trip.boatName
 }
 
+/** Trips list kicker — only surface status when a trip is actively underway. */
+export function tripListStatusKicker(
+  trip: Pick<Trip, 'status'>,
+): string | null {
+  if (trip.status === 'IN_PROGRESS') return 'In progress'
+  return null
+}
+
 export function defaultTripTitle(boatName: string, date = new Date()): string {
   const monthYear = new Intl.DateTimeFormat(undefined, {
     month: 'long',

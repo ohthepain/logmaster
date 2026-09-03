@@ -11,6 +11,11 @@ import {
   
 } from '../lib/map-data-layers'
 import type {MapDataLayerToggles} from '../lib/map-data-layers';
+import {
+  defaultMapLogEntryLayerToggles,
+  mergeMapLogEntryLayerToggles,
+} from '../lib/map-log-entry-layers'
+import type { MapLogEntryLayerToggles } from '../lib/map-log-entry-layers'
 
 export type DevTripReplay = {
   sourceTripId: string
@@ -53,6 +58,9 @@ type AppOptions = {
   /** Vector map data overlays (marinas, seamarks, place labels, …). */
   mapDataLayerToggles: MapDataLayerToggles
   setMapDataLayerToggles: (next: Partial<MapDataLayerToggles>) => void
+  /** Log entry markers on trip maps. */
+  mapLogEntryLayerToggles: MapLogEntryLayerToggles
+  setMapLogEntryLayerToggles: (next: Partial<MapLogEntryLayerToggles>) => void
 }
 
 export const useAppOptionsStore = create<AppOptions>()(
@@ -121,10 +129,20 @@ export const useAppOptionsStore = create<AppOptions>()(
         set((s) => ({
           mapDataLayerToggles: { ...s.mapDataLayerToggles, ...next },
         })),
+      mapLogEntryLayerToggles: defaultMapLogEntryLayerToggles(),
+      setMapLogEntryLayerToggles: (next: Partial<MapLogEntryLayerToggles>) =>
+        set((s) => ({
+          mapLogEntryLayerToggles: { ...s.mapLogEntryLayerToggles, ...next },
+        })),
     }),
     {
       name: 'travelmode-app-options',
       onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.mapLogEntryLayerToggles = mergeMapLogEntryLayerToggles(
+            state.mapLogEntryLayerToggles,
+          )
+        }
         setLocationAccessEnabled(Boolean(state?.recordingTripId))
       },
     },

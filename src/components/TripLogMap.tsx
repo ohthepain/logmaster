@@ -153,6 +153,8 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
   const devMode = useAppOptionsStore((state) => state.devMode);
   const mapDataLayerToggles = useAppOptionsStore((state) => state.mapDataLayerToggles);
   const setMapDataLayerToggles = useAppOptionsStore((state) => state.setMapDataLayerToggles);
+  const mapLogEntryLayerToggles = useAppOptionsStore((state) => state.mapLogEntryLayerToggles);
+  const setMapLogEntryLayerToggles = useAppOptionsStore((state) => state.setMapLogEntryLayerToggles);
   const devDraggablePosition =
     devMode && isDevModeAvailable() && showCurrentPosition && interactive;
   const [mapReady, setMapReady] = useState(false);
@@ -176,11 +178,19 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
     () => buildLegTrackGeoJson(entries, legs, tracks),
     [entries, legs, tracks],
   );
-  const legEntryGeoJson = useMemo(() => buildLegEntryPointsGeoJson(entries, legs), [entries, legs]);
+  const legEntryGeoJson = useMemo(
+    () =>
+      buildLegEntryPointsGeoJson(entries, legs, {
+        entryLayerToggles: mapLogEntryLayerToggles,
+      }),
+    [entries, legs, mapLogEntryLayerToggles],
+  );
   const viewportTarget = useMemo(
     () => resolveTripLogMapViewport(trip, entries, { focusEntryId, tracks }),
     [trip, entries, focusEntryId, tracks],
   );
+  const viewportPointCount =
+    viewportTarget.kind === "fit-track" ? viewportTarget.points.length : 0;
 
   const notifyInitialViewportSettled = useCallback(() => {
     if (initialViewportNotifiedRef.current) return;
@@ -589,7 +599,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
   useEffect(() => {
     initialFitDoneRef.current = false;
     initialViewportNotifiedRef.current = false;
-  }, [trip.id, focusEntryId, viewportTarget.kind]);
+  }, [trip.id, focusEntryId, viewportTarget.kind, viewportPointCount]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -681,6 +691,8 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
               <SailingMapLayerPanel
                 toggles={mapDataLayerToggles}
                 onChange={setMapDataLayerToggles}
+                logEntryToggles={mapLogEntryLayerToggles}
+                onLogEntryChange={setMapLogEntryLayerToggles}
               />
             }
             onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}

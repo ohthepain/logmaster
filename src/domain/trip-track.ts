@@ -46,7 +46,9 @@ export const TRIP_TRACK_KINDS = [
   ...INSTRUMENT_TRACK_KINDS,
 ] as const
 
-export type TripTrackKind = (typeof TRIP_TRACK_KINDS)[number]
+export type TripTrackKind =
+  | (typeof TRIP_TRACK_KINDS)[number]
+  | `gpx:${string}`
 
 export type TripTrackEncoding =
   | 'delta-v1'

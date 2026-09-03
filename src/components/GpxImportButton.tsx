@@ -3,7 +3,12 @@ import { Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppIconButtonTooltip } from './AppIconButtonTooltip'
 import { cn } from '../lib/cn'
-import { GpxImportError } from '../lib/gpx-import'
+import {
+  GpxFolderImportNeededError,
+  GpxImportError,
+  listGpxFilesFromDirectoryHandle,
+  readGpxImportFilesFromFileList,
+} from '../lib/gpx-import'
 import { useLogbookStore } from '../stores/logbook'
 
 export type GpxImportButtonHandle = {
@@ -16,35 +21,100 @@ type GpxImportButtonProps = {
   tooltip?: string
 }
 
+type DirectoryPickerWindow = Window & {
+  showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>
+}
+
 export const GpxImportButton = forwardRef<GpxImportButtonHandle, GpxImportButtonProps>(
-  function GpxImportButton({ onImported, className, tooltip = 'Upload GPX file' }, ref) {
+  function GpxImportButton(
+    {
+      onImported,
+      className,
+      tooltip = 'Import GPX files (Shift+click for OpenCPN export folder)',
+    },
+    ref,
+  ) {
     const fileInputRef = useRef<HTMLInputElement>(null)
-    const importTripFromGpx = useLogbookStore((state) => state.importTripFromGpx)
+    const folderInputRef = useRef<HTMLInputElement>(null)
+    const importTripFromGpxFiles = useLogbookStore((state) => state.importTripFromGpxFiles)
     const [importing, setImporting] = useState(false)
 
-    useImperativeHandle(ref, () => ({
-      open: () => {
-        if (!importing) fileInputRef.current?.click()
-      },
-    }))
+    const importFromFiles = async (files: File[]) => {
+      const gpxFiles = await readGpxImportFilesFromFileList(files)
+      const trip = await importTripFromGpxFiles(gpxFiles)
+      toast.success(`Imported ${trip.title ?? trip.boatName}`)
+      onImported?.(trip.id)
+    }
 
-    const handlePickFile = () => {
+    const openFilePicker = () => {
       if (importing) return
       fileInputRef.current?.click()
     }
 
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0]
-      event.target.value = ''
-      if (!file) return
+    const openFolderPicker = () => {
+      if (importing) return
+      folderInputRef.current?.click()
+    }
+
+    const pickExportFolder = async () => {
+      if (importing) return
+
+      const directoryPicker = (window as DirectoryPickerWindow).showDirectoryPicker
+      if (directoryPicker) {
+        try {
+          setImporting(true)
+          const directory = await directoryPicker.call(window)
+          const files = await listGpxFilesFromDirectoryHandle(directory)
+          if (files.length === 0) {
+            throw new GpxImportError('No GPX files were found in that folder.')
+          }
+          await importFromFiles(files)
+          return
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') return
+          if (error instanceof GpxImportError) {
+            toast.error(error.message)
+            return
+          }
+          // Fall back to the hidden directory input below.
+        } finally {
+          setImporting(false)
+        }
+      }
+
+      openFolderPicker()
+    }
+
+    useImperativeHandle(ref, () => ({
+      open: () => {
+        openFilePicker()
+      },
+    }))
+
+    const handlePickFile = (event: React.MouseEvent<HTMLButtonElement>) => {
+      if (importing) return
+      if (event.shiftKey) {
+        void pickExportFolder()
+        return
+      }
+      openFilePicker()
+    }
+
+    const handleSelection = async (
+      selectedFiles: File[],
+      openFolderPickerOnFailure: boolean,
+    ) => {
+      if (selectedFiles.length === 0) return
 
       setImporting(true)
       try {
-        const gpxXml = await file.text()
-        const trip = await importTripFromGpx(gpxXml, { fileName: file.name })
-        toast.success(`Imported ${trip.title ?? trip.boatName}`)
-        onImported?.(trip.id)
+        await importFromFiles(selectedFiles)
       } catch (error) {
+        if (openFolderPickerOnFailure && error instanceof GpxFolderImportNeededError) {
+          toast.info(error.message)
+          void pickExportFolder()
+          return
+        }
         toast.error(
           error instanceof GpxImportError
             ? error.message
@@ -57,14 +127,35 @@ export const GpxImportButton = forwardRef<GpxImportButtonHandle, GpxImportButton
       }
     }
 
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFiles = event.target.files ? [...event.target.files] : []
+      event.target.value = ''
+      await handleSelection(selectedFiles, true)
+    }
+
+    const handleFolderChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFiles = event.target.files ? [...event.target.files] : []
+      event.target.value = ''
+      await handleSelection(selectedFiles, false)
+    }
+
     return (
       <>
         <input
           ref={fileInputRef}
           type="file"
           accept=".gpx,application/gpx+xml,text/xml,application/xml"
+          multiple
           className="hidden"
           onChange={(event) => void handleFileChange(event)}
+        />
+        <input
+          ref={folderInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(event) => void handleFolderChange(event)}
+          {...({ webkitdirectory: '', directory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
         />
         <AppIconButtonTooltip label={tooltip} side="bottom">
           <button

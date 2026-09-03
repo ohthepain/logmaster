@@ -31,7 +31,8 @@ export function MapButtonTooltip({
           'whitespace-nowrap rounded-md border border-white/25 bg-black/75 px-2 py-1',
           'text-[10px] font-semibold uppercase tracking-[0.12em] text-white shadow-sm backdrop-blur-sm',
           'opacity-0 transition-opacity duration-150',
-          'group-hover:opacity-100 group-focus-within:opacity-100',
+          '[@media(hover:hover)]:group-hover:opacity-100',
+          'group-has-focus-visible:opacity-100',
         )}
       >
         {label}
