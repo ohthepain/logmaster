@@ -7,6 +7,7 @@ import { exportTripAsGpx, exportTripAsSignalK } from '../lib/trip-export'
 import { tripDisplayName } from '../lib/trip-display'
 import { useLogbookStore } from '../stores/logbook'
 import { Modal } from './Modal'
+import { AppIconButtonTooltip } from './AppIconButtonTooltip'
 
 type TripActionsMenuProps = {
   trip: Trip
@@ -14,6 +15,7 @@ type TripActionsMenuProps = {
   onDeleted?: () => void
   onOpenChange?: (open: boolean) => void
   className?: string
+  tooltip?: string
 }
 
 export function TripActionsMenu({
@@ -22,6 +24,7 @@ export function TripActionsMenu({
   onDeleted,
   onOpenChange,
   className,
+  tooltip = 'Trip options',
 }: TripActionsMenuProps) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -97,24 +100,27 @@ export function TripActionsMenu({
   return (
     <>
       <div className={cn('relative', className)} ref={rootRef}>
-        <button
-          type="button"
-          disabled={busy}
-          aria-label={`Actions for ${displayName}`}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          aria-controls={menuId}
-          onClick={(event) => {
-            event.stopPropagation()
-            setOpen((current) => !current)
-          }}
-          className={cn(
-            'flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--chip-line)] bg-[var(--surface)] text-[var(--sea-ink)]',
-            'transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60',
-          )}
-        >
-          <MoreHorizontal className="h-4 w-4" strokeWidth={2} aria-hidden />
-        </button>
+        <AppIconButtonTooltip label={tooltip} side="bottom">
+          <button
+            type="button"
+            disabled={busy}
+            aria-label={`${tooltip} for ${displayName}`}
+            title={tooltip}
+            aria-haspopup="menu"
+            aria-expanded={open}
+            aria-controls={menuId}
+            onClick={(event) => {
+              event.stopPropagation()
+              setOpen((current) => !current)
+            }}
+            className={cn(
+              'flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--chip-line)] bg-[var(--surface)] text-[var(--sea-ink)]',
+              'transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60',
+            )}
+          >
+            <MoreHorizontal className="h-4 w-4" strokeWidth={2} aria-hidden />
+          </button>
+        </AppIconButtonTooltip>
 
         {open ? (
           <div

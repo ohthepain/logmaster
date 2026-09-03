@@ -7,6 +7,7 @@ import {
   GpxImportButton,
   type GpxImportButtonHandle,
 } from '../../../components/GpxImportButton'
+import { GpxUrlImportButton } from '../../../components/GpxUrlImportButton'
 import { StartTripLauncher } from '../../../components/StartTripLauncher'
 import { TripActionsMenu } from '../../../components/TripActionsMenu'
 import type { Trip } from '../../../domain/logbook'
@@ -73,8 +74,9 @@ function TripsPage() {
           Trips
         </h1>
         <div className="flex items-center gap-2">
+          <GpxUrlImportButton onImported={handleImportedTrip} />
           <GpxImportButton ref={gpxImportRef} onImported={handleImportedTrip} />
-          <AddButton onClick={openStartTrip} aria-label="Add trip" />
+          <AddButton onClick={openStartTrip} aria-label="New trip" tooltip="New trip" />
         </div>
       </div>
 

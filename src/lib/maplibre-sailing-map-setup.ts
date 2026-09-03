@@ -12,6 +12,16 @@ import {
   openSeaMapSeamarkTileUrl,
   OPEN_SEAMAP_DARK_PAINT,
 } from './maplibre-openseamap'
+import {
+  OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID,
+  OPEN_SEAMAP_BATHYMETRY_RELIEF_PAINT,
+  OPEN_SEAMAP_BATHYMETRY_RELIEF_SOURCE_ID,
+  openSeaMapBathymetryReliefTileUrl,
+} from './maplibre-openseamap-bathymetry'
+import {
+  ensureOpenSeaMapViewportImageLayers,
+  sailingMapRasterInsertBeforeId,
+} from './maplibre-openseamap-viewport-layers'
 import { ensureMapDataLayerStackOrder } from './maplibre-data-layers'
 
 const HILLSHADE_LAYER_ID = 'Hillshade'
@@ -102,6 +112,42 @@ export function reloadSeamarkTiles(map: maplibregl.Map) {
   if (source && 'reload' in source && typeof source.reload === 'function') {
     source.reload()
   }
+}
+
+export function addOpenSeaMapBathymetryOverlays(map: maplibregl.Map) {
+  const insertBefore = sailingMapRasterInsertBeforeId(map)
+
+  if (!map.getSource(OPEN_SEAMAP_BATHYMETRY_RELIEF_SOURCE_ID)) {
+    map.addSource(OPEN_SEAMAP_BATHYMETRY_RELIEF_SOURCE_ID, {
+      type: 'raster',
+      tiles: [openSeaMapBathymetryReliefTileUrl()],
+      tileSize: 256,
+      minzoom: 0,
+      maxzoom: 11,
+      scheme: 'xyz',
+    })
+  }
+
+  if (!map.getLayer(OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID)) {
+    map.addLayer(
+      {
+        id: OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID,
+        type: 'raster',
+        source: OPEN_SEAMAP_BATHYMETRY_RELIEF_SOURCE_ID,
+        layout: { visibility: 'none' },
+        paint: {
+          ...OPEN_SEAMAP_BATHYMETRY_RELIEF_PAINT,
+          'raster-fade-duration': 0,
+          'raster-resampling': 'linear',
+        },
+      },
+      insertBefore,
+    )
+  }
+
+  ensureOpenSeaMapViewportImageLayers(map)
+
+  ensureMapDataLayerStackOrder(map)
 }
 
 export function addOpenSeaMapSeamarkOverlay(map: maplibregl.Map) {

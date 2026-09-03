@@ -13,6 +13,7 @@ type SailingMapControlStackProps = {
   onZoomIn: () => void
   onZoomOut: () => void
   onLocate?: () => void
+  locateLabel?: string
   layers?: ReactNode
   onExpand?: () => void
   className?: string
@@ -22,6 +23,7 @@ export function SailingMapControlStack({
   onZoomIn,
   onZoomOut,
   onLocate,
+  locateLabel = 'Center on your location',
   layers,
   onExpand,
   className,
@@ -29,7 +31,7 @@ export function SailingMapControlStack({
   return (
     <div
       className={cn(
-        'sailing-map-controls pointer-events-none absolute right-2.5 top-1/2 z-20 -translate-y-1/2 sm:right-3',
+        'sailing-map-controls pointer-events-none absolute right-2.5 top-1/2 z-40 -translate-y-1/2 sm:right-3',
         className,
       )}
     >
@@ -47,7 +49,7 @@ export function SailingMapControlStack({
           <Minus className="size-4" strokeWidth={2.25} />
         </MapControlButton>
         {onLocate ? (
-          <MapControlButton label="Center on your location" onClick={onLocate} bordered>
+          <MapControlButton label={locateLabel} onClick={onLocate} bordered>
             <LocateFixed className="size-4" strokeWidth={2.25} />
           </MapControlButton>
         ) : null}

@@ -13,6 +13,7 @@ import {
 import type { MapLngLat } from '../lib/logbook-map-geo'
 import {
   addOpenSeaMapSeamarkOverlay,
+  addOpenSeaMapBathymetryOverlays,
   bindSeamarkTileRefreshOnViewChange,
   finalizeSailingMapLayers,
   guardSailingMapAgainstTerrain,
@@ -134,6 +135,7 @@ export function LogEntryPositionMap({
           if (!map) return
           applySailingLogMapTheme(map)
           addOpenSeaMapSeamarkOverlay(map)
+          addOpenSeaMapBathymetryOverlays(map)
           installMapDataLayers(map)
 
           map.addSource(TRACK_SOURCE, {

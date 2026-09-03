@@ -9,6 +9,7 @@ import {
   bindMapDataLayerRefreshOnViewChange,
   refreshMapDataLayersForViewport,
 } from './maplibre-data-layers'
+import { bindOpenSeaMapContoursImageRefresh, refreshOpenSeaMapContoursImage } from './maplibre-openseamap-viewport-layers'
 
 export function effectiveMapDataLayerToggles(
   toggles: MapDataLayerToggles,
@@ -39,8 +40,21 @@ export function useMapDataLayerSync(
     const map = mapRef.current
     if (!map || !mapReady) return
     applyMapDataLayerToggles(map, effectiveToggles)
+    refreshOpenSeaMapContoursImage(
+      map,
+      effectiveToggles['openseamap-bathymetry-contours'],
+    )
     void refreshMapDataLayersForViewport(map, effectiveToggles)
   }, [mapRef, mapReady, effectiveToggles])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !mapReady) return
+    return bindOpenSeaMapContoursImageRefresh(
+      map,
+      () => effectiveTogglesRef.current['openseamap-bathymetry-contours'],
+    )
+  }, [mapRef, mapReady])
 
   useEffect(() => {
     const map = mapRef.current

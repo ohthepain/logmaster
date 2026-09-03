@@ -14,6 +14,7 @@ const GROUP_LABELS: Record<MapDataLayerGroup, string> = {
   places: 'Places',
   mooring: 'Mooring & shelter',
   navigation: 'Navigation',
+  bathymetry: 'Bathymetry',
 }
 
 type SailingMapLayerPanelProps = {
@@ -48,7 +49,7 @@ export function SailingMapLayerPanel({
       </MapControlButton>
 
       {open ? (
-        <div className="absolute right-[calc(100%+0.5rem)] top-0 z-20 w-[min(18rem,calc(100vw-3rem))] rounded-lg border border-[rgba(126,200,232,0.2)] bg-[rgba(26,51,72,0.97)] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+        <div className="absolute bottom-0 right-[calc(100%+0.5rem)] z-50 w-[min(18rem,calc(100vw-3rem))] rounded-lg border border-[rgba(126,200,232,0.2)] bg-[rgba(26,51,72,0.97)] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
             <p className="m-0 mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">
               Map layers
             </p>

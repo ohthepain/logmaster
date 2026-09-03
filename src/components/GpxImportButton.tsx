@@ -1,6 +1,7 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import { Upload } from 'lucide-react'
 import { toast } from 'sonner'
+import { AppIconButtonTooltip } from './AppIconButtonTooltip'
 import { cn } from '../lib/cn'
 import { GpxImportError } from '../lib/gpx-import'
 import { useLogbookStore } from '../stores/logbook'
@@ -12,10 +13,11 @@ export type GpxImportButtonHandle = {
 type GpxImportButtonProps = {
   onImported?: (tripId: string) => void
   className?: string
+  tooltip?: string
 }
 
 export const GpxImportButton = forwardRef<GpxImportButtonHandle, GpxImportButtonProps>(
-  function GpxImportButton({ onImported, className }, ref) {
+  function GpxImportButton({ onImported, className, tooltip = 'Upload GPX file' }, ref) {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const importTripFromGpx = useLogbookStore((state) => state.importTripFromGpx)
     const [importing, setImporting] = useState(false)
@@ -64,19 +66,21 @@ export const GpxImportButton = forwardRef<GpxImportButtonHandle, GpxImportButton
           className="hidden"
           onChange={(event) => void handleFileChange(event)}
         />
-        <button
-          type="button"
-          onClick={handlePickFile}
-          disabled={importing}
-          aria-label="Import GPX"
-          title="Import GPX"
-          className={cn(
-            'inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-[var(--chip-line)] bg-[var(--surface-strong)] text-[var(--sea-ink)] transition hover:-translate-y-px hover:bg-[var(--chip-bg)] disabled:opacity-60',
-            className,
-          )}
-        >
-          <Upload className="size-5" strokeWidth={2.2} />
-        </button>
+        <AppIconButtonTooltip label={tooltip} side="bottom">
+          <button
+            type="button"
+            onClick={handlePickFile}
+            disabled={importing}
+            aria-label={tooltip}
+            title={tooltip}
+            className={cn(
+              'inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-[var(--chip-line)] bg-[var(--surface-strong)] text-[var(--sea-ink)] transition hover:-translate-y-px hover:bg-[var(--chip-bg)] disabled:opacity-60',
+              className,
+            )}
+          >
+            <Upload className="size-5" strokeWidth={2.2} />
+          </button>
+        </AppIconButtonTooltip>
       </>
     )
   },

@@ -31,6 +31,9 @@ function partsForDataset(dataset: OsmPointDatasetId): QueryPart[] {
           kind: 'seamark',
           ql: 'nwr["seamark:type"~"^(buoy|beacon|light_major|light_minor|notice|restricted_area|wreck)$"]',
         },
+        { kind: 'depth', ql: 'node["seamark:type"="depth"]' },
+        { kind: 'depth', ql: 'node["seamark:sounding:value"]' },
+        { kind: 'depth', ql: 'node["depth"]["seamark:type"]' },
         { kind: 'wreck', ql: 'nwr["historic"="wreck"]' },
       ]
     default:
@@ -65,6 +68,8 @@ export function kindForTags(
     }
     if (seamarkType === 'notice') return 'notice'
     if (seamarkType === 'restricted_area') return 'restricted'
+    if (seamarkType === 'depth') return 'depth'
+    if (tags['seamark:sounding:value']?.trim()) return 'depth'
     if (seamarkType === 'wreck' || tags.historic === 'wreck') return 'wreck'
     return 'other'
   }

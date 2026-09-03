@@ -3,6 +3,7 @@ import {
   formatLightCharacteristicFromBase,
   formatLightCharacteristics,
   formatMapFeaturePopupHtml,
+  formatOsmDepthLabel,
   osmColourNameToHex,
   osmLightColourNames,
   osmLightDisplayColor,
@@ -32,6 +33,13 @@ describe('osm-feature-display', () => {
       }),
     ).toBe('#22c55e')
     expect(osmLightDisplayColor({})).toBe('#fde047')
+  })
+
+  it('formats OSM depth labels for map display', () => {
+    expect(formatOsmDepthLabel({ depth: '12' })).toBe('12 m')
+    expect(formatOsmDepthLabel({ 'seamark:depth': '4.5 m' })).toBe('4.5 m')
+    expect(formatOsmDepthLabel({ 'seamark:sounding:value': '8' })).toBe('8 m')
+    expect(formatOsmDepthLabel({})).toBeNull()
   })
 
   it('parses stringified GeoJSON tags', () => {

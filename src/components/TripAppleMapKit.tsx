@@ -536,8 +536,27 @@ export const TripAppleMapKit = forwardRef<TripAppleMapKitHandle, TripAppleMapKit
     })();
   }, [mapId, releaseFollowForManualViewport]);
 
+  const playbackPositionRef = useRef(playbackPosition);
+  playbackPositionRef.current = playbackPosition;
+
   const handleLocate = useCallback(() => {
     void (async () => {
+      const playback = playbackPositionRef.current;
+      if (playback) {
+        userControlledViewportRef.current = true;
+        await releaseFollowForManualViewport();
+        await LogmasterAppleMap.setCamera({
+          mapId,
+          center: {
+            latitude: playback.latitude,
+            longitude: playback.longitude,
+          },
+          spanLatitude: 0.04,
+          spanLongitude: 0.04,
+        });
+        return;
+      }
+
       const gps = await getCurrentPosition({ force: true });
       currentPositionRef.current = {
         latitude: gps.latitude ?? DEV_FALLBACK_POSITION.latitude,

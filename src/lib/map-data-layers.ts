@@ -4,6 +4,9 @@ export type OsmPointDatasetId = "marinas" | "harbours" | "anchorages" | "places"
 
 export type MapDataLayerId =
   | "openseamap-raster"
+  | "openseamap-bathymetry-relief"
+  | "openseamap-bathymetry-contours"
+  | "osm-depth-soundings"
   | "geonames-cities"
   | "osm-marinas"
   | "osm-harbours"
@@ -16,7 +19,12 @@ export type MapDataLayerId =
   | "osm-seamarks-lights"
   | "osm-seamarks-other";
 
-export type MapDataLayerGroup = "basemap" | "places" | "mooring" | "navigation";
+export type MapDataLayerGroup =
+  | "basemap"
+  | "places"
+  | "mooring"
+  | "navigation"
+  | "bathymetry";
 
 export type MapDataLayerDefinition = {
   id: MapDataLayerId;
@@ -79,6 +87,39 @@ export const MAP_DATA_LAYERS: MapDataLayerDefinition[] = [
     persistToggle: true,
     circleColor: "#7ec8e8",
     circleRadius: 0,
+  },
+  {
+    id: "openseamap-bathymetry-relief",
+    title: "Depth relief (GEBCO)",
+    description: "Shaded underwater terrain from GEBCO (~100 m+ resolution).",
+    group: "bathymetry",
+    defaultVisible: false,
+    persistToggle: true,
+    circleColor: "#1e3a5f",
+    circleRadius: 0,
+  },
+  {
+    id: "openseamap-bathymetry-contours",
+    title: "Depth contours",
+    description: "OpenSeaMap depth contour lines (not for navigation).",
+    group: "bathymetry",
+    defaultVisible: false,
+    persistToggle: true,
+    circleColor: "#38bdf8",
+    circleRadius: 0,
+  },
+  {
+    id: "osm-depth-soundings",
+    title: "Spot depths",
+    description: "Tappable OSM depth soundings — sparse; rebuild seamarks after query updates.",
+    group: "bathymetry",
+    defaultVisible: false,
+    persistToggle: true,
+    dataset: "seamarks",
+    tileFile: "seamarks.json.gz",
+    kindFilter: ["depth"],
+    circleColor: "#93c5fd",
+    circleRadius: 4,
   },
   {
     id: "geonames-cities",
@@ -256,5 +297,25 @@ export function mapDataLayerRenderLayerId(layerId: MapDataLayerId): string {
   if (layerId === "osm-seamarks-other") {
     return mapDataLayerSymbolLayerId(layerId);
   }
+  if (layerId === "osm-depth-soundings") {
+    return mapDataLayerCircleLayerId(layerId);
+  }
   return mapDataLayerCircleLayerId(layerId);
+}
+
+/** Symbol labels paired with {@link mapDataLayerRenderLayerId} for depth soundings. */
+export function mapDataLayerAuxiliaryLayerId(layerId: MapDataLayerId): string | null {
+  if (layerId === "osm-depth-soundings") {
+    return mapDataLayerSymbolLayerId(layerId);
+  }
+  return null;
+}
+
+/** Raster-only overlays toggled in the layers panel (no vector source). */
+export function isRasterMapDataLayerId(layerId: MapDataLayerId): boolean {
+  return (
+    layerId === "openseamap-raster" ||
+    layerId === "openseamap-bathymetry-relief" ||
+    layerId === "openseamap-bathymetry-contours"
+  );
 }

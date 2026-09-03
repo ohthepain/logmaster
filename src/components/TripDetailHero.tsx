@@ -8,11 +8,14 @@ import { getNativePlatform } from "../lib/platform";
 import { useAppOptionsStore } from "../stores/app-options";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { SailingMapControlStack } from "./SailingMapControlStack";
+import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
+import { SailingMapLayerPanel } from "./SailingMapLayerPanel";
 import { TripLogMap } from "./TripLogMap";
 import { TripOperationalStatus } from "./TripOperationalStatus";
 import { TripPlaybackInfoPanel } from "./TripPlaybackInfoPanel";
 import { TripPlaybackOverlay } from "./TripPlaybackOverlay";
 import { TripMapChromeButton } from "./TripMapChromeButton";
+import { cn } from "../lib/cn";
 import { tripPlaybackPositionAt, tripPlaybackRange } from "../lib/trip-playback";
 
 export type CompletedTripPanel = "map" | "log";
@@ -58,12 +61,17 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
   const isActiveTrip = trip.status === "IN_PROGRESS" || trip.status === "PLANNED";
   const isPlayback = trip.status === "COMPLETED";
   const recordingTripId = useAppOptionsStore((state) => state.recordingTripId);
+  const mapDataLayerToggles = useAppOptionsStore((state) => state.mapDataLayerToggles);
+  const setMapDataLayerToggles = useAppOptionsStore((state) => state.setMapDataLayerToggles);
   const showCurrentPosition = isActiveTrip && recordingTripId === trip.id;
   const showInteractiveMap = isActiveTrip || isPlayback || cover.kind === "map";
   const showPhoto = !showInteractiveMap && cover.kind === "photo" && cover.photoUrl;
   const showOperationalOverlay = isActiveTrip;
   const useExternalIosMapControls = getNativePlatform() === "ios" && showInteractiveMap;
+  const showMapDataLayers = getNativePlatform() !== "ios";
   const mapRef = useRef<TripMapHandle>(null);
+  const fullscreenMapRef = useRef<TripMapHandle>(null);
+  const [mapFullscreenOpen, setMapFullscreenOpen] = useState(false);
   const playbackRange = useMemo(
     () => tripPlaybackRange(trip, mapEntries, mapTracks),
     [mapEntries, mapTracks, trip],
@@ -117,12 +125,12 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
             onEntrySelect={onEntrySelect}
             mediaByEntry={mediaByEntry}
             mapClassName="absolute inset-0 size-full"
-            allowFullscreen={isActiveTrip}
+            allowFullscreen={showInteractiveMap}
             showControls={!useExternalIosMapControls}
             showCurrentPosition={showCurrentPosition}
             interactive={isActiveTrip || isPlayback}
             embedded
-            showSeamarks={isActiveTrip}
+            showSeamarks={isActiveTrip || isPlayback}
             playbackPosition={playbackPosition}
             playbackMode={isPlayback}
             boatIconId={trip.boatIconId}
@@ -143,10 +151,65 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
 
       {useExternalIosMapControls ? (
         <SailingMapControlStack
+          className={cn(
+            showPlaybackOverlay &&
+              "top-auto bottom-[calc(13.5rem+env(safe-area-inset-bottom,0px))] translate-y-0",
+          )}
           onZoomIn={() => mapRef.current?.zoomIn()}
           onZoomOut={() => mapRef.current?.zoomOut()}
-          onLocate={isPlayback ? undefined : () => mapRef.current?.locate()}
+          onLocate={() => mapRef.current?.locate()}
+          locateLabel={isPlayback ? "Center on boat position" : undefined}
+          layers={
+            showMapDataLayers ? (
+              <SailingMapLayerPanel
+                toggles={mapDataLayerToggles}
+                onChange={setMapDataLayerToggles}
+              />
+            ) : undefined
+          }
+          onExpand={showInteractiveMap ? () => setMapFullscreenOpen(true) : undefined}
         />
+      ) : null}
+
+      {mapFullscreenOpen ? (
+        <SailingMapFullscreenModal title="Trip map" onClose={() => setMapFullscreenOpen(false)}>
+          <div className="relative h-full min-h-0">
+            <TripLogMap
+              ref={fullscreenMapRef}
+              trip={trip}
+              entries={mapEntries}
+              legs={mapLegs}
+              tracks={mapTracks}
+              selectedEntryId={selectedEntryId}
+              onEntrySelect={onEntrySelect}
+              mediaByEntry={mediaByEntry}
+              mapClassName="absolute inset-0 size-full"
+              allowFullscreen={false}
+              showControls={false}
+              showCurrentPosition={showCurrentPosition}
+              interactive={isActiveTrip || isPlayback}
+              embedded
+              showSeamarks={isActiveTrip || isPlayback}
+              playbackPosition={playbackPosition}
+              playbackMode={isPlayback}
+              boatIconId={trip.boatIconId}
+            />
+            <SailingMapControlStack
+              onZoomIn={() => fullscreenMapRef.current?.zoomIn()}
+              onZoomOut={() => fullscreenMapRef.current?.zoomOut()}
+              onLocate={() => fullscreenMapRef.current?.locate()}
+              locateLabel={isPlayback ? "Center on boat position" : undefined}
+              layers={
+                showMapDataLayers ? (
+                  <SailingMapLayerPanel
+                    toggles={mapDataLayerToggles}
+                    onChange={setMapDataLayerToggles}
+                  />
+                ) : undefined
+              }
+            />
+          </div>
+        </SailingMapFullscreenModal>
       ) : null}
 
       {showPlaybackOverlay ? (

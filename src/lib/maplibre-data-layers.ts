@@ -9,12 +9,11 @@ import { degreeTilesForBbox,
 import type {GeoFeatureCollection} from './geo-feature-tiles';
 import {
   MAP_DATA_LAYERS,
+  isRasterMapDataLayerId,
+  mapDataLayerAuxiliaryLayerId,
   mapDataLayerCircleLayerId,
-  mapDataLayerRenderLayerId
-  
-  
-  
-  
+  mapDataLayerRenderLayerId,
+  mapDataLayerSymbolLayerId,
 } from './map-data-layers'
 import type {MapDataLayerDefinition, MapDataLayerId, MapDataLayerToggles, OsmPointDatasetId} from './map-data-layers';
 import {
@@ -28,6 +27,10 @@ import {
 } from './osm-feature-display'
 import { appOsmPointTileUrl  } from './osm-point-tiles'
 import type {OsmPointProperties} from './osm-point-tiles';
+import {
+  OPEN_SEAMAP_BATHYMETRY_CONTOURS_LAYER_ID,
+  OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID,
+} from './maplibre-openseamap-bathymetry'
 import {
   OPEN_SEAMAP_SEAMARK_LAYER_ID,
   OPEN_SEAMAP_SEAMARK_SOURCE_ID,
@@ -118,6 +121,24 @@ function kindFilterExpression(kinds: string[]) {
   ] as maplibregl.FilterSpecification
 }
 
+const RASTER_TOGGLE_LAYER_IDS: Partial<Record<MapDataLayerId, string>> = {
+  'openseamap-raster': OPEN_SEAMAP_SEAMARK_LAYER_ID,
+  'openseamap-bathymetry-relief': OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID,
+  'openseamap-bathymetry-contours': OPEN_SEAMAP_BATHYMETRY_CONTOURS_LAYER_ID,
+}
+
+function moveLayerBeforeIfExists(
+  map: maplibregl.Map,
+  layerId: string,
+  beforeId: string,
+) {
+  if (!map.getLayer(layerId) || !map.getLayer(beforeId)) return
+  try {
+    map.moveLayer(layerId, beforeId)
+  } catch {
+    /* ignore */
+  }
+}
 const APP_MAP_OVERLAY_LAYER_IDS = [
   'trip-log-track-line',
   'trip-log-entry-circles',
@@ -152,7 +173,7 @@ export function visibleMapDataLayerIds(
   toggles?: MapDataLayerToggles,
 ): string[] {
   return MAP_DATA_LAYERS.filter((layer) => {
-    if (layer.id === 'openseamap-raster') return false
+    if (isRasterMapDataLayerId(layer.id)) return false
     if (toggles && !toggles[layer.id]) return false
     const layerId = mapDataLayerRenderLayerId(layer.id)
     if (!map.getLayer(layerId)) return false
@@ -192,10 +213,10 @@ export function queryTappableMapDataFeatures(
   })
 }
 
-/** Raster seamarks below vector overlays; trip/compose graphics stay on top. */
+/** Raster overlays below vector layers; trip/compose graphics stay on top. */
 export function ensureMapDataLayerStackOrder(map: maplibregl.Map) {
   const geoLayerIds = MAP_DATA_LAYERS.filter(
-    (layer) => layer.id !== 'openseamap-raster',
+    (layer) => !isRasterMapDataLayerId(layer.id),
   )
     .map((layer) => mapDataLayerRenderLayerId(layer.id))
     .filter((id) => map.getLayer(id))
@@ -208,12 +229,35 @@ export function ensureMapDataLayerStackOrder(map: maplibregl.Map) {
     }
   }
 
-  if (map.getLayer(OPEN_SEAMAP_SEAMARK_LAYER_ID) && geoLayerIds[0]) {
-    try {
-      map.moveLayer(OPEN_SEAMAP_SEAMARK_LAYER_ID, geoLayerIds[0])
-    } catch {
-      /* ignore */
-    }
+  const anchor = geoLayerIds[0] ?? null
+  if (anchor) {
+    moveLayerBeforeIfExists(map, OPEN_SEAMAP_SEAMARK_LAYER_ID, anchor)
+  }
+
+  const seamarkOrAnchor = map.getLayer(OPEN_SEAMAP_SEAMARK_LAYER_ID)
+    ? OPEN_SEAMAP_SEAMARK_LAYER_ID
+    : anchor
+  if (seamarkOrAnchor) {
+    moveLayerBeforeIfExists(
+      map,
+      OPEN_SEAMAP_BATHYMETRY_CONTOURS_LAYER_ID,
+      seamarkOrAnchor,
+    )
+  }
+
+  const topBathymetryRaster = [
+    OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID,
+    OPEN_SEAMAP_BATHYMETRY_CONTOURS_LAYER_ID,
+  ]
+    .filter((id) => map.getLayer(id))
+    .at(-1)
+  const contoursOrSeamarkOrAnchor = topBathymetryRaster ?? seamarkOrAnchor
+  if (contoursOrSeamarkOrAnchor) {
+    moveLayerBeforeIfExists(
+      map,
+      OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID,
+      contoursOrSeamarkOrAnchor,
+    )
   }
 
   for (const layerId of APP_MAP_OVERLAY_LAYER_IDS) {
@@ -262,9 +306,86 @@ function ensureHazardSymbolLayer(map: maplibregl.Map, layer: MapDataLayerDefinit
   })
 }
 
+function defaultMapTextFont(map: maplibregl.Map): string[] {
+  const layers = map.getStyle().layers ?? []
+  for (const layer of layers) {
+    if (layer.type !== 'symbol') continue
+    const textFont = layer.layout?.['text-font']
+    if (Array.isArray(textFont) && textFont.every((entry) => typeof entry === 'string')) {
+      return textFont as string[]
+    }
+  }
+  return ['Roboto Regular', 'Arial Unicode MS Regular']
+}
+
+const depthLabelFilter = [
+  'all',
+  ['has', 'depthLabel'],
+  ['!=', ['get', 'depthLabel'], ''],
+] as maplibregl.FilterSpecification
+
+function ensureDepthSoundingLayers(map: maplibregl.Map, layer: MapDataLayerDefinition) {
+  if (!layer.dataset || !layer.kindFilter) return
+
+  const circleLayerId = mapDataLayerCircleLayerId(layer.id)
+  const symbolLayerId = mapDataLayerSymbolLayerId(layer.id)
+  ensureDatasetSource(map, layer.dataset)
+  const sourceId = datasetSourceId(layer.dataset)
+  const kindFilter = kindFilterExpression(layer.kindFilter)
+  const labelFilter = [
+    'all',
+    kindFilter,
+    depthLabelFilter,
+  ] as maplibregl.FilterSpecification
+
+  if (!map.getLayer(circleLayerId)) {
+    map.addLayer({
+      id: circleLayerId,
+      type: 'circle',
+      source: sourceId,
+      filter: labelFilter,
+      paint: {
+        'circle-radius': 5,
+        'circle-color': layer.circleColor,
+        'circle-opacity': 0.85,
+        'circle-stroke-width': 1.5,
+        'circle-stroke-color': '#0f172a',
+      },
+      layout: { visibility: 'none' },
+    })
+  }
+
+  if (!map.getLayer(symbolLayerId)) {
+    map.addLayer({
+      id: symbolLayerId,
+      type: 'symbol',
+      source: sourceId,
+      filter: labelFilter,
+      layout: {
+        visibility: 'none',
+        'text-field': ['get', 'depthLabel'],
+        'text-size': 11,
+        'text-font': defaultMapTextFont(map),
+        'text-offset': [0, -1.1],
+        'text-allow-overlap': true,
+        'text-ignore-placement': true,
+      },
+      paint: {
+        'text-color': '#e0f2fe',
+        'text-halo-color': '#0f172a',
+        'text-halo-width': 1.2,
+      },
+    })
+  }
+}
+
 function ensureDataLayerCircle(map: maplibregl.Map, layer: MapDataLayerDefinition) {
   if (layer.id === 'osm-seamarks-other') {
     ensureHazardSymbolLayer(map, layer)
+    return
+  }
+  if (layer.id === 'osm-depth-soundings') {
+    ensureDepthSoundingLayers(map, layer)
     return
   }
 
@@ -303,7 +424,7 @@ function ensureDataLayerCircle(map: maplibregl.Map, layer: MapDataLayerDefinitio
 
 export function installMapDataLayers(map: maplibregl.Map) {
   for (const layer of MAP_DATA_LAYERS) {
-    if (layer.id === 'openseamap-raster') continue
+    if (isRasterMapDataLayerId(layer.id)) continue
     ensureDataLayerCircle(map, layer)
   }
   ensureMapDataLayerStackOrder(map)
@@ -313,16 +434,17 @@ export function applyMapDataLayerToggles(
   map: maplibregl.Map,
   toggles: MapDataLayerToggles,
 ) {
-  if (map.getLayer(OPEN_SEAMAP_SEAMARK_LAYER_ID)) {
+  for (const [toggleId, layerId] of Object.entries(RASTER_TOGGLE_LAYER_IDS)) {
+    if (!map.getLayer(layerId)) continue
     map.setLayoutProperty(
-      OPEN_SEAMAP_SEAMARK_LAYER_ID,
+      layerId,
       'visibility',
-      toggles['openseamap-raster'] ? 'visible' : 'none',
+      toggles[toggleId as MapDataLayerId] ? 'visible' : 'none',
     )
   }
 
   for (const layer of MAP_DATA_LAYERS) {
-    if (layer.id === 'openseamap-raster') continue
+    if (isRasterMapDataLayerId(layer.id)) continue
     const layerId = mapDataLayerRenderLayerId(layer.id)
     if (!map.getLayer(layerId)) continue
     map.setLayoutProperty(
@@ -330,6 +452,14 @@ export function applyMapDataLayerToggles(
       'visibility',
       toggles[layer.id] ? 'visible' : 'none',
     )
+    const auxiliaryLayerId = mapDataLayerAuxiliaryLayerId(layer.id)
+    if (auxiliaryLayerId && map.getLayer(auxiliaryLayerId)) {
+      map.setLayoutProperty(
+        auxiliaryLayerId,
+        'visibility',
+        toggles[layer.id] ? 'visible' : 'none',
+      )
+    }
   }
 }
 

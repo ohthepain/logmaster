@@ -95,16 +95,40 @@ export function osmLightColourNames(tags: Record<string, string>): string[] {
   return [...new Set(names)]
 }
 
+export function formatOsmDepthLabel(tags: Record<string, string>): string | null {
+  const raw =
+    tags.depth?.trim() ||
+    tags['seamark:depth']?.trim() ||
+    tags['seamark:depth:depth']?.trim() ||
+    tags['seamark:sounding:value']?.trim() ||
+    null
+  if (!raw) return null
+  return /m$/i.test(raw) ? raw : `${raw} m`
+}
+
 export function enrichOsmPointProperties(
   properties: Record<string, unknown>,
 ): Record<string, unknown> {
   const kind = typeof properties.kind === 'string' ? properties.kind : null
   const tags = parseOsmFeatureTags(properties.tags)
-  if (kind !== 'light') return properties
-  return {
-    ...properties,
-    markerColor: osmLightDisplayColor(tags),
+  if (kind === 'light') {
+    return {
+      ...properties,
+      markerColor: osmLightDisplayColor(tags),
+    }
   }
+  if (kind === 'depth') {
+    const depthLabel = formatOsmDepthLabel(tags)
+    return {
+      ...properties,
+      depthLabel,
+      name:
+        typeof properties.name === 'string' && properties.name.trim().length > 0
+          ? properties.name
+          : depthLabel,
+    }
+  }
+  return properties
 }
 
 function humanizeToken(value: string): string {
@@ -119,6 +143,7 @@ export function formatSeamarkType(tags: Record<string, string>): string | null {
   if (seamarkType === 'light_major') return 'Major light'
   if (seamarkType === 'light_minor') return 'Minor light'
   if (seamarkType === 'restricted_area') return 'Restricted area'
+  if (seamarkType === 'depth') return 'Depth sounding'
   return humanizeToken(seamarkType)
 }
 
@@ -437,8 +462,26 @@ function placePopupRows(tags: Record<string, string>): PopupRow[] {
   ])
 }
 
+function depthPopupRows(tags: Record<string, string>): PopupRow[] {
+  const rows: PopupRow[] = []
+  const depthLabel = formatOsmDepthLabel(tags)
+  if (depthLabel) rows.push({ label: 'Depth', value: depthLabel })
+  rows.push(
+    ...rowsFromTags(tags, [
+      { key: 'seamark:depth:quality', label: 'Quality' },
+      { key: 'seamark:depth:accuracy', label: 'Accuracy' },
+      { key: 'source', label: 'Source' },
+      { key: 'note', label: 'Note' },
+    ]),
+  )
+  return rows
+}
+
 function popupRowsForFeature(input: MapFeaturePopupInput): PopupRow[] {
   const { layerId, kind, tags } = input
+  if (layerId === 'osm-depth-soundings' || kind === 'depth') {
+    return depthPopupRows(tags)
+  }
   if (layerId === 'osm-seamarks-lights' || kind === 'light') {
     return lightPopupRows(tags)
   }

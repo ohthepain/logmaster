@@ -11,10 +11,9 @@ import type {FetchMarinasOptions, MarinaCellResult, OverpassElement} from '../ma
 import { kindForTags, overpassQueryForCell } from './queries'
 import {
   mergeOsmPointFeatures
-  
-  
 } from './schema'
 import type {OsmPointFeature} from './schema';
+import { formatOsmDepthLabel } from '../../lib/osm-feature-display'
 
 function defaultKindForDataset(dataset: OsmPointDatasetId): string {
   if (dataset === 'harbours') return 'harbour'
@@ -54,6 +53,7 @@ export function overpassElementToOsmPoint(
   }
   const tags = element.tags ?? {}
   const kind = kindForTags(dataset, tags, defaultKind)
+  const depthLabel = kind === 'depth' ? formatOsmDepthLabel(tags) : null
   return {
     type: 'Feature',
     geometry: { type: 'Point', coordinates: [lon, lat] },
@@ -61,10 +61,11 @@ export function overpassElementToOsmPoint(
       id: `osm:${element.type}/${element.id}`,
       osmType: element.type,
       osmId: element.id,
-      name: featureName(tags),
+      name: featureName(tags) ?? depthLabel,
       kind,
       tags,
       sources: ['osm'],
+      ...(depthLabel ? { depthLabel } : {}),
     },
   }
 }

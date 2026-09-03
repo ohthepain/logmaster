@@ -15,6 +15,7 @@ import {
 import { boatIconSrc } from "../lib/boat-icons";
 import {
   addOpenSeaMapSeamarkOverlay,
+  addOpenSeaMapBathymetryOverlays,
   bindSeamarkTileRefreshOnViewChange,
   finalizeSailingMapLayers,
   guardSailingMapAgainstTerrain,
@@ -27,7 +28,14 @@ import { applySailingLogMapTheme, sailingMapLegTrackPaint, SailingMapColors } fr
 import { addLogEntrySymbolLayer, syncLogEntryMapMarkerImages, syncLogEntryMapIconSelection } from "../lib/map-log-entry-icons";
 import { getGeoJsonSource } from "../lib/maplibre-source";
 import { defaultRasterMapId } from "../lib/map-styles";
-import { centerMapOnCurrentLocation, fitMapToTripTrack, juiceMapFocus, SAILING_MAP_INITIAL_ZOOM } from "../lib/sailing-map-viewport";
+import {
+  centerMapOnCurrentLocation,
+  centerMapOnPoint,
+  fitMapToTripTrack,
+  juiceMapFocus,
+  SAILING_MAP_INITIAL_ZOOM,
+  SAILING_MAP_LOCATE_ZOOM,
+} from "../lib/sailing-map-viewport";
 import { captureMaplibreSnapshot, withCaptureTimeout } from "../lib/map-cover-capture";
 import type { TripMapHandle } from "../lib/trip-map-handle";
 import {
@@ -193,18 +201,25 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
     return withCaptureTimeout(captureMaplibreSnapshot(map));
   }, [mapReady]);
 
+  const handleLocate = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (playbackMode && playbackPosition) {
+      centerMapOnPoint(map, playbackPosition, SAILING_MAP_LOCATE_ZOOM);
+      return;
+    }
+    void centerMapOnCurrentLocation(map);
+  }, [playbackMode, playbackPosition]);
+
   useImperativeHandle(
     ref,
     () => ({
       zoomIn: () => mapRef.current?.zoomIn({ duration: 200 }),
       zoomOut: () => mapRef.current?.zoomOut({ duration: 200 }),
-      locate: () => {
-        const map = mapRef.current;
-        if (map) void centerMapOnCurrentLocation(map);
-      },
+      locate: handleLocate,
       captureMapSnapshot,
     }),
-    [captureMapSnapshot],
+    [captureMapSnapshot, handleLocate],
   );
 
   useEffect(() => {
@@ -277,6 +292,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
           if (!map) return;
           applySailingLogMapTheme(map);
           addOpenSeaMapSeamarkOverlay(map);
+          addOpenSeaMapBathymetryOverlays(map);
           installMapDataLayers(map);
 
           map.addSource(TRACK_SOURCE, {
@@ -629,12 +645,6 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
     mapRef.current?.zoomOut({ duration: 200 });
   }, []);
 
-  const handleLocate = useCallback(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    void centerMapOnCurrentLocation(map);
-  }, []);
-
   const mapShell = (
     <div
       className="relative h-full min-h-0 w-full overflow-hidden"
@@ -658,16 +668,21 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
       {mapReady && showControls ? (
         <>
           <SailingMapControlStack
-            className={controlStackClassName}
+            className={cn(
+              playbackMode &&
+                "top-auto bottom-[calc(13.5rem+env(safe-area-inset-bottom,0px))] translate-y-0",
+              controlStackClassName,
+            )}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
-            onLocate={playbackMode ? undefined : handleLocate}
-            layers={playbackMode ? undefined : (
+            onLocate={handleLocate}
+            locateLabel={playbackMode ? 'Center on boat position' : undefined}
+            layers={
               <SailingMapLayerPanel
                 toggles={mapDataLayerToggles}
                 onChange={setMapDataLayerToggles}
               />
-            )}
+            }
             onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}
           />
         </>

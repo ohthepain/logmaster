@@ -11,6 +11,7 @@ export type OsmPointProperties = {
   kind: string
   tags: Record<string, string>
   sources: ['osm']
+  depthLabel?: string | null
 }
 
 export function appOsmPointTileUrl(

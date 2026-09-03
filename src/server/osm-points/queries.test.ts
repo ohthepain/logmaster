@@ -9,6 +9,12 @@ describe('osm-points queries', () => {
     expect(kindForTags('seamarks', { 'seamark:type': 'light_major' }, 'other')).toBe(
       'light',
     )
+    expect(kindForTags('seamarks', { 'seamark:type': 'depth' }, 'other')).toBe(
+      'depth',
+    )
+    expect(kindForTags('seamarks', { 'seamark:sounding:value': '12' }, 'other')).toBe(
+      'depth',
+    )
     expect(kindForTags('seamarks', { historic: 'wreck' }, 'other')).toBe('wreck')
   })
 
@@ -25,6 +31,8 @@ describe('osm-points queries', () => {
       east: -5.2,
     })
     expect(query).toContain('seamark:type"~"^(buoy|beacon')
+    expect(query).toContain('node["seamark:type"="depth"]')
+    expect(query).toContain('node["seamark:sounding:value"]')
     expect(query).toContain('nwr["historic"="wreck"](49.9,-8.2,52.9,-5.2)')
     expect(query).not.toContain('nwr["seamark:type"="buoy"]')
   })
