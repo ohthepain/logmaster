@@ -155,7 +155,7 @@ Terraform creates per-environment secrets:
 | Secret | Keys |
 |--------|------|
 | `logmaster-{env}-database` | `DATABASE_URL` |
-| `logmaster-{env}-app` | `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AWS_SES_FROM_EMAIL`, `MAPTILER_API_KEY` |
+| `logmaster-{env}-app` | `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AWS_SES_FROM_EMAIL`, `MAPTILER_API_KEY`, `AISSTREAM_API_KEY` |
 
 Optional third-party values can be pulled from existing account-level Secrets Manager ARNs via tfvars (`google_client_id_secret_arn`, etc.).
 
@@ -165,6 +165,13 @@ Optional third-party values can be pulled from existing account-level Secrets Ma
 2. Run `./scripts/set-google-oauth-secrets.sh staging` (reads from local `.env`, updates the app secret, forces ECS redeploy).
 
 **Map tiles on deploy:** ECS reads `MAPTILER_API_KEY` from the same app secret. If it is empty, `/api/map-style-vector` and `/api/map-tiles/...` return **503** and the map shows “Map style failed (503)”. Either set `maptiler_api_key_secret_arn` in tfvars and `terraform apply`, or run `./scripts/set-maptiler-secrets.sh production` (reads `MAPTILER_API_KEY` or `VITE_MAPTILER_API_KEY` from `.env`, updates the secret, redeploys).
+
+**AIS live layer on deploy:** ECS reads `AISSTREAM_API_KEY` from the same app secret. If it is empty, `/api/ais/vessels` returns **503** and the AIS map layer stays empty. Either:
+
+1. Create an account-level secret (plain string API key), set `aisstream_api_key_secret_arn` in `environments/{env}/terraform.tfvars`, and `terraform apply`, or
+2. Run `./scripts/set-aisstream-secrets.sh staging` (reads `AISSTREAM_API_KEY` from `.env`, merges into the app secret, forces ECS redeploy).
+
+Do **not** put the API key in tfvars — only the Secrets Manager ARN. Keep the key in `.env` locally and in AWS Secrets Manager.
 
 In Google Cloud, add redirect URIs for each environment:
 

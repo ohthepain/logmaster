@@ -17,7 +17,8 @@ export type MapDataLayerId =
   | "osm-strait"
   | "osm-seamarks-buoys"
   | "osm-seamarks-lights"
-  | "osm-seamarks-other";
+  | "osm-seamarks-other"
+  | "ais-live";
 
 export type MapDataLayerGroup =
   | "basemap"
@@ -42,6 +43,10 @@ export type MapDataLayerDefinition = {
   kindFilter?: string[];
   /** GeoNames highres/lowres instead of OSM points. */
   geoFeatureResolution?: "highres" | "lowres";
+  /** Live feed overlay — not part of the offline vector tile pipeline. */
+  liveOnly?: boolean;
+  /** Requires network connectivity to show data. */
+  onlineOnly?: boolean;
   circleColor: string;
   circleRadius: number;
 };
@@ -259,6 +264,18 @@ export const MAP_DATA_LAYERS: MapDataLayerDefinition[] = [
     circleColor: "#f87171",
     circleRadius: 6,
   },
+  {
+    id: "ais-live",
+    title: "AIS vessels (live)",
+    description: "Current ship positions in the map view — coverage varies vs commercial charts (internet only).",
+    group: "navigation",
+    defaultVisible: true,
+    persistToggle: true,
+    liveOnly: true,
+    onlineOnly: true,
+    circleColor: "#fbbf24",
+    circleRadius: 0,
+  },
 ];
 
 const layerById = new Map(MAP_DATA_LAYERS.map((layer) => [layer.id, layer]));
@@ -277,7 +294,15 @@ export function defaultMapDataLayerToggles(): MapDataLayerToggles {
 
 /** Layers backed by a fetchable vector tile (excludes raster-only). */
 export function vectorMapDataLayers(): MapDataLayerDefinition[] {
-  return MAP_DATA_LAYERS.filter((layer) => layer.dataset != null || layer.geoFeatureResolution != null);
+  return MAP_DATA_LAYERS.filter(
+    (layer) =>
+      !layer.liveOnly &&
+      (layer.dataset != null || layer.geoFeatureResolution != null),
+  );
+}
+
+export function isLiveMapDataLayerId(layerId: MapDataLayerId): boolean {
+  return getMapDataLayer(layerId).liveOnly === true;
 }
 
 export function mapDataLayerSourceId(layerId: MapDataLayerId): string {

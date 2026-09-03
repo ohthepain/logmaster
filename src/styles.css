@@ -512,6 +512,40 @@ a {
   color: #fff;
 }
 
+.ais-vessel-popup-shell .maplibregl-popup-content {
+  padding: 0.55rem 0.65rem 0.65rem;
+}
+
+.ais-vessel-popup__photo {
+  display: block;
+  width: 100%;
+  max-height: 9rem;
+  object-fit: cover;
+  border-radius: 0.45rem;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ais-vessel-popup__photo--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 5rem;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.ais-vessel-popup__badge {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 0.12rem 0.45rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
 .dev-component-label {
   display: block;
   width: fit-content;

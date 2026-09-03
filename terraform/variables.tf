@@ -163,6 +163,12 @@ variable "maptiler_api_key_secret_arn" {
   default     = ""
 }
 
+variable "aisstream_api_key_secret_arn" {
+  type        = string
+  description = "Optional existing Secrets Manager ARN for AISStream.io API key."
+  default     = ""
+}
+
 variable "alb_certificate_arn" {
   type        = string
   description = "ACM certificate ARN for the ALB HTTPS listener (must be in the same region)."

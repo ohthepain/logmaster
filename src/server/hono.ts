@@ -22,6 +22,9 @@ import { geoFeatureRoutes } from './routes/geo-features'
 import { marinaRoutes } from './routes/marinas'
 import { osmPointTileRoutes } from './routes/osm-point-tiles'
 import { gpxImportRoutes } from './routes/gpx-import'
+import { placesRoutes } from './routes/places'
+import { aisRoutes } from './routes/ais'
+import { isAisStreamConfigured } from './ais/aisstream-client'
 
 const corsOrigins = getTrustedOrigins()
 
@@ -52,6 +55,7 @@ app.get('/health', (c) =>
     googleSignIn: isGoogleSignInEnabled(),
     googleWebClientId: getGoogleWebClientId(),
     mapTilerConfigured: Boolean(getMapTilerApiKeyFromEnv()),
+    aisConfigured: isAisStreamConfigured(),
   }),
 )
 
@@ -70,3 +74,5 @@ app.route('/geo-features', geoFeatureRoutes)
 app.route('/marinas', marinaRoutes)
 app.route('/osm-points', osmPointTileRoutes)
 app.route('/gpx-import', gpxImportRoutes)
+app.route('/places', placesRoutes)
+app.route('/ais', aisRoutes)

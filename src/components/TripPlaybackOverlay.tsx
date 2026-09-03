@@ -56,6 +56,7 @@ type TripPlaybackOverlayProps = {
   currentTimeMs: number
   onCurrentTimeChange: (timeMs: number) => void
   onShowLogEntries?: () => void
+  onPlayingChange?: (playing: boolean) => void
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -99,6 +100,7 @@ export function TripPlaybackOverlay({
   currentTimeMs,
   onCurrentTimeChange,
   onShowLogEntries,
+  onPlayingChange,
 }: TripPlaybackOverlayProps) {
   const timelineRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
@@ -162,6 +164,16 @@ export function TripPlaybackOverlay({
     }
     wasPlayingRef.current = playing
   }, [currentTimeMs, playing])
+
+  useEffect(() => {
+    onPlayingChange?.(playing)
+  }, [onPlayingChange, playing])
+
+  useEffect(() => {
+    return () => {
+      onPlayingChange?.(false)
+    }
+  }, [onPlayingChange])
 
   useEffect(() => {
     setWindowCenterMs(currentTimeMs)

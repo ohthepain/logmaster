@@ -23,7 +23,9 @@ import {
   scheduleSeamarkTileRefresh,
 } from "../lib/maplibre-sailing-map-setup";
 import { installMapDataLayers } from "../lib/maplibre-data-layers";
+import { installAisMapLayer } from "../lib/maplibre-ais-layer";
 import { useMapDataLayerSync } from "../lib/use-map-data-layer-sync";
+import { useAisMapLayer } from "../lib/use-ais-map-layer";
 import { applySailingLogMapTheme, sailingMapLegTrackPaint, SailingMapColors } from "../lib/maplibre-sailing-theme";
 import { addLogEntrySymbolLayer, syncLogEntryMapMarkerImages, syncLogEntryMapIconSelection } from "../lib/map-log-entry-icons";
 import { getGeoJsonSource } from "../lib/maplibre-source";
@@ -46,6 +48,7 @@ import { mapTilerTransformRequest } from "../lib/tiles";
 import { cn } from "../lib/cn";
 import { getNativePlatform } from "../lib/platform";
 import { useAppOptionsStore } from "../stores/app-options";
+import { useLogbookStore } from "../stores/logbook";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { TripAppleMapKit  } from "./TripAppleMapKit";
 import { SailingMapControlStack } from "./SailingMapControlStack";
@@ -76,6 +79,8 @@ type TripLogMapProps = {
   controlStackClassName?: string;
   playbackPosition?: TripPlaybackPosition | null;
   playbackMode?: boolean;
+  /** True while completed-trip replay is actively playing. */
+  playbackPlaying?: boolean;
   boatIconId?: string | null;
   onInitialViewportSettled?: () => void;
 };
@@ -135,6 +140,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
   controlStackClassName,
   playbackPosition = null,
   playbackMode = false,
+  playbackPlaying = false,
   boatIconId = null,
   onInitialViewportSettled,
   }: TripLogMapProps,
@@ -155,6 +161,8 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
   const setMapDataLayerToggles = useAppOptionsStore((state) => state.setMapDataLayerToggles);
   const mapLogEntryLayerToggles = useAppOptionsStore((state) => state.mapLogEntryLayerToggles);
   const setMapLogEntryLayerToggles = useAppOptionsStore((state) => state.setMapLogEntryLayerToggles);
+  const online = useLogbookStore((state) => state.online);
+  const isSavedTrip = trip.status === "COMPLETED";
   const devDraggablePosition =
     devMode && isDevModeAvailable() && showCurrentPosition && interactive;
   const [mapReady, setMapReady] = useState(false);
@@ -172,6 +180,13 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
   useMapDataLayerSync(mapRef, mapReady, mapDataLayerToggles, {
     enablePopups: interactive,
     seamarksAllowed: showSeamarks,
+  });
+
+  useAisMapLayer(mapRef, mapReady, {
+    enabled: mapDataLayerToggles["ais-live"],
+    online,
+    allowAis: !playbackMode || !playbackPlaying,
+    enablePopups: interactive,
   });
 
   const legTrackGeoJson = useMemo(
@@ -304,6 +319,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
           addOpenSeaMapSeamarkOverlay(map);
           addOpenSeaMapBathymetryOverlays(map);
           installMapDataLayers(map);
+          installAisMapLayer(map);
 
           map.addSource(TRACK_SOURCE, {
             type: "geojson",
@@ -693,6 +709,8 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
                 onChange={setMapDataLayerToggles}
                 logEntryToggles={mapLogEntryLayerToggles}
                 onLogEntryChange={setMapLogEntryLayerToggles}
+                aisPlaybackBlocked={playbackMode && playbackPlaying}
+                aisSavedTripHint={isSavedTrip && !(playbackMode && playbackPlaying)}
               />
             }
             onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}

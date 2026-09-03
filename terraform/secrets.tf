@@ -43,10 +43,16 @@ data "aws_secretsmanager_secret_version" "maptiler_api_key" {
   secret_id = var.maptiler_api_key_secret_arn
 }
 
+data "aws_secretsmanager_secret_version" "aisstream_api_key" {
+  count     = var.aisstream_api_key_secret_arn != "" ? 1 : 0
+  secret_id = var.aisstream_api_key_secret_arn
+}
+
 locals {
   google_client_id_value     = try(data.aws_secretsmanager_secret_version.google_client_id[0].secret_string, "")
   google_client_secret_value = try(data.aws_secretsmanager_secret_version.google_client_secret[0].secret_string, "")
   maptiler_api_key_value     = try(data.aws_secretsmanager_secret_version.maptiler_api_key[0].secret_string, "")
+  aisstream_api_key_value    = try(data.aws_secretsmanager_secret_version.aisstream_api_key[0].secret_string, "")
 }
 
 resource "aws_secretsmanager_secret_version" "app_initial" {
@@ -57,5 +63,6 @@ resource "aws_secretsmanager_secret_version" "app_initial" {
     GOOGLE_CLIENT_SECRET = var.google_auth_enabled ? local.google_client_secret_value : ""
     AWS_SES_FROM_EMAIL     = var.ses_from_email
     MAPTILER_API_KEY       = local.maptiler_api_key_value
+    AISSTREAM_API_KEY      = local.aisstream_api_key_value
   })
 }

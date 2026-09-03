@@ -80,7 +80,13 @@ export function useMapDataLayerSync(
           offset: 12,
         })
           .setLngLat(feature.coordinates)
-          .setHTML(formatMapFeaturePopupHtml(feature))
+          .setHTML(
+            formatMapFeaturePopupHtml({
+              ...feature,
+              latitude: feature.coordinates[1],
+              longitude: feature.coordinates[0],
+            }),
+          )
           .addTo(map)
       },
       () => effectiveTogglesRef.current,

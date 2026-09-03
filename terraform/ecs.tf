@@ -79,6 +79,10 @@ resource "aws_ecs_task_definition" "app" {
           name      = "MAPTILER_API_KEY"
           valueFrom = "${aws_secretsmanager_secret.app.arn}:MAPTILER_API_KEY::"
         },
+        {
+          name      = "AISSTREAM_API_KEY"
+          valueFrom = "${aws_secretsmanager_secret.app.arn}:AISSTREAM_API_KEY::"
+        },
       ]
 
       logConfiguration = {

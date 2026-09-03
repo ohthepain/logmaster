@@ -119,6 +119,27 @@ describe('osm-feature-display', () => {
     expect(lightHtml).toContain('2F.G(vert)2M')
     expect(lightHtml).toContain('A 0148')
     expect(lightHtml).toContain('View on OpenStreetMap')
+    expect(lightHtml).not.toContain('Images')
+
+    const marinaHtml = formatMapFeaturePopupHtml({
+      layerId: 'osm-marinas',
+      name: 'Royal Victoria',
+      kind: 'marina',
+      osmType: 'way',
+      osmId: 789,
+      latitude: 50.8,
+      longitude: -1.1,
+      tags: {},
+    })
+    expect(marinaHtml).toContain('View on OpenStreetMap')
+    expect(marinaHtml).toContain('Images')
+    expect(marinaHtml).toContain('Flickr')
+    expect(marinaHtml).toContain('/places/photos?')
+    expect(marinaHtml).toContain('source=flickr')
+    expect(marinaHtml.indexOf('View on OpenStreetMap')).toBeLessThan(
+      marinaHtml.indexOf('Images'),
+    )
+    expect(marinaHtml.indexOf('Images')).toBeLessThan(marinaHtml.indexOf('Flickr'))
 
     const hazardHtml = formatMapFeaturePopupHtml({
       layerId: 'osm-seamarks-other',

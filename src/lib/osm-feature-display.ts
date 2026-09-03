@@ -1,4 +1,8 @@
 import type { MapDataLayerId } from './map-data-layers'
+import {
+  mapLayerSupportsPlacePhotos,
+  placePhotosPageUrl,
+} from './place-photos-layers'
 
 export type MapFeaturePopupInput = {
   layerId: MapDataLayerId
@@ -7,6 +11,8 @@ export type MapFeaturePopupInput = {
   tags: Record<string, string>
   osmType?: string | null
   osmId?: number | null
+  latitude?: number | null
+  longitude?: number | null
 }
 
 const OSM_COLOUR_HEX: Record<string, string> = {
@@ -521,6 +527,51 @@ function osmFeatureUrl(input: MapFeaturePopupInput): string | null {
   return `https://www.openstreetmap.org/${input.osmType}/${input.osmId}`
 }
 
+const POPUP_LINK_STYLE =
+  'display:block;font-size:0.72rem;font-weight:600;color:#7ec8e8;text-decoration:none'
+
+function popupActionLinks(input: MapFeaturePopupInput): string {
+  const osmUrl = osmFeatureUrl(input)
+  const links: string[] = []
+
+  if (osmUrl) {
+    links.push(
+      `<a href="${escapeHtml(osmUrl)}" target="_blank" rel="noopener noreferrer" style="${POPUP_LINK_STYLE}">View on OpenStreetMap</a>`,
+    )
+  }
+
+  const latitude = input.latitude
+  const longitude = input.longitude
+  if (
+    mapLayerSupportsPlacePhotos(input.layerId) &&
+    latitude != null &&
+    longitude != null &&
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude)
+  ) {
+    const imagesUrl = placePhotosPageUrl({
+      latitude,
+      longitude,
+      name: input.name,
+      layerId: input.layerId,
+    })
+    const flickrUrl = placePhotosPageUrl({
+      latitude,
+      longitude,
+      name: input.name,
+      layerId: input.layerId,
+      source: 'flickr',
+    })
+    links.push(
+      `<a href="${escapeHtml(imagesUrl)}" style="${POPUP_LINK_STYLE}">Images</a>`,
+      `<a href="${escapeHtml(flickrUrl)}" style="${POPUP_LINK_STYLE}">Flickr</a>`,
+    )
+  }
+
+  if (links.length === 0) return ''
+  return `<div style="display:flex;flex-direction:column;gap:0.35rem;margin-top:0.65rem">${links.join('')}</div>`
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replaceAll('&', '&amp;')
@@ -540,16 +591,13 @@ function renderPopupRow(row: PopupRow): string {
 export function formatMapFeaturePopupHtml(input: MapFeaturePopupInput): string {
   const title = popupTitle(input)
   const rows = popupRowsForFeature(input)
-  const osmUrl = osmFeatureUrl(input)
 
   const rowHtml = rows.map(renderPopupRow).join('')
-  const osmLink = osmUrl
-    ? `<a href="${escapeHtml(osmUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:0.65rem;font-size:0.72rem;font-weight:600;color:#7ec8e8;text-decoration:none">View on OpenStreetMap</a>`
-    : ''
+  const actionLinks = popupActionLinks(input)
 
   return `<div style="font-family:system-ui,sans-serif;padding:0.1rem 0.1rem 0.05rem">
     <div style="font-size:0.88rem;font-weight:700;color:#fff;line-height:1.25">${escapeHtml(title)}</div>
     ${rowHtml || '<div style="margin-top:0.35rem;font-size:0.78rem;color:rgba(255,255,255,0.55)">No extra details tagged.</div>'}
-    ${osmLink}
+    ${actionLinks}
   </div>`
 }

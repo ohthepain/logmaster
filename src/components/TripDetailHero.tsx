@@ -79,6 +79,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
     [mapEntries, mapTracks, trip],
   );
   const [playbackTimeMs, setPlaybackTimeMs] = useState(playbackRange.startMs);
+  const [playbackPlaying, setPlaybackPlaying] = useState(false);
   const playbackPosition = useMemo(
     () =>
       isPlayback
@@ -91,6 +92,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
 
   useEffect(() => {
     setPlaybackTimeMs(playbackRange.startMs);
+    setPlaybackPlaying(false);
   }, [playbackRange.startMs, trip.id]);
 
   useImperativeHandle(
@@ -135,6 +137,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
             showSeamarks={isActiveTrip || isPlayback}
             playbackPosition={playbackPosition}
             playbackMode={isPlayback}
+            playbackPlaying={playbackPlaying}
             boatIconId={trip.boatIconId}
             onInitialViewportSettled={onInitialMapViewportSettled}
           />
@@ -168,6 +171,8 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
                 onChange={setMapDataLayerToggles}
                 logEntryToggles={mapLogEntryLayerToggles}
                 onLogEntryChange={setMapLogEntryLayerToggles}
+                aisPlaybackBlocked={isPlayback && playbackPlaying}
+                aisSavedTripHint={isPlayback && !playbackPlaying}
               />
             ) : undefined
           }
@@ -196,6 +201,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
               showSeamarks={isActiveTrip || isPlayback}
               playbackPosition={playbackPosition}
               playbackMode={isPlayback}
+              playbackPlaying={playbackPlaying}
               boatIconId={trip.boatIconId}
             />
             <SailingMapControlStack
@@ -210,6 +216,8 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
                     onChange={setMapDataLayerToggles}
                     logEntryToggles={mapLogEntryLayerToggles}
                     onLogEntryChange={setMapLogEntryLayerToggles}
+                    aisPlaybackBlocked={isPlayback && playbackPlaying}
+                    aisSavedTripHint={isPlayback && !playbackPlaying}
                   />
                 ) : undefined
               }
@@ -226,6 +234,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
           mediaByEntry={mediaByEntry}
           currentTimeMs={playbackTimeMs}
           onCurrentTimeChange={setPlaybackTimeMs}
+          onPlayingChange={setPlaybackPlaying}
           onShowLogEntries={
             onCompletedTripPanelChange ? () => onCompletedTripPanelChange('log') : undefined
           }

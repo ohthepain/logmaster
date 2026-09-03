@@ -24,6 +24,7 @@ import { Route as MainBoatsIndexRouteImport } from './routes/_main/boats/index'
 import { Route as MainAdminIndexRouteImport } from './routes/_main/admin/index'
 import { Route as MainTripsTripIdRouteImport } from './routes/_main/trips/$tripId'
 import { Route as MainResetPasswordTokenRouteImport } from './routes/_main/reset-password/$token'
+import { Route as MainPlacesPhotosRouteImport } from './routes/_main/places/photos'
 import { Route as MainDevTimeTravelRouteImport } from './routes/_main/dev/time-travel'
 import { Route as MainBoatsNewRouteImport } from './routes/_main/boats/new'
 import { Route as MainBoatsBoatIdRouteImport } from './routes/_main/boats/$boatId'
@@ -111,6 +112,11 @@ const MainTripsTripIdRoute = MainTripsTripIdRouteImport.update({
 const MainResetPasswordTokenRoute = MainResetPasswordTokenRouteImport.update({
   id: '/reset-password/$token',
   path: '/reset-password/$token',
+  getParentRoute: () => MainRouteRoute,
+} as any)
+const MainPlacesPhotosRoute = MainPlacesPhotosRouteImport.update({
+  id: '/places/photos',
+  path: '/places/photos',
   getParentRoute: () => MainRouteRoute,
 } as any)
 const MainDevTimeTravelRoute = MainDevTimeTravelRouteImport.update({
@@ -201,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/boats/new': typeof MainBoatsNewRoute
   '/dev/time-travel': typeof MainDevTimeTravelRoute
+  '/places/photos': typeof MainPlacesPhotosRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/trips/$tripId': typeof MainTripsTripIdRoute
   '/admin/': typeof MainAdminIndexRoute
@@ -231,6 +238,7 @@ export interface FileRoutesByTo {
   '/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/boats/new': typeof MainBoatsNewRoute
   '/dev/time-travel': typeof MainDevTimeTravelRoute
+  '/places/photos': typeof MainPlacesPhotosRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/trips/$tripId': typeof MainTripsTripIdRoute
   '/admin': typeof MainAdminIndexRoute
@@ -263,6 +271,7 @@ export interface FileRoutesById {
   '/_main/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/_main/boats/new': typeof MainBoatsNewRoute
   '/_main/dev/time-travel': typeof MainDevTimeTravelRoute
+  '/_main/places/photos': typeof MainPlacesPhotosRoute
   '/_main/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/_main/trips/$tripId': typeof MainTripsTripIdRoute
   '/_main/admin/': typeof MainAdminIndexRoute
@@ -295,6 +304,7 @@ export interface FileRouteTypes {
     | '/boats/$boatId'
     | '/boats/new'
     | '/dev/time-travel'
+    | '/places/photos'
     | '/reset-password/$token'
     | '/trips/$tripId'
     | '/admin/'
@@ -325,6 +335,7 @@ export interface FileRouteTypes {
     | '/boats/$boatId'
     | '/boats/new'
     | '/dev/time-travel'
+    | '/places/photos'
     | '/reset-password/$token'
     | '/trips/$tripId'
     | '/admin'
@@ -356,6 +367,7 @@ export interface FileRouteTypes {
     | '/_main/boats/$boatId'
     | '/_main/boats/new'
     | '/_main/dev/time-travel'
+    | '/_main/places/photos'
     | '/_main/reset-password/$token'
     | '/_main/trips/$tripId'
     | '/_main/admin/'
@@ -483,6 +495,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainResetPasswordTokenRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/places/photos': {
+      id: '/_main/places/photos'
+      path: '/places/photos'
+      fullPath: '/places/photos'
+      preLoaderRoute: typeof MainPlacesPhotosRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/dev/time-travel': {
       id: '/_main/dev/time-travel'
       path: '/dev/time-travel'
@@ -599,6 +618,7 @@ interface MainRouteRouteChildren {
   MainBoatsBoatIdRoute: typeof MainBoatsBoatIdRoute
   MainBoatsNewRoute: typeof MainBoatsNewRoute
   MainDevTimeTravelRoute: typeof MainDevTimeTravelRoute
+  MainPlacesPhotosRoute: typeof MainPlacesPhotosRoute
   MainResetPasswordTokenRoute: typeof MainResetPasswordTokenRoute
   MainTripsTripIdRoute: typeof MainTripsTripIdRoute
   MainAdminIndexRoute: typeof MainAdminIndexRoute
@@ -629,6 +649,7 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainBoatsBoatIdRoute: MainBoatsBoatIdRoute,
   MainBoatsNewRoute: MainBoatsNewRoute,
   MainDevTimeTravelRoute: MainDevTimeTravelRoute,
+  MainPlacesPhotosRoute: MainPlacesPhotosRoute,
   MainResetPasswordTokenRoute: MainResetPasswordTokenRoute,
   MainTripsTripIdRoute: MainTripsTripIdRoute,
   MainAdminIndexRoute: MainAdminIndexRoute,

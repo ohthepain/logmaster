@@ -7,6 +7,7 @@ import type { MapDataLayerGroup, MapDataLayerToggles } from '../lib/map-data-lay
 import { MAP_LOG_ENTRY_LAYER_TOGGLES } from '../lib/map-log-entry-layers'
 import type { MapLogEntryLayerToggles } from '../lib/map-log-entry-layers'
 import { MapControlButton } from './SailingMapControlStack'
+import { useLogbookStore } from '../stores/logbook'
 
 const DATA_GROUP_LABELS: Record<MapDataLayerGroup, string> = {
   basemap: 'Basemap',
@@ -21,6 +22,10 @@ type SailingMapLayerPanelProps = {
   onChange: (next: Partial<MapDataLayerToggles>) => void
   logEntryToggles: MapLogEntryLayerToggles
   onLogEntryChange: (next: Partial<MapLogEntryLayerToggles>) => void
+  /** Trip playback scrubs historical time — live AIS is hidden and disabled. */
+  aisPlaybackBlocked?: boolean
+  /** Saved trip static map — clarify that AIS is traffic now, not at trip time. */
+  aisSavedTripHint?: boolean
 }
 
 export function SailingMapLayerPanel({
@@ -28,9 +33,12 @@ export function SailingMapLayerPanel({
   onChange,
   logEntryToggles,
   onLogEntryChange,
+  aisPlaybackBlocked = false,
+  aisSavedTripHint = false,
 }: SailingMapLayerPanelProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const online = useLogbookStore((state) => state.online)
 
   useEffect(() => {
     if (!open) return
@@ -75,13 +83,19 @@ export function SailingMapLayerPanel({
                     {DATA_GROUP_LABELS[group]}
                   </p>
                   <ul className="m-0 flex list-none flex-col gap-1 p-0">
-                    {layers.map((layer) => (
+                    {layers.map((layer) => {
+                      const aisLayer = layer.id === 'ais-live'
+                      const aisDisabled =
+                        (layer.onlineOnly === true && !online) ||
+                        (aisLayer && aisPlaybackBlocked)
+                      return (
                       <li key={layer.id}>
                         <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 hover:bg-white/5">
                           <input
                             type="checkbox"
                             className="mt-0.5"
                             checked={toggles[layer.id]}
+                            disabled={aisDisabled}
                             onChange={(event) =>
                               onChange({
                                 [layer.id]: event.target.checked,
@@ -91,14 +105,33 @@ export function SailingMapLayerPanel({
                           <span className="min-w-0">
                             <span className="block text-sm text-white/95">
                               {layer.title}
+                              {layer.onlineOnly ? (
+                                <span className="ml-1 text-[10px] font-normal uppercase tracking-wide text-white/45">
+                                  {aisPlaybackBlocked
+                                    ? 'Replay'
+                                    : online
+                                      ? 'Live'
+                                      : 'Offline'}
+                                </span>
+                              ) : null}
                             </span>
                             <span className="block text-[11px] leading-snug text-white/55">
                               {layer.description}
+                              {aisLayer && aisSavedTripHint ? (
+                                <span className="mt-0.5 block text-white/45">
+                                  Shows traffic now along your saved route.
+                                </span>
+                              ) : null}
+                              {aisLayer && aisPlaybackBlocked ? (
+                                <span className="mt-0.5 block text-white/45">
+                                  Unavailable during trip replay.
+                                </span>
+                              ) : null}
                             </span>
                           </span>
                         </label>
                       </li>
-                    ))}
+                    )})}
                   </ul>
                 </div>
               ))}

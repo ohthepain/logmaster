@@ -140,6 +140,7 @@ function moveLayerBeforeIfExists(
   }
 }
 const APP_MAP_OVERLAY_LAYER_IDS = [
+  'ais-vessel-symbols',
   'trip-log-track-line',
   'trip-log-entry-circles',
   'trip-log-entry-icons',
@@ -216,7 +217,7 @@ export function queryTappableMapDataFeatures(
 /** Raster overlays below vector layers; trip/compose graphics stay on top. */
 export function ensureMapDataLayerStackOrder(map: maplibregl.Map) {
   const geoLayerIds = MAP_DATA_LAYERS.filter(
-    (layer) => !isRasterMapDataLayerId(layer.id),
+    (layer) => !isRasterMapDataLayerId(layer.id) && !layer.liveOnly,
   )
     .map((layer) => mapDataLayerRenderLayerId(layer.id))
     .filter((id) => map.getLayer(id))
@@ -424,7 +425,7 @@ function ensureDataLayerCircle(map: maplibregl.Map, layer: MapDataLayerDefinitio
 
 export function installMapDataLayers(map: maplibregl.Map) {
   for (const layer of MAP_DATA_LAYERS) {
-    if (isRasterMapDataLayerId(layer.id)) continue
+    if (isRasterMapDataLayerId(layer.id) || layer.liveOnly) continue
     ensureDataLayerCircle(map, layer)
   }
   ensureMapDataLayerStackOrder(map)
@@ -444,7 +445,7 @@ export function applyMapDataLayerToggles(
   }
 
   for (const layer of MAP_DATA_LAYERS) {
-    if (isRasterMapDataLayerId(layer.id)) continue
+    if (isRasterMapDataLayerId(layer.id) || layer.liveOnly) continue
     const layerId = mapDataLayerRenderLayerId(layer.id)
     if (!map.getLayer(layerId)) continue
     map.setLayoutProperty(
@@ -489,7 +490,7 @@ export async function refreshMapDataLayersForViewport(
   let geoResolution: 'highres' | 'lowres' | null = null
 
   for (const layer of MAP_DATA_LAYERS) {
-    if (!toggles[layer.id]) continue
+    if (!toggles[layer.id] || layer.liveOnly) continue
     if (layer.dataset) datasetsNeeded.add(layer.dataset)
     if (layer.geoFeatureResolution) geoResolution = layer.geoFeatureResolution
   }
