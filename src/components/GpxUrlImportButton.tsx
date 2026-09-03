@@ -76,7 +76,7 @@ export function GpxUrlImportButton({
           devComponentName="GpxUrlImportModal"
         >
           <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">
-            Paste a link to a GPX file. GitHub blob links are converted automatically; other hosts need a direct download URL.
+            Paste a link to a GPX file. Downloads go through logmaster so cross-origin hosts (e.g. nomadtracks.app) work. GitHub blob links are converted automatically.
           </p>
           <label className="mt-4 block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-[var(--sea-ink-soft)]">

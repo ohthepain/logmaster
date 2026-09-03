@@ -1,3 +1,7 @@
+import { apiUrl } from './app-origin'
+
+export const GPX_IMPORT_MAX_BYTES = 10 * 1024 * 1024
+
 export function gpxFileNameFromUrl(url: string): string {
   try {
     const pathname = new URL(url.trim()).pathname
@@ -45,12 +49,31 @@ export function normalizeGpxImportUrl(url: string): string {
   return parsed.toString()
 }
 
-function looksLikeGpx(text: string): boolean {
-  const trimmed = text.trimStart()
-  return trimmed.startsWith('<?xml') || /^<gpx[\s>]/i.test(trimmed)
+export function isBlockedGpxImportHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/\.$/, '')
+  if (!host) return true
+  if (host === 'localhost' || host.endsWith('.localhost')) return true
+  if (host.endsWith('.local') || host.endsWith('.internal')) return true
+  if (host === 'metadata.google.internal') return true
+
+  if (host.includes(':')) {
+    if (host === '::1' || host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd')) {
+      return true
+    }
+    return false
+  }
+
+  if (/^127\./.test(host)) return true
+  if (/^10\./.test(host)) return true
+  if (/^192\.168\./.test(host)) return true
+  if (/^169\.254\./.test(host)) return true
+  if (/^0\./.test(host)) return true
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return true
+
+  return false
 }
 
-export async function fetchGpxFromUrl(url: string): Promise<string> {
+export function resolveGpxImportDownloadUrl(url: string): string {
   const trimmed = url.trim()
   if (!trimmed) {
     throw new Error('Enter a GPX file URL.')
@@ -68,17 +91,40 @@ export async function fetchGpxFromUrl(url: string): Promise<string> {
   }
 
   const downloadUrl = normalizeGpxImportUrl(trimmed)
+  let downloadParsed: URL
+  try {
+    downloadParsed = new URL(downloadUrl)
+  } catch {
+    throw new Error('Enter a valid URL.')
+  }
+
+  if (isBlockedGpxImportHost(downloadParsed.hostname)) {
+    throw new Error('That URL is not allowed.')
+  }
+
+  return downloadUrl
+}
+
+export function looksLikeGpx(text: string): boolean {
+  const trimmed = text.trimStart()
+  return trimmed.startsWith('<?xml') || /^<gpx[\s>]/i.test(trimmed)
+}
+
+export async function fetchGpxFromUrl(url: string): Promise<string> {
+  const downloadUrl = resolveGpxImportDownloadUrl(url)
 
   let response: Response
   try {
-    response = await fetch(downloadUrl)
-  } catch {
-    throw new Error(
-      'Could not download the GPX file. Check the link is public and points directly to a .gpx file.',
+    response = await fetch(
+      apiUrl(`/api/gpx-import/fetch?url=${encodeURIComponent(downloadUrl)}`),
     )
+  } catch {
+    throw new Error('Could not download the GPX file. Check your connection and try again.')
   }
 
   if (!response.ok) {
+    const message = (await response.text()).trim()
+    if (message) throw new Error(message)
     throw new Error(`Could not download GPX (${response.status}).`)
   }
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   gpxFileNameFromUrl,
+  isBlockedGpxImportHost,
   normalizeGpxImportUrl,
+  resolveGpxImportDownloadUrl,
 } from './gpx-url-import'
 
 describe('gpx-url-import', () => {
@@ -35,5 +37,28 @@ describe('gpx-url-import', () => {
     expect(
       normalizeGpxImportUrl('https://example.com/tracks/day-sail.gpx'),
     ).toBe('https://example.com/tracks/day-sail.gpx')
+  })
+
+  it('blocks private and local hosts for server-side fetch', () => {
+    expect(isBlockedGpxImportHost('localhost')).toBe(true)
+    expect(isBlockedGpxImportHost('127.0.0.1')).toBe(true)
+    expect(isBlockedGpxImportHost('192.168.1.10')).toBe(true)
+    expect(isBlockedGpxImportHost('nomadtracks.app')).toBe(false)
+  })
+
+  it('resolves public GPX URLs for proxy fetch', () => {
+    expect(
+      resolveGpxImportDownloadUrl(
+        'https://nomadtracks.app/tracks/sailing-sibenik-croatia/sailing-sibenik-croatia.gpx',
+      ),
+    ).toBe(
+      'https://nomadtracks.app/tracks/sailing-sibenik-croatia/sailing-sibenik-croatia.gpx',
+    )
+  })
+
+  it('rejects local URLs', () => {
+    expect(() => resolveGpxImportDownloadUrl('http://127.0.0.1/track.gpx')).toThrow(
+      /not allowed/,
+    )
   })
 })

@@ -21,6 +21,7 @@ import { adminRoutes } from './routes/admin'
 import { geoFeatureRoutes } from './routes/geo-features'
 import { marinaRoutes } from './routes/marinas'
 import { osmPointTileRoutes } from './routes/osm-point-tiles'
+import { gpxImportRoutes } from './routes/gpx-import'
 
 const corsOrigins = getTrustedOrigins()
 
@@ -68,3 +69,4 @@ app.route('/admin', adminRoutes)
 app.route('/geo-features', geoFeatureRoutes)
 app.route('/marinas', marinaRoutes)
 app.route('/osm-points', osmPointTileRoutes)
+app.route('/gpx-import', gpxImportRoutes)
