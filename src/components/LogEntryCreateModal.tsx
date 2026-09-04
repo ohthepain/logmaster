@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, Camera, Check, LocateFixed, Mic, PenLine, X } from 'lucide-react'
+import { ArrowLeft, Camera, Check, LocateFixed, Map, Mic, PenLine, X } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { LogEntryPositionMap } from './LogEntryPositionMap'
@@ -75,6 +75,7 @@ export function LogEntryCreateModal({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const voiceChunksRef = useRef<Blob[]>([])
   const [draftPosition, setDraftPosition] = useState<MapLngLat | null>(null)
+  const [showPositionMap, setShowPositionMap] = useState(false)
   const positionLabel = usePositionPlaceLabel(draftPosition, {
     enabled: step === 'compose',
   })
@@ -123,6 +124,7 @@ export function LogEntryCreateModal({
     clearVoiceRecording()
     stopVoiceRecording()
     setDraftPosition(null)
+    setShowPositionMap(false)
     positionEditedRef.current = false
     setSaving(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -377,24 +379,47 @@ export function LogEntryCreateModal({
         {timeTravelNotice}
 
         <div className="overflow-hidden rounded-[1.25rem] border border-[var(--panel-border)]">
-          <LogEntryPositionMap
-            trip={trip}
-            entries={tripEntries}
-            legs={tripLegs}
-            position={draftPosition}
-            onPositionChange={handlePositionChange}
-            initialViewport="current-location"
-          />
-          <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] px-3 py-2">
-            <p className="m-0 text-xs text-[var(--sea-ink-soft)]">{positionLabel}</p>
-            <button
-              type="button"
-              onClick={() => void handleUseGps()}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-2.5 py-1 text-[10px] font-semibold text-[var(--sea-ink)]"
-            >
-              <LocateFixed className="size-3" />
-              Use GPS
-            </button>
+          {showPositionMap ? (
+            <LogEntryPositionMap
+              trip={trip}
+              entries={tripEntries}
+              legs={tripLegs}
+              position={draftPosition}
+              onPositionChange={handlePositionChange}
+              initialViewport="current-location"
+            />
+          ) : null}
+          <div
+            className={cn(
+              'flex items-center justify-between gap-2 px-3 py-2',
+              showPositionMap ? 'border-t border-[var(--line)]' : '',
+            )}
+          >
+            <p className="m-0 min-w-0 flex-1 text-xs text-[var(--sea-ink-soft)]">{positionLabel}</p>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowPositionMap((value) => !value)}
+                aria-pressed={showPositionMap}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold',
+                  showPositionMap
+                    ? 'border-[var(--brand)] bg-[var(--brand-muted)] text-[var(--brand)]'
+                    : 'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)]',
+                )}
+              >
+                <Map className="size-3" />
+                {showPositionMap ? 'Hide map' : 'Map'}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleUseGps()}
+                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-2.5 py-1 text-[10px] font-semibold text-[var(--sea-ink)]"
+              >
+                <LocateFixed className="size-3" />
+                Use GPS
+              </button>
+            </div>
           </div>
         </div>
 

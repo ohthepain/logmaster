@@ -1,6 +1,7 @@
 import type { Leg } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { decodeTripTrack, isPositionTrack } from '../domain/trip-track'
+import { decimatePositionSamples, MAP_TRACK_MAX_POINTS } from './trip-track-decimate'
 import { generateLegColor, resolveLegColor } from './leg-colors'
 import type { MapLngLat } from './logbook-map-geo'
 
@@ -25,7 +26,10 @@ export function buildTripTracksGeoJson(tracks: TripTrack[], legs: Leg[] = []) {
   const legColors = legColorLookup(legs)
 
   const features = tracks.filter(isPositionTrack).flatMap((track, trackIndex) => {
-    const samples = decodeTripTrack(track)
+    const samples = decimatePositionSamples(
+      decodeTripTrack(track),
+      MAP_TRACK_MAX_POINTS,
+    )
     if (samples.length < 2) return []
 
     return [

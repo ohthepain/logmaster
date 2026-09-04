@@ -411,7 +411,6 @@ function finalizeParsedGpx(raw: GpxRawDocument): ParsedGpxTrack {
   }
 
   segments = sortSegmentsChronologically(segments.map(prepareSegment))
-  segments = downsampleGpxSegments(segments, GPX_IMPORT_MAX_TRACK_POINTS)
   segments = segments.map(prepareSegment)
 
   const points = flattenSegmentPoints(segments)

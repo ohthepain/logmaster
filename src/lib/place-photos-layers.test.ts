@@ -32,14 +32,5 @@ describe('place-photos-layers', () => {
     ).toBe(
       '/places/photos?lat=43.65&lon=-79.38&name=Toronto+Harbour&layer=osm-harbours',
     )
-
-    expect(
-      placePhotosPageUrl({
-        latitude: 43.65,
-        longitude: -79.38,
-        name: 'Toronto Harbour',
-        source: 'flickr',
-      }),
-    ).toBe('/places/photos?lat=43.65&lon=-79.38&name=Toronto+Harbour&source=flickr')
   })
 })

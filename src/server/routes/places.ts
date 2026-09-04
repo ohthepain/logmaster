@@ -1,9 +1,5 @@
 import { Hono } from 'hono'
 import {
-  fetchFlickrPhotos,
-  isFlickrConfigured,
-} from '../places/flickr-photos'
-import {
   fetchPlacePhotos,
   isGooglePlacesConfigured,
   isValidPlacePhotoName,
@@ -41,13 +37,14 @@ placesRoutes.get('/photos/search', async (c) => {
   }
 
   const name = c.req.query('name')?.trim() || null
-  const result = await fetchPlacePhotos(latitude, longitude, name)
+  const { result, message } = await fetchPlacePhotos(latitude, longitude, name)
 
   if (!result) {
     return c.json({
       configured: true,
       place: null,
       photos: [],
+      message,
     })
   }
 
@@ -86,50 +83,4 @@ placesRoutes.get('/photos/media', async (c) => {
 
   if (!response) return c.text('Photo unavailable', 404)
   return response
-})
-
-placesRoutes.get('/flickr/search', async (c) => {
-  if (!isFlickrConfigured()) {
-    return c.json(
-      {
-        configured: false,
-        error: 'Flickr API is not configured on this server.',
-      },
-      503,
-    )
-  }
-
-  const latitude = parseCoordinate(c.req.query('latitude'), -90, 90)
-  const longitude = parseCoordinate(c.req.query('longitude'), -180, 180)
-  if (latitude == null || longitude == null) {
-    return c.json({ error: 'Invalid latitude or longitude' }, 400)
-  }
-
-  const name = c.req.query('name')?.trim() || null
-  const result = await fetchFlickrPhotos(latitude, longitude, name)
-
-  if (!result) {
-    return c.json({
-      configured: true,
-      place: null,
-      photos: [],
-    })
-  }
-
-  return c.json({
-    configured: true,
-    place: {
-      id: null,
-      name: result.queryLabel,
-    },
-    photos: result.photos.map((photo) => ({
-      name: photo.id,
-      title: photo.title,
-      widthPx: photo.widthPx,
-      heightPx: photo.heightPx,
-      pageUrl: photo.pageUrl,
-      authorAttributions: photo.authorAttributions,
-      mediaUrl: photo.mediaUrl,
-    })),
-  })
 })

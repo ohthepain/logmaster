@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../lib/cn";
+import { requestIosMapTouchSync } from "../lib/native/ios-map-touch-passthrough";
 
 export const PLAYBACK_SPEEDS = [0.25, 0.5, 1, 2, 5, 10, 25, 100] as const;
 export type PlaybackSpeed = (typeof PLAYBACK_SPEEDS)[number];
@@ -16,6 +17,8 @@ const DRAG_STEP_PX = 24;
 type PlaybackSpeedControlProps = {
   speedIndex: number;
   onSpeedIndexChange: (index: number) => void;
+  /** Where the speed menu opens — use `below` near the top of the map. */
+  menuPlacement?: "above" | "below";
 };
 
 type SpeedDragState = {
@@ -31,13 +34,18 @@ function clampSpeedIndex(index: number) {
   return Math.min(PLAYBACK_SPEEDS.length - 1, Math.max(0, index));
 }
 
-export function PlaybackSpeedControl({ speedIndex, onSpeedIndexChange }: PlaybackSpeedControlProps) {
+export function PlaybackSpeedControl({
+  speedIndex,
+  onSpeedIndexChange,
+  menuPlacement = "above",
+}: PlaybackSpeedControlProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<SpeedDragState | null>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
+    requestIosMapTouchSync();
     const close = (event: PointerEvent) => {
       if (rootRef.current?.contains(event.target as Node)) return;
       setMenuOpen(false);
@@ -52,7 +60,11 @@ export function PlaybackSpeedControl({ speedIndex, onSpeedIndexChange }: Playbac
         <div
           role="listbox"
           aria-label="Playback speed"
-          className="absolute bottom-full right-0 z-40 mb-2 flex min-w-[4.5rem] flex-col overflow-hidden rounded-xl border border-white/25 bg-black/80 py-1 shadow-xl backdrop-blur-md"
+          className={cn(
+            "ios-map-touch-target absolute right-0 z-50 flex min-w-[4.5rem] flex-col overflow-hidden rounded-xl border border-white/25 bg-black/80 py-1 shadow-xl backdrop-blur-md",
+            menuPlacement === "below" ? "top-full mt-2" : "bottom-full mb-2",
+          )}
+          data-map-touch-zone
         >
           {PLAYBACK_SPEEDS.map((speed, index) => (
             <button
@@ -66,7 +78,7 @@ export function PlaybackSpeedControl({ speedIndex, onSpeedIndexChange }: Playbac
                 setMenuOpen(false);
               }}
               className={cn(
-                "px-4 py-1.5 text-left text-sm font-semibold tabular-nums",
+                "ios-map-touch-target touch-manipulation px-4 py-1.5 text-left text-sm font-semibold tabular-nums",
                 index === speedIndex ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/10 hover:text-white",
               )}
             >
@@ -82,7 +94,8 @@ export function PlaybackSpeedControl({ speedIndex, onSpeedIndexChange }: Playbac
         aria-label={`Playback speed ${formatPlaybackSpeed(PLAYBACK_SPEEDS[speedIndex])}`}
         aria-expanded={menuOpen}
         aria-haspopup="listbox"
-        className="touch-none select-none inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-semibold tabular-nums text-white/75 hover:bg-white/20 hover:text-white"
+        className="ios-map-touch-target touch-manipulation select-none inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-semibold tabular-nums text-white/75 hover:bg-white/20 hover:text-white"
+        data-map-touch-zone
         onPointerDown={(event) => {
           event.currentTarget.setPointerCapture(event.pointerId);
           const holdTimer = setTimeout(() => {

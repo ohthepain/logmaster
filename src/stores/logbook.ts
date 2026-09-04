@@ -8,13 +8,21 @@ import type {
   TripStatus,
 } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
-import { captureLogbookContext } from '../lib/logbook-context'
+import { normalizeTripTrack } from '../domain/trip-track'
+import { getTripTrackRecorder, isOpenPositionTrack } from '../lib/trip-track-recorder'
+import { hydrateTripTrackPayload, fetchTripTrackManifests, mergeTrackManifests } from '../lib/trip-track-sync'
+import {
+  captureLogbookContext,
+  fetchLogbookLocationContext,
+  readDevicePosition,
+} from '../lib/logbook-context'
 import { attachPlaceToEntryData } from '../lib/logbook-place'
 import { defaultTripTitle } from '../lib/trip-display'
 import {
   bootstrapLogbook,
   hasPendingSync,
   syncLogbook,
+  type SyncLogbookOptions,
 } from '../lib/logbook-sync'
 import type { LogbookSnapshot } from '../lib/logbook-sync'
 import {
@@ -126,7 +134,20 @@ type LogbookState = {
     entryId: string,
     media: Omit<Media, 'id' | 'createdAt' | 'updatedAt' | 'synced'>,
   ) => Promise<Media | null>
-  syncNow: () => Promise<boolean>
+  syncNow: (options?: SyncLogbookOptions) => Promise<boolean>
+  upsertTripTracks: (tracks: TripTrack[]) => Promise<void>
+  appendTripTrackPosition: (
+    tripId: string,
+    sample: {
+      time: string
+      latitude: number
+      longitude: number
+      heading?: number | null
+      elevationM?: number | null
+    },
+    options?: { source?: TripTrack['source']; legId?: string | null },
+  ) => Promise<void>
+  ensureTripTrackPayloads: (tripId: string) => Promise<void>
   importTripFromGpx: (
     gpxXml: string,
     options?: { boatName?: string; fileName?: string },
@@ -192,23 +213,56 @@ function syncStatusMessage(snapshot: LogbookSnapshot, online: boolean): string |
   return null
 }
 
-async function flushLogbookSync(get: () => LogbookState) {
-  let attempts = 0
-  while (attempts < 8) {
-    await get().syncNow()
-    while (get().syncing) {
-      await new Promise((resolve) => setTimeout(resolve, 50))
-    }
-    if (!get().syncQueued) break
-    attempts += 1
-  }
+function scheduleBackgroundSync(
+  get: () => LogbookState,
+  options?: SyncLogbookOptions,
+) {
+  void get().syncNow(options)
 }
 
-async function assertSyncedWhenOnline(get: () => LogbookState) {
-  if (!get().online) return
-  const snapshot = await loadLogbookSnapshot()
-  if (!hasPendingSync(snapshot)) return
-  throw new Error(get().syncMessage ?? 'Could not sync to server')
+async function captureEntryContext(input: NewEntryInput) {
+  const hasPositionOverride =
+    input.latitude != null && input.longitude != null
+
+  if (hasPositionOverride) {
+    const [context, entryData] = await Promise.all([
+      captureLogbookContext({
+        latitude: input.latitude as number,
+        longitude: input.longitude as number,
+        accuracy: input.accuracy ?? null,
+        heading: input.heading ?? null,
+      }),
+      attachPlaceToEntryData(input.data, input.latitude, input.longitude),
+    ])
+    return { context, entryData }
+  }
+
+  const gps = await readDevicePosition()
+  if (gps.latitude == null || gps.longitude == null) {
+    const entryData = await attachPlaceToEntryData(input.data, null, null)
+    return {
+      context: {
+        ...gps,
+        country: null,
+        weather: null,
+      },
+      entryData,
+    }
+  }
+
+  const [locationContext, entryData] = await Promise.all([
+    fetchLogbookLocationContext(gps.latitude, gps.longitude),
+    attachPlaceToEntryData(input.data, gps.latitude, gps.longitude),
+  ])
+
+  return {
+    context: {
+      ...gps,
+      country: locationContext.country ?? null,
+      weather: locationContext.weather ?? null,
+    },
+    entryData,
+  }
 }
 
 async function persistLegsAndEntries(legs: Leg[], entries: LogEntry[]) {
@@ -291,6 +345,12 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
   autoMapCoverTripIds: [],
 
   load: async () => {
+    if (get().booted) {
+      if (get().online) {
+        void get().syncNow()
+      }
+      return
+    }
     const snapshot = await bootstrapLogbook()
     applySnapshot(set, snapshot, get().selectedTripId)
     set({
@@ -349,15 +409,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
 
-    await flushLogbookSync(get)
-    try {
-      await assertSyncedWhenOnline(get)
-    } catch (error) {
-      set({
-        syncMessage:
-          error instanceof Error ? error.message : 'Could not sync to server',
-      })
-    }
+    scheduleBackgroundSync(get, { skipBootstrap: true, skipTracks: true })
     return trip
   },
 
@@ -385,7 +437,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       trips: state.trips.map((trip) => (trip.id === tripId ? next : trip)),
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
-    void get().syncNow()
+    void get().syncNow({ skipBootstrap: true })
   },
 
   deleteTrip: async (tripId) => {
@@ -426,7 +478,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       }
     })
 
-    void get().syncNow()
+    void get().syncNow({ skipBootstrap: true })
   },
 
   updateLeg: async (legId, patch) => {
@@ -445,7 +497,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       legs: state.legs.map((leg) => (leg.id === legId ? next : leg)),
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
-    void get().syncNow()
+    void get().syncNow({ skipBootstrap: true })
   },
 
   mergeLegWithPrevious: async (legId) => {
@@ -468,22 +520,11 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       entries: sortEntries(result.entries),
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     })
-    void get().syncNow()
+    void get().syncNow({ skipBootstrap: true })
   },
 
   addEntry: async (input) => {
-    const hasPositionOverride =
-      input.latitude != null && input.longitude != null
-    const context = await captureLogbookContext(
-      hasPositionOverride
-        ? {
-            latitude: input.latitude as number,
-            longitude: input.longitude as number,
-            accuracy: input.accuracy ?? null,
-            heading: input.heading ?? null,
-          }
-        : undefined,
-    )
+    const { context, entryData } = await captureEntryContext(input)
     const {
       devMode,
       devTimeTravelEnabled,
@@ -494,6 +535,8 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     } = useAppOptionsStore.getState()
     const useDraftTimestamp =
       input.timestamp == null &&
+      input.type !== 'START_TRIP' &&
+      input.type !== 'END_TRIP' &&
       devMode &&
       devTimeTravelEnabled &&
       isDevModeAvailable() &&
@@ -506,11 +549,6 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
           )
         : devLogEntryDraftTimeIso
       : (input.timestamp ?? context.timestamp)
-    const entryData = await attachPlaceToEntryData(
-      input.data,
-      context.latitude,
-      context.longitude,
-    )
     const entry: LogEntry = {
       id: makeId(),
       tripId: input.tripId,
@@ -546,10 +584,12 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     const trip = get().trips.find((item) => item.id === input.tripId)
     if (trip) {
       if (input.type === 'END_TRIP') {
+        await get().upsertTripTracks(getTripTrackRecorder().sealTrip(input.tripId))
         await applyTripOperationalSync(input.tripId, get, set, {
           status: 'COMPLETED',
           completedAt: entry.timestamp,
         })
+        get().requestAutoMapCover(input.tripId)
       } else {
         const starting =
           trip.status === 'PLANNED'
@@ -565,15 +605,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       }
     }
 
-    await flushLogbookSync(get)
-    try {
-      await assertSyncedWhenOnline(get)
-    } catch (error) {
-      set({
-        syncMessage:
-          error instanceof Error ? error.message : 'Could not sync to server',
-      })
-    }
+    scheduleBackgroundSync(get, { skipBootstrap: true, skipTracks: true })
     return entry
   },
 
@@ -612,7 +644,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     }))
     await applyTripLegRebuild(current.tripId, get, set)
     await applyTripOperationalSync(current.tripId, get, set)
-    void get().syncNow()
+    void get().syncNow({ skipBootstrap: true })
   },
 
   deleteEntry: async (entryId) => {
@@ -633,7 +665,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     }))
     await applyTripLegRebuild(current.tripId, get, set)
     await applyTripOperationalSync(current.tripId, get, set)
-    void get().syncNow()
+    void get().syncNow({ skipBootstrap: true })
   },
 
   attachMedia: async (entryId, mediaInput) => {
@@ -718,16 +750,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
     }))
 
-    await flushLogbookSync(get)
-    try {
-      await assertSyncedWhenOnline(get)
-    } catch (error) {
-      set({
-        syncMessage:
-          error instanceof Error ? error.message : 'Could not sync to server',
-      })
-    }
-
+    scheduleBackgroundSync(get, { skipBootstrap: true })
     return trip
   },
 
@@ -745,7 +768,101 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     }))
   },
 
-  syncNow: async () => {
+  upsertTripTracks: async (tracks) => {
+    if (tracks.length === 0) return
+    const normalized = tracks.map((track) => normalizeTripTrack(track))
+    await Promise.all(normalized.map((track) => putTripTrack(track)))
+    const tripIds = new Set(normalized.map((track) => track.tripId))
+    for (const tripId of tripIds) {
+      addPendingTripId(tripId)
+    }
+    set((state) => {
+      const byId = new Map(state.tracks.map((track) => [track.id, track]))
+      for (const track of normalized) {
+        byId.set(track.id, track)
+      }
+      return {
+        tracks: [...byId.values()].sort(
+          (a, b) =>
+            new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
+        ),
+        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      }
+    })
+    void get().syncNow({ skipBootstrap: true })
+  },
+
+  appendTripTrackPosition: async (tripId, sample, options) => {
+    const recorder = getTripTrackRecorder()
+    const sealed = recorder.appendPositionSample(tripId, sample, {
+      source: options?.source ?? 'background-gps',
+      legId: options?.legId ?? null,
+    })
+    const openTrack = recorder.openPositionTrack(tripId)
+
+    set((state) => {
+      const byId = new Map(
+        state.tracks
+          .filter((track) => !isOpenPositionTrack(track) || track.tripId !== tripId)
+          .map((track) => [track.id, track]),
+      )
+      for (const track of sealed) {
+        byId.set(track.id, track)
+      }
+      if (openTrack) {
+        byId.set(openTrack.id, openTrack)
+      }
+      return {
+        tracks: [...byId.values()].sort(
+          (a, b) =>
+            new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
+        ),
+      }
+    })
+
+    if (sealed.length > 0) {
+      await get().upsertTripTracks(sealed)
+    } else if (openTrack) {
+      await putTripTrack(openTrack)
+    }
+  },
+
+  ensureTripTrackPayloads: async (tripId) => {
+    let tracks = get().tracks.filter((track) => track.tripId === tripId)
+    if (get().online) {
+      try {
+        const manifests = await fetchTripTrackManifests(tripId)
+        const merged = mergeTrackManifests(tracks, manifests)
+        set((state) => {
+          const byId = new Map(state.tracks.map((track) => [track.id, track]))
+          for (const track of merged) {
+            byId.set(track.id, track)
+          }
+          return { tracks: [...byId.values()] }
+        })
+        tracks = merged
+      } catch {
+        // Keep local manifests when the track API is unavailable.
+      }
+    }
+
+    const missing = tracks.filter(
+      (track) => track.storage === 's3' && track.payload == null,
+    )
+    if (missing.length === 0) return
+    const hydrated = await Promise.all(
+      missing.map((track) => hydrateTripTrackPayload(track)),
+    )
+    set((state) => {
+      const byId = new Map(state.tracks.map((track) => [track.id, track]))
+      for (const track of hydrated) {
+        byId.set(track.id, track)
+      }
+      return { tracks: [...byId.values()] }
+    })
+  },
+
+  syncNow: async (options?: SyncLogbookOptions) => {
     if (get().syncing) {
       set({ syncQueued: true })
       return false
@@ -753,7 +870,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     set({ syncing: true, syncMessage: 'Syncing…' })
     let success = true
     try {
-      const result = await syncLogbook()
+      const result = await syncLogbook(options)
       if (result.ok) {
         applySnapshot(set, result.snapshot, get().selectedTripId)
         set({
@@ -780,7 +897,13 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       const queued = get().syncQueued
       set({ syncing: false, syncQueued: false })
       if (queued) {
-        void get().syncNow()
+        void get().syncNow(options)
+      } else if (options?.skipTracks) {
+        const snapshot = await loadLogbookSnapshot()
+        const pendingTracks = (snapshot.tripTracks ?? []).filter((track) => !track.synced)
+        if (pendingTracks.length > 0) {
+          void get().syncNow({ skipBootstrap: true, skipTracks: false })
+        }
       }
     }
     return success && !hasPendingSync(await loadLogbookSnapshot())

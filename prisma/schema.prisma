@@ -150,7 +150,11 @@ model TripTrack {
   source      String
   kind        String   @default("position")
   encoding    String   @default("delta-v1")
-  payload     Json
+  payload     Json?
+  storage     String   @default("inline")
+  storageKey  String?
+  byteLength  Int?
+  sha256      String?
   sampleCount Int
   startedAt   DateTime
   endedAt     DateTime

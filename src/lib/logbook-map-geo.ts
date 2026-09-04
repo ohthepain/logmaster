@@ -1,5 +1,6 @@
 import type { LogEntry, Leg, Trip } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
+import { decodeTripTrack, isPositionTrack } from '../domain/trip-track'
 import {
   entryCreatedAtMs,
   entryHasMapPosition,
@@ -76,33 +77,151 @@ export function adjacentPositionedEntryPairs(
   return pairs
 }
 
+type PositionedEntryRun = {
+  legId: string | null
+  coordinates: [number, number][]
+  segmentIndex: number
+}
+
+function pushPositionedEntryRun(runs: PositionedEntryRun[], run: PositionedEntryRun | null) {
+  if (run && run.coordinates.length >= 2) {
+    runs.push(run)
+  }
+}
+
+/** One LineString per leg through all positioned entries in log order. */
+export function buildPositionedEntryTrackFeatures(
+  entries: LogEntry[],
+  legs: Leg[] = [],
+) {
+  const legColors = legColorLookup(legs)
+  const chronological = sortLogEntriesChronologically(
+    entries.filter((entry) => !entry.deleted),
+  )
+
+  const runs: PositionedEntryRun[] = []
+  let current: {
+    legId: string | null
+    coordinates: [number, number][]
+    lastCreatedAtMs: number
+  } | null = null
+
+  for (const entry of chronological) {
+    if (!entryHasMapPosition(entry)) continue
+
+    const coordinate: [number, number] = [entry.longitude!, entry.latitude!]
+    const legId = entry.legId ?? null
+    const createdAtMs = entryCreatedAtMs(entry)
+
+    if (
+      current &&
+      current.legId === legId &&
+      createdAtMs >= current.lastCreatedAtMs
+    ) {
+      const last = current.coordinates.at(-1)!
+      if (last[0] !== coordinate[0] || last[1] !== coordinate[1]) {
+        current.coordinates.push(coordinate)
+        current.lastCreatedAtMs = createdAtMs
+      }
+      continue
+    }
+
+    pushPositionedEntryRun(
+      runs,
+      current
+        ? {
+            legId: current.legId,
+            coordinates: current.coordinates,
+            segmentIndex: runs.length,
+          }
+        : null,
+    )
+    current = {
+      legId,
+      coordinates: [coordinate],
+      lastCreatedAtMs: createdAtMs,
+    }
+  }
+
+  pushPositionedEntryRun(
+    runs,
+    current
+      ? {
+          legId: current.legId,
+          coordinates: current.coordinates,
+          segmentIndex: runs.length,
+        }
+      : null,
+  )
+
+  return runs.map((run) => ({
+    type: 'Feature' as const,
+    geometry: {
+      type: 'LineString' as const,
+      coordinates: run.coordinates,
+    },
+    properties: {
+      legId: run.legId,
+      segmentIndex: run.segmentIndex,
+      color: colorForLegId(run.legId, legColors, run.segmentIndex),
+    },
+  }))
+}
+
+function positionTrackSampleCount(tracks: TripTrack[]): number {
+  return tracks
+    .filter(isPositionTrack)
+    .reduce(
+      (count, track) =>
+        count + Math.max(track.sampleCount ?? 0, decodeTripTrack(track).length),
+      0,
+    )
+}
+
 export function buildLegTrackGeoJson(
   entries: LogEntry[],
   legs: Leg[] = [],
   tracks: TripTrack[] = [],
 ) {
   const trackFeatures = buildTripTracksGeoJson(tracks, legs).features
-  const legColors = legColorLookup(legs)
-  const pairs = adjacentPositionedEntryPairs(entries)
+  const entryFeatures = buildPositionedEntryTrackFeatures(entries, legs)
+  const entryPointCount = positionedEntries(entries).length
+  const trackPointCount = positionTrackSampleCount(tracks)
 
-  const entryFeatures = pairs.map(([from, to], segmentIndex) => {
-    const legId = to.legId ?? from.legId ?? null
+  const preferTracks =
+    tracks.some(isPositionTrack) &&
+    trackPointCount >= Math.max(3, entryPointCount)
+  const preferEntries =
+    entryFeatures.length > 0 &&
+    (!preferTracks || entryPointCount > trackPointCount)
+
+  const geometryMode = preferTracks
+    ? 'tracks'
+    : preferEntries
+      ? 'entries'
+      : 'mixed'
+  const decodedTrackPoints = tracks
+    .filter(isPositionTrack)
+    .reduce((count, track) => count + decodeTripTrack(track).length, 0)
+  // #region agent log
+  if (entryPointCount >= 2 || trackPointCount >= 2) {
+    fetch('http://127.0.0.1:7411/ingest/3b7d181c-240e-49dd-892c-4bf73b6a58cb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d4c045'},body:JSON.stringify({sessionId:'d4c045',location:'logbook-map-geo.ts:buildLegTrackGeoJson',message:'map geometry decision',data:{geometryMode,preferTracks,preferEntries,entryPointCount,trackPointCount,decodedTrackPoints,trackFeatureCount:trackFeatures.length,entryFeatureCount:entryFeatures.length,positionTrackCount:tracks.filter(isPositionTrack).length,firstTrackSampleCount:tracks.find(isPositionTrack)?.sampleCount??null,firstTrackHasPayload:Boolean(tracks.find(isPositionTrack)?.payload),runId:'post-fix'},timestamp:Date.now(),hypothesisId:'A-D'})}).catch(()=>{});
+  }
+  // #endregion
+
+  if (preferTracks) {
     return {
-      type: 'Feature' as const,
-      geometry: {
-        type: 'LineString' as const,
-        coordinates: [
-          [from.longitude!, from.latitude!] as [number, number],
-          [to.longitude!, to.latitude!] as [number, number],
-        ],
-      },
-      properties: {
-        legId,
-        segmentIndex,
-        color: colorForLegId(legId, legColors, segmentIndex),
-      },
+      type: 'FeatureCollection' as const,
+      features: trackFeatures,
     }
-  })
+  }
+
+  if (preferEntries) {
+    return {
+      type: 'FeatureCollection' as const,
+      features: entryFeatures,
+    }
+  }
 
   return {
     type: 'FeatureCollection' as const,

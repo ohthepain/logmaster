@@ -143,7 +143,37 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
   const tripTracks = useMemo(
     () => store.tracks.filter((track) => track.tripId === tripId),
     [store.tracks, tripId],
-  );
+  )
+
+  const devTripReplay = useAppOptionsStore((state) => state.devTripReplay);
+  const devTripRetrip = useAppOptionsStore((state) => state.devTripRetrip);
+  const recordingTripId = useAppOptionsStore((state) => state.recordingTripId);
+  const devMode = useAppOptionsStore((state) => state.devMode);
+
+  const mapTracks = useMemo(() => {
+    let tracks = tripTracks
+    if (
+      devTripRetrip &&
+      recordingTripId === tripId &&
+      devTripRetrip.sourceTripId !== tripId
+    ) {
+      const sourceTracks = store.tracks.filter(
+        (track) =>
+          track.tripId === devTripRetrip.sourceTripId && track.kind === 'position',
+      )
+      tracks = [...sourceTracks, ...tracks]
+    }
+    return tracks
+  }, [devTripRetrip, recordingTripId, store.tracks, tripId, tripTracks])
+
+  useEffect(() => {
+    if (!trip) return
+    const { ensureTripTrackPayloads } = useLogbookStore.getState()
+    void ensureTripTrackPayloads(tripId)
+    if (devTripRetrip?.sourceTripId) {
+      void ensureTripTrackPayloads(devTripRetrip.sourceTripId)
+    }
+  }, [trip, tripId, tripTracks.length, devTripRetrip?.sourceTripId]);
 
   const tripEntries = useMemo(
     () =>
@@ -153,8 +183,6 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
     [store.entries, tripId],
   );
 
-  const devTripReplay = useAppOptionsStore((state) => state.devTripReplay);
-  const devMode = useAppOptionsStore((state) => state.devMode);
   const inProgressTrip = store.trips.find((item) => item.status === "IN_PROGRESS");
 
   useIosNativeMapTouchPassthrough(
@@ -190,7 +218,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
   const tryAutoMapCover = useCallback(
     async (options?: { force?: boolean }) => {
       const currentTrip = useLogbookStore.getState().trips.find((item) => item.id === tripId);
-      if (currentTrip?.coverPhotoDataUrl) {
+      if (currentTrip?.coverPhotoDataUrl && !options?.force) {
         useLogbookStore.getState().clearAutoMapCoverRequest(tripId);
         return true;
       }
@@ -210,17 +238,21 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
   );
 
   const handleInitialMapViewportSettled = useCallback(() => {
-    void tryAutoMapCover();
-  }, [tryAutoMapCover]);
+    const wantsCover = useLogbookStore.getState().autoMapCoverTripIds.includes(tripId);
+    void tryAutoMapCover({ force: wantsCover });
+  }, [tryAutoMapCover, tripId]);
 
   const wantsAutoMapCover = store.autoMapCoverTripIds.includes(tripId);
   const hasPositionTrack = tripTracks.some((track) => track.kind === "position");
+  const tripIsActive = trip?.status === "IN_PROGRESS" || trip?.status === "PLANNED";
 
   useEffect(() => {
-    if (!trip || trip.coverPhotoDataUrl) return;
+    if (!trip) return;
+    if (trip.coverPhotoDataUrl && !wantsAutoMapCover) return;
+    if (tripIsActive && !wantsAutoMapCover) return;
     if (!hasPositionTrack && !wantsAutoMapCover) return;
 
-    const delays = wantsAutoMapCover ? [0, 500, 1500, 3000] : [0];
+    const delays = wantsAutoMapCover ? [0, 800, 1500, 3000] : [0];
     const timers = delays.map((delay) =>
       window.setTimeout(() => {
         void tryAutoMapCover({ force: wantsAutoMapCover });
@@ -230,11 +262,26 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
     return () => {
       timers.forEach((timer) => window.clearTimeout(timer));
     };
-  }, [trip, hasPositionTrack, wantsAutoMapCover, tryAutoMapCover, tripId, tripTracks.length]);
+  }, [
+    trip,
+    tripIsActive,
+    hasPositionTrack,
+    wantsAutoMapCover,
+    tryAutoMapCover,
+    tripId,
+    tripTracks.length,
+    trip?.status,
+  ]);
 
   useEffect(() => {
     autoMapCoverAttemptedRef.current = null;
   }, [tripId]);
+
+  useEffect(() => {
+    if (trip?.status === "COMPLETED") {
+      autoMapCoverAttemptedRef.current = null;
+    }
+  }, [trip?.status, tripId]);
 
   if (!store.booted) {
     return (
@@ -328,6 +375,10 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
     setBusy(true);
     try {
       await store.addEntry({ tripId: trip.id, type: "START_TRIP" });
+      const current = useLogbookStore.getState().trips.find((item) => item.id === trip.id);
+      if (current?.status === "IN_PROGRESS") {
+        useAppOptionsStore.getState().setRecordingTripId(trip.id);
+      }
       toast.success("Trip started");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to start trip");
@@ -468,7 +519,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
           cover={cover}
           mapEntries={tripEntries}
           mapLegs={tripLegs}
-          mapTracks={tripTracks}
+          mapTracks={mapTracks}
           mediaByEntry={mediaByEntry}
           busy={busy}
           selectedEntryId={selectedEntryId}

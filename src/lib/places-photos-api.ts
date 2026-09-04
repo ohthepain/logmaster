@@ -1,5 +1,4 @@
 import { apiUrl } from './app-origin'
-import type { PlacePhotoSource } from './place-photos-layers'
 
 export type PlacePhotoAttribution = {
   displayName: string
@@ -8,10 +7,8 @@ export type PlacePhotoAttribution = {
 
 export type PlacePhoto = {
   name: string
-  title?: string
   widthPx: number
   heightPx: number
-  pageUrl?: string | null
   authorAttributions: PlacePhotoAttribution[]
   mediaUrl: string
 }
@@ -19,6 +16,7 @@ export type PlacePhoto = {
 export type PlacePhotosSearchResponse = {
   configured: boolean
   error?: string
+  message?: string
   place?: {
     id: string | null
     name: string
@@ -26,15 +24,12 @@ export type PlacePhotosSearchResponse = {
   photos?: PlacePhoto[]
 }
 
-async function fetchPlacePhotosFromApi(
-  path: string,
-  input: {
-    latitude: number
-    longitude: number
-    name?: string | null
-  },
-): Promise<PlacePhotosSearchResponse> {
-  const url = new URL(apiUrl(path))
+export async function fetchPlacePhotos(input: {
+  latitude: number
+  longitude: number
+  name?: string | null
+}): Promise<PlacePhotosSearchResponse> {
+  const url = new URL(apiUrl('/api/places/photos/search'))
   url.searchParams.set('latitude', String(input.latitude))
   url.searchParams.set('longitude', String(input.longitude))
   if (input.name?.trim()) url.searchParams.set('name', input.name.trim())
@@ -46,19 +41,6 @@ async function fetchPlacePhotosFromApi(
   }
 
   return (await response.json()) as PlacePhotosSearchResponse
-}
-
-export async function fetchPlacePhotos(input: {
-  latitude: number
-  longitude: number
-  name?: string | null
-  source?: PlacePhotoSource
-}): Promise<PlacePhotosSearchResponse> {
-  const path =
-    input.source === 'flickr'
-      ? '/api/places/flickr/search'
-      : '/api/places/photos/search'
-  return fetchPlacePhotosFromApi(path, input)
 }
 
 export function placePhotoMediaUrl(mediaPath: string): string {

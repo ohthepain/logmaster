@@ -101,6 +101,7 @@ function toTripTrack(data: Record<string, unknown>) {
   const endedAt = parseDate(data.endedAt) ?? startedAt
   const createdAt = parseDate(data.createdAt) ?? startedAt
   const updatedAt = parseDate(data.updatedAt) ?? startedAt
+  const storage = data.storage === 's3' ? 's3' : 'inline'
   return {
     id: String(data.id ?? crypto.randomUUID()),
     tripId: String(data.tripId),
@@ -108,13 +109,43 @@ function toTripTrack(data: Record<string, unknown>) {
     source: String(data.source ?? 'instrument'),
     kind: String(data.kind ?? 'position'),
     encoding: String(data.encoding ?? 'delta-v1'),
-    payload: data.payload ?? {},
+    payload:
+      storage === 'inline' ? ((data.payload as object | null | undefined) ?? {}) : null,
+    storage,
+    storageKey: (data.storageKey as string | null | undefined) ?? null,
+    byteLength:
+      data.byteLength != null && Number.isFinite(Number(data.byteLength))
+        ? Number(data.byteLength)
+        : null,
+    sha256: (data.sha256 as string | null | undefined) ?? null,
     sampleCount: Number(data.sampleCount ?? 0),
     startedAt,
     endedAt,
     createdAt,
     updatedAt,
     synced: Boolean(data.synced),
+  }
+}
+
+function serializeTripTrackForClient(track: Record<string, unknown>) {
+  const storage = track.storage === 's3' ? 's3' : 'inline'
+  return {
+    ...track,
+    payload: storage === 'inline' ? track.payload ?? null : null,
+    startedAt:
+      track.startedAt instanceof Date
+        ? track.startedAt.toISOString()
+        : track.startedAt,
+    endedAt:
+      track.endedAt instanceof Date ? track.endedAt.toISOString() : track.endedAt,
+    createdAt:
+      track.createdAt instanceof Date
+        ? track.createdAt.toISOString()
+        : track.createdAt,
+    updatedAt:
+      track.updatedAt instanceof Date
+        ? track.updatedAt.toISOString()
+        : track.updatedAt,
   }
 }
 
@@ -146,7 +177,16 @@ logbookRoutes.get('/bootstrap', async (c) => {
     db.media.findMany({ orderBy: [{ createdAt: 'asc' }] }),
     getDeletedTripIds(),
   ])
-  return c.json({ trips, legs, logEntries, tripTracks, media, deletedTripIds })
+  return c.json({
+    trips,
+    legs,
+    logEntries,
+    tripTracks: tripTracks.map((track: Record<string, unknown>) =>
+      serializeTripTrackForClient(track),
+    ),
+    media,
+    deletedTripIds,
+  })
 })
 
 logbookRoutes.post('/sync', async (c) => {
@@ -253,7 +293,9 @@ logbookRoutes.post('/sync', async (c) => {
       trips: savedTrips,
       legs: savedLegs,
       logEntries: savedEntries,
-      tripTracks: savedTracks,
+      tripTracks: savedTracks.map((track: Record<string, unknown>) =>
+        serializeTripTrackForClient(track),
+      ),
       media: savedMedia,
       deletedTripIds: savedDeletedTripIds,
     })

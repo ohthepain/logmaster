@@ -133,13 +133,11 @@ describe('osm-feature-display', () => {
     })
     expect(marinaHtml).toContain('View on OpenStreetMap')
     expect(marinaHtml).toContain('Images')
-    expect(marinaHtml).toContain('Flickr')
     expect(marinaHtml).toContain('/places/photos?')
-    expect(marinaHtml).toContain('source=flickr')
+    expect(marinaHtml).not.toContain('Flickr')
     expect(marinaHtml.indexOf('View on OpenStreetMap')).toBeLessThan(
       marinaHtml.indexOf('Images'),
     )
-    expect(marinaHtml.indexOf('Images')).toBeLessThan(marinaHtml.indexOf('Flickr'))
 
     const hazardHtml = formatMapFeaturePopupHtml({
       layerId: 'osm-seamarks-other',

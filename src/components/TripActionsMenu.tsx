@@ -3,9 +3,13 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { Trip } from '../domain/logbook'
 import { cn } from '../lib/cn'
+import { createDevTripRetrip } from '../lib/dev-trip-retrip'
+import { isDevModeAvailable } from '../lib/dev-mode'
 import { exportTripAsGpx, exportTripAsSignalK } from '../lib/trip-export'
 import { tripDisplayName } from '../lib/trip-display'
+import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore } from '../stores/logbook'
+import { DevTripRetripModal } from './DevTripRetripModal'
 import { Modal } from './Modal'
 import { AppIconButtonTooltip } from './AppIconButtonTooltip'
 
@@ -29,10 +33,17 @@ export function TripActionsMenu({
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [retripOpen, setRetripOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
   const tracks = useLogbookStore((state) => state.tracks)
+  const devMode = useAppOptionsStore((state) => state.devMode)
+  const devTripRetrip = useAppOptionsStore((state) => state.devTripRetrip)
+  const setDevTripRetrip = useAppOptionsStore((state) => state.setDevTripRetrip)
+  const stopDevTripRetrip = useAppOptionsStore((state) => state.stopDevTripRetrip)
   const displayName = tripDisplayName(trip)
+  const showRetripAction =
+    devMode && isDevModeAvailable() && trip.status === 'COMPLETED'
 
   useEffect(() => {
     onOpenChange?.(open)
@@ -97,6 +108,14 @@ export function TripActionsMenu({
     }
   }
 
+  const handleStartRetrip = (timescale: number) => {
+    void runAction(async () => {
+      setDevTripRetrip(createDevTripRetrip(trip.id, timescale))
+      setRetripOpen(false)
+      toast.success('Spoof armed — press play when ready')
+    })
+  }
+
   return (
     <>
       <div className={cn('relative', className)} ref={rootRef}>
@@ -151,6 +170,20 @@ export function TripActionsMenu({
             >
               Export as Signal K
             </button>
+            {showRetripAction ? (
+              <button
+                type="button"
+                role="menuitem"
+                disabled={busy}
+                onClick={() => {
+                  setOpen(false)
+                  setRetripOpen(true)
+                }}
+                className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
+              >
+                Re-trip (spoof)
+              </button>
+            ) : null}
             <button
               type="button"
               role="menuitem"
@@ -204,6 +237,23 @@ export function TripActionsMenu({
             </div>
           </div>
         </Modal>
+      ) : null}
+
+      {retripOpen ? (
+        <DevTripRetripModal
+          open={retripOpen}
+          sourceTrip={trip}
+          busy={busy}
+          activeRetripSourceId={devTripRetrip?.sourceTripId ?? null}
+          onClose={() => {
+            if (!busy) setRetripOpen(false)
+          }}
+          onConfirm={handleStartRetrip}
+          onStopActive={() => {
+            stopDevTripRetrip()
+            toast.success('Re-trip spoofing stopped')
+          }}
+        />
       ) : null}
     </>
   )

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { LogEntry, Trip, Leg  } from '../domain/logbook'
+import { encodePositionTrackSamples } from '../domain/trip-track'
 import {
   adjacentPositionedEntryPairs,
   buildLegEntryPointsGeoJson,
@@ -173,10 +174,11 @@ describe('buildLegTrackGeoJson', () => {
       legs,
     )
 
-    expect(geojson.features).toHaveLength(3)
+    expect(geojson.features).toHaveLength(2)
     expect(geojson.features[0]?.properties.color).toBe('#7ec8e8')
+    expect(geojson.features[0]?.geometry.coordinates).toHaveLength(2)
     expect(geojson.features[1]?.properties.color).toBe('#f4a261')
-    expect(geojson.features[2]?.properties.color).toBe('#f4a261')
+    expect(geojson.features[1]?.geometry.coordinates).toHaveLength(2)
   })
 
   it('does not chord across log entries without positions between', () => {
@@ -268,12 +270,9 @@ describe('buildLegTrackGeoJson', () => {
       }),
     ])
 
-    expect(geojson.features).toHaveLength(2)
+    expect(geojson.features).toHaveLength(1)
     expect(geojson.features[0]?.geometry.coordinates).toEqual([
       [-123.1, 48.1],
-      [-123.2, 48.2],
-    ])
-    expect(geojson.features[1]?.geometry.coordinates).toEqual([
       [-123.2, 48.2],
       [-123.3, 48.3],
     ])
@@ -315,12 +314,175 @@ describe('buildLegTrackGeoJson', () => {
       }),
     ])
 
-    expect(geojson.features).toHaveLength(2)
+    expect(geojson.features).toHaveLength(1)
+    expect(geojson.features[0]?.geometry.coordinates).toEqual([
+      [-123.1, 48.1],
+      [-123.2, 48.2],
+      [-123.3, 48.3],
+    ])
     expect(geojson.features.some((feature) => {
       const [fromLng, fromLat] = feature.geometry.coordinates[0]
       const [toLng, toLat] = feature.geometry.coordinates[1]
       return fromLat === 48.3 && fromLng === -123.3 && toLat === 48.1 && toLng === -123.1
     })).toBe(false)
+  })
+
+  it('connects positioned entries even when a note sits between hourly logs', () => {
+    const geojson = buildLegTrackGeoJson([
+      baseEntry({
+        id: 'hourly-1',
+        type: 'HOURLY_LOG',
+        timestamp: '2026-01-01T12:00:00.000Z',
+        latitude: 48.1,
+        longitude: -123.1,
+      }),
+      baseEntry({
+        id: 'note',
+        type: 'NOTE',
+        timestamp: '2026-01-01T12:30:00.000Z',
+        latitude: null,
+        longitude: null,
+      }),
+      baseEntry({
+        id: 'hourly-2',
+        type: 'HOURLY_LOG',
+        timestamp: '2026-01-01T13:00:00.000Z',
+        latitude: 48.2,
+        longitude: -123.2,
+      }),
+      baseEntry({
+        id: 'hourly-3',
+        type: 'HOURLY_LOG',
+        timestamp: '2026-01-01T14:00:00.000Z',
+        latitude: 48.3,
+        longitude: -123.3,
+      }),
+    ])
+
+    expect(geojson.features).toHaveLength(1)
+    expect(geojson.features[0]?.geometry.coordinates).toEqual([
+      [-123.1, 48.1],
+      [-123.2, 48.2],
+      [-123.3, 48.3],
+    ])
+  })
+
+  it('prefers trip track manifest over hourly logs before payload hydration', () => {
+    const geojson = buildLegTrackGeoJson(
+      [
+        baseEntry({
+          id: 'hourly-1',
+          type: 'HOURLY_LOG',
+          timestamp: '2026-01-01T12:00:00.000Z',
+          latitude: 48.1,
+          longitude: -123.1,
+        }),
+        baseEntry({
+          id: 'hourly-2',
+          type: 'HOURLY_LOG',
+          timestamp: '2026-01-01T13:00:00.000Z',
+          latitude: 48.2,
+          longitude: -123.2,
+        }),
+        baseEntry({
+          id: 'hourly-3',
+          type: 'HOURLY_LOG',
+          timestamp: '2026-01-01T14:00:00.000Z',
+          latitude: 48.3,
+          longitude: -123.3,
+        }),
+      ],
+      [],
+      [
+        {
+          id: 'track-1',
+          tripId: 'trip-1',
+          legId: null,
+          source: 'gpx-import',
+          kind: 'position',
+          encoding: 'delta-v1',
+          payload: null,
+          sampleCount: 500,
+          startedAt: '2026-01-01T12:00:00.000Z',
+          endedAt: '2026-01-01T14:00:00.000Z',
+          createdAt: '2026-01-01T12:00:00.000Z',
+          updatedAt: '2026-01-01T14:00:00.000Z',
+          synced: true,
+          storage: 's3',
+          storageKey: 'tracks/user/trip/track-1',
+          byteLength: 4096,
+          sha256: 'abc',
+        },
+      ],
+    )
+
+    expect(geojson.features).toHaveLength(0)
+  })
+
+  it('prefers entry geometry when trip tracks are sparser than hourly logs', () => {
+    const geojson = buildLegTrackGeoJson(
+      [
+        baseEntry({
+          id: 'hourly-1',
+          type: 'HOURLY_LOG',
+          timestamp: '2026-01-01T12:00:00.000Z',
+          latitude: 48.1,
+          longitude: -123.1,
+        }),
+        baseEntry({
+          id: 'hourly-2',
+          type: 'HOURLY_LOG',
+          timestamp: '2026-01-01T13:00:00.000Z',
+          latitude: 48.2,
+          longitude: -123.2,
+        }),
+        baseEntry({
+          id: 'hourly-3',
+          type: 'HOURLY_LOG',
+          timestamp: '2026-01-01T14:00:00.000Z',
+          latitude: 48.3,
+          longitude: -123.3,
+        }),
+      ],
+      [],
+      [
+        {
+          id: 'track-1',
+          tripId: 'trip-1',
+          legId: null,
+          source: 'background-gps',
+          kind: 'position',
+          encoding: 'delta-v1',
+          payload: encodePositionTrackSamples([
+            {
+              time: '2026-01-01T12:00:00.000Z',
+              latitude: 48.1,
+              longitude: -123.1,
+              heading: null,
+            },
+            {
+              time: '2026-01-01T14:00:00.000Z',
+              latitude: 48.3,
+              longitude: -123.3,
+              heading: null,
+            },
+          ]),
+          sampleCount: 2,
+          startedAt: '2026-01-01T12:00:00.000Z',
+          endedAt: '2026-01-01T14:00:00.000Z',
+          createdAt: '2026-01-01T12:00:00.000Z',
+          updatedAt: '2026-01-01T14:00:00.000Z',
+          synced: true,
+          storage: 'inline',
+          storageKey: null,
+          byteLength: null,
+          sha256: null,
+        },
+      ],
+    )
+
+    expect(geojson.features).toHaveLength(1)
+    expect(geojson.features[0]?.geometry.coordinates).toHaveLength(3)
   })
 })
 

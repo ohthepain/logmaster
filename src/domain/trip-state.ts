@@ -208,6 +208,79 @@ export function syncTripOperationalFields<
   }
 }
 
+/** Keep trip.status aligned with START_TRIP / END_TRIP entries after sync merges. */
+export function syncTripLifecycleFromEntries<
+  T extends Pick<
+    Trip,
+    | 'status'
+    | 'startedAt'
+    | 'completedAt'
+    | 'startLatitude'
+    | 'startLongitude'
+    | 'startCountry'
+    | 'sailsUp'
+    | 'engineOn'
+    | 'moored'
+    | 'anchorDown'
+  >,
+>(
+  trip: T,
+  entries: Pick<
+    LogEntry,
+    'type' | 'timestamp' | 'deleted' | 'latitude' | 'longitude'
+  >[],
+): T {
+  const tripEntries = entries.filter((entry) => !entry.deleted)
+  const lifecycleEntries = tripEntries
+    .filter((entry) => entry.type === 'START_TRIP' || entry.type === 'END_TRIP')
+    .sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    )
+
+  const lastEnd = [...lifecycleEntries]
+    .reverse()
+    .find((entry) => entry.type === 'END_TRIP')
+  const lastStart = [...lifecycleEntries]
+    .reverse()
+    .find((entry) => entry.type === 'START_TRIP')
+  const operational = syncTripOperationalFields(trip, tripEntries)
+
+  if (
+    lastEnd &&
+    (!lastStart ||
+      new Date(lastEnd.timestamp).getTime() >=
+        new Date(lastStart.timestamp).getTime())
+  ) {
+    return {
+      ...operational,
+      status: 'COMPLETED',
+      completedAt: lastEnd.timestamp,
+    }
+  }
+
+  if (lastStart) {
+    return {
+      ...operational,
+      status: 'IN_PROGRESS',
+      startedAt: lastStart.timestamp,
+      startLatitude: lastStart.latitude ?? trip.startLatitude ?? null,
+      startLongitude: lastStart.longitude ?? trip.startLongitude ?? null,
+      completedAt: null,
+    }
+  }
+
+  if (trip.status === 'COMPLETED') {
+    return operational
+  }
+
+  return {
+    ...operational,
+    status: 'PLANNED',
+    completedAt: null,
+  }
+}
+
 export function formatSailsState(sailsUp: boolean | null) {
   if (sailsUp === true) return 'Up'
   if (sailsUp === false) return 'Down'

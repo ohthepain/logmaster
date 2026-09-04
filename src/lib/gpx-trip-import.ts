@@ -167,6 +167,10 @@ function buildPositionTripTrack(
     createdAt: now,
     updatedAt: now,
     synced: false,
+    storage: 'inline',
+    storageKey: null,
+    byteLength: null,
+    sha256: null,
   }
 }
 
@@ -190,6 +194,10 @@ function buildScalarTripTrack(
     createdAt: now,
     updatedAt: now,
     synced: false,
+    storage: 'inline',
+    storageKey: null,
+    byteLength: null,
+    sha256: null,
   }
 }
 

@@ -16,6 +16,11 @@ export type PlacePhotosResult = {
   photos: PlacePhoto[]
 }
 
+export type FetchPlacePhotosResult = {
+  result: PlacePhotosResult | null
+  message?: string
+}
+
 type GoogleLatLng = {
   latitude: number
   longitude: number
@@ -36,13 +41,25 @@ type GooglePlace = {
   }>
 }
 
+type GooglePlacesError = {
+  error?: {
+    message?: string
+    status?: string
+  }
+}
+
 const PLACES_API = 'https://places.googleapis.com/v1'
-const PLACE_FIELD_MASK =
-  'places.id,places.displayName,places.photos,places.location'
+const SEARCH_FIELD_MASK =
+  'places.id,places.displayName,places.location'
+const DETAILS_FIELD_MASK =
+  'id,displayName,location,photos.name,photos.widthPx,photos.heightPx,photos.authorAttributions'
 const PHOTO_NAME_PATTERN = /^places\/[^/]+\/photos\/[^/]+$/
+const MAX_CANDIDATES = 8
 
 export function getGooglePlacesApiKey(): string | null {
-  const value = process.env.GOOGLE_PLACES_API_KEY?.trim()
+  const value =
+    process.env.GOOGLE_PLACES_API_KEY?.trim() ||
+    process.env.GOOGLE_PLACE_API_KEY?.trim()
   return value || null
 }
 
@@ -67,6 +84,10 @@ function haversineMeters(
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
   return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+function normalizePlaceId(id: string): string {
+  return id.replace(/^places\//, '')
 }
 
 function normalizePlace(place: GooglePlace): PlacePhotosResult | null {
@@ -102,129 +123,212 @@ function normalizePlace(place: GooglePlace): PlacePhotosResult | null {
   if (photos.length === 0) return null
 
   return {
-    placeId,
+    placeId: normalizePlaceId(placeId),
     placeName: place.displayName?.text?.trim() || 'Place',
     photos,
   }
 }
 
-function pickClosestPlaceWithPhotos(
+function rankPlacesByDistance(
   places: GooglePlace[],
   latitude: number,
   longitude: number,
-): GooglePlace | null {
-  const ranked = places
+): GooglePlace[] {
+  const seen = new Set<string>()
+
+  return places
     .flatMap((place) => {
+      const id = place.id?.trim()
       const location = place.location
-      if (!location || !place.photos?.length) return []
-      const distanceM = haversineMeters(
-        latitude,
-        longitude,
-        location.latitude,
-        location.longitude,
-      )
-      return [{ place, distanceM }]
+      if (!id || !location || seen.has(id)) return []
+      seen.add(id)
+      return [
+        {
+          place,
+          distanceM: haversineMeters(
+            latitude,
+            longitude,
+            location.latitude,
+            location.longitude,
+          ),
+        },
+      ]
     })
     .sort((a, b) => a.distanceM - b.distanceM)
-
-  return ranked[0]?.place ?? null
+    .map((entry) => entry.place)
+    .slice(0, MAX_CANDIDATES)
 }
 
 async function googlePlacesRequest<T>(
   path: string,
   init: RequestInit,
-): Promise<T | null> {
+): Promise<{ data: T | null; error: string | null }> {
   const apiKey = getGooglePlacesApiKey()
-  if (!apiKey) return null
+  if (!apiKey) {
+    return { data: null, error: 'Google Places API key is not configured.' }
+  }
+
+  const headers = new Headers(init.headers)
+  headers.set('X-Goog-Api-Key', apiKey)
+  if (init.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
 
   const response = await fetch(`${PLACES_API}${path}`, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': apiKey,
-      ...init.headers,
-    },
+    headers,
   })
 
-  if (!response.ok) return null
-  return (await response.json()) as T
+  const text = await response.text()
+  if (!response.ok) {
+    let message = `Google Places request failed (${response.status})`
+    try {
+      const json = JSON.parse(text) as GooglePlacesError
+      if (json.error?.message) message = json.error.message
+    } catch {
+      if (text.trim()) message = text.trim()
+    }
+    return { data: null, error: message }
+  }
+
+  if (!text.trim()) return { data: null, error: null }
+  return { data: JSON.parse(text) as T, error: null }
 }
 
 async function searchTextPlaces(
   latitude: number,
   longitude: number,
   name: string,
-): Promise<GooglePlace[]> {
+): Promise<{ places: GooglePlace[]; error: string | null }> {
   const payload = await googlePlacesRequest<{ places?: GooglePlace[] }>(
     '/places:searchText',
     {
       method: 'POST',
       headers: {
-        'X-Goog-FieldMask': PLACE_FIELD_MASK,
+        'X-Goog-FieldMask': SEARCH_FIELD_MASK,
       },
       body: JSON.stringify({
         textQuery: name,
         locationBias: {
           circle: {
             center: { latitude, longitude },
-            radius: 2500,
+            radius: 5000,
           },
         },
-        maxResultCount: 8,
+        maxResultCount: MAX_CANDIDATES,
       }),
     },
   )
-  return payload?.places ?? []
+
+  return {
+    places: payload.data?.places ?? [],
+    error: payload.error,
+  }
 }
 
 async function searchNearbyPlaces(
   latitude: number,
   longitude: number,
-): Promise<GooglePlace[]> {
+): Promise<{ places: GooglePlace[]; error: string | null }> {
   const payload = await googlePlacesRequest<{ places?: GooglePlace[] }>(
     '/places:searchNearby',
     {
       method: 'POST',
       headers: {
-        'X-Goog-FieldMask': PLACE_FIELD_MASK,
+        'X-Goog-FieldMask': SEARCH_FIELD_MASK,
       },
       body: JSON.stringify({
         locationRestriction: {
           circle: {
             center: { latitude, longitude },
-            radius: 750,
+            radius: 1500,
           },
         },
-        maxResultCount: 8,
+        maxResultCount: MAX_CANDIDATES,
       }),
     },
   )
-  return payload?.places ?? []
+
+  return {
+    places: payload.data?.places ?? [],
+    error: payload.error,
+  }
+}
+
+async function fetchPlaceDetails(placeId: string): Promise<GooglePlace | null> {
+  const payload = await googlePlacesRequest<GooglePlace>(
+    `/places/${normalizePlaceId(placeId)}`,
+    {
+      method: 'GET',
+      headers: {
+        'X-Goog-FieldMask': DETAILS_FIELD_MASK,
+      },
+    },
+  )
+
+  return payload.data
 }
 
 export async function fetchPlacePhotos(
   latitude: number,
   longitude: number,
   name?: string | null,
-): Promise<PlacePhotosResult | null> {
-  if (!isGooglePlacesConfigured()) return null
-
-  const trimmedName = name?.trim()
-  const places = trimmedName
-    ? await searchTextPlaces(latitude, longitude, trimmedName)
-    : await searchNearbyPlaces(latitude, longitude)
-
-  const bestPlace = pickClosestPlaceWithPhotos(places, latitude, longitude)
-  if (!bestPlace) return null
-
-  const normalized = normalizePlace(bestPlace)
-  if (!normalized) return null
-
-  if (trimmedName && !normalized.placeName) {
-    normalized.placeName = trimmedName
+): Promise<FetchPlacePhotosResult> {
+  if (!isGooglePlacesConfigured()) {
+    return { result: null }
   }
 
-  return normalized
+  const trimmedName = name?.trim()
+  const searchErrors: string[] = []
+  const candidates: GooglePlace[] = []
+
+  if (trimmedName) {
+    const textSearch = await searchTextPlaces(latitude, longitude, trimmedName)
+    if (textSearch.error) searchErrors.push(textSearch.error)
+    candidates.push(...textSearch.places)
+  }
+
+  const nearbySearch = await searchNearbyPlaces(latitude, longitude)
+  if (nearbySearch.error) searchErrors.push(nearbySearch.error)
+  candidates.push(...nearbySearch.places)
+
+  const rankedCandidates = rankPlacesByDistance(
+    candidates,
+    latitude,
+    longitude,
+  )
+
+  if (rankedCandidates.length === 0) {
+    return {
+      result: null,
+      message:
+        searchErrors[0] ??
+        (trimmedName
+          ? `No Google Maps places matched “${trimmedName}” near this point.`
+          : 'No Google Maps places were found near this point.'),
+    }
+  }
+
+  for (const candidate of rankedCandidates) {
+    const placeId = candidate.id?.trim()
+    if (!placeId) continue
+
+    const details = await fetchPlaceDetails(placeId)
+    const normalized = normalizePlace(details ?? candidate)
+    if (!normalized) continue
+
+    if (trimmedName && normalized.placeName === 'Place') {
+      normalized.placeName = trimmedName
+    }
+
+    return { result: normalized }
+  }
+
+  return {
+    result: null,
+    message:
+      'Google Maps found nearby places, but none returned photos. Photo access requires Places API (New) Place Details Pro (or higher) on your Google Cloud project — check billing and enabled APIs in Google Cloud Console.',
+  }
 }
 
 export async function fetchPlacePhotoMediaUri(

@@ -1,11 +1,13 @@
 import { Map, Pencil, RotateCw, Sailboat } from "lucide-react";
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { Leg, LogEntry, Media, Trip } from "../domain/logbook";
 import type { TripTrack } from "../domain/trip-track";
 import type { TripDetailCoverDisplay } from "../lib/trip-display";
 import type { TripMapHandle } from "../lib/trip-map-handle";
+import { retripSourceElapsedMs, retripSourceTimeMs as mapRetripSourceTimeMs } from "../lib/dev-trip-retrip";
 import { getNativePlatform } from "../lib/platform";
 import { useAppOptionsStore } from "../stores/app-options";
+import { useLogbookStore } from "../stores/logbook";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { SailingMapControlStack } from "./SailingMapControlStack";
 import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
@@ -61,11 +63,24 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
   const isActiveTrip = trip.status === "IN_PROGRESS" || trip.status === "PLANNED";
   const isPlayback = trip.status === "COMPLETED";
   const recordingTripId = useAppOptionsStore((state) => state.recordingTripId);
+  const devTripRetrip = useAppOptionsStore((state) => state.devTripRetrip);
+  const pauseDevTripRetrip = useAppOptionsStore((state) => state.pauseDevTripRetrip);
+  const resumeDevTripRetrip = useAppOptionsStore((state) => state.resumeDevTripRetrip);
+  const setDevTripRetripTimescale = useAppOptionsStore((state) => state.setDevTripRetripTimescale);
+  const stopDevTripRetrip = useAppOptionsStore((state) => state.stopDevTripRetrip);
+  const allTrips = useLogbookStore((state) => state.trips);
+  const allEntries = useLogbookStore((state) => state.entries);
+  const allTracks = useLogbookStore((state) => state.tracks);
   const mapDataLayerToggles = useAppOptionsStore((state) => state.mapDataLayerToggles);
   const setMapDataLayerToggles = useAppOptionsStore((state) => state.setMapDataLayerToggles);
   const mapLogEntryLayerToggles = useAppOptionsStore((state) => state.mapLogEntryLayerToggles);
   const setMapLogEntryLayerToggles = useAppOptionsStore((state) => state.setMapLogEntryLayerToggles);
-  const showCurrentPosition = isActiveTrip && recordingTripId === trip.id;
+  const showCurrentPosition =
+    (isActiveTrip && recordingTripId === trip.id) ||
+    (isActiveTrip && devTripRetrip != null) ||
+    (isPlayback &&
+      devTripRetrip != null &&
+      devTripRetrip.sourceTripId === trip.id);
   const showInteractiveMap = isActiveTrip || isPlayback || cover.kind === "map";
   const showPhoto = !showInteractiveMap && cover.kind === "photo" && cover.photoUrl;
   const showOperationalOverlay = isActiveTrip;
@@ -80,6 +95,43 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
   );
   const [playbackTimeMs, setPlaybackTimeMs] = useState(playbackRange.startMs);
   const [playbackPlaying, setPlaybackPlaying] = useState(false);
+  const [liveTimeMs, setLiveTimeMs] = useState(() => Date.now());
+  const [retripNowMs, setRetripNowMs] = useState(() => Date.now());
+
+  const retripSourceTrip = useMemo(
+    () =>
+      devTripRetrip
+        ? allTrips.find((item) => item.id === devTripRetrip.sourceTripId) ?? null
+        : null,
+    [allTrips, devTripRetrip],
+  );
+  const retripSourceEntries = useMemo(
+    () =>
+      retripSourceTrip
+        ? allEntries.filter(
+            (entry) => entry.tripId === retripSourceTrip.id && !entry.deleted,
+          )
+        : [],
+    [allEntries, retripSourceTrip],
+  );
+  const retripSourceTracks = useMemo(
+    () =>
+      retripSourceTrip
+        ? allTracks.filter((track) => track.tripId === retripSourceTrip.id)
+        : [],
+    [allTracks, retripSourceTrip],
+  );
+  const retripInfoTimeMs = useMemo(() => {
+    if (!devTripRetrip || !retripSourceTrip) return null;
+    const elapsedMs = retripSourceElapsedMs(devTripRetrip, retripNowMs);
+    return mapRetripSourceTimeMs(retripSourceTrip, elapsedMs);
+  }, [devTripRetrip, retripNowMs, retripSourceTrip]);
+
+  const handleRetripPauseToggle = useCallback(() => {
+    if (!devTripRetrip) return;
+    if (devTripRetrip.paused) resumeDevTripRetrip();
+    else pauseDevTripRetrip();
+  }, [devTripRetrip, pauseDevTripRetrip, resumeDevTripRetrip]);
   const playbackPosition = useMemo(
     () =>
       isPlayback
@@ -89,11 +141,50 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
   );
 
   const showPlaybackOverlay = isPlayback && completedTripPanel === "map";
+  const infoTimeMs = devTripRetrip && retripInfoTimeMs != null
+    ? retripInfoTimeMs
+    : isPlayback
+      ? playbackTimeMs
+      : liveTimeMs;
+  const infoTripId = devTripRetrip && retripSourceTrip ? retripSourceTrip.id : trip.id;
+  const infoTracks = devTripRetrip && retripSourceTrip ? retripSourceTracks : mapTracks;
+  const infoEntries = devTripRetrip && retripSourceTrip ? retripSourceEntries : mapEntries;
+  const infoPosition = useMemo(
+    () =>
+      isPlayback && !devTripRetrip
+        ? playbackPosition
+        : tripPlaybackPositionAt(infoTripId, infoEntries, infoTimeMs, infoTracks),
+    [
+      devTripRetrip,
+      infoEntries,
+      infoTimeMs,
+      infoTracks,
+      infoTripId,
+      isPlayback,
+      playbackPosition,
+    ],
+  );
+
+  const mapPlaybackPosition = devTripRetrip ? infoPosition : playbackPosition;
 
   useEffect(() => {
     setPlaybackTimeMs(playbackRange.startMs);
     setPlaybackPlaying(false);
   }, [playbackRange.startMs, trip.id]);
+
+  useEffect(() => {
+    if (!isActiveTrip) return;
+    setLiveTimeMs(Date.now());
+    const intervalId = window.setInterval(() => setLiveTimeMs(Date.now()), 1_000);
+    return () => window.clearInterval(intervalId);
+  }, [isActiveTrip, trip.id]);
+
+  useEffect(() => {
+    if (!devTripRetrip) return;
+    setRetripNowMs(Date.now());
+    const intervalId = window.setInterval(() => setRetripNowMs(Date.now()), 250);
+    return () => window.clearInterval(intervalId);
+  }, [devTripRetrip]);
 
   useImperativeHandle(
     ref,
@@ -135,7 +226,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
             interactive={isActiveTrip || isPlayback}
             embedded
             showSeamarks={isActiveTrip || isPlayback}
-            playbackPosition={playbackPosition}
+            playbackPosition={mapPlaybackPosition}
             playbackMode={isPlayback}
             playbackPlaying={playbackPlaying}
             boatIconId={trip.boatIconId}
@@ -199,7 +290,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
               interactive={isActiveTrip || isPlayback}
               embedded
               showSeamarks={isActiveTrip || isPlayback}
-              playbackPosition={playbackPosition}
+              playbackPosition={mapPlaybackPosition}
               playbackMode={isPlayback}
               playbackPlaying={playbackPlaying}
               boatIconId={trip.boatIconId}
@@ -288,13 +379,24 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
             </TripMapChromeButton>
           ) : null}
         </div>
-        {showPlaybackOverlay ? (
+        {showInteractiveMap ? (
           <TripPlaybackInfoPanel
-            tripId={trip.id}
-            tracks={mapTracks}
-            entries={mapEntries}
-            currentTimeMs={playbackTimeMs}
-            playbackPosition={playbackPosition}
+            tripId={infoTripId}
+            tracks={infoTracks}
+            entries={infoEntries}
+            currentTimeMs={infoTimeMs}
+            playbackPosition={infoPosition}
+            retrip={
+              devTripRetrip
+                ? {
+                    timescale: devTripRetrip.timescale,
+                    paused: devTripRetrip.paused,
+                    onPauseToggle: handleRetripPauseToggle,
+                    onTimescaleChange: setDevTripRetripTimescale,
+                    onStop: stopDevTripRetrip,
+                  }
+                : undefined
+            }
           />
         ) : null}
       </div>

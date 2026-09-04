@@ -55,6 +55,28 @@ async function fetchLocationContext(
   }
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => {
+      setTimeout(() => resolve(fallback), ms)
+    }),
+  ])
+}
+
+const LOCATION_CONTEXT_TIMEOUT_MS = 4_000
+
+export async function fetchLogbookLocationContext(
+  latitude: number,
+  longitude: number,
+): Promise<LocationContextResponse> {
+  return withTimeout(
+    fetchLocationContext(latitude, longitude),
+    LOCATION_CONTEXT_TIMEOUT_MS,
+    {},
+  )
+}
+
 export async function captureLogbookContext(positionOverride?: {
   latitude: number
   longitude: number
@@ -63,7 +85,7 @@ export async function captureLogbookContext(positionOverride?: {
 }) {
   if (positionOverride) {
     const timestamp = new Date().toISOString()
-    const context = await fetchLocationContext(
+    const context = await fetchLogbookLocationContext(
       positionOverride.latitude,
       positionOverride.longitude,
     )
@@ -88,7 +110,7 @@ export async function captureLogbookContext(positionOverride?: {
     }
   }
 
-  const context = await fetchLocationContext(gps.latitude, gps.longitude)
+  const context = await fetchLogbookLocationContext(gps.latitude, gps.longitude)
 
   return {
     ...gps,

@@ -17,6 +17,7 @@ import {
   operationalToggleEntryType,
   resolveTripOperationalState,
   syncTripOperationalFields,
+  syncTripLifecycleFromEntries,
 } from './trip-state'
 
 const plannedTrip: Pick<Trip, 'status'> = { status: 'PLANNED' }
@@ -134,6 +135,34 @@ describe('trip operational persistence helpers', () => {
       engineOn: true,
       moored: true,
       anchorDown: false,
+    })
+  })
+
+  it('derives IN_PROGRESS from START_TRIP even when trip.status is PLANNED', () => {
+    const trip: Trip = {
+      id: 'trip-1',
+      boatName: 'Boat',
+      startedAt: '2026-01-01T09:00:00Z',
+      status: 'PLANNED',
+      createdAt: '2026-01-01T09:00:00Z',
+      updatedAt: '2026-01-01T09:00:00Z',
+    }
+
+    expect(
+      syncTripLifecycleFromEntries(trip, [
+        {
+          type: 'START_TRIP',
+          timestamp: '2026-01-01T10:00:00Z',
+          deleted: false,
+          latitude: 48.1,
+          longitude: -123.1,
+        },
+      ]),
+    ).toMatchObject({
+      status: 'IN_PROGRESS',
+      startedAt: '2026-01-01T10:00:00Z',
+      startLatitude: 48.1,
+      startLongitude: -123.1,
     })
   })
 

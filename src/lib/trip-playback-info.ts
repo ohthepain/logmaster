@@ -36,6 +36,30 @@ function validDateMs(value: string | null | undefined): number | null {
   return Number.isFinite(ms) ? ms : null
 }
 
+/** Labels for trip tracks that contain at least one sample. */
+export function tripPlaybackAvailableTrackLabels(
+  tripId: string,
+  tracks: TripTrack[],
+): string[] {
+  const labels: string[] = []
+  if (
+    tripTrackSamplesForTrip(tripId, tracks).length > 0 ||
+    positionTracksForTrip(tripId, tracks).some(
+      (track) => decodeTripTrack(track).length > 0,
+    )
+  ) {
+    labels.push('Position')
+  }
+
+  for (const track of instrumentTracksForTrip(tripId, tracks)) {
+    if (!isInstrumentTrack(track)) continue
+    if (decodeInstrumentTrack(track).length === 0) continue
+    labels.push(instrumentTrackMeta(track.kind).label)
+  }
+
+  return labels
+}
+
 function formatDegrees(value: number) {
   return `${Math.round(value)}°`
 }

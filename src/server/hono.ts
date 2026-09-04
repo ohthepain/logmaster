@@ -8,6 +8,7 @@ import {
 } from './auth'
 import { getMapTilerApiKeyFromEnv } from '../lib/server-maptiler-key'
 import { logbookRoutes } from './routes/logbook'
+import { logbookTrackRoutes } from './routes/logbook-tracks'
 import { boatsRoutes } from './routes/boats'
 import { profileRoutes } from './routes/profile'
 import { crewRoutes } from './routes/crew'
@@ -60,6 +61,7 @@ app.get('/health', (c) =>
 )
 
 app.route('/logbook', logbookRoutes)
+app.route('/logbook', logbookTrackRoutes)
 app.route('/boats', boatsRoutes)
 app.route('/profile', profileRoutes)
 app.route('/crew', crewRoutes)

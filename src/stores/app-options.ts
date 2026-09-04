@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
+  pauseDevTripRetripState,
+  resumeDevTripRetripState,
+  retripWithTimescale,
+  type DevTripRetrip,
+} from '../lib/dev-trip-retrip'
+import {
   clearDevPositionOverride,
   setLocationAccessEnabled,
 } from '../lib/device-position'
@@ -24,6 +30,8 @@ export type DevTripReplay = {
   realStartedAt: string
 }
 
+export type { DevTripRetrip } from '../lib/dev-trip-retrip'
+
 type AppOptions = {
   devMode: boolean
   setDevMode: (v: boolean) => void
@@ -38,6 +46,13 @@ type AppOptions = {
   /** Active real-time replay of a completed trip. */
   devTripReplay: DevTripReplay | null
   setDevTripReplay: (replay: DevTripReplay | null) => void
+  /** Dev mode: global instrument spoofing from a completed trip. */
+  devTripRetrip: DevTripRetrip | null
+  setDevTripRetrip: (retrip: DevTripRetrip | null) => void
+  pauseDevTripRetrip: () => void
+  resumeDevTripRetrip: () => void
+  setDevTripRetripTimescale: (timescale: number) => void
+  stopDevTripRetrip: () => void
   lastTripBoatId: string | null
   setLastTripBoatId: (boatId: string | null) => void
   /** Native app: record GPS in background while a trip is in progress. */
@@ -71,6 +86,7 @@ export const useAppOptionsStore = create<AppOptions>()(
       devTimeTravelAnchorRealIso: null,
       devTimeTravelEnabled: false,
       devTripReplay: null,
+      devTripRetrip: null,
       setDevMode: (v) => {
         if (!v) {
           const replayTargetId = get().devTripReplay?.targetTripId
@@ -86,6 +102,7 @@ export const useAppOptionsStore = create<AppOptions>()(
             devTimeTravelAnchorRealIso: null,
             devTimeTravelEnabled: false,
             devTripReplay: null,
+            devTripRetrip: null,
             recordingTripId,
           })
           return
@@ -99,6 +116,26 @@ export const useAppOptionsStore = create<AppOptions>()(
         }),
       setDevTimeTravelEnabled: (enabled) => set({ devTimeTravelEnabled: enabled }),
       setDevTripReplay: (devTripReplay) => set({ devTripReplay }),
+      setDevTripRetrip: (devTripRetrip) => set({ devTripRetrip }),
+      pauseDevTripRetrip: () => {
+        const retrip = get().devTripRetrip
+        if (!retrip || retrip.paused) return
+        set({ devTripRetrip: pauseDevTripRetripState(retrip) })
+      },
+      resumeDevTripRetrip: () => {
+        const retrip = get().devTripRetrip
+        if (!retrip || !retrip.paused) return
+        set({ devTripRetrip: resumeDevTripRetripState(retrip) })
+      },
+      setDevTripRetripTimescale: (timescale) => {
+        const retrip = get().devTripRetrip
+        if (!retrip) return
+        set({ devTripRetrip: retripWithTimescale(retrip, timescale, Date.now()) })
+      },
+      stopDevTripRetrip: () => {
+        clearDevPositionOverride()
+        set({ devTripRetrip: null })
+      },
       lastTripBoatId: null,
       setLastTripBoatId: (boatId) => set({ lastTripBoatId: boatId }),
       backgroundTripRecording: true,

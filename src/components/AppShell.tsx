@@ -5,6 +5,7 @@ import { BackgroundTripRecorder } from './BackgroundTripRecorder'
 import { LiveActivityController } from './LiveActivityController'
 import { DevComponentLabel } from './DevComponentLabel'
 import { DevTripReplayController } from './DevTripReplayController'
+import { DevTripRetripController } from './DevTripRetripController'
 import { FtueGate } from './FtueGate'
 import { isTripDetailImmersiveRoute } from '../lib/trip-map-overlay'
 import { useLogbookStore } from '../stores/logbook'
@@ -38,6 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       />
       <FtueGate>
         <DevTripReplayController />
+        <DevTripRetripController />
         <BackgroundTripRecorder />
         <LiveActivityController />
         {hideChrome ? (

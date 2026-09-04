@@ -38,6 +38,7 @@ export function tripTrackSamplesForTrip(
   tracks: TripTrack[],
 ): PositionTrackSample[] {
   return positionTracksForTrip(tripId, tracks)
+    .filter((track) => track.payload != null)
     .flatMap((track) => decodeTripTrack(track))
     .sort((a, b) => (validDateMs(a.time) ?? 0) - (validDateMs(b.time) ?? 0))
 }

@@ -128,6 +128,8 @@ export type TripTrackPayload =
   | AngleTrackDeltaV1
   | WindTrackDeltaV1
 
+export type TripTrackStorage = 'inline' | 's3'
+
 export type TripTrack = {
   id: string
   tripId: string
@@ -135,13 +137,35 @@ export type TripTrack = {
   source: TripTrackSource
   kind: TripTrackKind
   encoding: TripTrackEncoding
-  payload: TripTrackPayload
+  /** Inline delta payload; null when stored in S3 and not yet fetched locally. */
+  payload: TripTrackPayload | null
   sampleCount: number
   startedAt: string
   endedAt: string
   createdAt: string
   updatedAt: string
   synced: boolean
+  storage?: TripTrackStorage
+  storageKey?: string | null
+  byteLength?: number | null
+  sha256?: string | null
+}
+
+export function normalizeTripTrack(track: TripTrack): TripTrack {
+  return {
+    ...track,
+    storage: track.storage ?? 'inline',
+    storageKey: track.storageKey ?? null,
+    byteLength: track.byteLength ?? null,
+    sha256: track.sha256 ?? null,
+    payload: track.payload ?? null,
+  }
+}
+
+export function tripTrackHasPayload(
+  track: Pick<TripTrack, 'payload' | 'storage'>,
+): track is TripTrack & { payload: TripTrackPayload } {
+  return track.payload != null
 }
 
 export type InstrumentTrackUnits = {
@@ -528,6 +552,9 @@ export function decodeTripTrack(track: TripTrack): PositionTrackSample[] {
   if (!isPositionTrack(track)) {
     throw new Error(`decodeTripTrack only supports position tracks (got ${track.kind})`)
   }
+  if (!track.payload) {
+    return []
+  }
   if (track.encoding !== 'delta-v1') {
     throw new Error(`Position track has unexpected encoding ${track.encoding}`)
   }
@@ -539,6 +566,9 @@ export function decodeInstrumentTrack(
 ): ScalarTrackSample[] | AngleTrackSample[] | WindTrackSample[] {
   if (isPositionTrack(track)) {
     throw new Error('decodeInstrumentTrack does not accept position tracks')
+  }
+  if (!track.payload) {
+    return []
   }
 
   switch (track.encoding) {

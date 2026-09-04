@@ -555,16 +555,8 @@ function popupActionLinks(input: MapFeaturePopupInput): string {
       name: input.name,
       layerId: input.layerId,
     })
-    const flickrUrl = placePhotosPageUrl({
-      latitude,
-      longitude,
-      name: input.name,
-      layerId: input.layerId,
-      source: 'flickr',
-    })
     links.push(
       `<a href="${escapeHtml(imagesUrl)}" style="${POPUP_LINK_STYLE}">Images</a>`,
-      `<a href="${escapeHtml(flickrUrl)}" style="${POPUP_LINK_STYLE}">Flickr</a>`,
     )
   }
 
