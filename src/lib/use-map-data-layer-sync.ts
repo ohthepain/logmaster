@@ -1,6 +1,7 @@
 import maplibregl from 'maplibre-gl'
 import { useEffect, useMemo, useRef  } from 'react'
 import type {RefObject} from 'react';
+import { resolveMapDataLayerToggles } from './map-data-layers'
 import type { MapDataLayerToggles } from './map-data-layers'
 import { formatMapFeaturePopupHtml } from './osm-feature-display'
 import {
@@ -10,16 +11,57 @@ import {
   refreshMapDataLayersForViewport,
 } from './maplibre-data-layers'
 import { bindOpenSeaMapContoursImageRefresh, refreshOpenSeaMapContoursImage } from './maplibre-openseamap-viewport-layers'
+import { reloadSeamarkTiles } from './maplibre-sailing-map-setup'
+import { syncAisMapLayerForViewport } from './use-ais-map-layer'
 
 export function effectiveMapDataLayerToggles(
   toggles: MapDataLayerToggles,
   options?: { seamarksAllowed?: boolean },
 ): MapDataLayerToggles {
+  const resolved = resolveMapDataLayerToggles(toggles)
   const seamarksAllowed = options?.seamarksAllowed ?? true
   return {
-    ...toggles,
-    'openseamap-raster': seamarksAllowed && toggles['openseamap-raster'],
+    ...resolved,
+    'openseamap-raster': seamarksAllowed && resolved['openseamap-raster'],
   }
+}
+
+/** Apply toggles, fetch vector tiles for the current view, and refresh raster overlays. */
+export async function syncMapDataLayersForViewport(
+  map: maplibregl.Map,
+  toggles: MapDataLayerToggles,
+) {
+  applyMapDataLayerToggles(map, toggles)
+  if (toggles['openseamap-raster']) {
+    reloadSeamarkTiles(map)
+  }
+  refreshOpenSeaMapContoursImage(
+    map,
+    toggles['openseamap-bathymetry-contours'],
+  )
+  await refreshMapDataLayersForViewport(map, toggles)
+}
+
+type MapViewportSyncOptions = {
+  seamarksAllowed?: boolean
+  /** Fetch live AIS for the current view after other layers settle. */
+  ais?: { enabled: boolean; online: boolean }
+}
+
+export function scheduleMapDataLayerViewportSync(
+  map: maplibregl.Map,
+  toggles: MapDataLayerToggles,
+  options?: MapViewportSyncOptions,
+) {
+  map.once('idle', () => {
+    const effectiveToggles = effectiveMapDataLayerToggles(toggles, options)
+    void (async () => {
+      await syncMapDataLayersForViewport(map, effectiveToggles)
+      if (options?.ais?.enabled && options.ais.online) {
+        await syncAisMapLayerForViewport(map)
+      }
+    })()
+  })
 }
 
 export function useMapDataLayerSync(
@@ -39,12 +81,7 @@ export function useMapDataLayerSync(
   useEffect(() => {
     const map = mapRef.current
     if (!map || !mapReady) return
-    applyMapDataLayerToggles(map, effectiveToggles)
-    refreshOpenSeaMapContoursImage(
-      map,
-      effectiveToggles['openseamap-bathymetry-contours'],
-    )
-    void refreshMapDataLayersForViewport(map, effectiveToggles)
+    void syncMapDataLayersForViewport(map, effectiveToggles)
   }, [mapRef, mapReady, effectiveToggles])
 
   useEffect(() => {

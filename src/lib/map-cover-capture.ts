@@ -42,6 +42,36 @@ async function waitForNextPaint(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, 16))
 }
 
+/** Reject empty or all-black JPEG captures (common without preserveDrawingBuffer). */
+export async function isBlankMapSnapshot(dataUrl: string | null): Promise<boolean> {
+  if (!dataUrl || dataUrl === 'data:,' || dataUrl.length < 120) return true
+  if (typeof document === 'undefined') return false
+
+  return new Promise((resolve) => {
+    const image = new Image()
+    image.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = 32
+      canvas.height = 32
+      const context = canvas.getContext('2d')
+      if (!context) {
+        resolve(false)
+        return
+      }
+      context.drawImage(image, 0, 0, 32, 32)
+      const pixels = context.getImageData(0, 0, 32, 32).data
+      let luminanceSum = 0
+      for (let index = 0; index < pixels.length; index += 4) {
+        luminanceSum += pixels[index]! + pixels[index + 1]! + pixels[index + 2]!
+      }
+      const averageLuminance = luminanceSum / (pixels.length / 4) / 3
+      resolve(averageLuminance < 8)
+    }
+    image.onerror = () => resolve(true)
+    image.src = dataUrl
+  })
+}
+
 /** Wait for a render frame; bounded so capture never hangs if `idle` does not re-fire. */
 export async function waitForMaplibreIdle(
   map: maplibregl.Map,
@@ -79,6 +109,7 @@ export async function captureMaplibreSnapshot(map: maplibregl.Map): Promise<stri
   try {
     const raw = map.getCanvas().toDataURL('image/jpeg', MAP_COVER_JPEG_QUALITY)
     if (!raw || raw === 'data:,') return null
+    if (await isBlankMapSnapshot(raw)) return null
     return downscaleJpegDataUrl(raw)
   } catch {
     return null

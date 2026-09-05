@@ -18,11 +18,13 @@ import { Route as MainPrivacyRouteImport } from './routes/_main/privacy'
 import { Route as MainMapRouteImport } from './routes/_main/map'
 import { Route as MainAboutRouteImport } from './routes/_main/about'
 import { Route as MainTripsIndexRouteImport } from './routes/_main/trips/index'
+import { Route as MainRoutesIndexRouteImport } from './routes/_main/routes/index'
 import { Route as MainResetPasswordIndexRouteImport } from './routes/_main/reset-password/index'
 import { Route as MainCrewIndexRouteImport } from './routes/_main/crew/index'
 import { Route as MainBoatsIndexRouteImport } from './routes/_main/boats/index'
 import { Route as MainAdminIndexRouteImport } from './routes/_main/admin/index'
 import { Route as MainTripsTripIdRouteImport } from './routes/_main/trips/$tripId'
+import { Route as MainRoutesRouteIdRouteImport } from './routes/_main/routes/$routeId'
 import { Route as MainResetPasswordTokenRouteImport } from './routes/_main/reset-password/$token'
 import { Route as MainPlacesPhotosRouteImport } from './routes/_main/places/photos'
 import { Route as MainDevTimeTravelRouteImport } from './routes/_main/dev/time-travel'
@@ -84,6 +86,11 @@ const MainTripsIndexRoute = MainTripsIndexRouteImport.update({
   path: '/trips/',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainRoutesIndexRoute = MainRoutesIndexRouteImport.update({
+  id: '/routes/',
+  path: '/routes/',
+  getParentRoute: () => MainRouteRoute,
+} as any)
 const MainResetPasswordIndexRoute = MainResetPasswordIndexRouteImport.update({
   id: '/reset-password/',
   path: '/reset-password/',
@@ -107,6 +114,11 @@ const MainAdminIndexRoute = MainAdminIndexRouteImport.update({
 const MainTripsTripIdRoute = MainTripsTripIdRouteImport.update({
   id: '/trips/$tripId',
   path: '/trips/$tripId',
+  getParentRoute: () => MainRouteRoute,
+} as any)
+const MainRoutesRouteIdRoute = MainRoutesRouteIdRouteImport.update({
+  id: '/routes/$routeId',
+  path: '/routes/$routeId',
   getParentRoute: () => MainRouteRoute,
 } as any)
 const MainResetPasswordTokenRoute = MainResetPasswordTokenRouteImport.update({
@@ -209,11 +221,13 @@ export interface FileRoutesByFullPath {
   '/dev/time-travel': typeof MainDevTimeTravelRoute
   '/places/photos': typeof MainPlacesPhotosRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
+  '/routes/$routeId': typeof MainRoutesRouteIdRoute
   '/trips/$tripId': typeof MainTripsTripIdRoute
   '/admin/': typeof MainAdminIndexRoute
   '/boats/': typeof MainBoatsIndexRoute
   '/crew/': typeof MainCrewIndexRoute
   '/reset-password/': typeof MainResetPasswordIndexRoute
+  '/routes/': typeof MainRoutesIndexRoute
   '/trips/': typeof MainTripsIndexRoute
   '/admin/jobs/geo-features': typeof MainAdminJobsGeoFeaturesRoute
   '/admin/jobs/marinas': typeof MainAdminJobsMarinasRoute
@@ -240,11 +254,13 @@ export interface FileRoutesByTo {
   '/dev/time-travel': typeof MainDevTimeTravelRoute
   '/places/photos': typeof MainPlacesPhotosRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
+  '/routes/$routeId': typeof MainRoutesRouteIdRoute
   '/trips/$tripId': typeof MainTripsTripIdRoute
   '/admin': typeof MainAdminIndexRoute
   '/boats': typeof MainBoatsIndexRoute
   '/crew': typeof MainCrewIndexRoute
   '/reset-password': typeof MainResetPasswordIndexRoute
+  '/routes': typeof MainRoutesIndexRoute
   '/trips': typeof MainTripsIndexRoute
   '/admin/jobs/geo-features': typeof MainAdminJobsGeoFeaturesRoute
   '/admin/jobs/marinas': typeof MainAdminJobsMarinasRoute
@@ -273,11 +289,13 @@ export interface FileRoutesById {
   '/_main/dev/time-travel': typeof MainDevTimeTravelRoute
   '/_main/places/photos': typeof MainPlacesPhotosRoute
   '/_main/reset-password/$token': typeof MainResetPasswordTokenRoute
+  '/_main/routes/$routeId': typeof MainRoutesRouteIdRoute
   '/_main/trips/$tripId': typeof MainTripsTripIdRoute
   '/_main/admin/': typeof MainAdminIndexRoute
   '/_main/boats/': typeof MainBoatsIndexRoute
   '/_main/crew/': typeof MainCrewIndexRoute
   '/_main/reset-password/': typeof MainResetPasswordIndexRoute
+  '/_main/routes/': typeof MainRoutesIndexRoute
   '/_main/trips/': typeof MainTripsIndexRoute
   '/_main/admin/jobs/geo-features': typeof MainAdminJobsGeoFeaturesRoute
   '/_main/admin/jobs/marinas': typeof MainAdminJobsMarinasRoute
@@ -306,11 +324,13 @@ export interface FileRouteTypes {
     | '/dev/time-travel'
     | '/places/photos'
     | '/reset-password/$token'
+    | '/routes/$routeId'
     | '/trips/$tripId'
     | '/admin/'
     | '/boats/'
     | '/crew/'
     | '/reset-password/'
+    | '/routes/'
     | '/trips/'
     | '/admin/jobs/geo-features'
     | '/admin/jobs/marinas'
@@ -337,11 +357,13 @@ export interface FileRouteTypes {
     | '/dev/time-travel'
     | '/places/photos'
     | '/reset-password/$token'
+    | '/routes/$routeId'
     | '/trips/$tripId'
     | '/admin'
     | '/boats'
     | '/crew'
     | '/reset-password'
+    | '/routes'
     | '/trips'
     | '/admin/jobs/geo-features'
     | '/admin/jobs/marinas'
@@ -369,11 +391,13 @@ export interface FileRouteTypes {
     | '/_main/dev/time-travel'
     | '/_main/places/photos'
     | '/_main/reset-password/$token'
+    | '/_main/routes/$routeId'
     | '/_main/trips/$tripId'
     | '/_main/admin/'
     | '/_main/boats/'
     | '/_main/crew/'
     | '/_main/reset-password/'
+    | '/_main/routes/'
     | '/_main/trips/'
     | '/_main/admin/jobs/geo-features'
     | '/_main/admin/jobs/marinas'
@@ -453,6 +477,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainTripsIndexRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/routes/': {
+      id: '/_main/routes/'
+      path: '/routes'
+      fullPath: '/routes/'
+      preLoaderRoute: typeof MainRoutesIndexRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/reset-password/': {
       id: '/_main/reset-password/'
       path: '/reset-password'
@@ -486,6 +517,13 @@ declare module '@tanstack/react-router' {
       path: '/trips/$tripId'
       fullPath: '/trips/$tripId'
       preLoaderRoute: typeof MainTripsTripIdRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
+    '/_main/routes/$routeId': {
+      id: '/_main/routes/$routeId'
+      path: '/routes/$routeId'
+      fullPath: '/routes/$routeId'
+      preLoaderRoute: typeof MainRoutesRouteIdRouteImport
       parentRoute: typeof MainRouteRoute
     }
     '/_main/reset-password/$token': {
@@ -620,11 +658,13 @@ interface MainRouteRouteChildren {
   MainDevTimeTravelRoute: typeof MainDevTimeTravelRoute
   MainPlacesPhotosRoute: typeof MainPlacesPhotosRoute
   MainResetPasswordTokenRoute: typeof MainResetPasswordTokenRoute
+  MainRoutesRouteIdRoute: typeof MainRoutesRouteIdRoute
   MainTripsTripIdRoute: typeof MainTripsTripIdRoute
   MainAdminIndexRoute: typeof MainAdminIndexRoute
   MainBoatsIndexRoute: typeof MainBoatsIndexRoute
   MainCrewIndexRoute: typeof MainCrewIndexRoute
   MainResetPasswordIndexRoute: typeof MainResetPasswordIndexRoute
+  MainRoutesIndexRoute: typeof MainRoutesIndexRoute
   MainTripsIndexRoute: typeof MainTripsIndexRoute
   MainAdminJobsGeoFeaturesRoute: typeof MainAdminJobsGeoFeaturesRoute
   MainAdminJobsMarinasRoute: typeof MainAdminJobsMarinasRoute
@@ -651,11 +691,13 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainDevTimeTravelRoute: MainDevTimeTravelRoute,
   MainPlacesPhotosRoute: MainPlacesPhotosRoute,
   MainResetPasswordTokenRoute: MainResetPasswordTokenRoute,
+  MainRoutesRouteIdRoute: MainRoutesRouteIdRoute,
   MainTripsTripIdRoute: MainTripsTripIdRoute,
   MainAdminIndexRoute: MainAdminIndexRoute,
   MainBoatsIndexRoute: MainBoatsIndexRoute,
   MainCrewIndexRoute: MainCrewIndexRoute,
   MainResetPasswordIndexRoute: MainResetPasswordIndexRoute,
+  MainRoutesIndexRoute: MainRoutesIndexRoute,
   MainTripsIndexRoute: MainTripsIndexRoute,
   MainAdminJobsGeoFeaturesRoute: MainAdminJobsGeoFeaturesRoute,
   MainAdminJobsMarinasRoute: MainAdminJobsMarinasRoute,

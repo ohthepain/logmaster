@@ -27,6 +27,7 @@ function isAppOverlayLayer(id: string): boolean {
   return (
     id.startsWith('trip-') ||
     id.startsWith('compose-') ||
+    id.startsWith('route-') ||
     id.startsWith('geo-') ||
     id.startsWith('openseamap-') ||
     id === 'route'

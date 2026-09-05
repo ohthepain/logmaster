@@ -1,6 +1,7 @@
 import { openDB } from 'idb'
 import type { DBSchema } from 'idb'
 import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
+import type { Route, RouteAnnotation, RouteMedia, RouteWaypoint } from '../domain/route'
 import type { TripTrack } from '../domain/trip-track'
 
 interface LogbookDB extends DBSchema {
@@ -30,10 +31,30 @@ interface LogbookDB extends DBSchema {
     value: Media
     indexes: { logEntryId: string; synced: boolean; updatedAt: string }
   }
+  routes: {
+    key: string
+    value: Route
+    indexes: { updatedAt: string; synced: boolean }
+  }
+  routeWaypoints: {
+    key: string
+    value: RouteWaypoint
+    indexes: { routeId: string; synced: boolean; updatedAt: string }
+  }
+  routeAnnotations: {
+    key: string
+    value: RouteAnnotation
+    indexes: { routeId: string; synced: boolean; updatedAt: string }
+  }
+  routeMedia: {
+    key: string
+    value: RouteMedia
+    indexes: { annotationId: string; synced: boolean; updatedAt: string }
+  }
 }
 
 const DB_NAME = 'logmaster'
-const DB_VERSION = 3
+const DB_VERSION = 4
 
 const PENDING_DELETED_TRIPS_KEY = 'logmaster-pending-trip-deletes'
 const PENDING_DELETED_MEDIA_KEY = 'logmaster-pending-media-deletes'
@@ -153,6 +174,34 @@ export async function getLogbookDb() {
           tripTracks.createIndex('tripId', 'tripId')
           tripTracks.createIndex('synced', 'synced')
           tripTracks.createIndex('updatedAt', 'updatedAt')
+        }
+      }
+
+      if (oldVersion < 4) {
+        if (!db.objectStoreNames.contains('routes')) {
+          const routes = db.createObjectStore('routes', { keyPath: 'id' })
+          routes.createIndex('updatedAt', 'updatedAt')
+          routes.createIndex('synced', 'synced')
+        }
+        if (!db.objectStoreNames.contains('routeWaypoints')) {
+          const routeWaypoints = db.createObjectStore('routeWaypoints', { keyPath: 'id' })
+          routeWaypoints.createIndex('routeId', 'routeId')
+          routeWaypoints.createIndex('synced', 'synced')
+          routeWaypoints.createIndex('updatedAt', 'updatedAt')
+        }
+        if (!db.objectStoreNames.contains('routeAnnotations')) {
+          const routeAnnotations = db.createObjectStore('routeAnnotations', {
+            keyPath: 'id',
+          })
+          routeAnnotations.createIndex('routeId', 'routeId')
+          routeAnnotations.createIndex('synced', 'synced')
+          routeAnnotations.createIndex('updatedAt', 'updatedAt')
+        }
+        if (!db.objectStoreNames.contains('routeMedia')) {
+          const routeMedia = db.createObjectStore('routeMedia', { keyPath: 'id' })
+          routeMedia.createIndex('annotationId', 'annotationId')
+          routeMedia.createIndex('synced', 'synced')
+          routeMedia.createIndex('updatedAt', 'updatedAt')
         }
       }
     },

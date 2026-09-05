@@ -292,6 +292,35 @@ export function defaultMapDataLayerToggles(): MapDataLayerToggles {
   return Object.fromEntries(MAP_DATA_LAYERS.map((layer) => [layer.id, layer.defaultVisible])) as MapDataLayerToggles;
 }
 
+/** Merge persisted/partial toggles with registry defaults (new layers, missing keys). */
+export function mergeMapDataLayerToggles(
+  partial?: Partial<MapDataLayerToggles> | null,
+): MapDataLayerToggles {
+  const defaults = defaultMapDataLayerToggles();
+  if (!partial) return defaults;
+  return { ...defaults, ...partial };
+}
+
+export function resolveMapDataLayerToggle(
+  toggles: MapDataLayerToggles,
+  layerId: MapDataLayerId,
+): boolean {
+  const value = toggles[layerId];
+  if (typeof value === "boolean") return value;
+  return getMapDataLayer(layerId).defaultVisible;
+}
+
+export function resolveMapDataLayerToggles(
+  toggles: MapDataLayerToggles,
+): MapDataLayerToggles {
+  return Object.fromEntries(
+    MAP_DATA_LAYERS.map((layer) => [
+      layer.id,
+      resolveMapDataLayerToggle(toggles, layer.id),
+    ]),
+  ) as MapDataLayerToggles;
+}
+
 /** Layers backed by a fetchable vector tile (excludes raster-only). */
 export function vectorMapDataLayers(): MapDataLayerDefinition[] {
   return MAP_DATA_LAYERS.filter(

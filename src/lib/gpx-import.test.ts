@@ -12,6 +12,9 @@ import {
   mergeGpxRawDocuments,
   parseAndMergeGpx,
   parseGpxRaw,
+  parseGpxRoute,
+  partitionGpxImportFiles,
+  classifyGpxDocument,
   readGpxImportFilesFromFileList,
   GpxFolderImportNeededError,
 } from './gpx-import'
@@ -283,14 +286,34 @@ describe('gpx-import', () => {
     expect(parsed.points.map((point) => point.latitude)).toEqual([59.91, 59.92])
   })
 
-  it('rejects marks-only GPX with a helpful OpenCPN message', () => {
+  it('parses waypoints-only GPX as a route', () => {
     const gpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="OpenCPN">
   <wpt lat="59.9000" lon="10.7400"><name>Harbour</name></wpt>
   <wpt lat="59.9100" lon="10.7500"><name>Anchorage</name></wpt>
 </gpx>`
 
-    expect(() => parseGpx(gpx)).toThrow(/marks or waypoints/i)
+    const parsed = parseGpxRoute(gpx)
+    expect(parsed.waypoints).toHaveLength(2)
+    expect(parsed.waypoints[0]?.name).toBe('Harbour')
+    expect(classifyGpxDocument(parseGpxRaw(gpx))).toBe('route')
+  })
+
+  it('partitions mixed GPX files into trip and route imports', () => {
+    const tracksGpx = `<?xml version="1.0"?><gpx><trk><trkseg>
+      <trkpt lat="1" lon="1"><time>2026-01-01T09:00:00Z</time></trkpt>
+    </trkseg></trk></gpx>`
+    const marksGpx = `<?xml version="1.0"?><gpx>
+      <wpt lat="2" lon="2"><name>Mark</name></wpt>
+    </gpx>`
+
+    const partitioned = partitionGpxImportFiles([
+      { gpxXml: tracksGpx, fileName: 'tracks.gpx' },
+      { gpxXml: marksGpx, fileName: 'marks.gpx' },
+    ])
+
+    expect(partitioned.tripFiles).toHaveLength(1)
+    expect(partitioned.routeFiles).toHaveLength(1)
   })
 
   it('merges OpenCPN tracks and marks GPX files into one trip', () => {

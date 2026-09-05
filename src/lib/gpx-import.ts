@@ -47,11 +47,22 @@ export type GpxRawDocument = {
   waypoints: GpxWaypoint[]
   trackSegments: GpxTrackSegment[]
   routeSegments: GpxTrackSegment[]
+  /** Ordered rtept waypoints flattened across all rte blocks. */
+  routeWaypoints: GpxWaypoint[]
 }
 
 export type GpxImportFile = {
   gpxXml: string
   fileName?: string
+}
+
+export type GpxImportKind = 'trip' | 'route'
+
+export type ParsedGpxRoute = {
+  name: string | null
+  waypoints: GpxWaypoint[]
+  /** True when ordered path came from GPX rte/rtept. */
+  fromRte: boolean
 }
 
 export class GpxImportError extends Error {
@@ -225,20 +236,61 @@ function parseTrackSegments(xml: string): GpxTrackSegment[] {
   return segments
 }
 
-function parseRouteSegments(xml: string): GpxTrackSegment[] {
+function parseRoutePointBlock(block: string, attrs: string): GpxWaypoint | null {
+  const lat = parseNumber(/lat="([^"]+)"/i.exec(attrs)?.[1])
+  const lon = parseNumber(/lon="([^"]+)"/i.exec(attrs)?.[1])
+  if (lat == null || lon == null) return null
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null
+
+  return {
+    name: readChildText(block, 'name')?.trim() || null,
+    description: readChildText(block, 'desc')?.trim() || null,
+    symbol: readChildText(block, 'sym')?.trim() || null,
+    latitude: lat,
+    longitude: lon,
+    time: parseIsoTime(readChildText(block, 'time')),
+  }
+}
+
+function parseRoutePointTags(xml: string): GpxWaypoint[] {
+  const points: GpxWaypoint[] = []
+  const pattern = /<rtept\b([^>]*)>([\s\S]*?)<\/rtept>/gi
+  for (const match of xml.matchAll(pattern)) {
+    const waypoint = parseRoutePointBlock(match[2] ?? '', match[1] ?? '')
+    if (waypoint) points.push(waypoint)
+  }
+  return points
+}
+
+function parseRouteSegmentsAndWaypoints(xml: string): {
+  segments: GpxTrackSegment[]
+  routeWaypoints: GpxWaypoint[]
+} {
   const segments: GpxTrackSegment[] = []
+  const routeWaypoints: GpxWaypoint[] = []
   const routePattern = /<rte\b[^>]*>([\s\S]*?)<\/rte>/gi
 
   for (const routeMatch of xml.matchAll(routePattern)) {
     const routeBlock = routeMatch[1] ?? ''
     const routeName = readChildText(routeBlock, 'name')?.trim() || null
-    const points = parsePointTags(routeBlock, 'rtept')
-    if (points.length > 0) {
-      segments.push({ trackName: routeName, points })
-    }
+    const blockWaypoints = parseRoutePointTags(routeBlock)
+    if (blockWaypoints.length === 0) continue
+
+    routeWaypoints.push(...blockWaypoints)
+    segments.push({
+      trackName: routeName,
+      points: blockWaypoints.map((waypoint) => ({
+        latitude: waypoint.latitude,
+        longitude: waypoint.longitude,
+        time: waypoint.time ?? '',
+        elevationM: null,
+        heading: null,
+        extensions: {},
+      })),
+    })
   }
 
-  return segments
+  return { segments, routeWaypoints }
 }
 
 function readMetadataName(xml: string): string | null {
@@ -425,6 +477,77 @@ function finalizeParsedGpx(raw: GpxRawDocument): ParsedGpxTrack {
   }
 }
 
+export function classifyGpxDocument(raw: GpxRawDocument): GpxImportKind {
+  if (raw.trackSegments.some((segment) => segment.points.length > 0)) return 'trip'
+  if (raw.routeSegments.some((segment) => segment.points.length > 0)) return 'route'
+  if (raw.waypoints.length > 0) return 'route'
+  throw new GpxImportError('No track, route, or waypoint data found.')
+}
+
+function gpxWaypointCoordinateKey(waypoint: Pick<GpxWaypoint, 'latitude' | 'longitude'>) {
+  return `${waypoint.latitude.toFixed(6)},${waypoint.longitude.toFixed(6)}`
+}
+
+export function finalizeParsedGpxRoute(raw: GpxRawDocument): ParsedGpxRoute {
+  const fromRte = raw.routeWaypoints.length > 0
+  const seen = new Set<string>()
+  const waypoints: GpxWaypoint[] = []
+
+  for (const waypoint of fromRte ? raw.routeWaypoints : raw.waypoints) {
+    const key = gpxWaypointCoordinateKey(waypoint)
+    if (seen.has(key)) continue
+    seen.add(key)
+    waypoints.push(waypoint)
+  }
+
+  if (fromRte) {
+    for (const waypoint of raw.waypoints) {
+      const key = gpxWaypointCoordinateKey(waypoint)
+      if (seen.has(key)) continue
+      seen.add(key)
+      waypoints.push(waypoint)
+    }
+  }
+
+  if (waypoints.length === 0) {
+    throw new GpxImportError('No route or waypoint data found in this GPX file.')
+  }
+
+  const routeName =
+    raw.routeSegments.map((segment) => segment.trackName?.trim()).find(Boolean) ??
+    raw.metadataName ??
+    waypoints[0]?.name
+
+  return {
+    name: routeName?.trim() || null,
+    waypoints,
+    fromRte,
+  }
+}
+
+export function parseGpxRoute(xml: string): ParsedGpxRoute {
+  return finalizeParsedGpxRoute(parseGpxRaw(xml))
+}
+
+export function partitionGpxImportFiles(files: GpxImportFile[]): {
+  tripFiles: GpxImportFile[]
+  routeFiles: GpxImportFile[]
+} {
+  const tripFiles: GpxImportFile[] = []
+  const routeFiles: GpxImportFile[] = []
+
+  for (const file of files) {
+    const raw = parseGpxRaw(file.gpxXml)
+    if (classifyGpxDocument(raw) === 'trip') {
+      tripFiles.push(file)
+    } else {
+      routeFiles.push(file)
+    }
+  }
+
+  return { tripFiles, routeFiles }
+}
+
 export function parseGpxRaw(xml: string): GpxRawDocument {
   const trimmed = xml.trim()
   if (!trimmed) {
@@ -434,11 +557,15 @@ export function parseGpxRaw(xml: string): GpxRawDocument {
     throw new GpxImportError('This does not look like a GPX file.')
   }
 
+  const { segments: routeSegments, routeWaypoints } =
+    parseRouteSegmentsAndWaypoints(trimmed)
+
   return {
     metadataName: readMetadataName(trimmed),
     waypoints: parseWaypoints(trimmed),
     trackSegments: parseTrackSegments(trimmed),
-    routeSegments: parseRouteSegments(trimmed),
+    routeSegments,
+    routeWaypoints,
   }
 }
 
@@ -467,6 +594,7 @@ export function mergeGpxRawDocuments(rawDocuments: GpxRawDocument[]): ParsedGpxT
     waypoints,
     trackSegments,
     routeSegments,
+    routeWaypoints: rawDocuments.flatMap((document) => document.routeWaypoints),
   })
 }
 

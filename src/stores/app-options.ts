@@ -13,7 +13,8 @@ import {
 import { defaultMapBasemapLayerToggles } from '../lib/maplibre-basemap-layer-toggles'
 import type { MapBasemapLayerToggles } from '../lib/maplibre-basemap-layer-toggles'
 import {
-  defaultMapDataLayerToggles
+  defaultMapDataLayerToggles,
+  mergeMapDataLayerToggles,
   
 } from '../lib/map-data-layers'
 import type {MapDataLayerToggles} from '../lib/map-data-layers';
@@ -178,6 +179,9 @@ export const useAppOptionsStore = create<AppOptions>()(
         if (state) {
           state.mapLogEntryLayerToggles = mergeMapLogEntryLayerToggles(
             state.mapLogEntryLayerToggles,
+          )
+          state.mapDataLayerToggles = mergeMapDataLayerToggles(
+            state.mapDataLayerToggles,
           )
         }
         setLocationAccessEnabled(Boolean(state?.recordingTripId))

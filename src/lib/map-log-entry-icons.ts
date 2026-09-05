@@ -6,6 +6,11 @@ import type {
   LogEntryMapOutline,
 } from './log-entry-map-marker'
 import {
+  drawWaypointSquareCross,
+  isWaypointMapKind,
+  waypointMapColor,
+} from './waypoint-map-style'
+import {
   LOG_ENTRY_MAP_ICON_KINDS,
   logEntryMapMarkerImageId,
 } from './log-entry-map-marker'
@@ -17,6 +22,10 @@ export const LOG_ENTRY_MAP_SELECTED_ICON_SCALE = 1.35
 
 function isMediaMarkerKind(kind: LogEntryMapIconKind): boolean {
   return kind === 'media-photo' || kind === 'media-video'
+}
+
+function isWaypointMarkerKind(kind: LogEntryMapIconKind): boolean {
+  return isWaypointMapKind(kind)
 }
 
 function markerCanvasSize(kind: LogEntryMapIconKind): number {
@@ -572,6 +581,12 @@ export function logEntryMapMarkerDisplaySize(kind: LogEntryMapIconKind): number 
 async function renderMarkerImageData(spec: MarkerSpec): Promise<ImageData> {
   const size = markerCanvasSize(spec.kind)
   const { ctx } = createMarkerCanvas(size)
+
+  if (isWaypointMarkerKind(spec.kind)) {
+    drawWaypointSquareCross(ctx, size, waypointMapColor(spec.kind))
+    return ctx.getImageData(0, 0, size, size)
+  }
+
   const mediaMarker = isMediaMarkerKind(spec.kind)
 
   if (mediaMarker) {

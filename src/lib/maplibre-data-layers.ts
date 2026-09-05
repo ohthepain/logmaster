@@ -16,6 +16,7 @@ import {
   mapDataLayerSymbolLayerId,
 } from './map-data-layers'
 import type {MapDataLayerDefinition, MapDataLayerId, MapDataLayerToggles, OsmPointDatasetId} from './map-data-layers';
+import { resolveMapDataLayerToggle, resolveMapDataLayerToggles } from './map-data-layers';
 import {
   hazardIconImageExpression,
   hazardIconSizeExpression,
@@ -139,8 +140,17 @@ function moveLayerBeforeIfExists(
     /* ignore */
   }
 }
+function resolvedLayerToggle(
+  toggles: MapDataLayerToggles,
+  layerId: MapDataLayerId,
+): boolean {
+  return resolveMapDataLayerToggle(toggles, layerId)
+}
+
 const APP_MAP_OVERLAY_LAYER_IDS = [
   'ais-vessel-symbols',
+  'route-planned-line',
+  'route-waypoint-icons',
   'trip-log-track-line',
   'trip-log-entry-circles',
   'trip-log-entry-icons',
@@ -440,7 +450,7 @@ export function applyMapDataLayerToggles(
     map.setLayoutProperty(
       layerId,
       'visibility',
-      toggles[toggleId as MapDataLayerId] ? 'visible' : 'none',
+      resolvedLayerToggle(toggles, toggleId as MapDataLayerId) ? 'visible' : 'none',
     )
   }
 
@@ -448,17 +458,14 @@ export function applyMapDataLayerToggles(
     if (isRasterMapDataLayerId(layer.id) || layer.liveOnly) continue
     const layerId = mapDataLayerRenderLayerId(layer.id)
     if (!map.getLayer(layerId)) continue
-    map.setLayoutProperty(
-      layerId,
-      'visibility',
-      toggles[layer.id] ? 'visible' : 'none',
-    )
+    const visible = resolvedLayerToggle(toggles, layer.id)
+    map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none')
     const auxiliaryLayerId = mapDataLayerAuxiliaryLayerId(layer.id)
     if (auxiliaryLayerId && map.getLayer(auxiliaryLayerId)) {
       map.setLayoutProperty(
         auxiliaryLayerId,
         'visibility',
-        toggles[layer.id] ? 'visible' : 'none',
+        visible ? 'visible' : 'none',
       )
     }
   }
@@ -478,6 +485,7 @@ export async function refreshMapDataLayersForViewport(
   map: maplibregl.Map,
   toggles: MapDataLayerToggles,
 ) {
+  const resolvedToggles = resolveMapDataLayerToggles(toggles)
   const bounds = map.getBounds()
   const tiles = degreeTilesForBbox([
     bounds.getWest(),
@@ -490,7 +498,7 @@ export async function refreshMapDataLayersForViewport(
   let geoResolution: 'highres' | 'lowres' | null = null
 
   for (const layer of MAP_DATA_LAYERS) {
-    if (!toggles[layer.id] || layer.liveOnly) continue
+    if (!resolvedToggles[layer.id] || layer.liveOnly) continue
     if (layer.dataset) datasetsNeeded.add(layer.dataset)
     if (layer.geoFeatureResolution) geoResolution = layer.geoFeatureResolution
   }
@@ -508,8 +516,9 @@ export async function refreshMapDataLayersForViewport(
   )
 
   ensureMapDataLayerStackOrder(map)
+  applyMapDataLayerToggles(map, toggles)
 
-  if (geoResolution && toggles['geonames-cities']) {
+  if (geoResolution && resolvedToggles['geonames-cities']) {
     const collections: GeoFeatureCollection[] = []
     for (const tile of tiles) {
       const payload = await fetchJsonTile(appGeoFeatureTileUrl(tile, geoResolution))

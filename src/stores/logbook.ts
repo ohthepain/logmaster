@@ -48,7 +48,7 @@ import {
 } from '../lib/media-entry'
 import { buildTripFromGpxFiles } from '../lib/gpx-trip-import'
 import { buildTripFromSignalK } from '../lib/signalk-trip-import'
-import { GpxImportError, type GpxImportFile } from '../lib/gpx-import'
+import { GpxImportError, partitionGpxImportFiles, type GpxImportFile } from '../lib/gpx-import'
 import { SignalKImportError } from '../lib/signalk-import'
 import {
   addPendingDeletedTripId,
@@ -1038,9 +1038,14 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
   },
 
   importTripFromGpxFiles: async (files, options) => {
+    const { tripFiles } = partitionGpxImportFiles(files)
+    if (tripFiles.length === 0) {
+      throw new GpxImportError('No GPX track files were found in that selection.')
+    }
+
     let imported: ReturnType<typeof buildTripFromGpxFiles>
     try {
-      imported = buildTripFromGpxFiles(files, options)
+      imported = buildTripFromGpxFiles(tripFiles, options)
     } catch (error) {
       if (error instanceof GpxImportError) throw error
       throw new GpxImportError(

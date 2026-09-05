@@ -3,7 +3,7 @@ import type { PositionTrackSample, TripTrack } from '../domain/trip-track'
 import { decodeTripTrack, positionTracksForTrip } from '../domain/trip-track'
 import { tripDisplayName } from './trip-display'
 
-function escapeXml(value: string): string {
+export function escapeGpxXml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -48,11 +48,11 @@ export function buildTripGpx(trip: Trip, tracks: TripTrack[]): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="logmaster" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
-    <name>${escapeXml(name)}</name>
+    <name>${escapeGpxXml(name)}</name>
     <time>${startedAt}</time>
   </metadata>
   <trk>
-    <name>${escapeXml(name)}</name>
+    <name>${escapeGpxXml(name)}</name>
     <trkseg>
 ${samples.map(formatGpxPoint).join('\n')}
     </trkseg>

@@ -21,7 +21,7 @@ const EMPTY_IMAGE_COORDINATES: [
 const CONTOURS_MIN_ZOOM = 6
 
 function isOverlayLayerId(id: string): boolean {
-  return id.startsWith('openseamap-') || id.startsWith('geo-') || id.startsWith('trip-')
+  return id.startsWith('openseamap-') || id.startsWith('geo-') || id.startsWith('trip-') || id.startsWith('route-')
 }
 
 /** Insert bathymetry rasters above land/water fills but below labels and roads. */

@@ -7,10 +7,12 @@ import {
   GpxFolderImportNeededError,
   GpxImportError,
   listGpxFilesFromDirectoryHandle,
+  partitionGpxImportFiles,
   readGpxImportFilesFromFileList,
 } from '../lib/gpx-import'
 import { SignalKImportError } from '../lib/signalk-import'
 import { useLogbookStore } from '../stores/logbook'
+import { useRoutesStore } from '../stores/routes'
 
 export type TripImportButtonHandle = {
   open: () => void
@@ -18,6 +20,7 @@ export type TripImportButtonHandle = {
 
 type TripImportButtonProps = {
   onImported?: (tripId: string) => void
+  onRouteImported?: (routeId: string) => void
   className?: string
   tooltip?: string
 }
@@ -30,8 +33,9 @@ export const TripImportButton = forwardRef<TripImportButtonHandle, TripImportBut
   function TripImportButton(
     {
       onImported,
+      onRouteImported,
       className,
-      tooltip = 'Import trip (Shift+click for OpenCPN export folder)',
+      tooltip = 'Import trip or route (Shift+click for OpenCPN export folder)',
     },
     ref,
   ) {
@@ -42,6 +46,7 @@ export const TripImportButton = forwardRef<TripImportButtonHandle, TripImportBut
     const menuId = useId()
     const importTripFromGpxFiles = useLogbookStore((state) => state.importTripFromGpxFiles)
     const importTripFromSignalK = useLogbookStore((state) => state.importTripFromSignalK)
+    const importRoutesFromGpxFiles = useRoutesStore((state) => state.importRoutesFromGpxFiles)
     const [importing, setImporting] = useState(false)
     const [menuOpen, setMenuOpen] = useState(false)
 
@@ -71,8 +76,27 @@ export const TripImportButton = forwardRef<TripImportButtonHandle, TripImportBut
 
     const importFromGpxFiles = async (files: File[]) => {
       const gpxFiles = await readGpxImportFilesFromFileList(files)
-      const trip = await importTripFromGpxFiles(gpxFiles)
-      finishImport(trip)
+      const { tripFiles, routeFiles } = partitionGpxImportFiles(gpxFiles)
+
+      if (tripFiles.length === 0 && routeFiles.length === 0) {
+        throw new GpxImportError('No GPX track or route data was found in that selection.')
+      }
+
+      if (routeFiles.length > 0) {
+        const routes = await importRoutesFromGpxFiles(routeFiles)
+        for (const route of routes) {
+          toast.success(`Imported route ${route.title}`)
+          onRouteImported?.(route.id)
+        }
+      }
+
+      if (tripFiles.length > 0) {
+        const trip = await importTripFromGpxFiles(tripFiles)
+        finishImport(trip)
+        return
+      }
+
+      setMenuOpen(false)
     }
 
     const importFromSignalKFile = async (file: File) => {
@@ -233,13 +257,12 @@ export const TripImportButton = forwardRef<TripImportButtonHandle, TripImportBut
           {...({ webkitdirectory: '', directory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
         />
 
-        <AppIconButtonTooltip label={tooltip} side="bottom">
+        <AppIconButtonTooltip label={tooltip} side="bottom" hidden={menuOpen}>
           <button
             type="button"
             onClick={handleMainClick}
             disabled={importing}
             aria-label={tooltip}
-            title={tooltip}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             aria-controls={menuId}

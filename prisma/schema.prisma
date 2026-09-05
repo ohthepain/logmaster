@@ -349,3 +349,102 @@ model AdminJobLog {
 
   @@map("admin_job_log")
 }
+
+enum RouteCoverKind {
+  photo
+  map
+}
+
+enum RouteAnnotationKind {
+  comment
+  photo
+}
+
+enum RouteMediaType {
+  photo
+  attachment
+}
+
+model Route {
+  id                String          @id @default(cuid())
+  title             String
+  description       String?
+  boatId            String?
+  coverKind         RouteCoverKind?
+  coverPhotoDataUrl String?         @db.Text
+  source            String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  synced            Boolean         @default(false)
+
+  waypoints   RouteWaypoint[]
+  annotations RouteAnnotation[]
+
+  @@index([updatedAt])
+  @@map("route")
+}
+
+model RouteWaypoint {
+  id          String   @id @default(cuid())
+  routeId     String
+  route       Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  sequence    Int
+  name        String?
+  description String?
+  symbol      String?
+  latitude    Float
+  longitude   Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  synced      Boolean  @default(false)
+
+  annotations RouteAnnotation[]
+
+  @@index([routeId, sequence])
+  @@map("route_waypoint")
+}
+
+model RouteAnnotation {
+  id         String              @id @default(cuid())
+  routeId    String
+  route      Route               @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  waypointId String?
+  waypoint   RouteWaypoint?      @relation(fields: [waypointId], references: [id], onDelete: SetNull)
+  kind       RouteAnnotationKind
+  body       String?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  synced     Boolean             @default(false)
+  deleted    Boolean             @default(false)
+
+  media RouteMedia[]
+
+  @@index([routeId, createdAt])
+  @@index([synced, updatedAt])
+  @@map("route_annotation")
+}
+
+model RouteMedia {
+  id           String         @id @default(cuid())
+  annotationId String
+  annotation   RouteAnnotation @relation(fields: [annotationId], references: [id], onDelete: Cascade)
+  type         RouteMediaType
+  order        Int            @default(0)
+  localPath    String?
+  remoteUrl    String?
+  thumbnailUrl String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  synced       Boolean        @default(false)
+
+  @@index([annotationId, order])
+  @@index([synced, updatedAt])
+  @@map("route_media")
+}
+
+model DeletedRoute {
+  id        String   @id
+  deletedAt DateTime @default(now())
+
+  @@map("deleted_route")
+}

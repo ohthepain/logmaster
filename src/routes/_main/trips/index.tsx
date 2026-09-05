@@ -1,5 +1,5 @@
-import { createFileRoute, useLocation, useNavigate } from '@tanstack/react-router'
-import { Map as MapIcon, Sailboat } from 'lucide-react'
+import { createFileRoute, Link, useLocation, useNavigate } from '@tanstack/react-router'
+import { Map as MapIcon, MapPin, Sailboat } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AddButton } from '../../../components/AddButton'
 import {
@@ -65,6 +65,10 @@ function TripsPage() {
     void navigate({ to: '/trips/$tripId', params: { tripId } })
   }
 
+  const handleImportedRoute = (routeId: string) => {
+    void navigate({ to: '/routes/$routeId', params: { routeId } })
+  }
+
   useEffect(() => {
     void useLogbookStore.getState().load()
   }, [])
@@ -91,12 +95,25 @@ function TripsPage() {
   return (
     <main className="page-wrap px-3 pb-24 pt-4 sm:px-4 sm:pb-28">
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="brand-title m-0 text-[2.35rem] leading-none sm:text-[2.75rem]">
-          Trips
-        </h1>
+        <div className="flex items-center gap-4">
+          <h1 className="brand-title m-0 text-[2.35rem] leading-none sm:text-[2.75rem]">
+            Trips
+          </h1>
+          <Link
+            to="/routes"
+            className="inline-flex items-center gap-1.5 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] no-underline"
+          >
+            <MapPin className="size-4" />
+            Routes
+          </Link>
+        </div>
         <div className="flex items-center gap-2">
           <GpxUrlImportButton onImported={handleImportedTrip} />
-          <TripImportButton ref={importRef} onImported={handleImportedTrip} />
+          <TripImportButton
+            ref={importRef}
+            onImported={handleImportedTrip}
+            onRouteImported={handleImportedRoute}
+          />
           <AddButton onClick={openStartTrip} aria-label="New trip" tooltip="New trip" />
         </div>
       </div>

@@ -13,6 +13,18 @@ import {
 const POLL_INTERVAL_MS = 12_000
 const MOVEEND_DEBOUNCE_MS = 1500
 
+export async function syncAisMapLayerForViewport(map: maplibregl.Map) {
+  const result = await fetchAisVessels(mapBoundsToAisBbox(map.getBounds()))
+  if (!result?.configured) {
+    clearAisMapLayerData(map)
+    return
+  }
+  updateAisMapLayerData(map, {
+    type: 'FeatureCollection',
+    features: result.features,
+  })
+}
+
 type UseAisMapLayerOptions = {
   enabled: boolean
   online: boolean
@@ -47,18 +59,8 @@ export function useAisMapLayer(
     let pollTimer: ReturnType<typeof setInterval> | null = null
 
     const refresh = async () => {
-      const bounds = map.getBounds()
-      const result = await fetchAisVessels(mapBoundsToAisBbox(bounds))
-      if (cancelled || !result?.configured) {
-        if (!cancelled && result && !result.configured) {
-          clearAisMapLayerData(map)
-        }
-        return
-      }
-      updateAisMapLayerData(map, {
-        type: 'FeatureCollection',
-        features: result.features,
-      })
+      if (cancelled) return
+      await syncAisMapLayerForViewport(map)
     }
 
     const scheduleRefresh = () => {

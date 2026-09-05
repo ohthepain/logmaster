@@ -20,6 +20,7 @@ import {
   type MapLogEntryLayerToggles,
 } from './map-log-entry-layers'
 import { buildTripTracksGeoJson, trackSampleMapPoints } from './trip-track-geo'
+import { isWaypointMapKind, waypointMapColor } from './waypoint-map-style'
 
 export type MapLngLat = { longitude: number; latitude: number }
 
@@ -226,7 +227,10 @@ export function buildLegTrackGeoJson(
 export function buildLegEntryPointsGeoJson(
   entries: LogEntry[],
   legs: Leg[] = [],
-  options?: { entryLayerToggles?: MapLogEntryLayerToggles },
+  options?: {
+    entryLayerToggles?: MapLogEntryLayerToggles
+    activeWaypointEntryId?: string | null
+  },
 ) {
   const toggles = options?.entryLayerToggles ?? defaultMapLogEntryLayerToggles()
   const legColors = legColorLookup(legs)
@@ -238,8 +242,11 @@ export function buildLegEntryPointsGeoJson(
     type: 'FeatureCollection' as const,
     features: sorted.map((entry, index) => {
       const legId = entry.legId ?? null
-      const color = colorForLegId(legId, legColors, 0)
-      const kind = logEntryMapIconKind(entry)
+      const kind = logEntryMapIconKind(entry, {
+        activeWaypoint: entry.id === options?.activeWaypointEntryId,
+      })
+      const color =
+        isWaypointMapKind(kind) ? waypointMapColor(kind) : colorForLegId(legId, legColors, 0)
       const outline = logEntryMapOutline(entry)
       return {
         type: 'Feature' as const,

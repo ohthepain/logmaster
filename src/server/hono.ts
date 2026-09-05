@@ -25,6 +25,7 @@ import { osmPointTileRoutes } from './routes/osm-point-tiles'
 import { gpxImportRoutes } from './routes/gpx-import'
 import { placesRoutes } from './routes/places'
 import { aisRoutes } from './routes/ais'
+import { routesApi } from './routes/routes'
 import { isAisStreamConfigured } from './ais/aisstream-client'
 
 const corsOrigins = getTrustedOrigins()
@@ -76,5 +77,6 @@ app.route('/geo-features', geoFeatureRoutes)
 app.route('/marinas', marinaRoutes)
 app.route('/osm-points', osmPointTileRoutes)
 app.route('/gpx-import', gpxImportRoutes)
+app.route('/routes', routesApi)
 app.route('/places', placesRoutes)
 app.route('/ais', aisRoutes)
