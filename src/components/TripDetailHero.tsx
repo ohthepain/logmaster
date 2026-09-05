@@ -1,4 +1,4 @@
-import { Map, Pencil, RotateCw, Sailboat } from "lucide-react";
+import { Map, RotateCw, Sailboat } from "lucide-react";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { Leg, LogEntry, Media, Trip } from "../domain/logbook";
 import type { TripTrack } from "../domain/trip-track";
@@ -17,6 +17,7 @@ import { TripOperationalStatus } from "./TripOperationalStatus";
 import { TripPlaybackInfoPanel } from "./TripPlaybackInfoPanel";
 import { TripPlaybackOverlay } from "./TripPlaybackOverlay";
 import { TripMapChromeButton } from "./TripMapChromeButton";
+import { TripMapEditMenu } from "./TripMapEditMenu";
 import { cn } from "../lib/cn";
 import { tripPlaybackPositionAt, tripPlaybackRange } from "../lib/trip-playback";
 
@@ -35,6 +36,8 @@ type TripDetailHeroProps = {
   completedTripPanel?: CompletedTripPanel;
   onCompletedTripPanelChange?: (panel: CompletedTripPanel) => void;
   onEditCoverClick: () => void;
+  uploadMediaInputId: string;
+  uploadingMedia?: boolean;
   onLogEntryClick?: () => void;
   onReplayTestClick?: () => void;
   onInitialMapViewportSettled?: () => void;
@@ -54,6 +57,8 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
   completedTripPanel = "map",
   onCompletedTripPanelChange,
   onEditCoverClick,
+  uploadMediaInputId,
+  uploadingMedia = false,
   onLogEntryClick,
   onReplayTestClick,
   onInitialMapViewportSettled,
@@ -132,6 +137,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
     if (devTripRetrip.paused) resumeDevTripRetrip();
     else pauseDevTripRetrip();
   }, [devTripRetrip, pauseDevTripRetrip, resumeDevTripRetrip]);
+
   const playbackPosition = useMemo(
     () =>
       isPlayback
@@ -321,6 +327,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
         <TripPlaybackOverlay
           trip={trip}
           entries={mapEntries}
+          legs={mapLegs}
           tracks={mapTracks}
           mediaByEntry={mediaByEntry}
           currentTimeMs={playbackTimeMs}
@@ -364,10 +371,13 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
       ) : null}
 
       <div className="pointer-events-none absolute inset-x-0 top-16 z-40 flex flex-col items-start gap-2 px-3 sm:px-4">
-        <div className="flex justify-start gap-2">
-          <TripMapChromeButton label="Edit trip cover" onClick={onEditCoverClick} disabled={busy} tooltipSide="bottom">
-            <Pencil className="size-4" />
-          </TripMapChromeButton>
+        <div className="pointer-events-auto flex justify-start gap-2">
+          <TripMapEditMenu
+            disabled={busy}
+            uploading={uploadingMedia}
+            onEditCover={onEditCoverClick}
+            uploadInputId={uploadMediaInputId}
+          />
           {onReplayTestClick ? (
             <TripMapChromeButton
               label="Start auto-test replay"

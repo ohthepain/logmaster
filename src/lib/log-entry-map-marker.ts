@@ -17,6 +17,8 @@ export const LOG_ENTRY_MAP_ICON_KINDS = [
   'engine-off',
   'video',
   'photo',
+  'media-photo',
+  'media-video',
   'voice',
   'note',
   'hourly-log',
@@ -40,6 +42,8 @@ export const LOG_ENTRY_MAP_ICON_PRIORITY: Record<LogEntryMapIconKind, number> = 
   'engine-off': 3,
   video: 4,
   photo: 5,
+  'media-photo': 5,
+  'media-video': 4,
   voice: 6,
   note: 7,
   'hourly-log': 8,
@@ -58,6 +62,7 @@ const TYPE_TO_ICON_KIND: Record<LogEntryType, LogEntryMapIconKind> = {
   ENGINE_ON: 'engine-on',
   ENGINE_OFF: 'engine-off',
   PHOTO: 'photo',
+  MEDIA: 'media-photo',
   VOICE_NOTE: 'voice',
   NOTE: 'note',
   HOURLY_LOG: 'hourly-log',
@@ -98,10 +103,19 @@ export function isVideoLogEntry(entry: Pick<LogEntry, 'type' | 'data'>): boolean
   return mediaType === 'video' || kind === 'video'
 }
 
+export function isMediaMapEntry(
+  entry: Pick<LogEntry, 'type' | 'data'>,
+): boolean {
+  return entry.type === 'MEDIA'
+}
+
 export function logEntryMapIconKind(
   entry: Pick<LogEntry, 'type' | 'data'>,
 ): LogEntryMapIconKind {
   if (isDirectionChangeEntry(entry)) return 'direction-change'
+  if (entry.type === 'MEDIA') {
+    return isVideoLogEntry(entry) ? 'media-video' : 'media-photo'
+  }
   if (isVideoLogEntry(entry)) return 'video'
   return TYPE_TO_ICON_KIND[entry.type] ?? 'note'
 }

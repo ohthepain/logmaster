@@ -33,6 +33,7 @@ enum LogEntryType {
   HOURLY_LOG
   PHOTO
   VOICE_NOTE
+  MEDIA
 }
 
 enum MediaType {
@@ -116,6 +117,7 @@ model Trip {
   skipperKey     String?
   crewMemberIds  Json?
   title          String?
+  subtitle       String?
   coverPhotoDataUrl String? @db.Text
   coverKind         TripCoverKind?
   boatId            String?
@@ -227,6 +229,7 @@ model Media {
   logEntryId   String
   logEntry     LogEntry    @relation(fields: [logEntryId], references: [id], onDelete: Cascade)
   type         MediaType
+  order        Int         @default(0)
   localPath    String?
   remoteUrl    String?
   thumbnailUrl String?
@@ -235,6 +238,7 @@ model Media {
   synced       Boolean     @default(false)
 
   @@index([logEntryId, createdAt])
+  @@index([logEntryId, order])
   @@index([synced, updatedAt])
   @@map("media")
 }

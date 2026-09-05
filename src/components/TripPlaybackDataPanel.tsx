@@ -1,6 +1,6 @@
 import { Check, Layers } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { LogEntry } from '../domain/logbook'
+import type { LogEntry, Media } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { cn } from '../lib/cn'
 import type { TripPlaybackRange } from '../lib/trip-playback'
@@ -151,10 +151,11 @@ export function usePlaybackViewState(
   tripId: string,
   tracks: TripTrack[],
   entries: LogEntry[],
+  mediaByEntry: Map<string, Media[]>,
 ) {
   const options = useMemo(
-    () => availablePlaybackPanels(tripId, tracks, entries),
-    [entries, tracks, tripId],
+    () => availablePlaybackPanels(tripId, tracks, entries, mediaByEntry),
+    [entries, mediaByEntry, tracks, tripId],
   )
   const [viewState, setViewState] = useState<PlaybackViewState>(() =>
     defaultPlaybackViewState(options),
@@ -179,6 +180,7 @@ export function usePlaybackViewState(
   }
 
   const showTimelineEntries = viewState['log-entries'] ?? false
+  const showTimelineMedia = viewState.media ?? false
   const enabledGraphPanelIds = useMemo(
     () => enabledGraphPlaybackPanelIds(viewState),
     [viewState],
@@ -190,6 +192,7 @@ export function usePlaybackViewState(
     viewState,
     togglePanel,
     showTimelineEntries,
+    showTimelineMedia,
     enabledGraphPanelIds,
     showInstrumentGraph,
   }

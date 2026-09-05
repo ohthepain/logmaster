@@ -38,6 +38,12 @@ describe('logEntryMapIconKind', () => {
     expect(logEntryMapIconKind(entry({ type: 'ENGINE_ON' }))).toBe('engine-on')
     expect(logEntryMapIconKind(entry({ type: 'ENGINE_OFF' }))).toBe('engine-off')
     expect(logEntryMapIconKind(entry({ type: 'PHOTO' }))).toBe('photo')
+    expect(logEntryMapIconKind(entry({ type: 'MEDIA' }))).toBe('media-photo')
+    expect(
+      logEntryMapIconKind(
+        entry({ type: 'MEDIA', data: { mediaType: 'video' } }),
+      ),
+    ).toBe('media-video')
     expect(logEntryMapIconKind(entry({ type: 'VOICE_NOTE' }))).toBe('voice')
     expect(logEntryMapIconKind(entry({ type: 'NOTE' }))).toBe('note')
     expect(logEntryMapIconKind(entry({ type: 'HOURLY_LOG' }))).toBe('hourly-log')

@@ -16,6 +16,7 @@ let package = Package(
         .package(name: "CapacitorApp", path: "../../../node_modules/.pnpm/@capacitor+app@8.1.1_@capacitor+core@8.4.2/node_modules/@capacitor/app"),
         .package(name: "CapacitorGeolocation", path: "../../../node_modules/.pnpm/@capacitor+geolocation@8.2.0_@capacitor+core@8.4.2/node_modules/@capacitor/geolocation"),
         .package(name: "CapacitorLocalNotifications", path: "../../../node_modules/.pnpm/@capacitor+local-notifications@8.2.1_@capacitor+core@8.4.2/node_modules/@capacitor/local-notifications"),
+        .package(name: "CapacitorShare", path: "../../../node_modules/.pnpm/@capacitor+share@8.0.1_@capacitor+core@8.4.2/node_modules/@capacitor/share"),
         .package(name: "CapawesomeCapacitorGoogleSignIn", path: "../../../node_modules/.pnpm/@capawesome+capacitor-google-sign-in@0.1.3_@capacitor+core@8.4.2/node_modules/@capawesome/capacitor-google-sign-in"),
         .package(name: "LogmasterAppleMap", path: "../../../node_modules/.pnpm/logmaster-apple-map@file+plugins+logmaster-apple-map_@capacitor+core@8.4.2/node_modules/logmaster-apple-map")
     ],
@@ -29,6 +30,7 @@ let package = Package(
                 .product(name: "CapacitorApp", package: "CapacitorApp"),
                 .product(name: "CapacitorGeolocation", package: "CapacitorGeolocation"),
                 .product(name: "CapacitorLocalNotifications", package: "CapacitorLocalNotifications"),
+                .product(name: "CapacitorShare", package: "CapacitorShare"),
                 .product(name: "CapawesomeCapacitorGoogleSignIn", package: "CapawesomeCapacitorGoogleSignIn"),
                 .product(name: "LogmasterAppleMap", package: "LogmasterAppleMap")
             ]

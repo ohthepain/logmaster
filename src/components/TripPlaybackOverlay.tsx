@@ -1,7 +1,9 @@
 import {
+  Camera,
   ChevronLeft,
   ChevronRight,
   List,
+  Mic,
   Pause,
   Play,
   RotateCcw,
@@ -9,17 +11,23 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { entryIcon, entryTitle } from '../domain/logbook'
-import type { LogEntry, Media, Trip } from '../domain/logbook'
+import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { formatDateTime } from '../lib/logbook-format'
-import { compareLogEntriesChronologically } from '../lib/logbook-entry-order'
+import { logEntryLegColor } from '../lib/logbook-map-geo'
 import { isVideoLogEntry } from '../lib/log-entry-map-marker'
 import {
   tripPlaybackRange,
   tripPlaybackWindow,
 } from '../lib/trip-playback'
 import { computePlaybackTimelineTicks } from '../lib/trip-playback-timeline-ticks'
+import {
+  buildPlaybackTimelineMediaMarkers,
+  playbackMediaMarkerOffsets,
+} from '../lib/trip-playback-media-timeline'
 import { cn } from '../lib/cn'
+import { compareLogEntriesChronologically } from '../lib/logbook-entry-order'
+import { PlaybackTimelineLogEntryMarker } from './PlaybackTimelineLogEntryMarker'
 import { PLAYBACK_SPEEDS, PlaybackSpeedControl } from './PlaybackSpeedControl'
 import {
   TripPlaybackInstrumentGraph,
@@ -31,6 +39,7 @@ const MAX_TIME_ZOOM = 16
 const PRESENTATION_LENGTH_MS = 120_000
 const DEFAULT_SPEED_INDEX = PLAYBACK_SPEEDS.indexOf(1)
 const TIMELINE_ENTRY_ROW_PX = 48
+const TIMELINE_MEDIA_ROW_PX = 44
 const TIMELINE_GRAPH_ROW_PX = 44
 const TIMELINE_TRACK_SECTION_PX = 28
 
@@ -51,6 +60,7 @@ const SCRUB_DRAG_PX = 6
 type TripPlaybackOverlayProps = {
   trip: Trip
   entries: LogEntry[]
+  legs?: Leg[]
   tracks?: TripTrack[]
   mediaByEntry: Map<string, Media[]>
   currentTimeMs: number
@@ -95,6 +105,7 @@ function formatDuration(durationMs: number) {
 export function TripPlaybackOverlay({
   trip,
   entries,
+  legs = [],
   tracks = [],
   mediaByEntry,
   currentTimeMs,
@@ -127,19 +138,40 @@ export function TripPlaybackOverlay({
     viewState,
     togglePanel,
     showTimelineEntries,
+    showTimelineMedia,
     enabledGraphPanelIds,
     showInstrumentGraph,
-  } = usePlaybackViewState(trip.id, tracks, chronologicalEntries)
+  } = usePlaybackViewState(trip.id, tracks, chronologicalEntries, mediaByEntry)
   const effectiveWindowCenterMs = playing ? currentTimeMs : windowCenterMs
   const windowRange = tripPlaybackWindow(range, effectiveWindowCenterMs, timeZoom)
-  const graphTopPx = showTimelineEntries ? TIMELINE_ENTRY_ROW_PX : 0
-  const timelineTrackTopPx =
+  const timelineMediaMarkers = useMemo(
+    () => buildPlaybackTimelineMediaMarkers(chronologicalEntries, mediaByEntry),
+    [chronologicalEntries, mediaByEntry],
+  )
+  const timelineRowHeightPx =
     (showTimelineEntries ? TIMELINE_ENTRY_ROW_PX : 0) +
-    (showInstrumentGraph ? TIMELINE_GRAPH_ROW_PX + 4 : showTimelineEntries ? 0 : 22)
+    (showTimelineMedia ? TIMELINE_MEDIA_ROW_PX : 0)
+  const graphTopPx = timelineRowHeightPx
+  const timelineTrackTopPx =
+    timelineRowHeightPx +
+    (showInstrumentGraph ? TIMELINE_GRAPH_ROW_PX + 4 : timelineRowHeightPx > 0 ? 0 : 22)
   const timelineHeightPx = timelineTrackTopPx + TIMELINE_TRACK_SECTION_PX
   const timelineTicks = useMemo(
     () => computePlaybackTimelineTicks(windowRange, range.startMs),
     [range.startMs, windowRange],
+  )
+  const visibleMediaMarkers = useMemo(
+    () =>
+      timelineMediaMarkers.filter(
+        (marker) =>
+          marker.timeMs >= windowRange.startMs &&
+          marker.timeMs <= windowRange.endMs,
+      ),
+    [timelineMediaMarkers, windowRange.endMs, windowRange.startMs],
+  )
+  const mediaMarkerOffsets = useMemo(
+    () => playbackMediaMarkerOffsets(visibleMediaMarkers),
+    [visibleMediaMarkers],
   )
   const currentPercent = clamp(
     ((currentTimeMs - windowRange.startMs) / windowRange.durationMs) * 100,
@@ -465,34 +497,79 @@ export function TripPlaybackOverlay({
             ))}
 
             {showTimelineEntries
-              ? chronologicalEntries.map((entry) => {
+              ? chronologicalEntries.map((entry, index) => {
                   const timeMs = new Date(entry.timestamp).getTime()
-                  if (timeMs < windowRange.startMs || timeMs > windowRange.endMs) return null
+                  if (timeMs < windowRange.startMs || timeMs > windowRange.endMs) {
+                    return null
+                  }
                   const left = ((timeMs - windowRange.startMs) / windowRange.durationMs) * 100
-                  const media = mediaByEntry.get(entry.id) ?? []
-                  const entryIsVideo = isVideoMedia(entry, media)
-                  const thumbnail =
-                    media.find((item) => item.thumbnailUrl)?.thumbnailUrl ??
-                    (entryIsVideo ? null : mediaSource(media))
                   return (
                     <button
                       key={entry.id}
                       type="button"
                       data-entry-id={entry.id}
                       className="absolute top-0 z-10 flex -translate-x-1/2 touch-manipulation flex-col items-center"
-                      style={{ left: `${left}%`, height: timelineTrackTopPx }}
-                      aria-label={`${entryTitle(entry.type)} at ${formatClock(timeMs)}`}
+                      style={{ left: `${left}%`, height: TIMELINE_ENTRY_ROW_PX }}
+                      aria-label={`${entryTitle(entry.type, entry.data)} at ${formatClock(timeMs)}`}
                     >
-                      {thumbnail ? (
-                        <span className="relative block size-10 shrink-0 overflow-hidden rounded-lg border-2 border-white bg-black shadow-md">
-                          <img src={thumbnail} alt="" className="size-full object-cover" />
-                          {entryIsVideo ? (
-                            <Play className="absolute left-1/2 top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 drop-shadow" fill="currentColor" />
+                      <PlaybackTimelineLogEntryMarker
+                        entry={entry}
+                        legColor={logEntryLegColor(entry, legs, index)}
+                        className="block shrink-0 drop-shadow-md"
+                      />
+                      <span className="w-px flex-1 bg-white/70" aria-hidden />
+                    </button>
+                  )
+                })
+              : null}
+
+            {showTimelineMedia
+              ? visibleMediaMarkers.map((marker) => {
+                  const left =
+                    ((marker.timeMs - windowRange.startMs) / windowRange.durationMs) *
+                    100
+                  const offsetPx = mediaMarkerOffsets.get(marker.id) ?? 0
+                  const entry =
+                    chronologicalEntries.find((item) => item.id === marker.entryId) ??
+                    null
+                  const label = entry
+                    ? `${entryTitle(entry.type, entry.data)} media at ${formatClock(marker.timeMs)}`
+                    : `Media at ${formatClock(marker.timeMs)}`
+                  return (
+                    <button
+                      key={marker.id}
+                      type="button"
+                      data-entry-id={marker.entryId}
+                      className="absolute z-10 flex touch-manipulation flex-col items-center"
+                      style={{
+                        left: `${left}%`,
+                        top: showTimelineEntries ? TIMELINE_ENTRY_ROW_PX : 0,
+                        height: TIMELINE_MEDIA_ROW_PX,
+                        transform: `translateX(calc(-50% + ${offsetPx}px))`,
+                      }}
+                      aria-label={label}
+                    >
+                      {marker.thumbnailUrl ? (
+                        <span className="relative block h-8 w-11 shrink-0 overflow-hidden rounded-md border-2 border-white bg-black shadow-md">
+                          <img
+                            src={marker.thumbnailUrl}
+                            alt=""
+                            className="size-full object-cover"
+                          />
+                          {marker.kind === 'video' ? (
+                            <Play
+                              className="absolute left-1/2 top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow"
+                              fill="currentColor"
+                            />
                           ) : null}
                         </span>
+                      ) : marker.kind === 'voice' ? (
+                        <span className="flex h-8 w-11 shrink-0 items-center justify-center rounded-md border-2 border-white/70 bg-black/75 text-white shadow-md">
+                          <Mic className="size-4" aria-hidden />
+                        </span>
                       ) : (
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-white/40 bg-black/70 text-sm shadow-md">
-                          {entryIcon(entry.type)}
+                        <span className="flex h-8 w-11 shrink-0 items-center justify-center rounded-md border-2 border-white/70 bg-black/75 text-white shadow-md">
+                          <Camera className="size-4" aria-hidden />
                         </span>
                       )}
                       <span className="w-px flex-1 bg-white/70" aria-hidden />

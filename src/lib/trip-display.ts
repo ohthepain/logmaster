@@ -5,6 +5,18 @@ export function tripDisplayName(trip: Pick<Trip, 'title' | 'boatName'>): string 
   return title || trip.boatName
 }
 
+/** Detail line under the title on trip cards — falls back to the date range. */
+export function tripListSubtitle(
+  trip: Pick<
+    Trip,
+    'subtitle' | 'status' | 'createdAt' | 'startedAt' | 'completedAt'
+  >,
+): string {
+  const subtitle = trip.subtitle?.trim()
+  if (subtitle) return subtitle
+  return formatTripDateRange(trip)
+}
+
 /** Trips list kicker — only surface status when a trip is actively underway. */
 export function tripListStatusKicker(
   trip: Pick<Trip, 'status'>,
@@ -86,6 +98,14 @@ export function formatTripShortDate(value: string): string {
   }).format(date)
 }
 
+function sameCalendarDay(left: Date, right: Date): boolean {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  )
+}
+
 export function formatTripDateRange(
   trip: Pick<Trip, 'status' | 'createdAt' | 'startedAt' | 'completedAt'>,
 ): string {
@@ -95,6 +115,15 @@ export function formatTripDateRange(
 
   const start = formatTripShortDate(trip.startedAt)
   if (trip.status === 'COMPLETED' && trip.completedAt) {
+    const startDate = new Date(trip.startedAt)
+    const endDate = new Date(trip.completedAt)
+    if (
+      !Number.isNaN(startDate.getTime()) &&
+      !Number.isNaN(endDate.getTime()) &&
+      sameCalendarDay(startDate, endDate)
+    ) {
+      return start
+    }
     return `${start} → ${formatTripShortDate(trip.completedAt)}`
   }
 

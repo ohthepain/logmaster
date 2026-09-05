@@ -44,6 +44,7 @@ const ENTRY_SYMBOLS: Record<LogEntryType, string> = {
   NOTE: 'note.text',
   HOURLY_LOG: 'clock.fill',
   PHOTO: 'camera.fill',
+  MEDIA: 'camera.fill',
   VOICE_NOTE: 'waveform',
 }
 

@@ -81,14 +81,19 @@ describe('trip-playback-panels', () => {
     ]
 
     const options = availablePlaybackPanels(tripId, tracks, [])
-    expect(options.map((option) => option.id)).toEqual(['log-entries', 'sog'])
+    expect(options.map((option) => option.id)).toEqual(['log-entries', 'media', 'sog'])
     expect(options[0]?.disabled).toBe(true)
+    expect(options[1]?.disabled).toBe(true)
   })
 
-  it('always lists log entries in the timeline selector', () => {
+  it('always lists log entries and media in the timeline selector', () => {
     const withoutEntries = availablePlaybackPanels(tripId, [], [])
     expect(withoutEntries[0]).toMatchObject({
       id: 'log-entries',
+      disabled: true,
+    })
+    expect(withoutEntries[1]).toMatchObject({
+      id: 'media',
       disabled: true,
     })
 
@@ -98,6 +103,10 @@ describe('trip-playback-panels', () => {
     expect(withEntries[0]).toMatchObject({
       id: 'log-entries',
       disabled: false,
+    })
+    expect(withEntries[1]).toMatchObject({
+      id: 'media',
+      disabled: true,
     })
   })
 
@@ -208,7 +217,7 @@ describe('trip-playback-panels', () => {
       { sog: true, 'log-entries': false } as never,
       options,
     )
-    expect(Object.keys(sanitized)).toEqual(['log-entries'])
+    expect(Object.keys(sanitized)).toEqual(['log-entries', 'media'])
     expect(sanitized['log-entries']).toBe(false)
   })
 })

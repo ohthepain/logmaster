@@ -11,8 +11,19 @@ import {
 } from './log-entry-map-marker'
 
 export const LOG_ENTRY_MAP_MARKER_SIZE = 64
+export const LOG_ENTRY_MAP_MEDIA_MARKER_SIZE = 46
 export const LOG_ENTRY_MAP_MARKER_PIXEL_RATIO = 2
 export const LOG_ENTRY_MAP_SELECTED_ICON_SCALE = 1.35
+
+function isMediaMarkerKind(kind: LogEntryMapIconKind): boolean {
+  return kind === 'media-photo' || kind === 'media-video'
+}
+
+function markerCanvasSize(kind: LogEntryMapIconKind): number {
+  return isMediaMarkerKind(kind)
+    ? LOG_ENTRY_MAP_MEDIA_MARKER_SIZE
+    : LOG_ENTRY_MAP_MARKER_SIZE
+}
 
 const GLYPH_ASSETS: Partial<Record<LogEntryMapIconKind, string>> = {
   'anchor-dropped': '/buttons/anchor-down-white.png',
@@ -56,36 +67,58 @@ function parseHexColor(color: string): { r: number; g: number; b: number } {
   }
 }
 
-function createMarkerCanvas() {
+function createMarkerCanvas(size: number) {
   const canvas = document.createElement('canvas')
-  canvas.width = LOG_ENTRY_MAP_MARKER_SIZE
-  canvas.height = LOG_ENTRY_MAP_MARKER_SIZE
+  canvas.width = size
+  canvas.height = size
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Could not create log entry marker canvas')
-  return { canvas, ctx }
+  return { canvas, ctx, size }
 }
 
 const MARKER_GLYPH_COLOR = SailingMapColors.labelHalo
 
-function markerCircleGeometry() {
-  const center = LOG_ENTRY_MAP_MARKER_SIZE / 2
+function markerCircleGeometry(size: number) {
+  const center = size / 2
   return { center, radius: center - 5, strokeWidth: 4.5 }
 }
 
-function fillMarkerCircle(ctx: CanvasRenderingContext2D) {
-  const { center, radius } = markerCircleGeometry()
+function mediaRectGeometry(size: number) {
+  const width = size - 8
+  const height = size - 14
+  const x = (size - width) / 2
+  const y = (size - height) / 2
+  return { x, y, width, height, radius: 4.5, strokeWidth: 3.5 }
+}
+
+function fillMarkerCircle(ctx: CanvasRenderingContext2D, size: number) {
+  const { center, radius } = markerCircleGeometry(size)
   ctx.beginPath()
   ctx.arc(center, center, radius, 0, Math.PI * 2)
   ctx.fillStyle = SailingMapColors.entryFill
   ctx.fill()
 }
 
+function fillMediaRect(ctx: CanvasRenderingContext2D, size: number) {
+  const { x, y, width, height, radius } = mediaRectGeometry(size)
+  ctx.beginPath()
+  ctx.moveTo(x + radius, y)
+  ctx.arcTo(x + width, y, x + width, y + height, radius)
+  ctx.arcTo(x + width, y + height, x, y + height, radius)
+  ctx.arcTo(x, y + height, x, y, radius)
+  ctx.arcTo(x, y, x + width, y, radius)
+  ctx.closePath()
+  ctx.fillStyle = SailingMapColors.entryFill
+  ctx.fill()
+}
+
 function strokeMarkerCircle(
   ctx: CanvasRenderingContext2D,
+  size: number,
   color: string,
   outline: LogEntryMapOutline,
 ) {
-  const { center, radius, strokeWidth } = markerCircleGeometry()
+  const { center, radius, strokeWidth } = markerCircleGeometry(size)
   ctx.beginPath()
   ctx.arc(center, center, radius, 0, Math.PI * 2)
   ctx.strokeStyle = color
@@ -97,20 +130,69 @@ function strokeMarkerCircle(
   ctx.setLineDash([])
 }
 
-function clipToInnerCircle(ctx: CanvasRenderingContext2D) {
-  const { center, radius, strokeWidth } = markerCircleGeometry()
+function strokeMediaRect(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  color: string,
+  outline: LogEntryMapOutline,
+) {
+  const { x, y, width, height, radius, strokeWidth } = mediaRectGeometry(size)
+  ctx.beginPath()
+  ctx.moveTo(x + radius, y)
+  ctx.arcTo(x + width, y, x + width, y + height, radius)
+  ctx.arcTo(x + width, y + height, x, y + height, radius)
+  ctx.arcTo(x, y + height, x, y, radius)
+  ctx.arcTo(x, y, x + width, y, radius)
+  ctx.closePath()
+  ctx.strokeStyle = color
+  ctx.lineWidth = strokeWidth
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+  ctx.setLineDash(outline === 'dotted' ? [0.8, 4.8] : [])
+  ctx.stroke()
+  ctx.setLineDash([])
+}
+
+function clipToInnerCircle(ctx: CanvasRenderingContext2D, size: number) {
+  const { center, radius, strokeWidth } = markerCircleGeometry(size)
   ctx.beginPath()
   ctx.arc(center, center, radius - strokeWidth, 0, Math.PI * 2)
+  ctx.clip()
+}
+
+function clipToInnerMediaRect(ctx: CanvasRenderingContext2D, size: number) {
+  const { x, y, width, height, radius, strokeWidth } = mediaRectGeometry(size)
+  const inset = strokeWidth
+  ctx.beginPath()
+  ctx.moveTo(x + inset + radius, y + inset)
+  ctx.arcTo(
+    x + width - inset,
+    y + inset,
+    x + width - inset,
+    y + height - inset,
+    radius,
+  )
+  ctx.arcTo(
+    x + width - inset,
+    y + height - inset,
+    x + inset,
+    y + height - inset,
+    radius,
+  )
+  ctx.arcTo(x + inset, y + height - inset, x + inset, y + inset, radius)
+  ctx.arcTo(x + inset, y + inset, x + width - inset, y + inset, radius)
+  ctx.closePath()
   ctx.clip()
 }
 
 function withGlyphFrame(
   ctx: CanvasRenderingContext2D,
   color: string,
+  canvasSize: number,
   draw: (ctx: CanvasRenderingContext2D) => void,
 ) {
-  const inset = 16
-  const scale = (LOG_ENTRY_MAP_MARKER_SIZE - inset * 2) / 24
+  const inset = canvasSize <= LOG_ENTRY_MAP_MEDIA_MARKER_SIZE ? 11 : 16
+  const scale = (canvasSize - inset * 2) / 24
   ctx.save()
   ctx.translate(inset, inset)
   ctx.scale(scale, scale)
@@ -127,8 +209,9 @@ function drawFallbackGlyph(
   ctx: CanvasRenderingContext2D,
   kind: LogEntryMapIconKind,
   color: string,
+  canvasSize: number,
 ) {
-  withGlyphFrame(ctx, color, (glyph) => {
+  withGlyphFrame(ctx, color, canvasSize, (glyph) => {
     switch (kind) {
       case 'anchor-dropped':
         drawAnchorGlyph(glyph, 'down')
@@ -155,9 +238,11 @@ function drawFallbackGlyph(
         drawEngineGlyph(glyph, false)
         break
       case 'video':
+      case 'media-video':
         drawVideoGlyph(glyph)
         break
       case 'photo':
+      case 'media-photo':
         drawPhotoGlyph(glyph)
         break
       case 'voice':
@@ -469,30 +554,55 @@ function drawGlyphFromAsset(
   ctx: CanvasRenderingContext2D,
   image: HTMLImageElement,
   color: string,
+  canvasSize: number,
 ) {
   const tinted = colorizeGlyphImage(image, color)
-  const inset = 13
-  const size = LOG_ENTRY_MAP_MARKER_SIZE - inset * 2
+  const inset = canvasSize <= LOG_ENTRY_MAP_MEDIA_MARKER_SIZE ? 10 : 13
+  const size = canvasSize - inset * 2
   ctx.drawImage(tinted, inset, inset, size, size)
 }
 
+export function logEntryMapMarkerDisplaySize(kind: LogEntryMapIconKind): number {
+  const canvasSize = isMediaMarkerKind(kind)
+    ? LOG_ENTRY_MAP_MEDIA_MARKER_SIZE
+    : LOG_ENTRY_MAP_MARKER_SIZE
+  return canvasSize / LOG_ENTRY_MAP_MARKER_PIXEL_RATIO
+}
+
 async function renderMarkerImageData(spec: MarkerSpec): Promise<ImageData> {
-  const { ctx } = createMarkerCanvas()
-  fillMarkerCircle(ctx)
+  const size = markerCanvasSize(spec.kind)
+  const { ctx } = createMarkerCanvas(size)
+  const mediaMarker = isMediaMarkerKind(spec.kind)
+
+  if (mediaMarker) {
+    fillMediaRect(ctx, size)
+  } else {
+    fillMarkerCircle(ctx, size)
+  }
+
   ctx.save()
-  clipToInnerCircle(ctx)
+  if (mediaMarker) {
+    clipToInnerMediaRect(ctx, size)
+  } else {
+    clipToInnerCircle(ctx, size)
+  }
 
   const asset = GLYPH_ASSETS[spec.kind]
   const image = asset ? await loadGlyphImage(asset) : null
   if (image) {
-    drawGlyphFromAsset(ctx, image, MARKER_GLYPH_COLOR)
+    drawGlyphFromAsset(ctx, image, MARKER_GLYPH_COLOR, size)
   } else {
-    drawFallbackGlyph(ctx, spec.kind, MARKER_GLYPH_COLOR)
+    drawFallbackGlyph(ctx, spec.kind, MARKER_GLYPH_COLOR, size)
   }
   ctx.restore()
-  strokeMarkerCircle(ctx, spec.color, spec.outline)
 
-  return ctx.getImageData(0, 0, LOG_ENTRY_MAP_MARKER_SIZE, LOG_ENTRY_MAP_MARKER_SIZE)
+  if (mediaMarker) {
+    strokeMediaRect(ctx, size, spec.color, spec.outline)
+  } else {
+    strokeMarkerCircle(ctx, size, spec.color, spec.outline)
+  }
+
+  return ctx.getImageData(0, 0, size, size)
 }
 
 export async function renderLogEntryMapMarkerImage(
@@ -518,7 +628,8 @@ export async function renderLogEntryMapMarkerDataUrl(
   if (cached) return cached
 
   const image = await renderLogEntryMapMarkerImage(kind, color, outline)
-  const { canvas, ctx } = createMarkerCanvas()
+  const size = markerCanvasSize(kind)
+  const { canvas, ctx } = createMarkerCanvas(size)
   ctx.putImageData(image, 0, 0)
   const dataUrl = canvas.toDataURL('image/png')
   dataUrlCache.set(cacheKey, dataUrl)

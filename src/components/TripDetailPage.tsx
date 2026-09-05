@@ -21,6 +21,10 @@ import type { CrewMember } from "../domain/crew";
 import { fetchCrew } from "../lib/crew-api";
 import { readImageFile } from "../lib/image-file";
 import {
+  tripMediaUploadToastMessage,
+  uploadTripMediaFiles,
+} from "../lib/trip-media-upload";
+import {
   DEV_TRIP_REPLAY_ENTRY_NOTE,
   DEV_TRIP_REPLAY_SOURCE,
   replayPositionAt,
@@ -29,7 +33,7 @@ import {
 import { isDevModeAvailable } from "../lib/dev-mode";
 import { setDevPositionOverride } from "../lib/device-position";
 import { formatDateTime, formatPosition } from "../lib/logbook-format";
-import { tripDetailCoverDisplay, tripDisplayName } from "../lib/trip-display";
+import { tripDetailCoverDisplay, defaultTripTitle, tripDisplayName } from "../lib/trip-display";
 import { getNativePlatform } from "../lib/platform";
 import { useIosNativeMapTouchPassthrough } from "../lib/native/ios-map-touch-passthrough";
 import { useAppOptionsStore } from "../stores/app-options";
@@ -45,10 +49,13 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
   const store = useLogbookStore();
   const trip = store.trips.find((item) => item.id === tripId) ?? null;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaFileInputRef = useRef<HTMLInputElement>(null);
   const heroMapRef = useRef<TripMapHandle>(null);
   const autoMapCoverAttemptedRef = useRef<string | null>(null);
   const fileInputId = useId();
+  const mediaFileInputId = useId();
   const [busy, setBusy] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
   const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
   const [crewPickerOpen, setCrewPickerOpen] = useState(false);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
@@ -325,6 +332,21 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
     }
   };
 
+  const handleSaveTripDetails = async (input: { title: string; subtitle: string }) => {
+    setBusy(true)
+    try {
+      await store.updateTrip(trip.id, {
+        title: input.title || null,
+        subtitle: input.subtitle || null,
+      })
+      toast.success('Trip details updated')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update trip details')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const handlePhotoPick = async (file: File | undefined) => {
     if (!file || !file.type.startsWith("image/")) return;
     setBusy(true);
@@ -369,6 +391,30 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
 
   const handleChoosePhotoCover = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleMediaFilePick = async (files: FileList | null) => {
+    if (!files?.length || !trip) return;
+    setUploadingMedia(true);
+    try {
+      const result = await uploadTripMediaFiles(
+        store,
+        trip.id,
+        Array.from(files),
+      );
+      if (result.saved > 0) {
+        toast.success(tripMediaUploadToastMessage(result));
+      } else {
+        toast.error(tripMediaUploadToastMessage(result));
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to upload media",
+      );
+    } finally {
+      setUploadingMedia(false);
+      if (mediaFileInputRef.current) mediaFileInputRef.current.value = "";
+    }
   };
 
   const handleStartTrip = async () => {
@@ -527,6 +573,8 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
           completedTripPanel={completedTripPanel}
           onCompletedTripPanelChange={trip.status === "COMPLETED" ? setCompletedTripPanel : undefined}
           onEditCoverClick={() => setCoverEditOpen(true)}
+          uploadMediaInputId={mediaFileInputId}
+          uploadingMedia={uploadingMedia}
           onInitialMapViewportSettled={handleInitialMapViewportSettled}
           onLogEntryClick={
             trip.status === "IN_PROGRESS" ? () => setCreateEntryOpen(true) : undefined
@@ -662,6 +710,16 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
         onChange={(event) => void handlePhotoPick(event.target.files?.[0])}
       />
 
+      <input
+        ref={mediaFileInputRef}
+        id={mediaFileInputId}
+        type="file"
+        accept="image/*,video/*"
+        multiple
+        className="sr-only"
+        onChange={(event) => void handleMediaFilePick(event.target.files)}
+      />
+
       <LogEntryCreateModal
         open={createEntryOpen}
         tripId={trip.id}
@@ -687,7 +745,11 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
         open={coverEditOpen}
         busy={busy}
         cover={cover}
+        title={trip.title ?? ''}
+        subtitle={trip.subtitle ?? ''}
+        titlePlaceholder={defaultTripTitle(trip.boatName)}
         onClose={() => setCoverEditOpen(false)}
+        onSaveDetails={(input) => void handleSaveTripDetails(input)}
         onChoosePhoto={handleChoosePhotoCover}
         onChooseMap={() => void handleChooseMapCover()}
         onUseCurrentMap={() => void handleUseCurrentMapCover()}

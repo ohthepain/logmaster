@@ -48,7 +48,9 @@ export function LogEntryMapMarkerTooltip({
         className,
       )}
     >
-      <p className="m-0 text-[11px] font-semibold leading-tight">{entryTitle(entry.type)}</p>
+      <p className="m-0 text-[11px] font-semibold leading-tight">
+        {entryTitle(entry.type, entry.data)}
+      </p>
       <p className="m-0 mt-0.5 text-[10px] text-white/70">{formatDateTime(entry.timestamp)}</p>
       {photoItems.length > 0 || videoItems.length > 0 ? (
         <div className="mt-1.5 flex flex-wrap gap-1">

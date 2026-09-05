@@ -25,6 +25,7 @@ export const LOG_ENTRY_TYPES = [
   'HOURLY_LOG',
   'PHOTO',
   'VOICE_NOTE',
+  'MEDIA',
 ] as const
 export type LogEntryType = (typeof LOG_ENTRY_TYPES)[number]
 
@@ -48,6 +49,7 @@ export type Trip = {
   skipperKey?: string | null
   crewMemberIds?: string[] | null
   title?: string | null
+  subtitle?: string | null
   coverPhotoDataUrl?: string | null
   coverKind?: TripCoverKind | null
   boatId?: string | null
@@ -106,6 +108,7 @@ export type Media = {
   id: string
   logEntryId: string
   type: MediaType
+  order: number
   localPath?: string | null
   remoteUrl?: string | null
   thumbnailUrl?: string | null
@@ -167,12 +170,37 @@ export const OPERATIONAL_STATUS_ENTRY_TYPES: LogEntryType[] = [
   'END_TRIP',
 ]
 
-export function entryTitle(type: LogEntryType) {
+export function entryTitle(
+  type: LogEntryType,
+  data?: Record<string, unknown> | null,
+) {
+  if (type === 'MEDIA') {
+    return isVideoMediaData(data) ? 'Video' : 'Photo'
+  }
   return EVENT_TYPES.find((event) => event.type === type)?.label ?? type
 }
 
-export function entryIcon(type: LogEntryType) {
+export function entryIcon(
+  type: LogEntryType,
+  data?: Record<string, unknown> | null,
+) {
+  if (type === 'MEDIA') {
+    return isVideoMediaData(data) ? '🎬' : '📷'
+  }
   return EVENT_TYPES.find((event) => event.type === type)?.icon ?? '•'
+}
+
+const VIDEO_MEDIA_EXTENSIONS = /\.(mp4|mov|m4v|webm)$/i
+
+export function isVideoMediaData(data?: Record<string, unknown> | null): boolean {
+  if (!data) return false
+  if (data.video === true) return true
+  if (data.mediaType === 'video') return true
+  if (data.kind === 'video') return true
+  const fileName = typeof data.fileName === 'string' ? data.fileName : ''
+  const mimeType = typeof data.mimeType === 'string' ? data.mimeType : ''
+  if (mimeType.startsWith('video/')) return true
+  return VIDEO_MEDIA_EXTENSIONS.test(fileName)
 }
 
 const LOG_ENTRY_NAVIGATION_ORDER: LogEntryType[] = [
@@ -248,6 +276,8 @@ export function isLogEntryTypeVisible(
       return state.inProgress && needsCastOff(state, entries)
     case 'ANCHOR_WEIGHED':
       return state.inProgress && state.anchorDown === true
+    case 'MEDIA':
+      return false
     default:
       return true
   }

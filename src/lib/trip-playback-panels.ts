@@ -1,4 +1,4 @@
-import type { LogEntry } from '../domain/logbook'
+import type { LogEntry, Media } from '../domain/logbook'
 import type {
   AngleTrackSample,
   InstrumentTrackKind,
@@ -20,8 +20,11 @@ import { gpxFieldMeta, gpxFieldMetaForTrackKind, isGpxImportScalarTrackKind, par
 import type { TripPlaybackRange } from './trip-playback'
 import { tripTrackSamplesForTrip } from './trip-track-playback'
 
+import { tripHasPlaybackMedia } from './trip-playback-media-timeline'
+
 export type PlaybackPanelId =
   | 'log-entries'
+  | 'media'
   | InstrumentTrackKind
   | 'sog-derived'
   | (string & {})
@@ -118,7 +121,7 @@ export function playbackPanelGraphPoints(
   tripId: string,
   tracks: TripTrack[],
 ): PlaybackGraphPoint[] {
-  if (panelId === 'log-entries') return []
+  if (panelId === 'log-entries' || panelId === 'media') return []
 
   if (panelId === 'sog-derived') {
     return scalarSamplesToGraphPoints(
@@ -190,6 +193,7 @@ export function availablePlaybackPanels(
   tripId: string,
   tracks: TripTrack[],
   entries: LogEntry[],
+  mediaByEntry: Map<string, Media[]> = new Map(),
 ): PlaybackPanelOption[] {
   const activeEntries = entries.filter((entry) => !entry.deleted)
   const options: PlaybackPanelOption[] = [
@@ -198,6 +202,12 @@ export function availablePlaybackPanels(
       label: 'Log entries',
       shortLabel: 'Log',
       disabled: activeEntries.length === 0,
+    },
+    {
+      id: 'media',
+      label: 'Media',
+      shortLabel: 'Media',
+      disabled: !tripHasPlaybackMedia(activeEntries, mediaByEntry),
     },
   ]
 
@@ -282,8 +292,12 @@ export const PLAYBACK_GRAPH_COLORS = [
   '#2dd4bf',
 ] as const
 
+export function isTimelineRowPanel(panelId: PlaybackPanelId): boolean {
+  return panelId === 'log-entries' || panelId === 'media'
+}
+
 export function isGraphPlaybackPanel(panelId: PlaybackPanelId): boolean {
-  return panelId !== 'log-entries'
+  return !isTimelineRowPanel(panelId)
 }
 
 export function playbackGraphScaleGroup(panelId: PlaybackPanelId): PlaybackGraphScaleGroup {
@@ -343,7 +357,9 @@ export function defaultPlaybackViewState(options: PlaybackPanelOption[]): Playba
     }
   }
   if (!Object.values(state).some(Boolean)) {
-    const fallback = options.find((option) => option.id !== 'log-entries')
+    const fallback = options.find(
+      (option) => option.id !== 'log-entries' && option.id !== 'media',
+    )
     if (fallback) {
       state[fallback.id] = true
     }
@@ -384,7 +400,7 @@ export function countEnabledPlaybackViews(state: PlaybackViewState): number {
 }
 
 export function playbackPanelUnit(panelId: PlaybackPanelId): string {
-  if (panelId === 'log-entries') return ''
+  if (isTimelineRowPanel(panelId)) return ''
   if (panelId === 'sog-derived') return 'kn'
   const gpxMeta = gpxFieldMetaForTrackKind(panelId)
   if (gpxMeta) return gpxMeta.unit

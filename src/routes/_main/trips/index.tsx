@@ -1,7 +1,6 @@
 import { createFileRoute, useLocation, useNavigate } from '@tanstack/react-router'
-import { Sailboat } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import { Map as MapIcon, Sailboat } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AddButton } from '../../../components/AddButton'
 import {
   GpxImportButton,
@@ -11,13 +10,22 @@ import { GpxUrlImportButton } from '../../../components/GpxUrlImportButton'
 import { StartTripLauncher } from '../../../components/StartTripLauncher'
 import { TripActionsMenu } from '../../../components/TripActionsMenu'
 import type { Trip } from '../../../domain/logbook'
+import type { TripTrack } from '../../../domain/trip-track'
 import { cn } from '../../../lib/cn'
-import { formatDateTime } from '../../../lib/logbook-format'
 import {
+  resolveTripCoverKind,
   tripCoverPhotoUrl,
   tripDisplayName,
-  tripListStatusKicker,
+  tripListSubtitle,
 } from '../../../lib/trip-display'
+import {
+  formatTripListDistanceMeters,
+  formatTripListDuration,
+  formatTripListEntryCount,
+  tripDurationMs,
+  tripListLocationKicker,
+  tripTrackDistanceMeters,
+} from '../../../lib/trip-list-stats'
 import { useSession } from '../../../lib/auth-client'
 import { useLogbookStore } from '../../../stores/logbook'
 
@@ -42,6 +50,15 @@ function TripsPage() {
   const { startTrip: startTripSearch } = Route.useSearch()
   const [startTripOpen, setStartTripOpen] = useState(false)
   const gpxImportRef = useRef<GpxImportButtonHandle>(null)
+
+  const entryCountByTripId = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const entry of store.entries) {
+      if (entry.deleted) continue
+      counts.set(entry.tripId, (counts.get(entry.tripId) ?? 0) + 1)
+    }
+    return counts
+  }, [store.entries])
 
   const handleImportedTrip = (tripId: string) => {
     store.selectTrip(tripId)
@@ -95,16 +112,13 @@ function TripsPage() {
           icon={Sailboat}
         />
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {store.trips.map((trip) => (
             <TripCard
               key={trip.id}
               trip={trip}
-              entryCount={
-                store.entries.filter(
-                  (entry) => entry.tripId === trip.id && !entry.deleted,
-                ).length
-              }
+              tracks={store.tracks}
+              entryCount={entryCountByTripId.get(trip.id) ?? 0}
               active={location.pathname === `/trips/${trip.id}`}
               onSelect={() => openTrip(trip.id)}
             />
@@ -121,90 +135,101 @@ function TripsPage() {
 
 function TripCard({
   trip,
+  tracks,
   entryCount,
   active,
   onSelect,
 }: {
   trip: Trip
+  tracks: TripTrack[]
   entryCount: number
   active: boolean
   onSelect: () => void
 }) {
   const coverPhoto = tripCoverPhotoUrl(trip)
+  const coverKind = resolveTripCoverKind(trip)
   const name = tripDisplayName(trip)
-  const statusKicker = tripListStatusKicker(trip)
+  const locationKicker = tripListLocationKicker(trip)
+  const subtitle = tripListSubtitle(trip)
+  const distanceLabel = formatTripListDistanceMeters(
+    tripTrackDistanceMeters(trip.id, tracks) || null,
+  )
+  const durationLabel = formatTripListDuration(tripDurationMs(trip))
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
-    <div
+    <article
       className={cn(
-        'relative w-full rounded-[1.4rem] border transition hover:-translate-y-[1px]',
+        'group relative overflow-hidden rounded-[1.4rem] border transition hover:-translate-y-[1px]',
         menuOpen && 'z-30',
         active
           ? 'border-[var(--active-border)] bg-[var(--active-panel)] shadow-sm'
           : 'border-[var(--panel-border)] bg-[var(--panel)]',
       )}
     >
-      <button type="button" onClick={onSelect} className="w-full text-left">
-        <div className="flex gap-4 p-4">
-          <div className="size-16 shrink-0 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)]">
-            {coverPhoto ? (
-              <img src={coverPhoto} alt="" className="size-full object-cover" />
-            ) : (
-              <div className="flex size-full items-center justify-center text-[var(--sea-ink-soft)]">
-                <Sailboat className="size-7" strokeWidth={1.5} />
-              </div>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3 pr-24">
-              <div className="min-w-0">
-                {statusKicker ? (
-                  <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--kicker)]">
-                    {statusKicker}
-                  </p>
-                ) : null}
-                <h3
-                  className={cn(
-                    'm-0 truncate text-lg font-bold text-[var(--sea-ink)]',
-                    statusKicker && 'mt-1',
-                  )}
-                >
-                  {name}
-                </h3>
-                <p className="m-0 mt-1 text-sm text-[var(--sea-ink-soft)]">
-                  {trip.status === 'PLANNED'
-                    ? `Created ${formatDateTime(trip.createdAt)}`
-                    : trip.status === 'COMPLETED' && trip.completedAt
-                      ? `${formatDateTime(trip.startedAt)} → ${formatDateTime(trip.completedAt)}`
-                      : formatDateTime(trip.startedAt)}
-                </p>
-              </div>
+      <button type="button" onClick={onSelect} className="block w-full text-left">
+        <div className="relative aspect-[16/10] overflow-hidden bg-[var(--chip-bg)]">
+          {coverPhoto ? (
+            <img
+              src={coverPhoto}
+              alt=""
+              className="size-full object-cover transition duration-300 group-hover:scale-[1.02]"
+            />
+          ) : coverKind === 'map' ? (
+            <div className="flex size-full flex-col items-center justify-center gap-2 bg-[linear-gradient(145deg,var(--brand-muted),var(--chip-bg))] text-[var(--sea-ink-soft)]">
+              <MapIcon className="size-8" strokeWidth={1.4} />
+              <span className="text-xs font-semibold uppercase tracking-[0.18em]">
+                Route map
+              </span>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--sea-ink-soft)]">
-              {trip.boatName !== name && <Badge>{trip.boatName}</Badge>}
-              {trip.startCountry && <Badge>{trip.startCountry}</Badge>}
-              {trip.skipper && <Badge>{trip.skipper}</Badge>}
+          ) : (
+            <div className="flex size-full items-center justify-center text-[var(--sea-ink-soft)]">
+              <Sailboat className="size-10" strokeWidth={1.5} />
             </div>
-          </div>
+          )}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/35 to-transparent" />
+        </div>
+
+        <div className="space-y-2 px-4 pb-4 pt-3">
+          {locationKicker ? (
+            <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--kicker)]">
+              {locationKicker}
+            </p>
+          ) : null}
+          <h3 className="m-0 line-clamp-2 text-[1.15rem] font-bold leading-snug text-[var(--sea-ink)]">
+            {name}
+          </h3>
+          <p className="m-0 line-clamp-3 text-sm leading-6 text-[var(--sea-ink-soft)]">
+            {subtitle}
+          </p>
+          <p className="m-0 pt-1 text-sm font-medium text-[var(--sea-ink-soft)]">
+            <span className="text-[var(--sea-ink)]">{trip.boatName}</span>
+            <StatSeparator />
+            {distanceLabel}
+            <StatSeparator />
+            {durationLabel}
+            <StatSeparator />
+            {formatTripListEntryCount(entryCount)}
+          </p>
         </div>
       </button>
-      <div className="absolute right-4 top-4 z-10 flex items-start gap-2">
-        <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--surface)] px-3 py-2 text-right">
-          <p className="m-0 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--sea-ink-soft)]">
-            Entries
-          </p>
-          <p className="m-0 text-xl font-bold text-[var(--sea-ink)]">
-            {entryCount}
-          </p>
-        </div>
+
+      <div className="absolute right-3 top-3 z-10">
         <TripActionsMenu
           trip={trip}
           entryCount={entryCount}
           onOpenChange={setMenuOpen}
         />
       </div>
-    </div>
+    </article>
+  )
+}
+
+function StatSeparator() {
+  return (
+    <span aria-hidden="true" className="mx-2 text-[var(--line)]">
+      ·
+    </span>
   )
 }
 
@@ -253,13 +278,5 @@ function EmptyState({
         ) : null}
       </div>
     </div>
-  )
-}
-
-function Badge({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full border border-[var(--panel-border)] bg-[var(--panel)] px-2.5 py-1 text-xs font-medium text-[var(--sea-ink-soft)]">
-      {children}
-    </span>
   )
 }

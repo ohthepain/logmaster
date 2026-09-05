@@ -1,10 +1,10 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, Camera, Check, LocateFixed, Map, Mic, PenLine, X } from 'lucide-react'
+import { ArrowLeft, Camera, Check, LocateFixed, Map, Mic, PenLine } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { LogEntryContentStack, type EntryContentBlock } from './LogEntryContentStack'
 import { LogEntryPositionMap } from './LogEntryPositionMap'
 import { Modal } from './Modal'
-import { VoiceNotePlayback } from './VoiceNotePlayback'
 import {
   entryIcon,
   entryTitle,
@@ -19,8 +19,19 @@ import {
 import { advanceIso, realNowIso } from '../lib/dev-time-travel'
 import { isDevModeAvailable } from '../lib/dev-mode'
 import { formatDateTime } from '../lib/logbook-format'
+import { readImageFile } from '../lib/image-file'
+import { photoMetadataFromLogEntry } from '../lib/photo-exif-stamp'
+import {
+  stampAndExportPhotoMetadata,
+  photoMetadataExportToastMessage,
+} from '../lib/photo-metadata-export'
 import type { MapLngLat } from '../lib/logbook-map-geo'
 import { cn } from '../lib/cn'
+import {
+  nextContentOrder,
+  withNoteOrder,
+  withVoiceOrder,
+} from '../lib/log-entry-content-order'
 import { usePositionPlaceLabel } from '../lib/use-position-place-label'
 import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore } from '../stores/logbook'
@@ -66,6 +77,9 @@ export function LogEntryCreateModal({
   const [selectedType, setSelectedType] = useState<LogEntryType | null>(null)
   const [draftNote, setDraftNote] = useState('')
   const [noteEditing, setNoteEditing] = useState(false)
+  const [noteOrder, setNoteOrder] = useState<number | null>(null)
+  const [voiceOrder, setVoiceOrder] = useState<number | null>(null)
+  const [draftPhotoOrder, setDraftPhotoOrder] = useState<number | null>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [voiceRecordingUrl, setVoiceRecordingUrl] = useState<string | null>(null)
@@ -93,6 +107,30 @@ export function LogEntryCreateModal({
   )
   const showTimeTravel =
     devMode && devTimeTravelEnabled && isDevModeAvailable()
+  const showPhotoMetadataAction = devMode && isDevModeAvailable()
+  const [metadataBusyKey, setMetadataBusyKey] = useState<string | null>(null)
+
+  const contentOrderInput = useMemo(
+    () => ({
+      media: [],
+      noteOrder: noteEditing || draftNote.trim() ? noteOrder : null,
+      voiceOrder:
+        isRecordingVoice || voiceRecordingUrl ? voiceOrder : null,
+      draftPhotoOrder: photoPreview ? draftPhotoOrder : null,
+    }),
+    [
+      draftNote,
+      draftPhotoOrder,
+      isRecordingVoice,
+      noteEditing,
+      noteOrder,
+      photoPreview,
+      voiceOrder,
+      voiceRecordingUrl,
+    ],
+  )
+
+  const allocateContentOrder = () => nextContentOrder(contentOrderInput)
 
   const applyDraftPosition = (position: MapLngLat) => {
     setDraftPosition(position)
@@ -118,8 +156,11 @@ export function LogEntryCreateModal({
     setSelectedType(null)
     setDraftNote('')
     setNoteEditing(false)
+    setNoteOrder(null)
+    setVoiceOrder(null)
+    setDraftPhotoOrder(null)
     setPhotoFile(null)
-    if (photoPreview) URL.revokeObjectURL(photoPreview)
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
     setPhotoPreview(null)
     clearVoiceRecording()
     stopVoiceRecording()
@@ -127,6 +168,7 @@ export function LogEntryCreateModal({
     setShowPositionMap(false)
     positionEditedRef.current = false
     setSaving(false)
+    setMetadataBusyKey(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -177,17 +219,24 @@ export function LogEntryCreateModal({
   }
 
   const handlePhotoPick = (file: File | undefined) => {
-    if (!file || !file.type.startsWith('image/')) return
-    if (photoPreview) URL.revokeObjectURL(photoPreview)
+    if (
+      !file ||
+      (!file.type.startsWith('image/') && !file.type.startsWith('video/'))
+    ) {
+      return
+    }
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
     setPhotoFile(file)
     setPhotoPreview(URL.createObjectURL(file))
+    setDraftPhotoOrder(allocateContentOrder())
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const clearPhoto = () => {
-    if (photoPreview) URL.revokeObjectURL(photoPreview)
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
     setPhotoFile(null)
     setPhotoPreview(null)
+    setDraftPhotoOrder(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -199,6 +248,7 @@ export function LogEntryCreateModal({
 
     if (voiceRecordingUrl) {
       clearVoiceRecording()
+      setVoiceOrder(null)
     }
 
     try {
@@ -219,6 +269,7 @@ export function LogEntryCreateModal({
         clearVoiceRecording()
         setVoiceRecordingBlob(blob)
         setVoiceRecordingUrl(URL.createObjectURL(blob))
+        setVoiceOrder((current) => current ?? allocateContentOrder())
       }
 
       mediaRecorderRef.current = recorder
@@ -230,6 +281,9 @@ export function LogEntryCreateModal({
   }
 
   const openNoteEditor = () => {
+    if (noteOrder == null) {
+      setNoteOrder(allocateContentOrder())
+    }
     setNoteEditing(true)
     requestAnimationFrame(() => noteInputRef.current?.focus())
   }
@@ -238,46 +292,104 @@ export function LogEntryCreateModal({
     if (!selectedType) return
     setSaving(true)
     try {
-      const data: Record<string, unknown> = {}
-      if (photoFile) {
-        data.fileName = photoFile.name
-        data.size = photoFile.size
-        data.mimeType = photoFile.type
+      const trimmedNote = draftNote.trim()
+      const hasPhoto = Boolean(photoFile && photoPreview)
+      const hasVoice = Boolean(voiceRecordingBlob && voiceRecordingUrl)
+      const mediaOnlyFlow =
+        hasPhoto && !hasVoice && (selectedType === 'PHOTO' || !trimmedNote)
+      const capturePosition =
+        draftPosition?.latitude != null && draftPosition?.longitude != null
+          ? {
+              latitude: draftPosition.latitude,
+              longitude: draftPosition.longitude,
+            }
+          : null
+
+      const uploadPhotoVideo = async (
+        note?: string,
+        attachEntryId?: string,
+      ) => {
+        if (!photoFile || !photoPreview) return
+        const isVideo = photoFile.type.startsWith('video/')
+        await store.savePhotoVideo(
+          {
+            tripId,
+            fileName: photoFile.name,
+            mimeType: photoFile.type,
+            size: photoFile.size,
+            thumbnailUrl: isVideo ? null : await readImageFile(photoFile),
+            remoteUrl: isVideo ? photoPreview : null,
+            capturePosition,
+            timestamp: showTimeTravel ? entryTimestampIso : undefined,
+            note,
+            attachEntryId,
+            order: draftPhotoOrder ?? undefined,
+          },
+          { skipSync: true },
+        )
       }
+
+      if (mediaOnlyFlow) {
+        await uploadPhotoVideo(trimmedNote || undefined)
+        await store.syncNow({ skipBootstrap: true })
+        toast.success(hasPhoto && photoFile?.type.startsWith('video/') ? 'Video saved' : 'Photo saved')
+        if (showTimeTravel) {
+          setDevLogEntryDraftTimeIso(advanceIso(entryTimestampIso, HOUR_MS))
+        }
+        onClose()
+        return
+      }
+
+      let data: Record<string, unknown> = {}
       if (voiceRecordingBlob) {
         data.voiceNote = true
       }
 
-      const entry = await store.addEntry({
-        tripId,
-        type: selectedType,
-        notes: draftNote.trim() || undefined,
-        data: Object.keys(data).length > 0 ? data : undefined,
-        latitude: draftPosition?.latitude ?? null,
-        longitude: draftPosition?.longitude ?? null,
-        timestamp: showTimeTravel ? entryTimestampIso : undefined,
-      })
+      data =
+        withNoteOrder(
+          data,
+          trimmedNote ? (noteOrder ?? allocateContentOrder()) : null,
+        ) ?? {}
+      data =
+        withVoiceOrder(
+          data,
+          voiceRecordingBlob ? (voiceOrder ?? allocateContentOrder()) : null,
+        ) ?? {}
+
+      const entry = await store.addEntry(
+        {
+          tripId,
+          type: selectedType,
+          notes: trimmedNote || undefined,
+          data: Object.keys(data).length > 0 ? data : undefined,
+          latitude: draftPosition?.latitude ?? null,
+          longitude: draftPosition?.longitude ?? null,
+          timestamp: showTimeTravel ? entryTimestampIso : undefined,
+        },
+        { skipSync: true },
+      )
       if (!entry) return
 
-      if (photoFile) {
-        await store.attachMedia(entry.id, {
-          logEntryId: entry.id,
-          type: 'photo',
-          localPath: photoFile.name,
-          remoteUrl: null,
-          thumbnailUrl: URL.createObjectURL(photoFile),
-        })
+      if (hasPhoto) {
+        await uploadPhotoVideo(undefined, entry.id)
       }
 
       if (voiceRecordingBlob && voiceRecordingUrl) {
-        await store.attachMedia(entry.id, {
-          logEntryId: entry.id,
-          type: 'voice',
-          localPath: 'voice-note.webm',
-          remoteUrl: voiceRecordingUrl,
-          thumbnailUrl: null,
-        })
+        await store.attachMedia(
+          entry.id,
+          {
+            logEntryId: entry.id,
+            type: 'voice',
+            localPath: 'voice-note.webm',
+            remoteUrl: voiceRecordingUrl,
+            thumbnailUrl: null,
+            order: voiceOrder ?? allocateContentOrder(),
+          },
+          { skipSync: true },
+        )
       }
+
+      await store.syncNow({ skipBootstrap: true })
 
       toast.success(`${entryTitle(selectedType)} logged`)
       if (showTimeTravel) {
@@ -312,7 +424,7 @@ export function LogEntryCreateModal({
 
   if (step === 'pick-type') {
     return (
-      <Modal title="Log entry" onClose={onClose} devComponentName="LogEntryCreateModal">
+      <Modal title="Log entry" onClose={onClose} showKicker={false} devComponentName="LogEntryCreateModal">
         <div className="space-y-4">
           {timeTravelNotice}
           {entryTypes.length === 0 ? (
@@ -359,12 +471,133 @@ export function LogEntryCreateModal({
     })
   }
 
+  const resolveDraftPhotoTimestamp = () =>
+    showTimeTravel ? entryTimestampIso : realNowIso()
+
+  const handleSetDraftPhotoMetadata = async () => {
+    if (!photoPreview) return
+    setMetadataBusyKey('draft-photo')
+    try {
+      const input = photoMetadataFromLogEntry({
+        entryTimestamp: resolveDraftPhotoTimestamp(),
+        entryLatitude: draftPosition?.latitude ?? null,
+        entryLongitude: draftPosition?.longitude ?? null,
+        draftPosition,
+        positionEdited: positionEditedRef.current,
+      })
+      const { file, dataUrl, exportResult } = await stampAndExportPhotoMetadata(
+        photoPreview,
+        photoFile?.name ?? 'photo.jpg',
+        input,
+        photoFile?.name ?? 'photo.jpg',
+      )
+      if (photoPreview.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+      setPhotoFile(file)
+      setPhotoPreview(dataUrl)
+      toast.success(photoMetadataExportToastMessage(exportResult))
+      if (exportResult.exiftoolCommand && !exportResult.exiftoolCopied) {
+        toast.message('Exiftool command', {
+          description: exportResult.exiftoolCommand,
+          duration: 12_000,
+        })
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not set photo metadata',
+      )
+    } finally {
+      setMetadataBusyKey(null)
+    }
+  }
+
+  const contentBlocks: EntryContentBlock[] = []
+
+  if (photoPreview) {
+    contentBlocks.push({
+      key: 'draft-photo',
+      kind: 'photo',
+      order: draftPhotoOrder ?? 0,
+      src: photoPreview,
+      onDelete: clearPhoto,
+      onSetMetadata: showPhotoMetadataAction
+        ? () => void handleSetDraftPhotoMetadata()
+        : undefined,
+      metadataBusy: metadataBusyKey === 'draft-photo',
+    })
+  }
+
+  if (noteEditing) {
+    contentBlocks.push({
+      key: 'note',
+      kind: 'note',
+      order: noteOrder ?? 0,
+      value: draftNote,
+      editing: true,
+      onChange: setDraftNote,
+      onBlur: () => {
+        if (!draftNote.trim()) {
+          setNoteEditing(false)
+          setNoteOrder(null)
+        }
+      },
+      inputRef: noteInputRef,
+    })
+  }
+
+  if (voiceRecordingUrl || isRecordingVoice) {
+    contentBlocks.push({
+      key: 'voice',
+      kind: 'voice',
+      order: voiceOrder ?? 0,
+      src: voiceRecordingUrl,
+      recording: isRecordingVoice,
+      onRemove: () => {
+        clearVoiceRecording()
+        stopVoiceRecording()
+        setVoiceOrder(null)
+      },
+    })
+  }
+
   return (
     <Modal
       title={entryTitle(selectedType)}
       onClose={onClose}
       layer="overlay"
+      showKicker={false}
       devComponentName="LogEntryCreateModal"
+      headerBelow={
+        <div className="flex items-center gap-2">
+          <AttachmentIconButton
+            icon={Camera}
+            label="Add photo"
+            active={!!photoPreview}
+            onClick={() => fileInputRef.current?.click()}
+          />
+          <AttachmentIconButton
+            icon={PenLine}
+            label="Add note"
+            active={noteEditing || draftNote.trim().length > 0}
+            onClick={openNoteEditor}
+          />
+          <AttachmentIconButton
+            icon={Mic}
+            label={isRecordingVoice ? 'Stop recording' : 'Record voice note'}
+            active={isRecordingVoice || !!voiceRecordingUrl}
+            recording={isRecordingVoice}
+            onClick={() => void handleVoiceToggle()}
+          />
+          <input
+            ref={fileInputRef}
+            id={fileInputId}
+            type="file"
+            accept="image/*,video/*"
+            capture="environment"
+            className="sr-only"
+            onChange={(e) => handlePhotoPick(e.target.files?.[0])}
+          />
+        </div>
+      }
     >
       <div className="space-y-4">
         <button
@@ -378,131 +611,57 @@ export function LogEntryCreateModal({
 
         {timeTravelNotice}
 
-        <div className="overflow-hidden rounded-[1.25rem] border border-[var(--panel-border)]">
-          {showPositionMap ? (
-            <LogEntryPositionMap
-              trip={trip}
-              entries={tripEntries}
-              legs={tripLegs}
-              position={draftPosition}
-              onPositionChange={handlePositionChange}
-              initialViewport="current-location"
-            />
-          ) : null}
-          <div
-            className={cn(
-              'flex items-center justify-between gap-2 px-3 py-2',
-              showPositionMap ? 'border-t border-[var(--line)]' : '',
-            )}
-          >
-            <p className="m-0 min-w-0 flex-1 text-xs text-[var(--sea-ink-soft)]">{positionLabel}</p>
-            <div className="flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setShowPositionMap((value) => !value)}
-                aria-pressed={showPositionMap}
+        <LogEntryContentStack
+          blocks={contentBlocks}
+          map={
+            <div className="overflow-hidden rounded-[1.25rem] border border-[var(--panel-border)]">
+              {showPositionMap ? (
+                <LogEntryPositionMap
+                  trip={trip}
+                  entries={tripEntries}
+                  legs={tripLegs}
+                  position={draftPosition}
+                  onPositionChange={handlePositionChange}
+                  initialViewport="current-location"
+                />
+              ) : null}
+              <div
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold',
-                  showPositionMap
-                    ? 'border-[var(--brand)] bg-[var(--brand-muted)] text-[var(--brand)]'
-                    : 'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)]',
+                  'flex items-center justify-between gap-2 px-3 py-2',
+                  showPositionMap ? 'border-t border-[var(--line)]' : '',
                 )}
               >
-                <Map className="size-3" />
-                {showPositionMap ? 'Hide map' : 'Map'}
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleUseGps()}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-2.5 py-1 text-[10px] font-semibold text-[var(--sea-ink)]"
-              >
-                <LocateFixed className="size-3" />
-                Use GPS
-              </button>
+                <p className="m-0 min-w-0 flex-1 text-xs text-[var(--sea-ink-soft)]">
+                  {positionLabel}
+                </p>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowPositionMap((value) => !value)}
+                    aria-pressed={showPositionMap}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold',
+                      showPositionMap
+                        ? 'border-[var(--brand)] bg-[var(--brand-muted)] text-[var(--brand)]'
+                        : 'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)]',
+                    )}
+                  >
+                    <Map className="size-3" />
+                    {showPositionMap ? 'Hide map' : 'Map'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleUseGps()}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-2.5 py-1 text-[10px] font-semibold text-[var(--sea-ink)]"
+                  >
+                    <LocateFixed className="size-3" />
+                    Use GPS
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <AttachmentIconButton
-              icon={Camera}
-              label="Add photo"
-              active={!!photoPreview}
-              onClick={() => fileInputRef.current?.click()}
-            />
-            <AttachmentIconButton
-              icon={PenLine}
-              label="Add note"
-              active={noteEditing || draftNote.trim().length > 0}
-              onClick={openNoteEditor}
-            />
-            <AttachmentIconButton
-              icon={Mic}
-              label={isRecordingVoice ? 'Stop recording' : 'Record voice note'}
-              active={isRecordingVoice || !!voiceRecordingUrl}
-              recording={isRecordingVoice}
-              onClick={() => void handleVoiceToggle()}
-            />
-            <input
-              ref={fileInputRef}
-              id={fileInputId}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="sr-only"
-              onChange={(e) => handlePhotoPick(e.target.files?.[0])}
-            />
-          </div>
-
-          {photoPreview ? (
-            <div className="relative overflow-hidden rounded-2xl border border-[var(--panel-border)]">
-              <img
-                src={photoPreview}
-                alt=""
-                className="aspect-[4/3] w-full object-cover"
-              />
-              <button
-                type="button"
-                onClick={clearPhoto}
-                className="absolute right-2 top-2 inline-flex size-8 items-center justify-center rounded-full bg-black/50 text-white"
-                aria-label="Remove photo"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-          ) : null}
-
-          {noteEditing ? (
-            <textarea
-              ref={noteInputRef}
-              value={draftNote}
-              onChange={(e) => setDraftNote(e.target.value)}
-              onBlur={() => {
-                if (!draftNote.trim()) setNoteEditing(false)
-              }}
-              rows={3}
-              placeholder="Add a note…"
-              className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-sm text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
-            />
-          ) : draftNote.trim() ? (
-            <p className="m-0 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-sm leading-6 text-[var(--sea-ink)]">
-              {draftNote.trim()}
-            </p>
-          ) : null}
-
-          {voiceRecordingUrl ? (
-            <VoiceNotePlayback
-              src={voiceRecordingUrl}
-              onRemove={() => {
-                clearVoiceRecording()
-                stopVoiceRecording()
-              }}
-            />
-          ) : isRecordingVoice ? (
-            <p className="m-0 text-xs font-medium text-[var(--brand)]">Recording… tap mic to stop</p>
-          ) : null}
-        </div>
+          }
+        />
 
         <button
           type="button"

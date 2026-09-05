@@ -27,6 +27,7 @@ function toTrip(data: Record<string, unknown>) {
       ? (data.crewMemberIds as string[])
       : null,
     title: (data.title as string | null | undefined) ?? null,
+    subtitle: (data.subtitle as string | null | undefined) ?? null,
     coverPhotoDataUrl:
       (data.coverPhotoDataUrl as string | null | undefined) ?? null,
     coverKind:
@@ -159,6 +160,10 @@ function toMedia(data: Record<string, unknown>) {
     localPath: (data.localPath as string | null | undefined) ?? null,
     remoteUrl: (data.remoteUrl as string | null | undefined) ?? null,
     thumbnailUrl: (data.thumbnailUrl as string | null | undefined) ?? null,
+    order:
+      typeof data.order === 'number' && Number.isFinite(data.order)
+        ? data.order
+        : 0,
     createdAt,
     updatedAt,
     synced: Boolean(data.synced),
@@ -198,6 +203,7 @@ logbookRoutes.post('/sync', async (c) => {
       tripTracks?: Record<string, unknown>[]
       media?: Record<string, unknown>[]
       deletedTripIds?: string[]
+      deletedMediaIds?: string[]
     }
 
     const trips = body.trips ?? []
@@ -208,9 +214,18 @@ logbookRoutes.post('/sync', async (c) => {
     const deletedTripIds = (body.deletedTripIds ?? []).filter(
       (id): id is string => typeof id === 'string' && id.length > 0,
     )
+    const deletedMediaIds = (body.deletedMediaIds ?? []).filter(
+      (id): id is string => typeof id === 'string' && id.length > 0,
+    )
 
     if (deletedTripIds.length > 0) {
       await deleteTripsFromLogbook(deletedTripIds)
+    }
+
+    if (deletedMediaIds.length > 0) {
+      await db.media.deleteMany({
+        where: { id: { in: deletedMediaIds } },
+      })
     }
 
     const tombstoneIds = new Set(await getDeletedTripIds())

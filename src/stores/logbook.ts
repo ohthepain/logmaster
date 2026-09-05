@@ -32,13 +32,25 @@ import {
 } from '../lib/trip-legs'
 import { withHumanEditedFlag } from '../domain/instrument-data'
 import { syncTripOperationalFields } from '../domain/trip-state'
+import {
+  nextContentOrder,
+  readNoteOrder,
+  readVoiceOrder,
+} from '../lib/log-entry-content-order'
 import { advanceIso, effectiveTimeTravelIso } from '../lib/dev-time-travel'
 import { isDevModeAvailable } from '../lib/dev-mode'
 import { sortLogEntriesChronologically } from '../lib/logbook-entry-order'
+import {
+  appendNote,
+  buildPromotedMediaEntryInput,
+  isPromotableMedia,
+  resolvePhotoVideoSave,
+} from '../lib/media-entry'
 import { buildTripFromGpxFiles } from '../lib/gpx-trip-import'
 import { GpxImportError, type GpxImportFile } from '../lib/gpx-import'
 import {
   addPendingDeletedTripId,
+  addPendingDeletedMediaId,
   addPendingTripId,
   deleteLeg,
   deleteLogEntry,
@@ -78,6 +90,22 @@ type NewEntryInput = {
   longitude?: number | null
   accuracy?: number | null
   timestamp?: string
+  legId?: string | null
+}
+
+type SavePhotoVideoInput = {
+  tripId: string
+  fileName: string
+  mimeType: string
+  size: number
+  thumbnailUrl: string | null
+  remoteUrl?: string | null
+  capturePosition: { latitude: number; longitude: number } | null
+  timestamp?: string
+  note?: string
+  attachEntryId?: string
+  excludeEntryId?: string
+  order?: number
 }
 
 type UpdateEntryInput = Partial<
@@ -91,6 +119,7 @@ type UpdateTripInput = Partial<
   Pick<
     Trip,
     | 'title'
+    | 'subtitle'
     | 'coverPhotoDataUrl'
     | 'coverKind'
     | 'boatName'
@@ -105,6 +134,10 @@ type UpdateTripInput = Partial<
 >
 
 type UpdateLegInput = Partial<Pick<Leg, 'title' | 'color'>>
+
+type LogbookWriteOptions = {
+  skipSync?: boolean
+}
 
 type LogbookState = {
   trips: Trip[]
@@ -127,13 +160,35 @@ type LogbookState = {
   deleteTrip: (tripId: string) => Promise<void>
   updateLeg: (legId: string, patch: UpdateLegInput) => Promise<void>
   mergeLegWithPrevious: (legId: string) => Promise<void>
-  addEntry: (input: NewEntryInput) => Promise<LogEntry | null>
-  updateEntry: (entryId: string, patch: UpdateEntryInput) => Promise<void>
+  addEntry: (
+    input: NewEntryInput,
+    options?: LogbookWriteOptions,
+  ) => Promise<LogEntry | null>
+  updateEntry: (
+    entryId: string,
+    patch: UpdateEntryInput,
+    options?: LogbookWriteOptions,
+  ) => Promise<void>
   deleteEntry: (entryId: string) => Promise<void>
   attachMedia: (
     entryId: string,
-    media: Omit<Media, 'id' | 'createdAt' | 'updatedAt' | 'synced'>,
+    media: Omit<Media, 'id' | 'createdAt' | 'updatedAt' | 'synced' | 'order'> & {
+      order?: number
+    },
+    options?: LogbookWriteOptions,
   ) => Promise<Media | null>
+  savePhotoVideo: (
+    input: SavePhotoVideoInput,
+    options?: LogbookWriteOptions,
+  ) => Promise<{ entry: LogEntry | null; media: Media | null; attached: boolean }>
+  removeMedia: (mediaId: string) => Promise<void>
+  updateMedia: (
+    mediaId: string,
+    patch: Partial<
+      Pick<Media, 'logEntryId' | 'localPath' | 'remoteUrl' | 'thumbnailUrl' | 'order'>
+    >,
+    options?: LogbookWriteOptions,
+  ) => Promise<void>
   syncNow: (options?: SyncLogbookOptions) => Promise<boolean>
   upsertTripTracks: (tracks: TripTrack[]) => Promise<void>
   appendTripTrackPosition: (
@@ -423,6 +478,10 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
         patch.title !== undefined
           ? patch.title?.trim() || null
           : current.title ?? null,
+      subtitle:
+        patch.subtitle !== undefined
+          ? patch.subtitle?.trim() || null
+          : current.subtitle ?? null,
       crewMemberIds:
         patch.crewMemberIds !== undefined
           ? patch.crewMemberIds?.length
@@ -523,7 +582,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     void get().syncNow({ skipBootstrap: true })
   },
 
-  addEntry: async (input) => {
+  addEntry: async (input, options) => {
     const { context, entryData } = await captureEntryContext(input)
     const {
       devMode,
@@ -552,6 +611,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     const entry: LogEntry = {
       id: makeId(),
       tripId: input.tripId,
+      legId: input.legId ?? null,
       type: input.type,
       timestamp,
       latitude: context.latitude,
@@ -605,11 +665,13 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       }
     }
 
-    scheduleBackgroundSync(get, { skipBootstrap: true, skipTracks: true })
+    if (!options?.skipSync) {
+      scheduleBackgroundSync(get, { skipBootstrap: true, skipTracks: true })
+    }
     return entry
   },
 
-  updateEntry: async (entryId, patch) => {
+  updateEntry: async (entryId, patch, options) => {
     const current = get().entries.find((entry) => entry.id === entryId)
     if (!current) return
 
@@ -617,20 +679,34 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       patch.latitude !== undefined ? patch.latitude : current.latitude
     const longitude =
       patch.longitude !== undefined ? patch.longitude : current.longitude
-    const positionTouched =
-      patch.latitude !== undefined || patch.longitude !== undefined
+    const positionChanged =
+      (patch.latitude !== undefined && patch.latitude !== current.latitude) ||
+      (patch.longitude !== undefined && patch.longitude !== current.longitude)
     let data =
       patch.data !== undefined ? patch.data : (current.data ?? null)
 
-    if (positionTouched) {
+    if (positionChanged) {
       data = await attachPlaceToEntryData(data, latitude, longitude)
     }
 
     data = withHumanEditedFlag(data)
 
+    const notes = patch.notes !== undefined ? patch.notes : current.notes
+    const sameNotes = notes === current.notes
+    const sameLat = latitude === current.latitude
+    const sameLng = longitude === current.longitude
+    const sameData =
+      JSON.stringify(data ?? null) === JSON.stringify(current.data ?? null)
+    if (sameNotes && sameLat && sameLng && sameData) {
+      return
+    }
+
     const next = {
       ...current,
       ...patch,
+      notes,
+      latitude,
+      longitude,
       data,
       updatedAt: nowIso(),
       synced: false,
@@ -644,12 +720,37 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     }))
     await applyTripLegRebuild(current.tripId, get, set)
     await applyTripOperationalSync(current.tripId, get, set)
-    void get().syncNow({ skipBootstrap: true })
+    if (!options?.skipSync) {
+      void get().syncNow({ skipBootstrap: true })
+    }
   },
 
   deleteEntry: async (entryId) => {
     const current = get().entries.find((entry) => entry.id === entryId)
     if (!current) return
+
+    if (current.type !== 'MEDIA') {
+      const entryMedia = get().media.filter((item) => item.logEntryId === entryId)
+      for (const item of entryMedia) {
+        if (!isPromotableMedia(item)) continue
+
+        const promotedEntry = await get().addEntry(
+          {
+            ...buildPromotedMediaEntryInput(current, item),
+            legId: current.legId ?? null,
+          },
+          { skipSync: true },
+        )
+        if (!promotedEntry) continue
+
+        await get().updateMedia(
+          item.id,
+          { logEntryId: promotedEntry.id },
+          { skipSync: true },
+        )
+      }
+    }
+
     const next = {
       ...current,
       deleted: true,
@@ -668,13 +769,94 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     void get().syncNow({ skipBootstrap: true })
   },
 
-  attachMedia: async (entryId, mediaInput) => {
+  savePhotoVideo: async (input, options) => {
+    const tripEntries = get().entries.filter(
+      (entry) => entry.tripId === input.tripId && !entry.deleted,
+    )
+    const resolution = resolvePhotoVideoSave({
+      tripId: input.tripId,
+      tripEntries,
+      capturePosition: input.capturePosition,
+      attachEntryId: input.attachEntryId,
+      excludeEntryId: input.excludeEntryId,
+      fileName: input.fileName,
+      mimeType: input.mimeType,
+      size: input.size,
+      timestamp: input.timestamp,
+    })
+
+    if (resolution.action === 'attach') {
+      const target = get().entries.find((entry) => entry.id === resolution.entryId)
+      if (input.note?.trim() && target) {
+        await get().updateEntry(
+          resolution.entryId,
+          {
+            notes: appendNote(target.notes, input.note),
+          },
+          { skipSync: true },
+        )
+      }
+
+      const media = await get().attachMedia(
+        resolution.entryId,
+        {
+          logEntryId: resolution.entryId,
+          type: 'photo',
+          localPath: input.fileName,
+          remoteUrl: input.remoteUrl ?? null,
+          thumbnailUrl: input.thumbnailUrl,
+          order: input.order,
+        },
+        options,
+      )
+      return {
+        entry: get().entries.find((entry) => entry.id === resolution.entryId) ?? null,
+        media,
+        attached: true,
+      }
+    }
+
+    const entry = await get().addEntry(resolution.entryInput, { skipSync: true })
+    if (!entry) {
+      return { entry: null, media: null, attached: false }
+    }
+
+    const media = await get().attachMedia(
+      entry.id,
+      {
+        logEntryId: entry.id,
+        type: 'photo',
+        localPath: input.fileName,
+        remoteUrl: input.remoteUrl ?? null,
+        thumbnailUrl: input.thumbnailUrl,
+        order: input.order,
+      },
+      options,
+    )
+
+    if (!options?.skipSync) {
+      void get().syncNow({ skipBootstrap: true })
+    }
+
+    return { entry, media, attached: false }
+  },
+
+  attachMedia: async (entryId, mediaInput, options) => {
     const current = get().entries.find((entry) => entry.id === entryId)
     if (!current) return null
+    const entryMedia = get().media.filter((item) => item.logEntryId === entryId)
+    const order =
+      mediaInput.order ??
+      nextContentOrder({
+        media: entryMedia,
+        noteOrder: readNoteOrder(current.data),
+        voiceOrder: readVoiceOrder(current.data),
+      })
     const media: Media = {
       id: makeId(),
       logEntryId: entryId,
       type: mediaInput.type,
+      order,
       localPath: mediaInput.localPath ?? null,
       remoteUrl: mediaInput.remoteUrl ?? null,
       thumbnailUrl: mediaInput.thumbnailUrl ?? null,
@@ -707,8 +889,93 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
         syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
       }))
     }
-    void get().syncNow()
+    if (!options?.skipSync) {
+      void get().syncNow()
+    }
     return media
+  },
+
+  removeMedia: async (mediaId) => {
+    const item = get().media.find((candidate) => candidate.id === mediaId)
+    if (!item) return
+
+    await deleteMedia(mediaId)
+    if (item.synced) {
+      addPendingDeletedMediaId(mediaId)
+    }
+
+    const current = get().entries.find((entry) => entry.id === item.logEntryId)
+    if (current) {
+      const nextEntry = {
+        ...current,
+        data: withHumanEditedFlag(current.data),
+        updatedAt: nowIso(),
+        synced: false,
+      }
+      await putLogEntry(nextEntry)
+      set((state) => ({
+        media: state.media.filter((candidate) => candidate.id !== mediaId),
+        entries: sortEntries(
+          state.entries.map((entry) =>
+            entry.id === current.id ? nextEntry : entry,
+          ),
+        ),
+        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      }))
+    } else {
+      set((state) => ({
+        media: state.media.filter((candidate) => candidate.id !== mediaId),
+        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      }))
+    }
+
+    void get().syncNow({ skipBootstrap: true })
+  },
+
+  updateMedia: async (mediaId, patch, options) => {
+    const item = get().media.find((candidate) => candidate.id === mediaId)
+    if (!item) return
+
+    const next: Media = {
+      ...item,
+      ...patch,
+      updatedAt: nowIso(),
+      synced: false,
+    }
+    await putMedia(next)
+
+    const current = get().entries.find((entry) => entry.id === item.logEntryId)
+    if (current) {
+      const nextEntry = {
+        ...current,
+        data: withHumanEditedFlag(current.data),
+        updatedAt: nowIso(),
+        synced: false,
+      }
+      await putLogEntry(nextEntry)
+      set((state) => ({
+        media: state.media.map((candidate) =>
+          candidate.id === mediaId ? next : candidate,
+        ),
+        entries: sortEntries(
+          state.entries.map((entry) =>
+            entry.id === current.id ? nextEntry : entry,
+          ),
+        ),
+        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      }))
+    } else {
+      set((state) => ({
+        media: state.media.map((candidate) =>
+          candidate.id === mediaId ? next : candidate,
+        ),
+        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      }))
+    }
+
+    if (!options?.skipSync) {
+      void get().syncNow({ skipBootstrap: true })
+    }
   },
 
   importTripFromGpx: async (gpxXml, options) => {

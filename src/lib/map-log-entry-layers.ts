@@ -83,6 +83,7 @@ const LAYER_ID_TO_TOGGLE: Record<MapLogEntryLayerId, MapLogEntryLayerToggleId> =
   NOTE: 'log',
   HOURLY_LOG: 'log',
   PHOTO: 'media',
+  MEDIA: 'media',
   VIDEO: 'media',
   VOICE_NOTE: 'media',
   DIRECTION_CHANGE: 'auto',
@@ -97,7 +98,7 @@ const TOGGLE_MEMBER_LAYER_IDS: Record<
   engine: ['ENGINE_ON', 'ENGINE_OFF'],
   'anchor-mooring': ['ANCHOR_DROPPED', 'ANCHOR_WEIGHED', 'MOORED', 'CAST_OFF'],
   log: ['NOTE', 'HOURLY_LOG'],
-  media: ['PHOTO', 'VIDEO', 'VOICE_NOTE'],
+  media: ['PHOTO', 'MEDIA', 'VIDEO', 'VOICE_NOTE'],
   auto: ['DIRECTION_CHANGE'],
 }
 

@@ -1,10 +1,10 @@
-import { Camera, Check, LocateFixed, Mic, Trash2, X } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { Camera, LocateFixed, Mic, PenLine, Trash2 } from 'lucide-react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { LogEntryContentStack, type EntryContentBlock } from './LogEntryContentStack'
 import { LogEntryPositionMap } from './LogEntryPositionMap'
 import { Modal } from './Modal'
 import { entryTitle } from '../domain/logbook'
-import type { Media } from '../domain/logbook'
 import {
   DEV_FALLBACK_POSITION,
   getCurrentPosition,
@@ -12,9 +12,24 @@ import {
 import type { MapLngLat } from '../lib/logbook-map-geo'
 import { cn } from '../lib/cn'
 import {
+  nextContentOrder,
+  readNoteOrder,
+  readVoiceOrder,
+  withNoteOrder,
+  withVoiceOrder,
+} from '../lib/log-entry-content-order'
+import { readImageFile } from '../lib/image-file'
+import { isDevModeAvailable } from '../lib/dev-mode'
+import { photoMetadataFromLogEntry } from '../lib/photo-exif-stamp'
+import {
+  stampAndExportPhotoMetadata,
+  photoMetadataExportToastMessage,
+} from '../lib/photo-metadata-export'
+import {
   seedPlaceFromEntryData,
   usePositionPlaceLabel,
 } from '../lib/use-position-place-label'
+import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore } from '../stores/logbook'
 
 type LogEntryComposerModalProps = {
@@ -31,6 +46,8 @@ export function LogEntryComposerModal({
   onClose,
 }: LogEntryComposerModalProps) {
   const store = useLogbookStore()
+  const devMode = useAppOptionsStore((state) => state.devMode)
+  const showPhotoMetadataAction = devMode && isDevModeAvailable()
   const trip = store.trips.find((item) => item.id === tripId) ?? null
   const entry = entryId
     ? store.entries.find((item) => item.id === entryId) ?? null
@@ -45,8 +62,13 @@ export function LogEntryComposerModal({
     : []
   const fileInputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const noteInputRef = useRef<HTMLTextAreaElement>(null)
   const positionEditedRef = useRef(false)
   const [draftNote, setDraftNote] = useState('')
+  const [noteEditing, setNoteEditing] = useState(false)
+  const [noteOrder, setNoteOrder] = useState<number | null>(null)
+  const [voiceOrder, setVoiceOrder] = useState<number | null>(null)
+  const [draftPhotoOrder, setDraftPhotoOrder] = useState<number | null>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [includeVoiceNote, setIncludeVoiceNote] = useState(false)
@@ -59,6 +81,7 @@ export function LogEntryComposerModal({
   })
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [metadataBusyKey, setMetadataBusyKey] = useState<string | null>(null)
 
   const applyDraftPosition = (position: MapLngLat) => {
     setDraftPosition(position)
@@ -67,8 +90,12 @@ export function LogEntryComposerModal({
 
   const reset = () => {
     setDraftNote('')
+    setNoteEditing(false)
+    setNoteOrder(null)
+    setVoiceOrder(null)
+    setDraftPhotoOrder(null)
     setPhotoFile(null)
-    if (photoPreview) URL.revokeObjectURL(photoPreview)
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
     setPhotoPreview(null)
     setIncludeVoiceNote(false)
     setDraftPosition(null)
@@ -76,6 +103,7 @@ export function LogEntryComposerModal({
     positionEditedRef.current = false
     setSaving(false)
     setDeleting(false)
+    setMetadataBusyKey(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -86,7 +114,11 @@ export function LogEntryComposerModal({
     }
     if (!entry) return
 
-    setDraftNote(entry.notes ?? '')
+    const notes = entry.notes ?? ''
+    setDraftNote(notes)
+    setNoteEditing(notes.trim().length > 0)
+    setNoteOrder(readNoteOrder(entry.data))
+    setVoiceOrder(readVoiceOrder(entry.data))
     setIncludeVoiceNote(
       entry.data?.voiceNote === true || entry.data?.placeholder === true,
     )
@@ -106,54 +138,156 @@ export function LogEntryComposerModal({
     setDraftPosition(null)
   }, [open, entry?.id, entry?.latitude, entry?.longitude, entry?.notes, entry?.data])
 
+  const contentOrderInput = useMemo(
+    () => ({
+      media: entryMedia,
+      noteOrder: noteEditing || draftNote.trim() ? noteOrder : null,
+      voiceOrder: includeVoiceNote ? voiceOrder : null,
+      draftPhotoOrder: photoPreview ? draftPhotoOrder : null,
+    }),
+    [
+      draftNote,
+      draftPhotoOrder,
+      entryMedia,
+      includeVoiceNote,
+      noteEditing,
+      noteOrder,
+      photoPreview,
+      voiceOrder,
+    ],
+  )
+
+  const isEntryDirty = (): boolean => {
+    if (!entry) return false
+    if (photoFile && photoPreview) return true
+
+    const trimmedNote = draftNote.trim()
+    const savedNote = (entry.notes ?? '').trim()
+    if (trimmedNote !== savedNote) return true
+
+    const savedVoice =
+      entry.data?.voiceNote === true || entry.data?.placeholder === true
+    if (includeVoiceNote !== savedVoice) return true
+
+    const nextNoteOrder = trimmedNote
+      ? (noteOrder ?? readNoteOrder(entry.data))
+      : null
+    if (nextNoteOrder !== readNoteOrder(entry.data)) return true
+
+    const nextVoiceOrder = includeVoiceNote
+      ? (voiceOrder ?? readVoiceOrder(entry.data))
+      : null
+    if (nextVoiceOrder !== readVoiceOrder(entry.data)) return true
+
+    const entryLat = entry.latitude ?? null
+    const entryLng = entry.longitude ?? null
+    const draftLat = draftPosition?.latitude ?? null
+    const draftLng = draftPosition?.longitude ?? null
+    if (entryLat !== draftLat || entryLng !== draftLng) return true
+
+    return false
+  }
+
   if (!open || !entry || !trip) return null
 
+  const allocateContentOrder = () => nextContentOrder(contentOrderInput)
+
   const handlePhotoPick = (file: File | undefined) => {
-    if (!file || !file.type.startsWith('image/')) return
-    if (photoPreview) URL.revokeObjectURL(photoPreview)
+    if (
+      !file ||
+      (!file.type.startsWith('image/') && !file.type.startsWith('video/'))
+    ) {
+      return
+    }
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
     setPhotoFile(file)
     setPhotoPreview(URL.createObjectURL(file))
+    setDraftPhotoOrder(allocateContentOrder())
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const clearPhoto = () => {
-    if (photoPreview) URL.revokeObjectURL(photoPreview)
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
     setPhotoFile(null)
     setPhotoPreview(null)
+    setDraftPhotoOrder(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const handleSave = async () => {
-    setSaving(true)
-    try {
-      const data = { ...(entry.data ?? {}) }
-      if (includeVoiceNote) {
-        data.voiceNote = true
-        data.placeholder = true
-      } else {
-        delete data.voiceNote
-        delete data.placeholder
-      }
+  const handlePersist = async (options?: { sync?: boolean }) => {
+    let data = { ...(entry.data ?? {}) }
+    if (includeVoiceNote) {
+      data.voiceNote = true
+      data.placeholder = true
+    } else {
+      delete data.voiceNote
+      delete data.placeholder
+    }
 
-      await store.updateEntry(entry.id, {
-        notes: draftNote.trim() || null,
+    const trimmedNote = draftNote.trim()
+    data = withVoiceOrder(
+      data,
+      includeVoiceNote ? (voiceOrder ?? allocateContentOrder()) : null,
+    ) ?? {}
+    data =
+      withNoteOrder(
+        data,
+        trimmedNote ? (noteOrder ?? allocateContentOrder()) : null,
+      ) ?? {}
+
+    if (photoFile && photoPreview) {
+      const isVideo = photoFile.type.startsWith('video/')
+      const capturePosition =
+        draftPosition?.latitude != null && draftPosition?.longitude != null
+          ? {
+              latitude: draftPosition.latitude,
+              longitude: draftPosition.longitude,
+            }
+          : null
+      await store.savePhotoVideo(
+        {
+          tripId,
+          fileName: photoFile.name,
+          mimeType: photoFile.type,
+          size: photoFile.size,
+          thumbnailUrl: isVideo ? null : await readImageFile(photoFile),
+          remoteUrl: isVideo ? photoPreview : null,
+          capturePosition,
+          timestamp: entry.timestamp,
+          attachEntryId: entry.id,
+          order: draftPhotoOrder ?? allocateContentOrder(),
+        },
+        { skipSync: true },
+      )
+    }
+
+    await store.updateEntry(
+      entry.id,
+      {
+        notes: trimmedNote || null,
         latitude: draftPosition?.latitude ?? null,
         longitude: draftPosition?.longitude ?? null,
         data: Object.keys(data).length > 0 ? data : null,
-      })
+      },
+      { skipSync: true },
+    )
 
-      if (photoFile) {
-        await store.attachMedia(entry.id, {
-          logEntryId: entry.id,
-          type: 'photo',
-          localPath: photoFile.name,
-          remoteUrl: null,
-          thumbnailUrl: URL.createObjectURL(photoFile),
-        })
-      }
+    if (options?.sync !== false) {
+      await store.syncNow({ skipBootstrap: true })
+    }
+  }
 
-      toast.success('Log entry updated')
+  const handleClose = async () => {
+    if (deleting || saving) return
+    if (!isEntryDirty()) {
       onClose()
+      return
+    }
+    setSaving(true)
+    try {
+      await handlePersist({ sync: false })
+      onClose()
+      void store.syncNow({ skipBootstrap: true })
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to update log entry',
@@ -161,6 +295,11 @@ export function LogEntryComposerModal({
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleCancel = () => {
+    if (deleting || saving) return
+    onClose()
   }
 
   const handleDelete = async () => {
@@ -201,159 +340,270 @@ export function LogEntryComposerModal({
 
   const mapEntries = tripEntries.filter((item) => item.id !== entry.id)
 
+  const openNoteEditor = () => {
+    if (noteOrder == null) {
+      setNoteOrder(allocateContentOrder())
+    }
+    setNoteEditing(true)
+    requestAnimationFrame(() => noteInputRef.current?.focus())
+  }
+
+  const handleRemoveMedia = async (mediaId: string) => {
+    const item = entryMedia.find((candidate) => candidate.id === mediaId)
+    if (item?.thumbnailUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(item.thumbnailUrl)
+    }
+    try {
+      await store.removeMedia(mediaId)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to remove photo',
+      )
+    }
+  }
+
+  const toggleVoiceNote = () => {
+    setIncludeVoiceNote((current) => {
+      const next = !current
+      if (next && voiceOrder == null) {
+        setVoiceOrder(allocateContentOrder())
+      }
+      return next
+    })
+  }
+
+  const handleSetPhotoMetadata = async (
+    key: string,
+    src: string,
+    fileName: string,
+    options?: { mediaId?: string },
+  ) => {
+    setMetadataBusyKey(key)
+    try {
+      const input = photoMetadataFromLogEntry({
+        entryTimestamp: entry.timestamp,
+        entryLatitude: entry.latitude,
+        entryLongitude: entry.longitude,
+        draftPosition,
+        positionEdited: positionEditedRef.current,
+      })
+      const { file, dataUrl, exportResult } = await stampAndExportPhotoMetadata(
+        src,
+        fileName,
+        input,
+        fileName,
+      )
+      if (options?.mediaId) {
+        await store.updateMedia(options.mediaId, {
+          thumbnailUrl: dataUrl,
+          localPath: file.name,
+        })
+      } else {
+        if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+        setPhotoFile(file)
+        setPhotoPreview(dataUrl)
+      }
+      toast.success(photoMetadataExportToastMessage(exportResult))
+      if (exportResult.exiftoolCommand && !exportResult.exiftoolCopied) {
+        toast.message('Exiftool command', {
+          description: exportResult.exiftoolCommand,
+          duration: 12_000,
+        })
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not set photo metadata',
+      )
+    } finally {
+      setMetadataBusyKey(null)
+    }
+  }
+
+  const contentBlocks: EntryContentBlock[] = []
+
+  for (const item of entryMedia) {
+    if (!item.thumbnailUrl) continue
+    contentBlocks.push({
+      key: item.id,
+      kind: 'photo',
+      order: item.order,
+      src: item.thumbnailUrl,
+      onDelete: () => void handleRemoveMedia(item.id),
+      onSetMetadata: showPhotoMetadataAction
+        ? () =>
+            void handleSetPhotoMetadata(item.id, item.thumbnailUrl!, item.localPath ?? 'photo.jpg', {
+              mediaId: item.id,
+            })
+        : undefined,
+      metadataBusy: metadataBusyKey === item.id,
+    })
+  }
+
+  if (photoPreview) {
+    contentBlocks.push({
+      key: 'draft-photo',
+      kind: 'photo',
+      order: draftPhotoOrder ?? 0,
+      src: photoPreview,
+      onDelete: clearPhoto,
+      onSetMetadata: showPhotoMetadataAction
+        ? () =>
+            void handleSetPhotoMetadata(
+              'draft-photo',
+              photoPreview,
+              photoFile?.name ?? 'photo.jpg',
+            )
+        : undefined,
+      metadataBusy: metadataBusyKey === 'draft-photo',
+    })
+  }
+
+  if (noteEditing) {
+    contentBlocks.push({
+      key: 'note',
+      kind: 'note',
+      order: noteOrder ?? 0,
+      value: draftNote,
+      editing: true,
+      onChange: setDraftNote,
+      onBlur: () => {
+        if (!draftNote.trim()) {
+          setNoteEditing(false)
+          setNoteOrder(null)
+        }
+      },
+      inputRef: noteInputRef,
+    })
+  }
+
+  if (includeVoiceNote) {
+    contentBlocks.push({
+      key: 'voice',
+      kind: 'voice',
+      order: voiceOrder ?? 0,
+    })
+  }
+
+  const attachmentToolbar = (
+    <div className="flex items-center gap-2">
+      <AttachmentIconButton
+        icon={Camera}
+        label="Add photo"
+        active={!!photoPreview}
+        onClick={() => fileInputRef.current?.click()}
+      />
+      <AttachmentIconButton
+        icon={PenLine}
+        label="Add note"
+        active={noteEditing || draftNote.trim().length > 0}
+        onClick={openNoteEditor}
+      />
+      <AttachmentIconButton
+        icon={Mic}
+        label={includeVoiceNote ? 'Remove voice note' : 'Add voice note'}
+        active={includeVoiceNote}
+        onClick={toggleVoiceNote}
+      />
+      <input
+        ref={fileInputRef}
+        id={fileInputId}
+        type="file"
+        accept="image/*,video/*"
+        capture="environment"
+        className="sr-only"
+        onChange={(e) => handlePhotoPick(e.target.files?.[0])}
+      />
+    </div>
+  )
+
   return (
     <Modal
       title={entryTitle(entry.type)}
-      onClose={onClose}
+      onClose={() => void handleClose()}
       layer="overlay"
+      showKicker={false}
       devComponentName="LogEntryComposerModal"
-    >
-      <div className="space-y-4">
-        <div className="overflow-hidden rounded-[1.25rem] border border-[var(--panel-border)]">
-          <LogEntryPositionMap
-            trip={trip}
-            entries={mapEntries}
-            legs={tripLegs}
-            tracks={tripTracks}
-            position={draftPosition}
-            onPositionChange={handlePositionChange}
-            initialViewport="entry-focus"
-          />
-          <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] px-3 py-2">
-            <p className="m-0 text-xs text-[var(--sea-ink-soft)]">{positionLabel}</p>
-            <button
-              type="button"
-              onClick={() => void handleUseGps()}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-2.5 py-1 text-[10px] font-semibold text-[var(--sea-ink)]"
-            >
-              <LocateFixed className="size-3" />
-              Use GPS
-            </button>
-          </div>
-        </div>
-
-        <ExistingMedia media={entryMedia} />
-
-        <div className="space-y-2">
-          <p className="m-0 text-sm font-medium text-[var(--sea-ink)]">Photo</p>
-          {photoPreview ? (
-            <div className="relative overflow-hidden rounded-2xl border border-[var(--panel-border)]">
-              <img
-                src={photoPreview}
-                alt=""
-                className="aspect-[4/3] w-full object-cover"
-              />
-              <button
-                type="button"
-                onClick={clearPhoto}
-                className="absolute right-2 top-2 inline-flex size-8 items-center justify-center rounded-full bg-black/50 text-white"
-                aria-label="Remove photo"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)]"
-              >
-                <Camera className="size-4" />
-                Add photo
-              </button>
-              <input
-                ref={fileInputRef}
-                id={fileInputId}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="sr-only"
-                onChange={(e) => handlePhotoPick(e.target.files?.[0])}
-              />
-            </>
-          )}
-        </div>
-
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
-            Note
-          </span>
-          <textarea
-            value={draftNote}
-            onChange={(e) => setDraftNote(e.target.value)}
-            rows={3}
-            placeholder="Optional note"
-            className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
-          />
-        </label>
-
-        <div className="space-y-2">
-          <p className="m-0 text-sm font-medium text-[var(--sea-ink)]">
-            Voice note
-          </p>
+      headerBelow={attachmentToolbar}
+      headerActions={
+        <>
           <button
             type="button"
-            onClick={() => setIncludeVoiceNote((current) => !current)}
-            className={cn(
-              'inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold transition',
-              includeVoiceNote
-                ? 'border-[var(--sea-ink)] bg-[var(--active-panel)] text-[var(--sea-ink)]'
-                : 'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)]',
-            )}
+            disabled={saving || deleting}
+            onClick={handleCancel}
+            className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-sm font-semibold text-[var(--sea-ink)] disabled:opacity-60"
           >
-            <Mic className="size-4" />
-            {includeVoiceNote ? 'Voice note included' : 'Add voice note'}
+            Cancel
           </button>
-          {includeVoiceNote && (
-            <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
-              Recording will be added in a future update. This entry is marked
-              for a voice note.
-            </p>
-          )}
-        </div>
-
-        <button
-          type="button"
-          disabled={saving || deleting}
-          onClick={() => void handleSave()}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
-        >
-          <Check className="size-4" />
-          {saving ? 'Saving…' : 'Save changes'}
-        </button>
-
-        <button
-          type="button"
-          disabled={saving || deleting}
-          onClick={() => void handleDelete()}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm font-semibold text-red-700 disabled:opacity-60 dark:text-red-300"
-        >
-          <Trash2 className="size-4" />
-          {deleting ? 'Deleting…' : 'Delete entry'}
-        </button>
-      </div>
+          <button
+            type="button"
+            disabled={saving || deleting}
+            onClick={() => void handleDelete()}
+            aria-label={deleting ? 'Deleting entry' : 'Delete entry'}
+            className="inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/5 px-3 py-2 text-sm font-semibold text-red-700 disabled:opacity-60 dark:text-red-300"
+          >
+            <Trash2 className="size-4" />
+            {deleting ? 'Deleting…' : 'Delete'}
+          </button>
+        </>
+      }
+    >
+      <LogEntryContentStack
+        blocks={contentBlocks}
+        map={
+          <div className="overflow-hidden rounded-[1.25rem] border border-[var(--panel-border)]">
+            <LogEntryPositionMap
+              trip={trip}
+              entries={mapEntries}
+              legs={tripLegs}
+              tracks={tripTracks}
+              position={draftPosition}
+              onPositionChange={handlePositionChange}
+              initialViewport="entry-focus"
+            />
+            <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] px-3 py-2">
+              <p className="m-0 text-xs text-[var(--sea-ink-soft)]">{positionLabel}</p>
+              <button
+                type="button"
+                onClick={() => void handleUseGps()}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-2.5 py-1 text-[10px] font-semibold text-[var(--sea-ink)]"
+              >
+                <LocateFixed className="size-3" />
+                Use GPS
+              </button>
+            </div>
+          </div>
+        }
+      />
     </Modal>
   )
 }
 
-function ExistingMedia({ media }: { media: Media[] }) {
-  const photos = media.filter((item) => item.thumbnailUrl)
-  if (photos.length === 0) return null
-
+function AttachmentIconButton({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: typeof Camera
+  label: string
+  active?: boolean
+  onClick: () => void
+}) {
   return (
-    <div className="space-y-2">
-      <p className="m-0 text-sm font-medium text-[var(--sea-ink)]">Photos</p>
-      <div className="flex flex-wrap gap-2">
-        {photos.map((item) => (
-          <img
-            key={item.id}
-            src={item.thumbnailUrl ?? undefined}
-            alt=""
-            className="size-24 rounded-xl border border-[var(--line)] object-cover"
-          />
-        ))}
-      </div>
-    </div>
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={active}
+      onClick={onClick}
+      className={cn(
+        'inline-flex size-11 items-center justify-center rounded-2xl border transition outline-none',
+        'focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--panel)]',
+        active
+          ? 'border-[var(--sea-ink)] bg-[var(--active-panel)] text-[var(--sea-ink)]'
+          : 'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)] hover:border-[var(--line)] hover:text-[var(--sea-ink)]',
+      )}
+    >
+      <Icon className="size-5" strokeWidth={2.1} />
+    </button>
   )
 }

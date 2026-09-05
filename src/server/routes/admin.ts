@@ -53,6 +53,7 @@ function serializeTrip(trip: {
   skipperKey: string | null
   crewMemberIds: unknown
   title: string | null
+  subtitle: string | null
   coverPhotoDataUrl: string | null
   coverKind: string | null
   boatId: string | null
@@ -80,6 +81,7 @@ function serializeTrip(trip: {
       ? (trip.crewMemberIds as string[])
       : null,
     title: trip.title,
+    subtitle: trip.subtitle,
     coverPhotoDataUrl: trip.coverPhotoDataUrl,
     coverKind: trip.coverKind,
     boatId: trip.boatId,

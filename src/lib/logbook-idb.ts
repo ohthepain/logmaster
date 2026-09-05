@@ -36,6 +36,7 @@ const DB_NAME = 'logmaster'
 const DB_VERSION = 3
 
 const PENDING_DELETED_TRIPS_KEY = 'logmaster-pending-trip-deletes'
+const PENDING_DELETED_MEDIA_KEY = 'logmaster-pending-media-deletes'
 const PENDING_TRIP_SYNC_KEY = 'logmaster-pending-trip-sync'
 
 function readPendingIdList(key: string): string[] {
@@ -77,6 +78,25 @@ export function removePendingDeletedTripIds(ids: string[]) {
   writePendingIdList(
     PENDING_DELETED_TRIPS_KEY,
     getPendingDeletedTripIds().filter((id) => !remove.has(id)),
+  )
+}
+
+export function getPendingDeletedMediaIds(): string[] {
+  return readPendingIdList(PENDING_DELETED_MEDIA_KEY)
+}
+
+export function addPendingDeletedMediaId(id: string) {
+  const ids = new Set(getPendingDeletedMediaIds())
+  ids.add(id)
+  writePendingIdList(PENDING_DELETED_MEDIA_KEY, [...ids])
+}
+
+export function removePendingDeletedMediaIds(ids: string[]) {
+  if (ids.length === 0) return
+  const remove = new Set(ids)
+  writePendingIdList(
+    PENDING_DELETED_MEDIA_KEY,
+    getPendingDeletedMediaIds().filter((id) => !remove.has(id)),
   )
 }
 

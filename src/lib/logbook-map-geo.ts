@@ -40,6 +40,14 @@ function colorForLegId(
   return generateLegColor(fallbackSequence)
 }
 
+export function logEntryLegColor(
+  entry: Pick<LogEntry, 'legId'>,
+  legs: Leg[],
+  fallbackSequence = 0,
+): string {
+  return colorForLegId(entry.legId ?? null, legColorLookup(legs), fallbackSequence)
+}
+
 function positionedEntries(entries: LogEntry[]): LogEntry[] {
   return sortLogEntriesChronologically(entries).filter(entryHasMapPosition)
 }
