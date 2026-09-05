@@ -98,6 +98,7 @@ describe('signalk-export', () => {
 
     const exported = JSON.parse(buildTripSignalKExport(trip, tracks)) as {
       name: string
+      positionTrack: unknown[]
       deltas: Array<{
         updates: Array<{
           values: Array<{ path: string; value: unknown }>
@@ -106,6 +107,7 @@ describe('signalk-export', () => {
     }
 
     expect(exported.name).toBe('Harbour sail')
+    expect(exported.positionTrack).toHaveLength(1)
     const paths = exported.deltas.flatMap((delta) =>
       delta.updates.flatMap((update) => update.values.map((value) => value.path)),
     )
@@ -115,7 +117,70 @@ describe('signalk-export', () => {
     expect(paths).toContain('navigation.headingTrue')
   })
 
-  it('throws when there is no track data', () => {
-    expect(() => buildTripSignalKExport(trip, [])).toThrow(/no track data/i)
+  it('throws when there is nothing to export', () => {
+    expect(() => buildTripSignalKExport(trip, [])).toThrow(/no track data or log entries/i)
+  })
+
+  it('dedupes duplicate position tracks on export', () => {
+    const samples = [
+      {
+        time: '2026-06-01T09:00:00.000Z',
+        latitude: 59.9139,
+        longitude: 10.7522,
+        heading: 120,
+      },
+      {
+        time: '2026-06-01T09:05:00.000Z',
+        latitude: 59.9145,
+        longitude: 10.753,
+        heading: 125,
+      },
+    ]
+    const payload = encodePositionTrackSamples(samples)
+    const tracks: TripTrack[] = [
+      {
+        id: 'track-position-sealed',
+        tripId: trip.id,
+        source: 'background-gps',
+        kind: 'position',
+        encoding: 'delta-v1',
+        payload,
+        sampleCount: 2,
+        startedAt: samples[0]!.time,
+        endedAt: samples[1]!.time,
+        createdAt: '2026-06-01T09:00:00.000Z',
+        updatedAt: '2026-06-01T09:05:00.000Z',
+        synced: false,
+      },
+      {
+        id: 'open-position:trip-1',
+        tripId: trip.id,
+        source: 'background-gps',
+        kind: 'position',
+        encoding: 'delta-v1',
+        payload,
+        sampleCount: 2,
+        startedAt: samples[0]!.time,
+        endedAt: samples[1]!.time,
+        createdAt: '2026-06-01T09:00:00.000Z',
+        updatedAt: '2026-06-01T09:05:00.000Z',
+        synced: false,
+      },
+    ]
+
+    const exported = JSON.parse(buildTripSignalKExport(trip, tracks)) as {
+      positionTrack: unknown[]
+      deltas: unknown[]
+    }
+
+    expect(exported.positionTrack).toHaveLength(2)
+    expect(exported.deltas.filter((delta) => {
+      const record = delta as {
+        updates?: Array<{ values?: Array<{ path?: string }> }>
+      }
+      return record.updates?.some((update) =>
+        update.values?.some((value) => value.path === 'navigation.position'),
+      )
+    })).toHaveLength(2)
   })
 })

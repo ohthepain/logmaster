@@ -9,7 +9,7 @@ import type {
 } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { normalizeTripTrack } from '../domain/trip-track'
-import { getTripTrackRecorder, isOpenPositionTrack } from '../lib/trip-track-recorder'
+import { getTripTrackRecorder, isOpenPositionTrack, openPositionTrackId } from '../lib/trip-track-recorder'
 import { hydrateTripTrackPayload, fetchTripTrackManifests, mergeTrackManifests } from '../lib/trip-track-sync'
 import {
   captureLogbookContext,
@@ -47,7 +47,9 @@ import {
   resolvePhotoVideoSave,
 } from '../lib/media-entry'
 import { buildTripFromGpxFiles } from '../lib/gpx-trip-import'
+import { buildTripFromSignalK } from '../lib/signalk-trip-import'
 import { GpxImportError, type GpxImportFile } from '../lib/gpx-import'
+import { SignalKImportError } from '../lib/signalk-import'
 import {
   addPendingDeletedTripId,
   addPendingDeletedMediaId,
@@ -211,6 +213,10 @@ type LogbookState = {
     files: GpxImportFile[],
     options?: { boatName?: string },
   ) => Promise<Trip>
+  importTripFromSignalK: (
+    json: string,
+    options?: { boatName?: string; fileName?: string },
+  ) => Promise<Trip>
   autoMapCoverTripIds: string[]
   requestAutoMapCover: (tripId: string) => void
   clearAutoMapCoverRequest: (tripId: string) => void
@@ -325,6 +331,45 @@ async function persistLegsAndEntries(legs: Leg[], entries: LogEntry[]) {
     ...legs.filter((leg) => !leg.synced).map((leg) => putLeg(leg)),
     ...entries.filter((entry) => !entry.synced).map((entry) => putLogEntry(entry)),
   ])
+}
+
+type ImportedTripBundle = {
+  trip: Trip
+  entries: LogEntry[]
+  tracks: TripTrack[]
+  legs: Leg[]
+}
+
+async function persistImportedTrip(
+  get: () => LogbookState,
+  set: (partial: Partial<LogbookState> | ((state: LogbookState) => Partial<LogbookState>)) => void,
+  imported: ImportedTripBundle,
+): Promise<Trip> {
+  const { trip, entries, tracks, legs: tripLegs } = imported
+
+  await putTrip(trip)
+  await Promise.all(tracks.map((track) => putTripTrack(track)))
+  await Promise.all(entries.map((entry) => putLogEntry(entry)))
+  await persistLegsAndEntries(
+    tripLegs,
+    entries.filter((entry) => entry.tripId === trip.id),
+  )
+  addPendingTripId(trip.id)
+
+  set((state) => ({
+    trips: sortTrips([trip, ...state.trips]),
+    legs: [...state.legs.filter((leg) => leg.tripId !== trip.id), ...tripLegs],
+    entries: sortEntries([...state.entries, ...entries]),
+    tracks: [...state.tracks, ...tracks],
+    selectedTripId: trip.id,
+    syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+    autoMapCoverTripIds: state.autoMapCoverTripIds.includes(trip.id)
+      ? state.autoMapCoverTripIds
+      : [...state.autoMapCoverTripIds, trip.id],
+  }))
+
+  scheduleBackgroundSync(get, { skipBootstrap: true })
+  return trip
 }
 
 async function applyTripLegRebuild(
@@ -645,6 +690,14 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     if (trip) {
       if (input.type === 'END_TRIP') {
         await get().upsertTripTracks(getTripTrackRecorder().sealTrip(input.tripId))
+        getTripTrackRecorder().clearTrip(input.tripId)
+        await deleteTripTrack(openPositionTrackId(input.tripId))
+        set((state) => ({
+          tracks: state.tracks.filter(
+            (track) =>
+              !(track.tripId === input.tripId && isOpenPositionTrack(track)),
+          ),
+        }))
         await applyTripOperationalSync(input.tripId, get, set, {
           status: 'COMPLETED',
           completedAt: entry.timestamp,
@@ -995,30 +1048,21 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       )
     }
 
-    const { trip, entries, tracks, legs: tripLegs } = imported
+    return persistImportedTrip(get, set, imported)
+  },
 
-    await putTrip(trip)
-    await Promise.all(tracks.map((track) => putTripTrack(track)))
-    await Promise.all(entries.map((entry) => putLogEntry(entry)))
-    await persistLegsAndEntries(
-      tripLegs,
-      entries.filter((entry) => entry.tripId === trip.id),
-    )
-    addPendingTripId(trip.id)
+  importTripFromSignalK: async (json, options) => {
+    let imported: ReturnType<typeof buildTripFromSignalK>
+    try {
+      imported = buildTripFromSignalK(json, options)
+    } catch (error) {
+      if (error instanceof SignalKImportError) throw error
+      throw new SignalKImportError(
+        error instanceof Error ? error.message : 'Could not import Signal K file',
+      )
+    }
 
-    get().requestAutoMapCover(trip.id)
-
-    set((state) => ({
-      trips: sortTrips([trip, ...state.trips]),
-      legs: [...state.legs.filter((leg) => leg.tripId !== trip.id), ...tripLegs],
-      entries: sortEntries([...state.entries, ...entries]),
-      tracks: [...state.tracks, ...tracks],
-      selectedTripId: trip.id,
-      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
-    }))
-
-    scheduleBackgroundSync(get, { skipBootstrap: true })
-    return trip
+    return persistImportedTrip(get, set, imported)
   },
 
   requestAutoMapCover: (tripId) => {

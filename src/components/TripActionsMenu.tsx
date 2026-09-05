@@ -37,6 +37,7 @@ export function TripActionsMenu({
   const rootRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
   const tracks = useLogbookStore((state) => state.tracks)
+  const entries = useLogbookStore((state) => state.entries)
   const devMode = useAppOptionsStore((state) => state.devMode)
   const devTripRetrip = useAppOptionsStore((state) => state.devTripRetrip)
   const setDevTripRetrip = useAppOptionsStore((state) => state.setDevTripRetrip)
@@ -88,7 +89,14 @@ export function TripActionsMenu({
 
   const handleExportSignalK = () => {
     void runAction(async () => {
-      await exportTripAsSignalK(trip, tracks)
+      await useLogbookStore.getState().ensureTripTrackPayloads(trip.id)
+      const hydratedTracks = useLogbookStore
+        .getState()
+        .tracks.filter((track) => track.tripId === trip.id)
+      const tripEntries = entries.filter(
+        (entry) => entry.tripId === trip.id && !entry.deleted,
+      )
+      await exportTripAsSignalK(trip, hydratedTracks, tripEntries)
       toast.success('Signal K export ready')
     })
   }

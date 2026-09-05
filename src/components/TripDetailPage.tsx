@@ -18,6 +18,7 @@ import { TripLegSection } from "./TripLegSection";
 import { NativeRecordingSettings } from "./NativeRecordingSettings";
 import type { Media } from "../domain/logbook";
 import type { CrewMember } from "../domain/crew";
+import { decodeTripTrack } from "../domain/trip-track";
 import { fetchCrew } from "../lib/crew-api";
 import { readImageFile } from "../lib/image-file";
 import {
@@ -152,6 +153,14 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
     [store.tracks, tripId],
   )
 
+  const positionSampleCount = useMemo(
+    () =>
+      tripTracks
+        .filter((track) => track.kind === "position")
+        .reduce((count, track) => count + decodeTripTrack(track).length, 0),
+    [tripTracks],
+  )
+
   const devTripReplay = useAppOptionsStore((state) => state.devTripReplay);
   const devTripRetrip = useAppOptionsStore((state) => state.devTripRetrip);
   const recordingTripId = useAppOptionsStore((state) => state.recordingTripId);
@@ -252,15 +261,26 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
   const wantsAutoMapCover = store.autoMapCoverTripIds.includes(tripId);
   const hasPositionTrack = tripTracks.some((track) => track.kind === "position");
   const tripIsActive = trip?.status === "IN_PROGRESS" || trip?.status === "PLANNED";
+  const autoMapCoverDelays = useMemo(
+    () => (wantsAutoMapCover ? [0, 800, 1500, 3000, 5000, 8000] : [0]),
+    [wantsAutoMapCover],
+  );
+
+  useEffect(() => {
+    if (!wantsAutoMapCover) return;
+    if (positionSampleCount > 0) {
+      autoMapCoverAttemptedRef.current = null;
+    }
+  }, [positionSampleCount, wantsAutoMapCover, tripId]);
 
   useEffect(() => {
     if (!trip) return;
     if (trip.coverPhotoDataUrl && !wantsAutoMapCover) return;
     if (tripIsActive && !wantsAutoMapCover) return;
     if (!hasPositionTrack && !wantsAutoMapCover) return;
+    if (wantsAutoMapCover && positionSampleCount === 0) return;
 
-    const delays = wantsAutoMapCover ? [0, 800, 1500, 3000] : [0];
-    const timers = delays.map((delay) =>
+    const timers = autoMapCoverDelays.map((delay) =>
       window.setTimeout(() => {
         void tryAutoMapCover({ force: wantsAutoMapCover });
       }, delay),
@@ -278,6 +298,8 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
     tripId,
     tripTracks.length,
     trip?.status,
+    positionSampleCount,
+    autoMapCoverDelays,
   ]);
 
   useEffect(() => {

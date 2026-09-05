@@ -203,20 +203,6 @@ export function buildLegTrackGeoJson(
     entryFeatures.length > 0 &&
     (!preferTracks || entryPointCount > trackPointCount)
 
-  const geometryMode = preferTracks
-    ? 'tracks'
-    : preferEntries
-      ? 'entries'
-      : 'mixed'
-  const decodedTrackPoints = tracks
-    .filter(isPositionTrack)
-    .reduce((count, track) => count + decodeTripTrack(track).length, 0)
-  // #region agent log
-  if (entryPointCount >= 2 || trackPointCount >= 2) {
-    fetch('http://127.0.0.1:7411/ingest/3b7d181c-240e-49dd-892c-4bf73b6a58cb',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d4c045'},body:JSON.stringify({sessionId:'d4c045',location:'logbook-map-geo.ts:buildLegTrackGeoJson',message:'map geometry decision',data:{geometryMode,preferTracks,preferEntries,entryPointCount,trackPointCount,decodedTrackPoints,trackFeatureCount:trackFeatures.length,entryFeatureCount:entryFeatures.length,positionTrackCount:tracks.filter(isPositionTrack).length,firstTrackSampleCount:tracks.find(isPositionTrack)?.sampleCount??null,firstTrackHasPayload:Boolean(tracks.find(isPositionTrack)?.payload),runId:'post-fix'},timestamp:Date.now(),hypothesisId:'A-D'})}).catch(()=>{});
-  }
-  // #endregion
-
   if (preferTracks) {
     return {
       type: 'FeatureCollection' as const,

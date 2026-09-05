@@ -3,9 +3,9 @@ import { Map as MapIcon, Sailboat } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AddButton } from '../../../components/AddButton'
 import {
-  GpxImportButton,
-  type GpxImportButtonHandle,
-} from '../../../components/GpxImportButton'
+  TripImportButton,
+  type TripImportButtonHandle,
+} from '../../../components/TripImportButton'
 import { GpxUrlImportButton } from '../../../components/GpxUrlImportButton'
 import { StartTripLauncher } from '../../../components/StartTripLauncher'
 import { TripActionsMenu } from '../../../components/TripActionsMenu'
@@ -49,7 +49,7 @@ function TripsPage() {
   const location = useLocation()
   const { startTrip: startTripSearch } = Route.useSearch()
   const [startTripOpen, setStartTripOpen] = useState(false)
-  const gpxImportRef = useRef<GpxImportButtonHandle>(null)
+  const importRef = useRef<TripImportButtonHandle>(null)
 
   const entryCountByTripId = useMemo(() => {
     const counts = new Map<string, number>()
@@ -96,7 +96,7 @@ function TripsPage() {
         </h1>
         <div className="flex items-center gap-2">
           <GpxUrlImportButton onImported={handleImportedTrip} />
-          <GpxImportButton ref={gpxImportRef} onImported={handleImportedTrip} />
+          <TripImportButton ref={importRef} onImported={handleImportedTrip} />
           <AddButton onClick={openStartTrip} aria-label="New trip" tooltip="New trip" />
         </div>
       </div>
@@ -104,11 +104,11 @@ function TripsPage() {
       {store.trips.length === 0 ? (
         <EmptyState
           title="No trips yet"
-          description="Start a sailing session or import a GPX track to create your first trip."
+          description="Start a sailing session or import a GPX or Signal K track to create your first trip."
           actionLabel="Add trip"
           onAction={openStartTrip}
-          secondaryActionLabel="Import GPX"
-          onSecondaryAction={() => gpxImportRef.current?.open()}
+          secondaryActionLabel="Import track"
+          onSecondaryAction={() => importRef.current?.open()}
           icon={Sailboat}
         />
       ) : (

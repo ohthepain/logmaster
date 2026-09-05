@@ -651,9 +651,11 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
     const bounds = mapPointsToBounds(viewportTarget.points);
     if (bounds) {
       fitMapToTripTrack(map, bounds);
-      initialFitDoneRef.current = true;
-      settleInitialViewport(map);
+    } else if (viewportTarget.points.length > 0) {
+      juiceMapFocus(map, viewportTarget.points[0]!);
     }
+    initialFitDoneRef.current = true;
+    settleInitialViewport(map);
   }, [
     mapReady,
     viewportTarget,

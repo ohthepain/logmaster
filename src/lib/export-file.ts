@@ -89,6 +89,17 @@ async function pickPhotoSaveHandle(
   })
 }
 
+function isFileSystemWriteBlockedError(error: unknown): boolean {
+  if (!(error instanceof DOMException || error instanceof Error)) return false
+  if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
+    return true
+  }
+  return (
+    error.message.includes('createWritable') ||
+    error.message.includes('not allowed by the user agent')
+  )
+}
+
 async function writeBytesToHandle(
   handle: FileSystemFileHandle,
   bytes: Uint8Array,
@@ -96,7 +107,7 @@ async function writeBytesToHandle(
 ): Promise<void> {
   const writable = await handle.createWritable()
   try {
-    await writable.write(bytes)
+    await writable.write(new Blob([bytes]))
     await writable.close()
     const saved = await handle.getFile()
     if (saved.size <= 0) {
@@ -128,8 +139,15 @@ export async function saveStampedPhotoBytes(
   }
 
   if (handle) {
-    await writeBytesToHandle(handle, bytes, saveFileName)
-    return true
+    try {
+      await writeBytesToHandle(handle, bytes, saveFileName)
+      return true
+    } catch (error) {
+      if (isFileSystemWriteBlockedError(error)) {
+        return downloadBytes(saveFileName, bytes, 'image/jpeg')
+      }
+      throw error
+    }
   }
 
   return downloadBytes(saveFileName, bytes, 'image/jpeg')
@@ -155,13 +173,18 @@ export async function writeStampedPhotoToHandle(
   await writeBytesToHandle(handle, bytes, saveFileName)
 }
 
-async function saveBlobWithPicker(fileName: string, blob: Blob): Promise<boolean> {
-  if (blob.size <= 0) {
+async function saveBlobWithPicker(
+  fileName: string,
+  bytes: Uint8Array,
+  mimeType: string,
+): Promise<boolean> {
+  if (bytes.byteLength <= 0) {
     throw new Error(`Cannot save empty file (${fileName})`)
   }
 
-  const extension = fileName.split('.').pop()?.toLowerCase() ?? 'bin'
-  const mimeType = blob.type || 'application/octet-stream'
+  const extension = fileName.includes('.')
+    ? (fileName.split('.').pop()?.toLowerCase() ?? 'bin')
+    : 'bin'
   const accept =
     mimeType === 'image/jpeg'
       ? { 'image/jpeg': ['.jpg', '.jpeg'] }
@@ -184,9 +207,49 @@ async function saveBlobWithPicker(fileName: string, blob: Blob): Promise<boolean
     ],
   })
 
-  const bytes = new Uint8Array(await blob.arrayBuffer())
   await writeBytesToHandle(handle, bytes, fileName)
   return true
+}
+
+/** Save a text export — uses share sheet on native, direct download on web. */
+export async function saveTextExport(
+  fileName: string,
+  content: string,
+  mimeType: string,
+): Promise<boolean> {
+  const bytes = new TextEncoder().encode(content)
+  assertNonEmptyBytes(bytes, fileName)
+
+  const file = new File([bytes], fileName, { type: mimeType })
+
+  if (isNativePlatform()) {
+    const reader = new FileReader()
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      reader.onload = () => resolve(String(reader.result ?? ''))
+      reader.onerror = () => reject(reader.error ?? new Error('Could not read file'))
+      reader.readAsDataURL(file)
+    })
+    await Share.share({
+      title: file.name,
+      dialogTitle: 'Share trip export',
+      url: dataUrl,
+    })
+    return true
+  }
+
+  if (
+    typeof navigator !== 'undefined' &&
+    navigator.canShare?.({ files: [file] })
+  ) {
+    try {
+      await navigator.share({ files: [file], title: file.name })
+      return true
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return false
+    }
+  }
+
+  return downloadBytes(fileName, bytes, mimeType)
 }
 
 export async function saveOrShareFile(
@@ -232,9 +295,12 @@ export async function saveOrShareFile(
 
   if ('showSaveFilePicker' in window) {
     try {
-      return await saveBlobWithPicker(file.name, blob)
+      return await saveBlobWithPicker(file.name, bytes, file.type)
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return false
+      if (isFileSystemWriteBlockedError(error)) {
+        return downloadBlob(file.name, blob)
+      }
       throw error
     }
   }
