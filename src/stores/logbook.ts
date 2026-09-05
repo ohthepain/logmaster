@@ -51,6 +51,12 @@ import { buildTripFromSignalK } from '../lib/signalk-trip-import'
 import { GpxImportError, partitionGpxImportFiles, type GpxImportFile } from '../lib/gpx-import'
 import { SignalKImportError } from '../lib/signalk-import'
 import {
+  buildTripWaypointEntryInput,
+  type TripWaypointInput,
+} from '../lib/trip-waypoint-entry'
+import { routeWaypointsToTripEntries } from '../lib/route-waypoint-ops'
+import { routeWaypointsForRoute, useRoutesStore } from './routes'
+import {
   addPendingDeletedTripId,
   addPendingDeletedMediaId,
   addPendingTripId,
@@ -166,6 +172,15 @@ type LogbookState = {
     input: NewEntryInput,
     options?: LogbookWriteOptions,
   ) => Promise<LogEntry | null>
+  addTripWaypoint: (
+    tripId: string,
+    input: TripWaypointInput,
+    options?: LogbookWriteOptions,
+  ) => Promise<LogEntry | null>
+  importRouteWaypointsToTrip: (
+    routeId: string,
+    tripId: string,
+  ) => Promise<number>
   updateEntry: (
     entryId: string,
     patch: UpdateEntryInput,
@@ -722,6 +737,38 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       scheduleBackgroundSync(get, { skipBootstrap: true, skipTracks: true })
     }
     return entry
+  },
+
+  addTripWaypoint: async (tripId, input, options) => {
+    return get().addEntry(buildTripWaypointEntryInput(tripId, input), options)
+  },
+
+  importRouteWaypointsToTrip: async (routeId, tripId) => {
+    await useRoutesStore.getState().load()
+    const sourceWaypoints = routeWaypointsForRoute(
+      routeId,
+      useRoutesStore.getState().waypoints,
+    )
+    if (sourceWaypoints.length === 0) {
+      throw new Error('Route has no waypoints.')
+    }
+
+    const tripEntries = get().entries.filter(
+      (entry) => entry.tripId === tripId && !entry.deleted,
+    )
+    const newEntries = routeWaypointsToTripEntries(sourceWaypoints, tripId, {
+      existingEntries: tripEntries,
+    })
+    if (newEntries.length === 0) return 0
+
+    await Promise.all(newEntries.map((entry) => putLogEntry(entry)))
+    set((state) => ({
+      entries: sortEntries([...state.entries, ...newEntries]),
+      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+    }))
+    await applyTripLegRebuild(tripId, get, set)
+    scheduleBackgroundSync(get, { skipBootstrap: true, skipTracks: true })
+    return newEntries.length
   },
 
   updateEntry: async (entryId, patch, options) => {

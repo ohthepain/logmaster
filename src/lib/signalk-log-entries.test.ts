@@ -112,6 +112,29 @@ describe('signalk log entries and waypoints', () => {
     expect(exportableLogEntries(entries)).toHaveLength(3)
     expect(collectWaypointsFromEntries(entries)).toHaveLength(1)
 
+    const manualWaypointEntries = [
+      baseEntry({
+        id: 'entry-manual-waypoint',
+        type: 'NOTE',
+        timestamp: '2026-06-01T11:00:00.000Z',
+        latitude: 59.93,
+        longitude: 10.77,
+        notes: 'Mark',
+        data: {
+          waypoint: true,
+          source: 'manual',
+          place: {
+            name: 'Mark',
+            detail: null,
+            kind: 'waypoint',
+            source: 'manual',
+            distanceM: 0,
+          },
+        },
+      }),
+    ]
+    expect(collectWaypointsFromEntries(manualWaypointEntries)).toHaveLength(1)
+
     const exported = JSON.parse(buildTripSignalKExport(trip, tracks, entries)) as {
       version: number
       logEntries: Array<{ type: string }>

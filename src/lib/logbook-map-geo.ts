@@ -224,6 +224,93 @@ export function buildLegTrackGeoJson(
   }
 }
 
+export function withEntryMapPositionOverride(
+  entries: LogEntry[],
+  entryId: string,
+  position: MapLngLat,
+): LogEntry[] {
+  return entries.map((entry) =>
+    entry.id === entryId
+      ? { ...entry, latitude: position.latitude, longitude: position.longitude }
+      : entry,
+  )
+}
+
+function buildWaypointEditConnectorLineFeatures(
+  entries: LogEntry[],
+  legs: Leg[],
+  editingEntryId: string,
+) {
+  const legColors = legColorLookup(legs)
+
+  return adjacentPositionedEntryPairs(entries)
+    .filter(([a, b]) => a.id === editingEntryId || b.id === editingEntryId)
+    .map(([a, b], index) => ({
+      type: 'Feature' as const,
+      geometry: {
+        type: 'LineString' as const,
+        coordinates: [
+          [a.longitude!, a.latitude!] as [number, number],
+          [b.longitude!, b.latitude!] as [number, number],
+        ],
+      },
+      properties: {
+        legId: a.legId ?? b.legId ?? null,
+        segmentIndex: index,
+        color: colorForLegId(a.legId ?? b.legId ?? null, legColors, index),
+      },
+    }))
+}
+
+/** Track lines while dragging a trip waypoint — updates paths through the draft position. */
+export function buildLegTrackGeoJsonWithWaypointDraft(
+  entries: LogEntry[],
+  legs: Leg[],
+  tracks: TripTrack[],
+  editingEntryId: string,
+  draftPosition: MapLngLat,
+) {
+  const overridden = withEntryMapPositionOverride(
+    entries,
+    editingEntryId,
+    draftPosition,
+  )
+  const entryFeatures = buildPositionedEntryTrackFeatures(overridden, legs)
+  const trackFeatures = buildTripTracksGeoJson(tracks, legs).features
+  const entryPointCount = positionedEntries(overridden).length
+  const trackPointCount = positionTrackSampleCount(tracks)
+  const preferTracks =
+    tracks.some(isPositionTrack) &&
+    trackPointCount >= Math.max(3, entryPointCount)
+  const preferEntries =
+    entryFeatures.length > 0 &&
+    (!preferTracks || entryPointCount > trackPointCount)
+  const connectors = buildWaypointEditConnectorLineFeatures(
+    overridden,
+    legs,
+    editingEntryId,
+  )
+
+  if (preferEntries) {
+    return {
+      type: 'FeatureCollection' as const,
+      features: entryFeatures,
+    }
+  }
+
+  if (preferTracks) {
+    return {
+      type: 'FeatureCollection' as const,
+      features: [...trackFeatures, ...connectors],
+    }
+  }
+
+  return {
+    type: 'FeatureCollection' as const,
+    features: [...trackFeatures, ...entryFeatures, ...connectors],
+  }
+}
+
 export function buildLegEntryPointsGeoJson(
   entries: LogEntry[],
   legs: Leg[] = [],

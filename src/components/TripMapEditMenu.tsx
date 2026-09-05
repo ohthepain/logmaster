@@ -7,6 +7,8 @@ type TripMapEditMenuProps = {
   disabled?: boolean
   uploading?: boolean
   onEditCover: () => void
+  onAddWaypoint?: () => void
+  onEditWaypoints?: () => void
   uploadInputId: string
 }
 
@@ -14,6 +16,8 @@ export function TripMapEditMenu({
   disabled = false,
   uploading = false,
   onEditCover,
+  onAddWaypoint,
+  onEditWaypoints,
   uploadInputId,
 }: TripMapEditMenuProps) {
   const [open, setOpen] = useState(false)
@@ -98,6 +102,36 @@ export function TripMapEditMenu({
           >
             {uploading ? 'Uploading…' : 'Upload photos and video'}
           </label>
+          {onAddWaypoint ? (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation()
+                runAction(onAddWaypoint)
+              }}
+              className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
+            >
+              Add waypoint
+            </button>
+          ) : null}
+          {onEditWaypoints ? (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation()
+                runAction(onEditWaypoints)
+              }}
+              className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
+            >
+              Edit waypoints
+            </button>
+          ) : null}
           <button
             type="button"
             role="menuitem"

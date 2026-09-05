@@ -1,13 +1,16 @@
-import { Map, RotateCw, Sailboat } from "lucide-react";
+import { Map, Route as RouteIcon, RotateCw, Sailboat } from "lucide-react";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { Leg, LogEntry, Media, Trip } from "../domain/logbook";
 import type { TripTrack } from "../domain/trip-track";
 import type { TripDetailCoverDisplay } from "../lib/trip-display";
 import type { TripMapHandle } from "../lib/trip-map-handle";
+import type { MapWaypointPickConfig } from "../lib/map-waypoint-pick";
+import { isWaypointMapInteractionActive } from "../lib/map-waypoint-pick";
 import { retripSourceElapsedMs, retripSourceTimeMs as mapRetripSourceTimeMs } from "../lib/dev-trip-retrip";
 import { getNativePlatform } from "../lib/platform";
 import { useAppOptionsStore } from "../stores/app-options";
 import { useLogbookStore } from "../stores/logbook";
+import { routeWaypointsForRoute, useRoutesStore } from "../stores/routes";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { SailingMapControlStack } from "./SailingMapControlStack";
 import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
@@ -18,6 +21,7 @@ import { TripPlaybackInfoPanel } from "./TripPlaybackInfoPanel";
 import { TripPlaybackOverlay } from "./TripPlaybackOverlay";
 import { TripMapChromeButton } from "./TripMapChromeButton";
 import { TripMapEditMenu } from "./TripMapEditMenu";
+import { PlannedRoutePickerModal } from "./RouteCopyModals";
 import { cn } from "../lib/cn";
 import { tripPlaybackPositionAt, tripPlaybackRange } from "../lib/trip-playback";
 
@@ -39,6 +43,9 @@ type TripDetailHeroProps = {
   uploadMediaInputId: string;
   uploadingMedia?: boolean;
   onLogEntryClick?: () => void;
+  onAddWaypointClick?: () => void;
+  onEditWaypointsClick?: () => void;
+  waypointPick?: MapWaypointPickConfig;
   onReplayTestClick?: () => void;
   onInitialMapViewportSettled?: () => void;
 };
@@ -60,6 +67,9 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
   uploadMediaInputId,
   uploadingMedia = false,
   onLogEntryClick,
+  onAddWaypointClick,
+  onEditWaypointsClick,
+  waypointPick,
   onReplayTestClick,
   onInitialMapViewportSettled,
 }: TripDetailHeroProps,
@@ -88,16 +98,32 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
       devTripRetrip.sourceTripId === trip.id);
   const showInteractiveMap = isActiveTrip || isPlayback || cover.kind === "map";
   const showPhoto = !showInteractiveMap && cover.kind === "photo" && cover.photoUrl;
-  const showOperationalOverlay = isActiveTrip;
+  const waypointMapInteractionActive = isWaypointMapInteractionActive(waypointPick);
+  const showOperationalOverlay = isActiveTrip && !waypointMapInteractionActive;
   const useExternalIosMapControls = getNativePlatform() === "ios" && showInteractiveMap;
   const showMapDataLayers = getNativePlatform() !== "ios";
   const mapRef = useRef<TripMapHandle>(null);
   const fullscreenMapRef = useRef<TripMapHandle>(null);
   const [mapFullscreenOpen, setMapFullscreenOpen] = useState(false);
+  const [plannedRoutePickerOpen, setPlannedRoutePickerOpen] = useState(false);
+  const [overlayRouteId, setOverlayRouteId] = useState<string | null>(null);
+  const routes = useRoutesStore((state) => state.routes);
+  const routeWaypoints = useRoutesStore((state) => state.waypoints);
+  const plannedRouteWaypoints = useMemo(
+    () =>
+      overlayRouteId
+        ? routeWaypointsForRoute(overlayRouteId, routeWaypoints)
+        : [],
+    [overlayRouteId, routeWaypoints],
+  );
   const playbackRange = useMemo(
     () => tripPlaybackRange(trip, mapEntries, mapTracks),
     [mapEntries, mapTracks, trip],
   );
+
+  useEffect(() => {
+    void useRoutesStore.getState().load();
+  }, []);
   const [playbackTimeMs, setPlaybackTimeMs] = useState(playbackRange.startMs);
   const [playbackPlaying, setPlaybackPlaying] = useState(false);
   const [liveTimeMs, setLiveTimeMs] = useState(() => Date.now());
@@ -236,6 +262,8 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
             playbackMode={isPlayback}
             playbackPlaying={playbackPlaying}
             boatIconId={trip.boatIconId}
+            plannedRouteWaypoints={plannedRouteWaypoints}
+            waypointPick={waypointPick}
             onInitialViewportSettled={onInitialMapViewportSettled}
           />
         </div>
@@ -300,6 +328,8 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
               playbackMode={isPlayback}
               playbackPlaying={playbackPlaying}
               boatIconId={trip.boatIconId}
+              plannedRouteWaypoints={plannedRouteWaypoints}
+              waypointPick={waypointPick}
             />
             <SailingMapControlStack
               onZoomIn={() => fullscreenMapRef.current?.zoomIn()}
@@ -323,7 +353,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
         </SailingMapFullscreenModal>
       ) : null}
 
-      {showPlaybackOverlay ? (
+      {showPlaybackOverlay && !waypointMapInteractionActive ? (
         <TripPlaybackOverlay
           trip={trip}
           entries={mapEntries}
@@ -371,13 +401,27 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
       ) : null}
 
       <div className="pointer-events-none absolute inset-x-0 top-16 z-40 flex flex-col items-start gap-2 px-3 sm:px-4">
+        {!waypointMapInteractionActive ? (
         <div className="pointer-events-auto flex justify-start gap-2">
           <TripMapEditMenu
             disabled={busy}
             uploading={uploadingMedia}
             onEditCover={onEditCoverClick}
+            onAddWaypoint={onAddWaypointClick}
+            onEditWaypoints={onEditWaypointsClick}
             uploadInputId={uploadMediaInputId}
           />
+          {showInteractiveMap ? (
+            <TripMapChromeButton
+              label={overlayRouteId ? "Change planned route overlay" : "Show planned route"}
+              onClick={() => setPlannedRoutePickerOpen(true)}
+              disabled={busy}
+              active={overlayRouteId != null}
+              tooltipSide="bottom"
+            >
+              <RouteIcon className="size-4" />
+            </TripMapChromeButton>
+          ) : null}
           {onReplayTestClick ? (
             <TripMapChromeButton
               label="Start auto-test replay"
@@ -389,7 +433,8 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
             </TripMapChromeButton>
           ) : null}
         </div>
-        {showInteractiveMap ? (
+        ) : null}
+        {showInteractiveMap && !waypointMapInteractionActive ? (
           <TripPlaybackInfoPanel
             tripId={infoTripId}
             tracks={infoTracks}
@@ -410,6 +455,17 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
           />
         ) : null}
       </div>
+
+      <PlannedRoutePickerModal
+        open={plannedRoutePickerOpen}
+        routes={routes}
+        selectedRouteId={overlayRouteId}
+        onClose={() => setPlannedRoutePickerOpen(false)}
+        onSelect={(routeId) => {
+          setOverlayRouteId(routeId);
+          setPlannedRoutePickerOpen(false);
+        }}
+      />
     </section>
   );
 });

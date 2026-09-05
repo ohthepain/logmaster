@@ -1,5 +1,17 @@
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { Map as MapIcon, MapPin, MessageSquarePlus, Pencil, Sailboat } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  GripVertical,
+  Map as MapIcon,
+  MapPin,
+  MapPinPlus,
+  MessageSquarePlus,
+  Pencil,
+  Plus,
+  Sailboat,
+  Trash2,
+} from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { Route, RouteAnnotation, RouteWaypoint } from '../domain/route'
@@ -16,10 +28,13 @@ import {
   routePlannedDistanceMeters,
 } from '../lib/route-display'
 import type { TripMapHandle } from '../lib/trip-map-handle'
+import type { MapLngLat } from '../lib/logbook-map-geo'
+import type { MapWaypointPickConfig } from '../lib/map-waypoint-pick'
 import { DevComponentLabel } from './DevComponentLabel'
 import { RouteActionsMenu } from './RouteActionsMenu'
 import { RouteCoverEditModal } from './RouteCoverEditModal'
 import { RouteMap } from './RouteMap'
+import { RouteWaypointComposerModal } from './RouteWaypointComposerModal'
 import { TripMapChromeButton } from './TripMapChromeButton'
 import {
   TripImportButton,
@@ -46,6 +61,11 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
   const [submitting, setSubmitting] = useState(false)
   const [coverEditOpen, setCoverEditOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [waypointComposerOpen, setWaypointComposerOpen] = useState(false)
+  const [waypointPickActive, setWaypointPickActive] = useState(false)
+  const [waypointPickBusy, setWaypointPickBusy] = useState(false)
+  const [editingWaypoint, setEditingWaypoint] = useState<RouteWaypoint | null>(null)
+  const [draftMapPosition, setDraftMapPosition] = useState<MapLngLat | null>(null)
 
   useEffect(() => {
     void useRoutesStore.getState().load()
@@ -143,6 +163,39 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
     routeId,
     autoMapCoverDelays,
   ])
+
+  const startWaypointPick = useCallback(() => {
+    setWaypointPickActive(true)
+  }, [])
+
+  const waypointPick = useMemo<MapWaypointPickConfig | null>(
+    () =>
+      waypointPickActive
+        ? {
+            phase: 'add',
+            busy: waypointPickBusy,
+            onCancel: () => {
+              setWaypointPickActive(false)
+            },
+            onConfirm: async (position) => {
+              setWaypointPickBusy(true)
+              try {
+                await store.addRouteWaypoint(routeId, {
+                  latitude: position.latitude,
+                  longitude: position.longitude,
+                })
+                toast.success('Waypoint added')
+                setWaypointPickActive(false)
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : 'Could not save waypoint')
+              } finally {
+                setWaypointPickBusy(false)
+              }
+            },
+          }
+        : null,
+    [routeId, store, waypointPickActive, waypointPickBusy],
+  )
 
   if (!store.booted || !route || !cover) {
     return (
@@ -242,6 +295,50 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
     }
   }
 
+  const openWaypointComposer = (waypoint: RouteWaypoint) => {
+    setEditingWaypoint(waypoint)
+    setDraftMapPosition({
+      latitude: waypoint.latitude,
+      longitude: waypoint.longitude,
+    })
+    setWaypointComposerOpen(true)
+  }
+
+  const closeWaypointComposer = () => {
+    setWaypointComposerOpen(false)
+    setEditingWaypoint(null)
+    setDraftMapPosition(null)
+  }
+
+  const handleDeleteWaypoint = async (waypointId: string) => {
+    if (!window.confirm('Delete this waypoint?')) return
+    try {
+      await store.deleteRouteWaypointById(waypointId)
+      toast.success('Waypoint deleted')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not delete waypoint')
+    }
+  }
+
+  const moveWaypoint = async (waypointId: string, direction: 'up' | 'down') => {
+    const index = waypoints.findIndex((waypoint) => waypoint.id === waypointId)
+    if (index === -1) return
+    const targetIndex = direction === 'up' ? index - 1 : index + 1
+    if (targetIndex < 0 || targetIndex >= waypoints.length) return
+
+    const orderedIds = waypoints.map((waypoint) => waypoint.id)
+    ;[orderedIds[index], orderedIds[targetIndex]] = [
+      orderedIds[targetIndex]!,
+      orderedIds[index]!,
+    ]
+
+    try {
+      await store.reorderRouteWaypoints(routeId, orderedIds)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not reorder waypoints')
+    }
+  }
+
   return (
     <main className="page-wrap px-3 pb-24 pt-4 sm:px-4 sm:pb-28">
       <DevComponentLabel name="RouteDetailPage" />
@@ -275,12 +372,18 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
             route={route}
             waypoints={waypoints}
             className="absolute inset-0 size-full rounded-none"
+            waypointPick={waypointPick ?? undefined}
+            onWaypointClick={(waypointId) => {
+              const waypoint = waypoints.find((item) => item.id === waypointId)
+              if (waypoint) openWaypointComposer(waypoint)
+            }}
             onInitialViewportSettled={handleInitialMapViewportSettled}
           />
 
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/35 to-transparent" />
 
-          <div className="pointer-events-none absolute left-3 top-3 z-10">
+          {!waypointPickActive ? (
+          <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col gap-2">
             <TripMapChromeButton
               label="Edit route cover"
               onClick={() => setCoverEditOpen(true)}
@@ -288,7 +391,14 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
             >
               <Pencil className="size-4" />
             </TripMapChromeButton>
+            <TripMapChromeButton
+              label="Add waypoint on map"
+              onClick={() => startWaypointPick()}
+            >
+              <MapPinPlus className="size-4" />
+            </TripMapChromeButton>
           </div>
+          ) : null}
         </div>
       </div>
 
@@ -302,44 +412,101 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
 
       <section className="space-y-4">
         <div className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] p-4 sm:p-5">
-          <h2 className="brand-title m-0 text-lg">Waypoints</h2>
-          <ol className="mt-3 space-y-3">
-            {waypoints.map((waypoint, index) => (
-              <li
-                key={waypoint.id}
-                className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] px-3 py-2.5"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
-                      {waypoint.name ?? `Waypoint ${index + 1}`}
-                    </p>
-                    {waypoint.description ? (
-                      <p className="mt-1 mb-0 text-sm text-[var(--sea-ink-soft)]">
-                        {waypoint.description}
-                      </p>
-                    ) : null}
-                    <p className="mt-1 mb-0 text-xs text-[var(--sea-ink-soft)]">
-                      {waypoint.latitude.toFixed(5)}, {waypoint.longitude.toFixed(5)}
-                    </p>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="brand-title m-0 text-lg">Waypoints</h2>
+            <button
+              type="button"
+              onClick={() => startWaypointPick()}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--btn-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--btn-text)]"
+            >
+              <Plus className="size-3.5" />
+              Add waypoint
+            </button>
+          </div>
+          {waypoints.length === 0 ? (
+            <p className="mt-3 mb-0 text-sm text-[var(--sea-ink-soft)]">
+              No waypoints yet. Add one manually or tap the map pin control above.
+            </p>
+          ) : (
+            <ol className="mt-3 space-y-3">
+              {waypoints.map((waypoint, index) => (
+                <li
+                  key={waypoint.id}
+                  className="rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] px-3 py-2.5"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <div className="flex shrink-0 flex-col gap-0.5 pt-0.5">
+                        <button
+                          type="button"
+                          aria-label="Move waypoint up"
+                          disabled={index === 0}
+                          onClick={() => void moveWaypoint(waypoint.id, 'up')}
+                          className="rounded p-0.5 text-[var(--sea-ink-soft)] disabled:opacity-30"
+                        >
+                          <ChevronUp className="size-4" />
+                        </button>
+                        <GripVertical className="mx-auto size-4 text-[var(--sea-ink-soft)]" />
+                        <button
+                          type="button"
+                          aria-label="Move waypoint down"
+                          disabled={index === waypoints.length - 1}
+                          onClick={() => void moveWaypoint(waypoint.id, 'down')}
+                          className="rounded p-0.5 text-[var(--sea-ink-soft)] disabled:opacity-30"
+                        >
+                          <ChevronDown className="size-4" />
+                        </button>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
+                          {waypoint.name ?? `Waypoint ${index + 1}`}
+                        </p>
+                        {waypoint.description ? (
+                          <p className="mt-1 mb-0 text-sm text-[var(--sea-ink-soft)]">
+                            {waypoint.description}
+                          </p>
+                        ) : null}
+                        <p className="mt-1 mb-0 text-xs text-[var(--sea-ink-soft)]">
+                          {waypoint.latitude.toFixed(5)}, {waypoint.longitude.toFixed(5)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-col gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openWaypointComposer(waypoint)}
+                        className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-2.5 py-1 text-xs font-semibold text-[var(--sea-ink)]"
+                      >
+                        <Pencil className="size-3.5" />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCommentWaypointId(waypoint.id)}
+                        className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-2.5 py-1 text-xs font-semibold text-[var(--sea-ink)]"
+                      >
+                        <MessageSquarePlus className="size-3.5" />
+                        Comment
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteWaypoint(waypoint.id)}
+                        className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-2.5 py-1 text-xs font-semibold text-[var(--brand)]"
+                      >
+                        <Trash2 className="size-3.5" />
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setCommentWaypointId(waypoint.id)}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--chip-line)] px-2.5 py-1 text-xs font-semibold text-[var(--sea-ink)]"
-                  >
-                    <MessageSquarePlus className="size-3.5" />
-                    Comment
-                  </button>
-                </div>
-                <WaypointComments
-                  annotations={annotations.filter(
-                    (annotation) => annotation.waypointId === waypoint.id,
-                  )}
-                />
-              </li>
-            ))}
-          </ol>
+                  <WaypointComments
+                    annotations={annotations.filter(
+                      (annotation) => annotation.waypointId === waypoint.id,
+                    )}
+                  />
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
 
         <div className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] p-4 sm:p-5">
@@ -398,6 +565,14 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
         onUseCurrentMap={() => void handleUseCurrentMapCover()}
         showUseCurrentMap={hasWaypoints}
         onRemoveCover={() => void handleRemoveCover()}
+      />
+
+      <RouteWaypointComposerModal
+        open={waypointComposerOpen && editingWaypoint !== null}
+        routeId={routeId}
+        waypoint={editingWaypoint}
+        initialPosition={draftMapPosition}
+        onClose={closeWaypointComposer}
       />
     </main>
   )
@@ -528,6 +703,16 @@ export function RoutesListPage() {
     void navigate({ to: '/routes/$routeId', params: { routeId } })
   }
 
+  const handleCreateRoute = async () => {
+    try {
+      const route = await store.createRoute()
+      openRoute(route.id)
+      toast.success('Route created')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not create route')
+    }
+  }
+
   return (
     <main className="page-wrap px-3 pb-24 pt-4 sm:px-4 sm:pb-28">
       <DevComponentLabel name="RoutesListPage" />
@@ -545,13 +730,23 @@ export function RoutesListPage() {
             Trips
           </Link>
         </div>
-        <TripImportButton
-          ref={importRef}
-          onRouteImported={(routeId) => openRoute(routeId)}
-          onImported={(tripId) => {
-            void navigate({ to: '/trips/$tripId', params: { tripId } })
-          }}
-        />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleCreateRoute()}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--btn-bg)] px-3 py-2 text-sm font-semibold text-[var(--btn-text)]"
+          >
+            <Plus className="size-4" />
+            New route
+          </button>
+          <TripImportButton
+            ref={importRef}
+            onRouteImported={(routeId) => openRoute(routeId)}
+            onImported={(tripId) => {
+              void navigate({ to: '/trips/$tripId', params: { tripId } })
+            }}
+          />
+        </div>
       </div>
 
       <p className="mb-6 text-sm text-[var(--sea-ink-soft)]">
@@ -567,8 +762,16 @@ export function RoutesListPage() {
           </div>
           <h3 className="m-0 text-lg font-bold text-[var(--sea-ink)]">No routes yet</h3>
           <p className="mx-auto mt-2 max-w-lg text-sm leading-7 text-[var(--sea-ink-soft)]">
-            Import a GPX file with waypoints or a planned route to create your first route.
+            Create a route and add waypoints on the map, or import a GPX file with a planned path.
           </p>
+          <button
+            type="button"
+            onClick={() => void handleCreateRoute()}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)]"
+          >
+            <Plus className="size-4" />
+            New route
+          </button>
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

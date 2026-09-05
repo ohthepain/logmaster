@@ -8,8 +8,11 @@ import {
   routeWaypointsForRoute,
   useRoutesStore,
 } from '../stores/routes'
+import { useLogbookStore } from '../stores/logbook'
+import { tripDisplayName } from '../lib/trip-display'
 import { AppIconButtonTooltip } from './AppIconButtonTooltip'
 import { Modal } from './Modal'
+import { RouteSourceCopyModal, RouteTripCopyModal } from './RouteCopyModals'
 
 type RouteActionsMenuProps = {
   route: Route
@@ -31,9 +34,13 @@ export function RouteActionsMenu({
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [copyTripOpen, setCopyTripOpen] = useState(false)
+  const [copyRouteOpen, setCopyRouteOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
   const storeWaypoints = useRoutesStore((state) => state.waypoints)
+  const routes = useRoutesStore((state) => state.routes)
+  const trips = useLogbookStore((state) => state.trips)
   const waypoints =
     waypointsProp ?? routeWaypointsForRoute(route.id, storeWaypoints)
   const displayName = route.title.trim() || 'Route'
@@ -101,6 +108,33 @@ export function RouteActionsMenu({
     }
   }
 
+  const handleCopyToTrip = (tripId: string) => {
+    void runAction(async () => {
+      const count = await useLogbookStore.getState().importRouteWaypointsToTrip(route.id, tripId)
+      const trip = useLogbookStore.getState().trips.find((item) => item.id === tripId)
+      if (count === 0) {
+        toast.message('All waypoints already exist on that trip')
+      } else {
+        toast.success(
+          `Added ${count} waypoint${count === 1 ? '' : 's'} to ${trip ? tripDisplayName(trip) : 'trip'}`,
+        )
+      }
+      setCopyTripOpen(false)
+    })
+  }
+
+  const handleCopyFromRoute = (sourceRouteId: string) => {
+    void runAction(async () => {
+      const copied = await useRoutesStore
+        .getState()
+        .copyWaypointsFromRoute(route.id, sourceRouteId)
+      toast.success(
+        `Copied ${copied.length} waypoint${copied.length === 1 ? '' : 's'} from route`,
+      )
+      setCopyRouteOpen(false)
+    })
+  }
+
   return (
     <>
       <div className={cn('relative', className)} ref={rootRef}>
@@ -137,6 +171,30 @@ export function RouteActionsMenu({
             )}
             onClick={(event) => event.stopPropagation()}
           >
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy || waypoints.length === 0}
+              onClick={() => {
+                setOpen(false)
+                setCopyTripOpen(true)
+              }}
+              className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
+            >
+              Add to trip…
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              onClick={() => {
+                setOpen(false)
+                setCopyRouteOpen(true)
+              }}
+              className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
+            >
+              Copy waypoints from route…
+            </button>
             <button
               type="button"
               role="menuitem"
@@ -210,6 +268,25 @@ export function RouteActionsMenu({
           </div>
         </Modal>
       ) : null}
+
+      <RouteTripCopyModal
+        open={copyTripOpen}
+        routeTitle={displayName}
+        trips={trips}
+        busy={busy}
+        onClose={() => setCopyTripOpen(false)}
+        onSelect={handleCopyToTrip}
+      />
+
+      <RouteSourceCopyModal
+        open={copyRouteOpen}
+        targetRouteTitle={displayName}
+        routes={routes}
+        currentRouteId={route.id}
+        busy={busy}
+        onClose={() => setCopyRouteOpen(false)}
+        onSelect={handleCopyFromRoute}
+      />
     </>
   )
 }

@@ -1,6 +1,7 @@
 import type { LogEntry, LogEntryType, WeatherSnapshot } from '../domain/logbook'
 import { LOG_ENTRY_TYPES } from '../domain/logbook'
 import type { SignalKDelta } from './signalk-export'
+import { isTripWaypointEntry } from './trip-waypoint-entry'
 
 export const SIGNALK_LOG_ENTRY_PATH = 'logmaster.logEntry'
 export const SIGNALK_WAYPOINTS_PATH = 'navigation.course.waypoints'
@@ -67,10 +68,7 @@ export function waypointFromLogEntry(entry: LogEntry): SignalKWaypointExport | n
 
   const data = entry.data
   const place = isRecord(data?.place) ? data.place : null
-  const isWaypoint =
-    data?.gpxWaypoint === true ||
-    data?.signalkWaypoint === true ||
-    place != null
+  const isWaypoint = isTripWaypointEntry(data) || place != null
 
   if (!isWaypoint && entry.type !== 'NOTE') return null
   if (!isWaypoint) return null

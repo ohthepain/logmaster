@@ -1,3 +1,5 @@
+import { isTripWaypointEntry as isManualOrImportedTripWaypoint } from './trip-waypoint-entry'
+
 export const ROUTE_MAP_ICON_KINDS = [
   'waypoint',
   'waypoint-start',
@@ -19,5 +21,5 @@ export function routeWaypointIconKind(index: number, total: number): RouteMapIco
 }
 
 export function isTripWaypointEntry(data: Record<string, unknown> | null | undefined) {
-  return data?.gpxWaypoint === true || data?.signalkWaypoint === true
+  return isManualOrImportedTripWaypoint(data)
 }

@@ -11,6 +11,9 @@ import { TripCrewPickerModal } from "./TripCrewPickerModal";
 import { TripCoverEditModal } from "./TripCoverEditModal";
 import { TripDetailHero } from "./TripDetailHero";
 import type { CompletedTripPanel } from "./TripDetailHero";
+import type { MapWaypointPickConfig } from "../lib/map-waypoint-pick";
+import { isWaypointMapInteractionActive } from "../lib/map-waypoint-pick";
+import { tripWaypointEntries } from "../lib/trip-waypoint-entry";
 import type { TripMapHandle } from "../lib/trip-map-handle";
 import { TripDetailBottomSheet } from "./TripDetailBottomSheet";
 import { TripRecordButton } from "./TripRecordButton";
@@ -64,6 +67,11 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [coverEditOpen, setCoverEditOpen] = useState(false);
   const [replayOpen, setReplayOpen] = useState(false);
+  const [waypointMapPhase, setWaypointMapPhase] = useState<
+    "idle" | "add" | "edit-select" | "edit-center" | "edit-pick"
+  >("idle");
+  const [editingWaypointEntryId, setEditingWaypointEntryId] = useState<string | null>(null);
+  const [waypointPickBusy, setWaypointPickBusy] = useState(false);
   const [completedTripPanel, setCompletedTripPanel] = useState<CompletedTripPanel>("map");
   const liveActivityStartHandledRef = useRef(false);
 
@@ -311,6 +319,133 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
       autoMapCoverAttemptedRef.current = null;
     }
   }, [trip?.status, tripId]);
+
+  const startWaypointPick = useCallback(() => {
+    setEditingWaypointEntryId(null);
+    setWaypointMapPhase("add");
+  }, []);
+
+  const startWaypointEdit = useCallback(() => {
+    const waypoints = tripWaypointEntries(
+      store.entries.filter((entry) => entry.tripId === tripId && !entry.deleted),
+    );
+    if (waypoints.length === 0) {
+      toast.message("No waypoints to edit yet");
+      return;
+    }
+    setEditingWaypointEntryId(null);
+    setWaypointMapPhase("edit-select");
+  }, [store.entries, tripId]);
+
+  const waypointPick = useMemo<MapWaypointPickConfig | null>(() => {
+    if (waypointMapPhase === "idle") return null;
+
+    if (waypointMapPhase === "add") {
+      return {
+        phase: "add",
+        busy: waypointPickBusy,
+        onCancel: () => {
+          setWaypointMapPhase("idle");
+        },
+        onConfirm: async (position) => {
+          setWaypointPickBusy(true);
+          try {
+            const entry = await useLogbookStore.getState().addTripWaypoint(tripId, {
+              latitude: position.latitude,
+              longitude: position.longitude,
+            });
+            if (!entry) {
+              throw new Error("Could not save waypoint");
+            }
+            toast.success("Waypoint added");
+            setWaypointMapPhase("idle");
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Could not save waypoint");
+          } finally {
+            setWaypointPickBusy(false);
+          }
+        },
+      };
+    }
+
+    if (waypointMapPhase === "edit-select") {
+      return {
+        phase: "edit-select",
+        onCancel: () => {
+          setWaypointMapPhase("idle");
+        },
+        onSelectEntry: (entryId) => {
+          setEditingWaypointEntryId(entryId);
+          setWaypointMapPhase("edit-center");
+        },
+      };
+    }
+
+    if (waypointMapPhase === "edit-center" && editingWaypointEntryId) {
+      return {
+        phase: "edit-center",
+        editingEntryId: editingWaypointEntryId,
+        onCancel: () => {
+          setEditingWaypointEntryId(null);
+          setWaypointMapPhase("edit-select");
+        },
+        onCentered: () => {
+          setWaypointMapPhase("edit-pick");
+        },
+      };
+    }
+
+    if (waypointMapPhase === "edit-pick" && editingWaypointEntryId) {
+      return {
+        phase: "edit-pick",
+        editingEntryId: editingWaypointEntryId,
+        busy: waypointPickBusy,
+        onCancel: () => {
+          setEditingWaypointEntryId(null);
+          setWaypointMapPhase("edit-select");
+        },
+        onConfirm: async (position) => {
+          setWaypointPickBusy(true);
+          try {
+            await useLogbookStore.getState().updateEntry(editingWaypointEntryId, {
+              latitude: position.latitude,
+              longitude: position.longitude,
+            });
+            toast.success("Waypoint moved");
+            setEditingWaypointEntryId(null);
+            setWaypointMapPhase("edit-select");
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Could not move waypoint");
+          } finally {
+            setWaypointPickBusy(false);
+          }
+        },
+        onDelete: async () => {
+          if (!window.confirm("Delete this waypoint?")) return;
+          setWaypointPickBusy(true);
+          try {
+            await useLogbookStore.getState().deleteEntry(editingWaypointEntryId);
+            toast.success("Waypoint deleted");
+            setEditingWaypointEntryId(null);
+            setWaypointMapPhase("edit-select");
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Could not delete waypoint");
+          } finally {
+            setWaypointPickBusy(false);
+          }
+        },
+      };
+    }
+
+    return null;
+  }, [
+    editingWaypointEntryId,
+    tripId,
+    waypointMapPhase,
+    waypointPickBusy,
+  ]);
+
+  const waypointMapInteractionActive = isWaypointMapInteractionActive(waypointPick);
 
   if (!store.booted) {
     return (
@@ -601,6 +736,9 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
           onLogEntryClick={
             trip.status === "IN_PROGRESS" ? () => setCreateEntryOpen(true) : undefined
           }
+          onAddWaypointClick={() => startWaypointPick()}
+          onEditWaypointsClick={() => startWaypointEdit()}
+          waypointPick={waypointPick ?? undefined}
           onReplayTestClick={
             trip.status === "COMPLETED" && devMode && isDevModeAvailable()
               ? () => setReplayOpen(true)
@@ -608,7 +746,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
           }
         />
 
-        {trip.status !== "COMPLETED" ? <TripDetailBottomSheet
+        {trip.status !== "COMPLETED" && !waypointMapInteractionActive ? <TripDetailBottomSheet
           leadingAction={
             trip.status === "IN_PROGRESS" ? (
               <TripRecordButton
@@ -688,7 +826,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
           </div>
         </TripDetailBottomSheet> : null}
 
-        {trip.status === "COMPLETED" && completedTripPanel === "log" ? (
+        {trip.status === "COMPLETED" && completedTripPanel === "log" && !waypointMapInteractionActive ? (
           <TripDetailBottomSheet>
             <TripLegSection
               tripId={trip.id}

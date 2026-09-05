@@ -2,10 +2,11 @@ import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { LogEntry, Leg, Trip, Media } from "../domain/logbook";
+import type { RouteWaypoint } from "../domain/route";
 import type { TripTrack } from "../domain/trip-track";
 import { DEV_FALLBACK_POSITION, setDevPositionOverride, subscribeToDevicePosition } from "../lib/logbook-context";
 import { isDevModeAvailable } from "../lib/dev-mode";
-import { buildLegEntryPointsGeoJson, buildLegTrackGeoJson, mapBrandColor, mapPointsToBounds, resolveTripLogMapViewport, tripStartMapPoint } from "../lib/logbook-map-geo";
+import { buildLegEntryPointsGeoJson, buildLegTrackGeoJson, buildLegTrackGeoJsonWithWaypointDraft, mapBrandColor, mapPointsToBounds, resolveTripLogMapViewport, tripStartMapPoint, withEntryMapPositionOverride } from "../lib/logbook-map-geo";
 import { createCurrentPositionMarkerElement } from "../lib/map-current-position-marker";
 import {
   createBoatMapMarkerElementForIconId,
@@ -37,6 +38,7 @@ import {
   juiceMapFocus,
   SAILING_MAP_INITIAL_ZOOM,
   SAILING_MAP_LOCATE_ZOOM,
+  SAILING_MAP_FOCUS_ZOOM,
 } from "../lib/sailing-map-viewport";
 import { captureMaplibreSnapshot, withCaptureTimeout } from "../lib/map-cover-capture";
 import type { TripMapHandle } from "../lib/trip-map-handle";
@@ -47,9 +49,20 @@ import {
 import { mapTilerTransformRequest } from "../lib/tiles";
 import { cn } from "../lib/cn";
 import { getNativePlatform } from "../lib/platform";
+import type { MapWaypointPickConfig } from "../lib/map-waypoint-pick";
+import {
+  isWaypointCenterPickActive,
+  isWaypointEditSelectActive,
+  isWaypointMapInteractionActive,
+} from "../lib/map-waypoint-pick";
+import { isTripWaypointEntry, tripWaypointEntries } from "../lib/trip-waypoint-entry";
+import { useMapCenterPosition } from "../lib/use-map-center-position";
+import { useMapCenterAnchoredZoom } from "../lib/use-map-center-anchored-zoom";
 import { useAppOptionsStore } from "../stores/app-options";
 import { useLogbookStore } from "../stores/logbook";
 import { DevComponentLabel } from "./DevComponentLabel";
+import { WaypointCenterPickOverlay } from "./WaypointCenterPickOverlay";
+import { WaypointEditSelectOverlay } from "./WaypointEditSelectOverlay";
 import { TripAppleMapKit  } from "./TripAppleMapKit";
 import { SailingMapControlStack } from "./SailingMapControlStack";
 import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
@@ -57,8 +70,21 @@ import { SailingMapLayerPanel } from "./SailingMapLayerPanel";
 import type { TripPlaybackPosition } from "../lib/trip-playback";
 import { LogEntryMapMarkerHoverTarget } from "./LogEntryMapMarkerHoverTarget";
 import type { MapEntryPreviewState } from "./LogEntryMapMarkerHoverTarget";
+import {
+  buildRouteLineGeoJson,
+  buildRouteWaypointPointsGeoJson,
+} from "../lib/route-map-geo";
+import {
+  addRouteWaypointSymbolLayer,
+  routeLinePaint,
+  syncRouteMapMarkerImages,
+} from "../lib/route-map-icons";
 
 const ENTRY_LAYER = "trip-log-entry-icons";
+const PLANNED_LINE_SOURCE = "trip-planned-route-line";
+const PLANNED_WAYPOINT_SOURCE = "trip-planned-route-waypoints";
+const PLANNED_LINE_LAYER = "trip-planned-route-line-layer";
+const PLANNED_WAYPOINT_LAYER = "trip-planned-route-waypoint-icons";
 
 type TripLogMapProps = {
   trip: Trip;
@@ -82,6 +108,8 @@ type TripLogMapProps = {
   /** True while completed-trip replay is actively playing. */
   playbackPlaying?: boolean;
   boatIconId?: string | null;
+  plannedRouteWaypoints?: RouteWaypoint[];
+  waypointPick?: MapWaypointPickConfig;
   onInitialViewportSettled?: () => void;
 };
 
@@ -142,6 +170,8 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
   playbackMode = false,
   playbackPlaying = false,
   boatIconId = null,
+  plannedRouteWaypoints = [],
+  waypointPick,
   onInitialViewportSettled,
   }: TripLogMapProps,
   ref,
@@ -149,6 +179,8 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const onEntrySelectRef = useRef(onEntrySelect);
+  const waypointPickRef = useRef(waypointPick);
+  const entriesRef = useRef(entries);
   const currentPositionMarkerRef = useRef<maplibregl.Marker | null>(null);
   const liveBoatMarkerRef = useRef<maplibregl.Marker | null>(null);
   const playbackBoatMarkerRef = useRef<maplibregl.Marker | null>(null);
@@ -170,6 +202,11 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
   const [currentPosition, setCurrentPosition] = useState<LngLat | null>(null);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [hoveredEntry, setHoveredEntry] = useState<MapEntryPreviewState | null>(null);
+  const waypointMapInteractionActive = isWaypointMapInteractionActive(waypointPick);
+  const waypointCenterPickActive = isWaypointCenterPickActive(waypointPick);
+  const waypointEditSelectActive = isWaypointEditSelectActive(waypointPick);
+  const pickCenterPosition = useMapCenterPosition(mapRef, mapReady, waypointCenterPickActive);
+  useMapCenterAnchoredZoom(mapRef, mapReady, waypointCenterPickActive);
 
   const entriesById = useMemo(
     () => new Map(entries.map((entry) => [entry.id, entry])),
@@ -193,12 +230,69 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
     () => buildLegTrackGeoJson(entries, legs, tracks),
     [entries, legs, tracks],
   );
+  const editingWaypointEntryId =
+    waypointPick?.phase === "edit-pick" ? waypointPick.editingEntryId : null;
+  const displayedTrackGeoJson = useMemo(() => {
+    if (!editingWaypointEntryId || !pickCenterPosition) {
+      return legTrackGeoJson;
+    }
+    return buildLegTrackGeoJsonWithWaypointDraft(
+      entries,
+      legs,
+      tracks,
+      editingWaypointEntryId,
+      pickCenterPosition,
+    );
+  }, [
+    editingWaypointEntryId,
+    pickCenterPosition,
+    entries,
+    legs,
+    tracks,
+    legTrackGeoJson,
+  ]);
   const legEntryGeoJson = useMemo(
     () =>
       buildLegEntryPointsGeoJson(entries, legs, {
         entryLayerToggles: mapLogEntryLayerToggles,
       }),
     [entries, legs, mapLogEntryLayerToggles],
+  );
+  const waypointPickEntryGeoJson = useMemo(
+    () => buildLegEntryPointsGeoJson(tripWaypointEntries(entries), legs),
+    [entries, legs],
+  );
+  const displayedEntryGeoJson = useMemo(() => {
+    if (!waypointMapInteractionActive) return legEntryGeoJson;
+
+    if (editingWaypointEntryId && pickCenterPosition) {
+      const waypoints = withEntryMapPositionOverride(
+        tripWaypointEntries(entries),
+        editingWaypointEntryId,
+        pickCenterPosition,
+      );
+      return buildLegEntryPointsGeoJson(waypoints, legs, {
+        activeWaypointEntryId: editingWaypointEntryId,
+      });
+    }
+
+    return waypointPickEntryGeoJson;
+  }, [
+    waypointMapInteractionActive,
+    waypointPickEntryGeoJson,
+    legEntryGeoJson,
+    editingWaypointEntryId,
+    pickCenterPosition,
+    entries,
+    legs,
+  ]);
+  const plannedLineGeoJson = useMemo(
+    () => buildRouteLineGeoJson(plannedRouteWaypoints),
+    [plannedRouteWaypoints],
+  );
+  const plannedWaypointGeoJson = useMemo(
+    () => buildRouteWaypointPointsGeoJson(plannedRouteWaypoints),
+    [plannedRouteWaypoints],
   );
   const viewportTarget = useMemo(
     () => resolveTripLogMapViewport(trip, entries, { focusEntryId, tracks }),
@@ -250,6 +344,14 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
   useEffect(() => {
     onEntrySelectRef.current = onEntrySelect;
   }, [onEntrySelect]);
+
+  useEffect(() => {
+    waypointPickRef.current = waypointPick;
+  }, [waypointPick]);
+
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
 
   useEffect(() => {
     if (!showCurrentPosition) {
@@ -338,10 +440,38 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
           });
           addLogEntrySymbolLayer(map, ENTRY_SOURCE, ENTRY_LAYER, selectedEntryId);
 
+          map.addSource(PLANNED_LINE_SOURCE, {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+          });
+          map.addLayer({
+            id: PLANNED_LINE_LAYER,
+            type: "line",
+            source: PLANNED_LINE_SOURCE,
+            paint: routeLinePaint,
+          });
+          map.addSource(PLANNED_WAYPOINT_SOURCE, {
+            type: "geojson",
+            data: { type: "FeatureCollection", features: [] },
+          });
+          addRouteWaypointSymbolLayer(
+            map,
+            PLANNED_WAYPOINT_SOURCE,
+            PLANNED_WAYPOINT_LAYER,
+          );
+
           map.on("click", ENTRY_LAYER, (event) => {
             const entryId = event.features?.[0]?.properties?.entryId;
             if (typeof entryId !== "string" || !entryId) return;
             setHoveredEntry(null);
+            const pick = waypointPickRef.current;
+            if (pick?.phase === "edit-select") {
+              const entry = entriesRef.current.find((item) => item.id === entryId);
+              if (entry && isTripWaypointEntry(entry.data)) {
+                pick.onSelectEntry(entryId);
+              }
+              return;
+            }
             onEntrySelectRef.current?.(entryId);
           });
           map.on("mouseenter", ENTRY_LAYER, (event) => {
@@ -457,13 +587,13 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
     const currentSource = getGeoJsonSource(map, CURRENT_SOURCE);
     if (!trackSource || !currentSource) return;
 
-    trackSource.setData(legTrackGeoJson);
+    trackSource.setData(displayedTrackGeoJson);
 
     currentSource.setData({
       type: "FeatureCollection",
       features: [],
     });
-  }, [mapReady, legTrackGeoJson]);
+  }, [mapReady, displayedTrackGeoJson]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -473,15 +603,36 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
     if (!entrySource) return;
 
     let cancelled = false;
-    void syncLogEntryMapMarkerImages(map, legEntryGeoJson).then(() => {
+    void syncLogEntryMapMarkerImages(map, displayedEntryGeoJson).then(() => {
       if (cancelled) return;
-      entrySource.setData(legEntryGeoJson);
+      entrySource.setData(displayedEntryGeoJson);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [mapReady, legEntryGeoJson]);
+  }, [mapReady, displayedEntryGeoJson]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+
+    const lineSource = getGeoJsonSource(map, PLANNED_LINE_SOURCE);
+    if (lineSource) lineSource.setData(plannedLineGeoJson);
+
+    const waypointSource = getGeoJsonSource(map, PLANNED_WAYPOINT_SOURCE);
+    if (!waypointSource) return;
+
+    let cancelled = false;
+    void syncRouteMapMarkerImages(map, plannedWaypointGeoJson).then(() => {
+      if (cancelled) return;
+      waypointSource.setData(plannedWaypointGeoJson);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mapReady, plannedLineGeoJson, plannedWaypointGeoJson]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -665,6 +816,57 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
     settleInitialViewport,
   ]);
 
+  const editCenterTargetRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (waypointPick?.phase !== "edit-center") {
+      editCenterTargetRef.current = null;
+      return;
+    }
+
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    if (editCenterTargetRef.current === waypointPick.editingEntryId) return;
+
+    const entry = entries.find((item) => item.id === waypointPick.editingEntryId);
+    if (
+      entry?.latitude == null ||
+      entry.longitude == null ||
+      !Number.isFinite(entry.latitude) ||
+      !Number.isFinite(entry.longitude)
+    ) {
+      waypointPick.onCentered();
+      return;
+    }
+
+    editCenterTargetRef.current = waypointPick.editingEntryId;
+    const target = { latitude: entry.latitude, longitude: entry.longitude };
+    const finishCenter = () => {
+      waypointPick.onCentered();
+    };
+
+    const center = map.getCenter();
+    const lngDiff = Math.abs(center.lng - target.longitude);
+    const latDiff = Math.abs(center.lat - target.latitude);
+    const zoomDiff = Math.abs(map.getZoom() - SAILING_MAP_FOCUS_ZOOM);
+    if (lngDiff < 1e-5 && latDiff < 1e-5 && zoomDiff < 0.05) {
+      finishCenter();
+      return;
+    }
+
+    const onMoveEnd = () => {
+      map.off("moveend", onMoveEnd);
+      finishCenter();
+    };
+
+    map.once("moveend", onMoveEnd);
+    centerMapOnPoint(map, target, SAILING_MAP_FOCUS_ZOOM);
+
+    return () => {
+      map.off("moveend", onMoveEnd);
+    };
+  }, [entries, mapReady, waypointPick]);
+
   const handleZoomIn = useCallback(() => {
     mapRef.current?.zoomIn({ duration: 200 });
   }, []);
@@ -683,7 +885,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
         <DevComponentLabel name="TripLogMap" className="absolute left-2 top-2 z-10" />
       ) : null}
       <div ref={containerRef} className={cn("sailing-map", mapClassName)} />
-      {hoveredEntryRecord && hoveredEntry ? (
+      {hoveredEntryRecord && hoveredEntry && !waypointMapInteractionActive ? (
         <LogEntryMapMarkerHoverTarget
           entry={hoveredEntryRecord}
           media={mediaByEntry?.get(hoveredEntryRecord.id) ?? []}
@@ -693,7 +895,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
           onMediaClick={(entryId) => onEntrySelectRef.current?.(entryId)}
         />
       ) : null}
-      {mapReady && showControls ? (
+      {mapReady && showControls && !waypointMapInteractionActive ? (
         <>
           <SailingMapControlStack
             className={cn(
@@ -719,7 +921,24 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
           />
         </>
       ) : null}
-      {mapReady && devDraggablePosition ? (
+      {waypointEditSelectActive && waypointPick?.phase === "edit-select" ? (
+        <WaypointEditSelectOverlay onCancel={waypointPick.onCancel} />
+      ) : null}
+      {waypointCenterPickActive && waypointPick ? (
+        <WaypointCenterPickOverlay
+          position={pickCenterPosition}
+          busy={waypointPick.busy}
+          onCancel={waypointPick.onCancel}
+          confirmLabel={waypointPick.phase === "edit-pick" ? "Save waypoint position" : "Add waypoint"}
+          hideCenterMarker={waypointPick.phase === "edit-pick"}
+          onDelete={waypointPick.phase === "edit-pick" ? waypointPick.onDelete : undefined}
+          onConfirm={() => {
+            if (!pickCenterPosition) return;
+            waypointPick.onConfirm(pickCenterPosition);
+          }}
+        />
+      ) : null}
+      {mapReady && devDraggablePosition && !waypointMapInteractionActive ? (
         <p
           className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full px-2.5 py-1 text-[10px] font-medium shadow-sm"
           style={{
@@ -761,6 +980,8 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
           allowFullscreen={false}
           playbackPosition={playbackPosition}
           playbackMode={playbackMode}
+          plannedRouteWaypoints={plannedRouteWaypoints}
+          waypointPick={waypointPick}
         />
       </SailingMapFullscreenModal>
     ) : null;

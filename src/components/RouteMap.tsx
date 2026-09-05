@@ -43,6 +43,13 @@ import {
   SAILING_MAP_FOCUS_ZOOM,
   SAILING_MAP_INITIAL_ZOOM,
 } from '../lib/sailing-map-viewport'
+import type { MapWaypointPickConfig } from '../lib/map-waypoint-pick'
+import {
+  isWaypointCenterPickActive,
+  isWaypointMapInteractionActive,
+} from '../lib/map-waypoint-pick'
+import { useMapCenterPosition } from '../lib/use-map-center-position'
+import { useMapCenterAnchoredZoom } from '../lib/use-map-center-anchored-zoom'
 import { mapTilerTransformRequest } from '../lib/tiles'
 import type { TripMapHandle } from '../lib/trip-map-handle'
 import { getNativePlatform } from '../lib/platform'
@@ -60,6 +67,7 @@ import { cn } from '../lib/cn'
 import { SailingMapControlStack } from './SailingMapControlStack'
 import { SailingMapFullscreenModal } from './SailingMapFullscreenModal'
 import { SailingMapLayerPanel } from './SailingMapLayerPanel'
+import { WaypointCenterPickOverlay } from './WaypointCenterPickOverlay'
 
 const LINE_SOURCE = 'route-line'
 const WAYPOINT_SOURCE = 'route-waypoints'
@@ -72,7 +80,11 @@ type RouteMapProps = {
   className?: string
   showControls?: boolean
   allowFullscreen?: boolean
+  editMode?: boolean
+  waypointPick?: MapWaypointPickConfig
   onInitialViewportSettled?: () => void
+  onMapClick?: (position: { latitude: number; longitude: number }) => void
+  onWaypointClick?: (waypointId: string) => void
 }
 
 export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(function RouteMap(
@@ -82,7 +94,11 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(function RouteM
     className = 'h-56 w-full sm:h-72',
     showControls = true,
     allowFullscreen = true,
+    editMode = false,
+    waypointPick,
     onInitialViewportSettled,
+    onMapClick,
+    onWaypointClick,
   },
   ref,
 ) {
@@ -112,6 +128,26 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(function RouteM
     () => ({ enabled: aisEnabled, online }),
     [aisEnabled, online],
   )
+
+  const onMapClickRef = useRef(onMapClick)
+  const onWaypointClickRef = useRef(onWaypointClick)
+  const editModeRef = useRef(editMode)
+  const waypointMapInteractionActive = isWaypointMapInteractionActive(waypointPick)
+  const waypointCenterPickActive = isWaypointCenterPickActive(waypointPick)
+  const pickCenterPosition = useMapCenterPosition(mapRef, mapReady, waypointCenterPickActive)
+  useMapCenterAnchoredZoom(mapRef, mapReady, waypointCenterPickActive)
+
+  useEffect(() => {
+    onMapClickRef.current = onMapClick
+  }, [onMapClick])
+
+  useEffect(() => {
+    onWaypointClickRef.current = onWaypointClick
+  }, [onWaypointClick])
+
+  useEffect(() => {
+    editModeRef.current = editMode
+  }, [editMode])
 
   const lineGeoJson = useMemo(() => buildRouteLineGeoJson(waypoints), [waypoints])
   const waypointGeoJson = useMemo(
@@ -222,6 +258,26 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(function RouteM
           })
           addRouteWaypointSymbolLayer(map, WAYPOINT_SOURCE, WAYPOINT_LAYER)
 
+          map.on('click', WAYPOINT_LAYER, (event) => {
+            const feature = event.features?.[0]
+            const waypointId = feature?.properties?.waypointId
+            if (typeof waypointId === 'string') {
+              onWaypointClickRef.current?.(waypointId)
+            }
+          })
+
+          map.on('click', (event) => {
+            if (!editModeRef.current || !event.lngLat || !map) return
+            const hits = map.queryRenderedFeatures(event.point, {
+              layers: [WAYPOINT_LAYER],
+            })
+            if (hits.length > 0) return
+            onMapClickRef.current?.({
+              latitude: event.lngLat.lat,
+              longitude: event.lngLat.lng,
+            })
+          })
+
           finalizeSailingMapLayers(map)
           scheduleSeamarkTileRefresh(map)
           unbindSeamarkRefresh = bindSeamarkTileRefreshOnViewChange(map)
@@ -251,6 +307,12 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(function RouteM
       setMapReady(false)
     }
   }, [])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !mapReady) return
+    map.getCanvas().style.cursor = editMode ? 'crosshair' : ''
+  }, [editMode, mapReady])
 
   useEffect(() => {
     const container = containerRef.current
@@ -334,7 +396,7 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(function RouteM
           className="sailing-map absolute inset-0 size-full"
           aria-label={`Map for ${route.title}`}
         />
-        {showControls ? (
+        {showControls && !waypointMapInteractionActive ? (
           <SailingMapControlStack
             onZoomIn={() => mapRef.current?.zoomIn({ duration: 200 })}
             onZoomOut={() => mapRef.current?.zoomOut({ duration: 200 })}
@@ -352,6 +414,17 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(function RouteM
             onExpand={allowFullscreen ? () => setMapFullscreenOpen(true) : undefined}
           />
         ) : null}
+        {waypointCenterPickActive && waypointPick?.phase === 'add' ? (
+          <WaypointCenterPickOverlay
+            position={pickCenterPosition}
+            busy={waypointPick.busy}
+            onCancel={waypointPick.onCancel}
+            onConfirm={() => {
+              if (!pickCenterPosition) return
+              waypointPick.onConfirm(pickCenterPosition)
+            }}
+          />
+        ) : null}
       </div>
 
       {mapFullscreenOpen ? (
@@ -362,6 +435,10 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(function RouteM
             className="absolute inset-0 size-full rounded-none"
             showControls
             allowFullscreen={false}
+            editMode={editMode}
+            waypointPick={waypointPick}
+            onMapClick={onMapClick}
+            onWaypointClick={onWaypointClick}
           />
         </SailingMapFullscreenModal>
       ) : null}
