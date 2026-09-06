@@ -63,3 +63,32 @@ export function tripWaypointEntries(entries: LogEntry[]): LogEntry[] {
     (entry) => !entry.deleted && isTripWaypointEntry(entry.data),
   )
 }
+
+export function tripWaypointNameFromEntry(
+  entry: Pick<LogEntry, 'data'>,
+): string {
+  const raw = entry.data?.place
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return ''
+  const name = (raw as { name?: unknown }).name
+  return typeof name === 'string' ? name.trim() : ''
+}
+
+export function withTripWaypointName(
+  data: Record<string, unknown> | null | undefined,
+  name: string | null | undefined,
+): Record<string, unknown> {
+  const next = { ...(data ?? {}), waypoint: true, source: 'manual' }
+  const trimmed = name?.trim() || ''
+  if (trimmed) {
+    next.place = {
+      name: trimmed,
+      detail: null,
+      kind: 'waypoint',
+      source: 'manual',
+      distanceM: 0,
+    }
+  } else {
+    delete next.place
+  }
+  return next
+}

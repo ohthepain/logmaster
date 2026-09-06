@@ -52,6 +52,7 @@ import { GpxImportError, partitionGpxImportFiles, type GpxImportFile } from '../
 import { SignalKImportError } from '../lib/signalk-import'
 import {
   buildTripWaypointEntryInput,
+  isTripWaypointEntry,
   type TripWaypointInput,
 } from '../lib/trip-waypoint-entry'
 import { routeWaypointsToTripEntries } from '../lib/route-waypoint-ops'
@@ -138,6 +139,9 @@ type UpdateTripInput = Partial<
     | 'engineOn'
     | 'moored'
     | 'anchorDown'
+    | 'storyHtml'
+    | 'storyShareToken'
+    | 'storyUpdatedAt'
   >
 >
 
@@ -785,7 +789,12 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     let data =
       patch.data !== undefined ? patch.data : (current.data ?? null)
 
-    if (positionChanged) {
+    const skipPlaceLookup =
+      isTripWaypointEntry(current.data) &&
+      patch.data !== undefined &&
+      isTripWaypointEntry(patch.data)
+
+    if (positionChanged && !skipPlaceLookup) {
       data = await attachPlaceToEntryData(data, latitude, longitude)
     }
 

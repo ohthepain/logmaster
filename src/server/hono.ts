@@ -7,6 +7,7 @@ import {
   isGoogleSignInEnabled,
 } from './auth'
 import { getMapTilerApiKeyFromEnv } from '../lib/server-maptiler-key'
+import { logbookStoryMediaRoutes } from './routes/logbook-story-media'
 import { logbookRoutes } from './routes/logbook'
 import { logbookTrackRoutes } from './routes/logbook-tracks'
 import { boatsRoutes } from './routes/boats'
@@ -63,6 +64,7 @@ app.get('/health', (c) =>
 
 app.route('/logbook', logbookRoutes)
 app.route('/logbook', logbookTrackRoutes)
+app.route('/logbook', logbookStoryMediaRoutes)
 app.route('/boats', boatsRoutes)
 app.route('/profile', profileRoutes)
 app.route('/crew', crewRoutes)

@@ -404,6 +404,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(fun
         {!waypointMapInteractionActive ? (
         <div className="pointer-events-auto flex justify-start gap-2">
           <TripMapEditMenu
+            tripId={trip.id}
             disabled={busy}
             uploading={uploadingMedia}
             onEditCover={onEditCoverClick}

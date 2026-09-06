@@ -93,3 +93,21 @@ export function extensionForMime(mimeType: string): string {
   if (mimeType === 'image/heic' || mimeType === 'image/heif') return 'heic'
   return 'jpg'
 }
+
+export function storyMediaS3Key(
+  userId: string,
+  tripId: string,
+  mediaId: string,
+  ext: string,
+): string {
+  return `users/${userId}/stories/${tripId}/${mediaId}.${ext}`
+}
+
+export function extensionForStoryMime(mimeType: string): string {
+  if (mimeType.startsWith('video/')) {
+    if (mimeType === 'video/webm') return 'webm'
+    if (mimeType === 'video/quicktime') return 'mov'
+    return 'mp4'
+  }
+  return extensionForMime(mimeType)
+}

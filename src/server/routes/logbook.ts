@@ -47,6 +47,10 @@ function toTrip(data: Record<string, unknown>) {
     engineOn: (data.engineOn as boolean | null | undefined) ?? null,
     moored: (data.moored as boolean | null | undefined) ?? null,
     anchorDown: (data.anchorDown as boolean | null | undefined) ?? null,
+    storyHtml: (data.storyHtml as string | null | undefined) ?? null,
+    storyShareToken:
+      (data.storyShareToken as string | null | undefined) ?? null,
+    storyUpdatedAt: parseDate(data.storyUpdatedAt),
     createdAt,
     updatedAt,
   }

@@ -13,7 +13,11 @@ import { TripDetailHero } from "./TripDetailHero";
 import type { CompletedTripPanel } from "./TripDetailHero";
 import type { MapWaypointPickConfig } from "../lib/map-waypoint-pick";
 import { isWaypointMapInteractionActive } from "../lib/map-waypoint-pick";
-import { tripWaypointEntries } from "../lib/trip-waypoint-entry";
+import {
+  tripWaypointEntries,
+  tripWaypointNameFromEntry,
+  withTripWaypointName,
+} from "../lib/trip-waypoint-entry";
 import type { TripMapHandle } from "../lib/trip-map-handle";
 import { TripDetailBottomSheet } from "./TripDetailBottomSheet";
 import { TripRecordButton } from "./TripRecordButton";
@@ -72,6 +76,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
   >("idle");
   const [editingWaypointEntryId, setEditingWaypointEntryId] = useState<string | null>(null);
   const [waypointPickBusy, setWaypointPickBusy] = useState(false);
+  const [waypointDraftName, setWaypointDraftName] = useState("");
   const [completedTripPanel, setCompletedTripPanel] = useState<CompletedTripPanel>("map");
   const liveActivityStartHandledRef = useRef(false);
 
@@ -322,6 +327,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
 
   const startWaypointPick = useCallback(() => {
     setEditingWaypointEntryId(null);
+    setWaypointDraftName("");
     setWaypointMapPhase("add");
   }, []);
 
@@ -334,6 +340,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
       return;
     }
     setEditingWaypointEntryId(null);
+    setWaypointDraftName("");
     setWaypointMapPhase("edit-select");
   }, [store.entries, tripId]);
 
@@ -344,7 +351,10 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
       return {
         phase: "add",
         busy: waypointPickBusy,
+        name: waypointDraftName,
+        onNameChange: setWaypointDraftName,
         onCancel: () => {
+          setWaypointDraftName("");
           setWaypointMapPhase("idle");
         },
         onConfirm: async (position) => {
@@ -353,11 +363,13 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
             const entry = await useLogbookStore.getState().addTripWaypoint(tripId, {
               latitude: position.latitude,
               longitude: position.longitude,
+              name: waypointDraftName,
             });
             if (!entry) {
               throw new Error("Could not save waypoint");
             }
             toast.success("Waypoint added");
+            setWaypointDraftName("");
             setWaypointMapPhase("idle");
           } catch (error) {
             toast.error(error instanceof Error ? error.message : "Could not save waypoint");
@@ -372,9 +384,12 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
       return {
         phase: "edit-select",
         onCancel: () => {
+          setWaypointDraftName("");
           setWaypointMapPhase("idle");
         },
         onSelectEntry: (entryId) => {
+          const entry = store.entries.find((item) => item.id === entryId);
+          setWaypointDraftName(entry ? tripWaypointNameFromEntry(entry) : "");
           setEditingWaypointEntryId(entryId);
           setWaypointMapPhase("edit-center");
         },
@@ -387,6 +402,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
         editingEntryId: editingWaypointEntryId,
         onCancel: () => {
           setEditingWaypointEntryId(null);
+          setWaypointDraftName("");
           setWaypointMapPhase("edit-select");
         },
         onCentered: () => {
@@ -400,22 +416,28 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
         phase: "edit-pick",
         editingEntryId: editingWaypointEntryId,
         busy: waypointPickBusy,
+        name: waypointDraftName,
+        onNameChange: setWaypointDraftName,
         onCancel: () => {
           setEditingWaypointEntryId(null);
+          setWaypointDraftName("");
           setWaypointMapPhase("edit-select");
         },
         onConfirm: async (position) => {
           setWaypointPickBusy(true);
           try {
+            const current = store.entries.find((item) => item.id === editingWaypointEntryId);
             await useLogbookStore.getState().updateEntry(editingWaypointEntryId, {
               latitude: position.latitude,
               longitude: position.longitude,
+              data: withTripWaypointName(current?.data, waypointDraftName),
             });
-            toast.success("Waypoint moved");
+            toast.success("Waypoint updated");
             setEditingWaypointEntryId(null);
+            setWaypointDraftName("");
             setWaypointMapPhase("edit-select");
           } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Could not move waypoint");
+            toast.error(error instanceof Error ? error.message : "Could not update waypoint");
           } finally {
             setWaypointPickBusy(false);
           }
@@ -427,6 +449,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
             await useLogbookStore.getState().deleteEntry(editingWaypointEntryId);
             toast.success("Waypoint deleted");
             setEditingWaypointEntryId(null);
+            setWaypointDraftName("");
             setWaypointMapPhase("edit-select");
           } catch (error) {
             toast.error(error instanceof Error ? error.message : "Could not delete waypoint");
@@ -441,8 +464,10 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
   }, [
     editingWaypointEntryId,
     tripId,
+    store.entries,
     waypointMapPhase,
     waypointPickBusy,
+    waypointDraftName,
   ]);
 
   const waypointMapInteractionActive = isWaypointMapInteractionActive(waypointPick);

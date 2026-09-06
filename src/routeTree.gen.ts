@@ -35,12 +35,15 @@ import { Route as MainAdminTripsRouteImport } from './routes/_main/admin/trips'
 import { Route as MainAdminPgbossRouteImport } from './routes/_main/admin/pgboss'
 import { Route as MainAdminJobManagementRouteImport } from './routes/_main/admin/job-management'
 import { Route as MainAdminCountriesRouteImport } from './routes/_main/admin/countries'
+import { Route as MainTripsTripIdIndexRouteImport } from './routes/_main/trips/$tripId/index'
 import { Route as MainAdminRegionsIndexRouteImport } from './routes/_main/admin/regions/index'
 import { Route as MainAdminJobsIndexRouteImport } from './routes/_main/admin/jobs/index'
 import { Route as MainCrewInviteTokenRouteImport } from './routes/_main/crew/invite/$token'
 import { Route as MainAdminJobsSystemRouteImport } from './routes/_main/admin/jobs/system'
 import { Route as MainAdminJobsMarinasRouteImport } from './routes/_main/admin/jobs/marinas'
 import { Route as MainAdminJobsGeoFeaturesRouteImport } from './routes/_main/admin/jobs/geo-features'
+import { Route as MainTripsTripIdStoryIndexRouteImport } from './routes/_main/trips/$tripId/story/index'
+import { Route as MainTripsTripIdStoryEditRouteImport } from './routes/_main/trips/$tripId/story/edit'
 
 const MainRouteRoute = MainRouteRouteImport.update({
   id: '/_main',
@@ -171,6 +174,11 @@ const MainAdminCountriesRoute = MainAdminCountriesRouteImport.update({
   path: '/admin/countries',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainTripsTripIdIndexRoute = MainTripsTripIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MainTripsTripIdRoute,
+} as any)
 const MainAdminRegionsIndexRoute = MainAdminRegionsIndexRouteImport.update({
   id: '/admin/regions/',
   path: '/admin/regions/',
@@ -202,6 +210,18 @@ const MainAdminJobsGeoFeaturesRoute =
     path: '/admin/jobs/geo-features',
     getParentRoute: () => MainRouteRoute,
   } as any)
+const MainTripsTripIdStoryIndexRoute =
+  MainTripsTripIdStoryIndexRouteImport.update({
+    id: '/story/',
+    path: '/story/',
+    getParentRoute: () => MainTripsTripIdRoute,
+  } as any)
+const MainTripsTripIdStoryEditRoute =
+  MainTripsTripIdStoryEditRouteImport.update({
+    id: '/story/edit',
+    path: '/story/edit',
+    getParentRoute: () => MainTripsTripIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof MainIndexRoute
@@ -222,7 +242,7 @@ export interface FileRoutesByFullPath {
   '/places/photos': typeof MainPlacesPhotosRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/routes/$routeId': typeof MainRoutesRouteIdRoute
-  '/trips/$tripId': typeof MainTripsTripIdRoute
+  '/trips/$tripId': typeof MainTripsTripIdRouteWithChildren
   '/admin/': typeof MainAdminIndexRoute
   '/boats/': typeof MainBoatsIndexRoute
   '/crew/': typeof MainCrewIndexRoute
@@ -235,6 +255,9 @@ export interface FileRoutesByFullPath {
   '/crew/invite/$token': typeof MainCrewInviteTokenRoute
   '/admin/jobs/': typeof MainAdminJobsIndexRoute
   '/admin/regions/': typeof MainAdminRegionsIndexRoute
+  '/trips/$tripId/': typeof MainTripsTripIdIndexRoute
+  '/trips/$tripId/story/edit': typeof MainTripsTripIdStoryEditRoute
+  '/trips/$tripId/story/': typeof MainTripsTripIdStoryIndexRoute
 }
 export interface FileRoutesByTo {
   '/about': typeof MainAboutRoute
@@ -255,7 +278,6 @@ export interface FileRoutesByTo {
   '/places/photos': typeof MainPlacesPhotosRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/routes/$routeId': typeof MainRoutesRouteIdRoute
-  '/trips/$tripId': typeof MainTripsTripIdRoute
   '/admin': typeof MainAdminIndexRoute
   '/boats': typeof MainBoatsIndexRoute
   '/crew': typeof MainCrewIndexRoute
@@ -268,6 +290,9 @@ export interface FileRoutesByTo {
   '/crew/invite/$token': typeof MainCrewInviteTokenRoute
   '/admin/jobs': typeof MainAdminJobsIndexRoute
   '/admin/regions': typeof MainAdminRegionsIndexRoute
+  '/trips/$tripId': typeof MainTripsTripIdIndexRoute
+  '/trips/$tripId/story/edit': typeof MainTripsTripIdStoryEditRoute
+  '/trips/$tripId/story': typeof MainTripsTripIdStoryIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -290,7 +315,7 @@ export interface FileRoutesById {
   '/_main/places/photos': typeof MainPlacesPhotosRoute
   '/_main/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/_main/routes/$routeId': typeof MainRoutesRouteIdRoute
-  '/_main/trips/$tripId': typeof MainTripsTripIdRoute
+  '/_main/trips/$tripId': typeof MainTripsTripIdRouteWithChildren
   '/_main/admin/': typeof MainAdminIndexRoute
   '/_main/boats/': typeof MainBoatsIndexRoute
   '/_main/crew/': typeof MainCrewIndexRoute
@@ -303,6 +328,9 @@ export interface FileRoutesById {
   '/_main/crew/invite/$token': typeof MainCrewInviteTokenRoute
   '/_main/admin/jobs/': typeof MainAdminJobsIndexRoute
   '/_main/admin/regions/': typeof MainAdminRegionsIndexRoute
+  '/_main/trips/$tripId/': typeof MainTripsTripIdIndexRoute
+  '/_main/trips/$tripId/story/edit': typeof MainTripsTripIdStoryEditRoute
+  '/_main/trips/$tripId/story/': typeof MainTripsTripIdStoryIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -338,6 +366,9 @@ export interface FileRouteTypes {
     | '/crew/invite/$token'
     | '/admin/jobs/'
     | '/admin/regions/'
+    | '/trips/$tripId/'
+    | '/trips/$tripId/story/edit'
+    | '/trips/$tripId/story/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/about'
@@ -358,7 +389,6 @@ export interface FileRouteTypes {
     | '/places/photos'
     | '/reset-password/$token'
     | '/routes/$routeId'
-    | '/trips/$tripId'
     | '/admin'
     | '/boats'
     | '/crew'
@@ -371,6 +401,9 @@ export interface FileRouteTypes {
     | '/crew/invite/$token'
     | '/admin/jobs'
     | '/admin/regions'
+    | '/trips/$tripId'
+    | '/trips/$tripId/story/edit'
+    | '/trips/$tripId/story'
   id:
     | '__root__'
     | '/_main'
@@ -405,6 +438,9 @@ export interface FileRouteTypes {
     | '/_main/crew/invite/$token'
     | '/_main/admin/jobs/'
     | '/_main/admin/regions/'
+    | '/_main/trips/$tripId/'
+    | '/_main/trips/$tripId/story/edit'
+    | '/_main/trips/$tripId/story/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -596,6 +632,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAdminCountriesRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/trips/$tripId/': {
+      id: '/_main/trips/$tripId/'
+      path: '/'
+      fullPath: '/trips/$tripId/'
+      preLoaderRoute: typeof MainTripsTripIdIndexRouteImport
+      parentRoute: typeof MainTripsTripIdRoute
+    }
     '/_main/admin/regions/': {
       id: '/_main/admin/regions/'
       path: '/admin/regions'
@@ -638,8 +681,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAdminJobsGeoFeaturesRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/trips/$tripId/story/': {
+      id: '/_main/trips/$tripId/story/'
+      path: '/story'
+      fullPath: '/trips/$tripId/story/'
+      preLoaderRoute: typeof MainTripsTripIdStoryIndexRouteImport
+      parentRoute: typeof MainTripsTripIdRoute
+    }
+    '/_main/trips/$tripId/story/edit': {
+      id: '/_main/trips/$tripId/story/edit'
+      path: '/story/edit'
+      fullPath: '/trips/$tripId/story/edit'
+      preLoaderRoute: typeof MainTripsTripIdStoryEditRouteImport
+      parentRoute: typeof MainTripsTripIdRoute
+    }
   }
 }
+
+interface MainTripsTripIdRouteChildren {
+  MainTripsTripIdIndexRoute: typeof MainTripsTripIdIndexRoute
+  MainTripsTripIdStoryEditRoute: typeof MainTripsTripIdStoryEditRoute
+  MainTripsTripIdStoryIndexRoute: typeof MainTripsTripIdStoryIndexRoute
+}
+
+const MainTripsTripIdRouteChildren: MainTripsTripIdRouteChildren = {
+  MainTripsTripIdIndexRoute: MainTripsTripIdIndexRoute,
+  MainTripsTripIdStoryEditRoute: MainTripsTripIdStoryEditRoute,
+  MainTripsTripIdStoryIndexRoute: MainTripsTripIdStoryIndexRoute,
+}
+
+const MainTripsTripIdRouteWithChildren = MainTripsTripIdRoute._addFileChildren(
+  MainTripsTripIdRouteChildren,
+)
 
 interface MainRouteRouteChildren {
   MainAboutRoute: typeof MainAboutRoute
@@ -659,7 +732,7 @@ interface MainRouteRouteChildren {
   MainPlacesPhotosRoute: typeof MainPlacesPhotosRoute
   MainResetPasswordTokenRoute: typeof MainResetPasswordTokenRoute
   MainRoutesRouteIdRoute: typeof MainRoutesRouteIdRoute
-  MainTripsTripIdRoute: typeof MainTripsTripIdRoute
+  MainTripsTripIdRoute: typeof MainTripsTripIdRouteWithChildren
   MainAdminIndexRoute: typeof MainAdminIndexRoute
   MainBoatsIndexRoute: typeof MainBoatsIndexRoute
   MainCrewIndexRoute: typeof MainCrewIndexRoute
@@ -692,7 +765,7 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainPlacesPhotosRoute: MainPlacesPhotosRoute,
   MainResetPasswordTokenRoute: MainResetPasswordTokenRoute,
   MainRoutesRouteIdRoute: MainRoutesRouteIdRoute,
-  MainTripsTripIdRoute: MainTripsTripIdRoute,
+  MainTripsTripIdRoute: MainTripsTripIdRouteWithChildren,
   MainAdminIndexRoute: MainAdminIndexRoute,
   MainBoatsIndexRoute: MainBoatsIndexRoute,
   MainCrewIndexRoute: MainCrewIndexRoute,

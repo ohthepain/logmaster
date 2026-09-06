@@ -63,6 +63,7 @@ import { useLogbookStore } from "../stores/logbook";
 import { DevComponentLabel } from "./DevComponentLabel";
 import { WaypointCenterPickOverlay } from "./WaypointCenterPickOverlay";
 import { WaypointEditSelectOverlay } from "./WaypointEditSelectOverlay";
+import { WaypointNameEditor } from "./WaypointNameEditor";
 import { TripAppleMapKit  } from "./TripAppleMapKit";
 import { SailingMapControlStack } from "./SailingMapControlStack";
 import { SailingMapFullscreenModal } from "./SailingMapFullscreenModal";
@@ -925,7 +926,15 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
         <WaypointEditSelectOverlay onCancel={waypointPick.onCancel} />
       ) : null}
       {waypointCenterPickActive && waypointPick ? (
-        <WaypointCenterPickOverlay
+        <>
+          {"name" in waypointPick && waypointPick.onNameChange ? (
+            <WaypointNameEditor
+              value={waypointPick.name ?? ""}
+              onChange={waypointPick.onNameChange}
+              disabled={waypointPick.busy}
+            />
+          ) : null}
+          <WaypointCenterPickOverlay
           position={pickCenterPosition}
           busy={waypointPick.busy}
           onCancel={waypointPick.onCancel}
@@ -937,6 +946,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(function T
             waypointPick.onConfirm(pickCenterPosition);
           }}
         />
+        </>
       ) : null}
       {mapReady && devDraggablePosition && !waypointMapInteractionActive ? (
         <p

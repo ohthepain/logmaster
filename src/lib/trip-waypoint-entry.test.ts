@@ -3,6 +3,8 @@ import {
   buildTripWaypointEntryInput,
   isTripWaypointEntry,
   tripWaypointEntries,
+  tripWaypointNameFromEntry,
+  withTripWaypointName,
 } from './trip-waypoint-entry'
 
 describe('isTripWaypointEntry', () => {
@@ -32,6 +34,35 @@ describe('buildTripWaypointEntryInput', () => {
   })
 })
 
+describe('withTripWaypointName', () => {
+  it('sets manual place name on waypoint data', () => {
+    expect(withTripWaypointName({ waypoint: true }, 'Harbour').place).toEqual({
+      name: 'Harbour',
+      detail: null,
+      kind: 'waypoint',
+      source: 'manual',
+      distanceM: 0,
+    })
+  })
+
+  it('clears place when name is empty', () => {
+    const data = withTripWaypointName(
+      { waypoint: true, place: { name: 'Old' } },
+      '',
+    )
+    expect(data.place).toBeUndefined()
+  })
+})
+
+describe('tripWaypointNameFromEntry', () => {
+  it('reads place name from entry data', () => {
+    expect(
+      tripWaypointNameFromEntry({
+        data: { place: { name: '  Marina  ' } },
+      }),
+    ).toBe('Marina')
+  })
+})
 describe('tripWaypointEntries', () => {
   it('filters waypoint log entries', () => {
     const entries = tripWaypointEntries([

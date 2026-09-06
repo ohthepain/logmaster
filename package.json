@@ -69,6 +69,7 @@
     "@tanstack/react-router-ssr-query": "latest",
     "@tanstack/react-start": "^1.167.42",
     "@tanstack/router-plugin": "^1.167.22",
+    "@tinymce/tinymce-react": "^6.3.0",
     "@turf/turf": "^7.3.5",
     "better-auth": "^1.6.6",
     "better-auth-offline": "^0.0.2",
@@ -87,6 +88,7 @@
     "sharp": "^0.35.3",
     "sonner": "^2.0.7",
     "tailwindcss": "^4.1.18",
+    "tinymce": "^8.9.0",
     "workbox-window": "^7.4.1",
     "zustand": "^5.0.12"
   },

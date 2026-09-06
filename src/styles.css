@@ -582,3 +582,122 @@ a {
   cursor: text;
   touch-action: auto;
 }
+
+/* Trip story — read-only view (editor uses matching styles in trip-story-styles.ts) */
+.trip-story-view .trip-story {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.trip-story-view .story-kicker {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--kicker);
+}
+
+.trip-story-view h1 {
+  margin: 0 0 0.5rem;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: clamp(1.875rem, 4vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--sea-ink);
+}
+
+.trip-story-view .story-lead {
+  margin: 0 0 1.75rem;
+  font-size: 1.125rem;
+  color: var(--sea-ink-soft);
+}
+
+.trip-story-view .story-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem 2rem;
+  margin: 0 0 2.5rem;
+  padding: 0 0 2rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.trip-story-view .story-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.trip-story-view .story-stat-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--kicker);
+}
+
+.trip-story-view .story-stat-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--sea-ink);
+}
+
+.trip-story-view .story-timeline {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .trip-story-view .story-timeline {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .trip-story-view .story-note {
+    grid-column: 1 / -1;
+  }
+}
+
+.trip-story-view .story-photo {
+  margin: 0;
+}
+
+.trip-story-view .story-photo img,
+.trip-story-view .story-photo video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 1rem;
+}
+
+.trip-story-view .story-photo figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--sea-ink-soft);
+}
+
+.trip-story-view .story-note {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-left: 3px solid var(--line);
+  background: var(--surface-strong);
+  border-radius: 0 0.75rem 0.75rem 0;
+}
+
+.trip-story-view .story-note time {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--kicker);
+}
+
+.trip-story-view .story-note p {
+  margin: 0;
+  line-height: 1.65;
+  color: var(--sea-ink);
+}

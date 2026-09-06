@@ -133,15 +133,32 @@ model Trip {
   engineOn       Boolean?
   moored         Boolean?
   anchorDown     Boolean?
+  storyHtml         String?   @db.Text
+  storyShareToken   String?   @unique
+  storyUpdatedAt    DateTime?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
   logEntries     LogEntry[]
   legs           Leg[]
   tripTracks     TripTrack[]
+  storyMedia     TripStoryMedia[]
 
   @@index([status, startedAt])
   @@map("trip")
+}
+
+model TripStoryMedia {
+  id        String   @id @default(cuid())
+  tripId    String
+  s3Key     String
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@map("trip_story_media")
 }
 
 model TripTrack {

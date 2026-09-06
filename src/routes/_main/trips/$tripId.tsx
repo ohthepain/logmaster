@@ -1,23 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { TripDetailPage } from '../../../components/TripDetailPage'
-
-type TripSearch = {
-  liveActivity?: 'start'
-}
+import { Outlet, createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_main/trips/$tripId')({
-  validateSearch: (search: Record<string, unknown>): TripSearch =>
-    search.liveActivity === 'start' ? { liveActivity: 'start' } : {},
-  component: TripRoutePage,
+  component: TripLayout,
 })
 
-function TripRoutePage() {
-  const { tripId } = Route.useParams()
-  const { liveActivity } = Route.useSearch()
-  return (
-    <TripDetailPage
-      tripId={tripId}
-      startFromLiveActivity={liveActivity === 'start'}
-    />
-  )
+function TripLayout() {
+  return <Outlet />
 }

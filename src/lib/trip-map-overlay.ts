@@ -8,3 +8,7 @@ export const TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS = "border-white/25 bg-black/
 export function isTripDetailImmersiveRoute(pathname: string): boolean {
   return /^\/trips\/[^/]+$/.test(pathname);
 }
+
+export function isTripStoryRoute(pathname: string): boolean {
+  return /^\/trips\/[^/]+\/story(\/edit)?\/?$/.test(pathname);
+}

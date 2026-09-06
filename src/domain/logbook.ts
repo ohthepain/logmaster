@@ -65,6 +65,9 @@ export type Trip = {
   engineOn?: boolean | null
   moored?: boolean | null
   anchorDown?: boolean | null
+  storyHtml?: string | null
+  storyShareToken?: string | null
+  storyUpdatedAt?: string | null
   createdAt: string
   updatedAt: string
 }

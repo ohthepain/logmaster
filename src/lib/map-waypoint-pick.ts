@@ -5,6 +5,8 @@ export type MapWaypointPickPhase = 'add' | 'edit-select' | 'edit-pick'
 type MapWaypointPickAdd = {
   phase: 'add'
   busy?: boolean
+  name?: string
+  onNameChange?: (name: string) => void
   onCancel: () => void
   onConfirm: (position: MapLngLat) => void
 }
@@ -26,6 +28,8 @@ type MapWaypointPickEditMove = {
   phase: 'edit-pick'
   editingEntryId: string
   busy?: boolean
+  name: string
+  onNameChange: (name: string) => void
   onCancel: () => void
   onConfirm: (position: MapLngLat) => void
   onDelete: () => void
