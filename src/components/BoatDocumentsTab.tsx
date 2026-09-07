@@ -17,9 +17,14 @@ import {
   documentTitleFromUrl,
   resolveDocumentLinkTitle,
 } from '../lib/document-title'
+import {
+  openBoatDocumentRecord,
+  type BoatDocumentViewerPayload,
+} from '../lib/boat-document-open'
 import { cn } from '../lib/cn'
 import { Modal } from './Modal'
 import { BoatDocumentCategoryField } from './BoatDocumentCategoryField'
+import { BoatDocumentViewerModal } from './BoatDocumentViewerModal'
 import {
   BoatDocumentActionsMenu,
   BoatDocumentKindIcon,
@@ -46,6 +51,8 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const titleTouchedRef = useRef(false)
   const linkTitleRequestRef = useRef(0)
+  const [documentViewer, setDocumentViewer] =
+    useState<BoatDocumentViewerPayload | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -100,6 +107,16 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
         (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name),
       ),
     )
+  }
+
+  const handleOpenDocument = async (document: BoatDocument) => {
+    try {
+      await openBoatDocumentRecord(document, {
+        onOpenViewer: setDocumentViewer,
+      })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to open document')
+    }
   }
 
   const handleCreateUpload = async (file: File) => {
@@ -254,34 +271,41 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
                     key={document.id}
                     className="flex items-center gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3"
                   >
-                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)]">
-                      <BoatDocumentKindIcon
-                        kind={document.currentVersion.kind}
-                        className="size-4"
-                      />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="m-0 truncate text-sm font-semibold text-[var(--sea-ink)]">
-                        {document.title}
-                      </p>
-                      <p className="m-0 truncate text-xs text-[var(--sea-ink-soft)]">
-                        {document.currentVersion.kind === 'link'
-                          ? document.currentVersion.url
-                          : (document.currentVersion.fileName ?? 'Uploaded file')}
-                      </p>
-                      <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
-                        Updated{' '}
-                        {new Date(document.updatedAt).toLocaleDateString()}
-                        {' · '}
-                        v{document.currentVersion.versionNumber}
-                      </p>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleOpenDocument(document)}
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left transition hover:opacity-80"
+                    >
+                      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)]">
+                        <BoatDocumentKindIcon
+                          kind={document.currentVersion.kind}
+                          className="size-4"
+                        />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="m-0 truncate text-sm font-semibold text-[var(--sea-ink)]">
+                          {document.title}
+                        </p>
+                        <p className="m-0 truncate text-xs text-[var(--sea-ink-soft)]">
+                          {document.currentVersion.kind === 'link'
+                            ? document.currentVersion.url
+                            : (document.currentVersion.fileName ?? 'Uploaded file')}
+                        </p>
+                        <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
+                          Updated{' '}
+                          {new Date(document.updatedAt).toLocaleDateString()}
+                          {' · '}
+                          v{document.currentVersion.versionNumber}
+                        </p>
+                      </div>
+                    </button>
                     <BoatDocumentActionsMenu
                       boatId={boatId}
                       boatDocument={document}
                       categoryName={categoryName(document.categoryId)}
                       categories={categories}
                       onCategoryCreated={addCategory}
+                      onOpenViewer={setDocumentViewer}
                       onUpdated={(updated) =>
                         setDocuments((current) =>
                           current.map((item) =>
@@ -458,6 +482,15 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
             </div>
           </div>
         </Modal>
+      ) : null}
+
+      {documentViewer ? (
+        <BoatDocumentViewerModal
+          title={documentViewer.title}
+          contentUrl={documentViewer.contentUrl}
+          viewKind={documentViewer.viewKind}
+          onClose={() => setDocumentViewer(null)}
+        />
       ) : null}
     </>
   )

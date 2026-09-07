@@ -8,6 +8,12 @@ project(':capacitor-community-background-geolocation').projectDir = new File('..
 include ':capacitor-app'
 project(':capacitor-app').projectDir = new File('../node_modules/.pnpm/@capacitor+app@8.1.1_@capacitor+core@8.4.2/node_modules/@capacitor/app/android')
 
+include ':capacitor-file-viewer'
+project(':capacitor-file-viewer').projectDir = new File('../node_modules/.pnpm/@capacitor+file-viewer@2.0.2_@capacitor+core@8.4.2/node_modules/@capacitor/file-viewer/android')
+
+include ':capacitor-filesystem'
+project(':capacitor-filesystem').projectDir = new File('../node_modules/.pnpm/@capacitor+filesystem@8.1.3_@capacitor+core@8.4.2/node_modules/@capacitor/filesystem/android')
+
 include ':capacitor-geolocation'
 project(':capacitor-geolocation').projectDir = new File('../node_modules/.pnpm/@capacitor+geolocation@8.2.0_@capacitor+core@8.4.2/node_modules/@capacitor/geolocation/android')
 

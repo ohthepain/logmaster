@@ -15,6 +15,12 @@ import {
   updateBoatDocumentUpload,
 } from '../lib/boat-documents-api'
 import { documentTitleFromFileName } from '../lib/document-title'
+import {
+  boatDocumentOpenTarget,
+  boatDocumentVersionOpenTarget,
+  openBoatDocument,
+  type BoatDocumentViewerPayload,
+} from '../lib/boat-document-open'
 import { cn } from '../lib/cn'
 import { BoatDocumentCategoryField } from './BoatDocumentCategoryField'
 import { Modal } from './Modal'
@@ -25,6 +31,7 @@ type BoatDocumentActionsMenuProps = {
   categoryName: string
   categories: Array<{ id: string; name: string }>
   onCategoryCreated: (category: BoatDocumentCategory) => void
+  onOpenViewer: (payload: BoatDocumentViewerPayload) => void
   onUpdated: (document: BoatDocument) => void
   onDeleted: (documentId: string) => void
 }
@@ -35,6 +42,7 @@ export function BoatDocumentActionsMenu({
   categoryName,
   categories,
   onCategoryCreated,
+  onOpenViewer,
   onUpdated,
   onDeleted,
 }: BoatDocumentActionsMenuProps) {
@@ -192,14 +200,25 @@ export function BoatDocumentActionsMenu({
     if (file) void handleReplaceFile(file)
   }
 
-  const openCurrent = () => {
-    const version = boatDocument.currentVersion
-    if (version.kind === 'link' && version.url) {
-      window.open(version.url, '_blank', 'noopener,noreferrer')
-      return
+  const openCurrent = async () => {
+    setOpen(false)
+    try {
+      await openBoatDocument(boatDocumentOpenTarget(boatDocument), {
+        onOpenViewer,
+      })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to open document')
     }
-    if (version.contentUrl) {
-      window.open(version.contentUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  const openVersion = async (version: BoatDocumentVersion) => {
+    try {
+      await openBoatDocument(
+        boatDocumentVersionOpenTarget(boatDocument.title, version),
+        { onOpenViewer },
+      )
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to open document')
     }
   }
 
@@ -240,7 +259,7 @@ export function BoatDocumentActionsMenu({
               type="button"
               role="menuitem"
               disabled={busy}
-              onClick={openCurrent}
+              onClick={() => void openCurrent()}
               className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
             >
               Open
@@ -543,15 +562,14 @@ export function BoatDocumentActionsMenu({
                         Open
                       </a>
                     ) : version.contentUrl ? (
-                      <a
-                        href={version.contentUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)] no-underline"
+                      <button
+                        type="button"
+                        onClick={() => void openVersion(version)}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)]"
                       >
                         <FileText className="size-3.5" />
                         View
-                      </a>
+                      </button>
                     ) : null}
                   </li>
                 ))}
