@@ -209,6 +209,7 @@ function serializeDocument(document: {
   boatId: string
   categoryId: string
   title: string
+  purpose: string | null
   sortOrder: number
   createdAt: Date
   updatedAt: Date
@@ -234,6 +235,7 @@ function serializeDocument(document: {
     boatId: document.boatId,
     categoryId: document.categoryId,
     title: document.title,
+    purpose: document.purpose,
     sortOrder: document.sortOrder,
     createdAt: document.createdAt.toISOString(),
     updatedAt: document.updatedAt.toISOString(),
@@ -289,6 +291,26 @@ function isValidHttpUrl(value: string): boolean {
   } catch {
     return false
   }
+}
+
+const DOCUMENT_PURPOSES = [
+  'receipt',
+  'invoice',
+  'photo',
+  'manual',
+  'warranty',
+  'other',
+] as const
+
+function parseDocumentPurpose(
+  value: unknown,
+): (typeof DOCUMENT_PURPOSES)[number] | null | undefined {
+  if (value === undefined) return undefined
+  if (value === null || value === '') return null
+  const str = String(value)
+  return DOCUMENT_PURPOSES.includes(str as (typeof DOCUMENT_PURPOSES)[number])
+    ? (str as (typeof DOCUMENT_PURPOSES)[number])
+    : null
 }
 
 export const boatsRoutes = new Hono()
@@ -681,6 +703,7 @@ boatsRoutes.post('/:boatId/documents', async (c) => {
       file.name.trim() ||
       'Document'
     const categoryId = String(body.categoryId ?? '').trim()
+    const purpose = parseDocumentPurpose(body.purpose)
     if (!(file instanceof File)) {
       return c.json({ error: 'file is required' }, 400)
     }
@@ -714,6 +737,7 @@ boatsRoutes.post('/:boatId/documents', async (c) => {
         boatId: boat.id,
         categoryId,
         title,
+        purpose: purpose ?? undefined,
         sortOrder: maxSort + 1,
         versions: {
           create: {
@@ -744,10 +768,12 @@ boatsRoutes.post('/:boatId/documents', async (c) => {
     categoryId?: string
     url?: string
     kind?: string
+    purpose?: string | null
   }
   const title = body.title?.trim()
   const categoryId = body.categoryId?.trim()
   const url = body.url?.trim()
+  const purpose = parseDocumentPurpose(body.purpose)
   if (!title) return c.json({ error: 'Title is required' }, 400)
   if (!categoryId) return c.json({ error: 'Category is required' }, 400)
   if (!url) return c.json({ error: 'URL is required' }, 400)
@@ -767,6 +793,7 @@ boatsRoutes.post('/:boatId/documents', async (c) => {
       boatId: boat.id,
       categoryId,
       title,
+      purpose: purpose ?? undefined,
       sortOrder: maxSort + 1,
       versions: {
         create: {
@@ -856,11 +883,13 @@ boatsRoutes.patch('/documents/:documentId', async (c) => {
     title?: string
     categoryId?: string
     url?: string
+    purpose?: string | null
   }
 
   const data: {
     title?: string
     categoryId?: string
+    purpose?: (typeof DOCUMENT_PURPOSES)[number] | null
     updatedAt: Date
   } = { updatedAt: new Date() }
 
@@ -868,6 +897,10 @@ boatsRoutes.patch('/documents/:documentId', async (c) => {
     const title = body.title.trim()
     if (!title) return c.json({ error: 'Title is required' }, 400)
     data.title = title
+  }
+
+  if (body.purpose !== undefined) {
+    data.purpose = parseDocumentPurpose(body.purpose) ?? null
   }
 
   if (body.categoryId !== undefined) {

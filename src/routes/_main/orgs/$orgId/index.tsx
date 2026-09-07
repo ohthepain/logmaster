@@ -5,6 +5,7 @@ import type { FormEvent } from 'react'
 import { toast } from 'sonner'
 import { AttachBoatToOrgModal } from '../../../../components/AttachBoatToOrgModal'
 import { OrgDocumentsTab } from '../../../../components/OrgDocumentsTab'
+import { OrgAccountingTab } from '../../../../components/OrgAccountingTab'
 import {
   InviteMemberModal,
   ResourceMembersTab,
@@ -30,8 +31,9 @@ import {
   updateOrgMemberRole,
 } from '../../../../lib/orgs-api'
 import { cn } from '../../../../lib/cn'
+import { useSession } from '../../../../lib/auth-client'
 
-type OrgDetailTab = 'members' | 'documents' | 'contacts' | 'boats'
+type OrgDetailTab = 'members' | 'documents' | 'contacts' | 'boats' | 'accounting'
 
 type OrgDetailSearch = {
   tab?: OrgDetailTab
@@ -44,7 +46,8 @@ export const Route = createFileRoute('/_main/orgs/$orgId/')({
       tab === 'members' ||
       tab === 'documents' ||
       tab === 'contacts' ||
-      tab === 'boats'
+      tab === 'boats' ||
+      tab === 'accounting'
     ) {
       return { tab }
     }
@@ -70,6 +73,13 @@ function OrgDetailPage() {
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
   const [savingName, setSavingName] = useState(false)
+  const session = useSession()
+  const currentUserId = session.data?.user?.id
+  const canManageAccounting = members.some(
+    (member) =>
+      member.userId === currentUserId &&
+      (member.role === 'OWNER' || member.role === 'ADMIN'),
+  )
 
   const setTab = useCallback(
     (next: OrgDetailTab) => {
@@ -215,6 +225,7 @@ function OrgDetailPage() {
             ['documents', 'Documents'],
             ['contacts', 'Contacts'],
             ['boats', 'Boats'],
+            ['accounting', 'Accounting'],
           ] as const
         ).map(([value, label]) => {
           const selected = tab === value
@@ -343,6 +354,10 @@ function OrgDetailPage() {
             boats={org.boats ?? []}
             onAdd={() => setAddBoatOpen(true)}
           />
+        ) : null}
+
+        {tab === 'accounting' ? (
+          <OrgAccountingTab orgId={orgId} canManage={canManageAccounting} />
         ) : null}
       </div>
 

@@ -4,6 +4,7 @@ import type {
   OrgDocumentVersion,
   OrgDocumentsPayload,
 } from '../domain/org'
+import type { DocumentPurpose } from '../domain/boat-assets'
 import { apiUrl } from './app-origin'
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -45,12 +46,18 @@ export async function createOrgDocumentCategory(
 
 export async function createOrgDocumentUpload(
   orgId: string,
-  input: { title: string; categoryId: string; file: File },
+  input: {
+    title: string
+    categoryId: string
+    file: File
+    purpose?: DocumentPurpose | null
+  },
 ): Promise<OrgDocument> {
   const form = new FormData()
   form.append('title', input.title)
   form.append('categoryId', input.categoryId)
   form.append('file', input.file)
+  if (input.purpose) form.append('purpose', input.purpose)
   const data = await api<{ document: OrgDocument }>(
     `/api/orgs/${orgId}/documents`,
     { method: 'POST', body: form },
@@ -60,7 +67,12 @@ export async function createOrgDocumentUpload(
 
 export async function createOrgDocumentLink(
   orgId: string,
-  input: { title: string; categoryId: string; url: string },
+  input: {
+    title: string
+    categoryId: string
+    url: string
+    purpose?: DocumentPurpose | null
+  },
 ): Promise<OrgDocument> {
   const data = await api<{ document: OrgDocument }>(
     `/api/orgs/${orgId}/documents`,
@@ -95,7 +107,11 @@ export async function updateOrgDocumentLink(
 
 export async function updateOrgDocumentMetadata(
   documentId: string,
-  patch: { title?: string; categoryId?: string },
+  patch: {
+    title?: string
+    categoryId?: string
+    purpose?: DocumentPurpose | null
+  },
 ): Promise<OrgDocument> {
   const data = await api<{ document: OrgDocument }>(
     `/api/orgs/documents/${documentId}`,

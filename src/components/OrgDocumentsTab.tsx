@@ -29,6 +29,8 @@ import {
   OrgDocumentActionsMenu,
   OrgDocumentKindIcon,
 } from './OrgDocumentActionsMenu'
+import { DocumentPurposeBadge, DocumentPurposeField } from './DocumentPurposeField'
+import type { DocumentPurpose } from '../domain/boat-assets'
 
 type OrgDocumentsTabProps = {
   orgId: string
@@ -45,6 +47,7 @@ export function OrgDocumentsTab({ orgId }: OrgDocumentsTabProps) {
   const [busy, setBusy] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [categoryDraft, setCategoryDraft] = useState('')
+  const [purposeDraft, setPurposeDraft] = useState<DocumentPurpose | ''>('')
   const [linkDraft, setLinkDraft] = useState('')
   const [dragOver, setDragOver] = useState(false)
   const [linkTitleLoading, setLinkTitleLoading] = useState(false)
@@ -130,6 +133,7 @@ export function OrgDocumentsTab({ orgId }: OrgDocumentsTabProps) {
         title: documentTitleFromFileName(file.name),
         categoryId: categoryDraft,
         file,
+        purpose: purposeDraft || null,
       })
       setDocuments((current) => [...current, document])
       setAddMode(null)
@@ -190,6 +194,7 @@ export function OrgDocumentsTab({ orgId }: OrgDocumentsTabProps) {
         title,
         categoryId: categoryDraft,
         url,
+        purpose: purposeDraft || null,
       })
       setDocuments((current) => [...current, document])
       setAddMode(null)
@@ -284,7 +289,8 @@ export function OrgDocumentsTab({ orgId }: OrgDocumentsTabProps) {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="m-0 truncate text-sm font-semibold text-[var(--sea-ink)]">
-                          {document.title}
+                          {document.title}{' '}
+                          <DocumentPurposeBadge purpose={document.purpose} />
                         </p>
                         <p className="m-0 truncate text-xs text-[var(--sea-ink-soft)]">
                           {document.currentVersion.kind === 'link'
@@ -368,6 +374,10 @@ export function OrgDocumentsTab({ orgId }: OrgDocumentsTabProps) {
               busy={busy}
               setBusy={setBusy}
             />
+            <DocumentPurposeField
+              value={purposeDraft}
+              onChange={setPurposeDraft}
+            />
 
             <input
               ref={fileInputRef}
@@ -440,6 +450,10 @@ export function OrgDocumentsTab({ orgId }: OrgDocumentsTabProps) {
               orgId={orgId}
               busy={busy}
               setBusy={setBusy}
+            />
+            <DocumentPurposeField
+              value={purposeDraft}
+              onChange={setPurposeDraft}
             />
 
             <label className="block">

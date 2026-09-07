@@ -1,4 +1,5 @@
 import type { BoatDocumentKind } from './boat'
+import type { DocumentPurpose } from './boat-assets'
 
 export type OrgMemberRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER'
 
@@ -40,6 +41,7 @@ export type OrgDocument = {
   orgId: string
   categoryId: string
   title: string
+  purpose: DocumentPurpose | null
   sortOrder: number
   createdAt: string
   updatedAt: string

@@ -82,6 +82,11 @@ model User {
   createdRoutes          Route[]        @relation("CreatedRoutes")
   boatShareOwnerships    BoatShareOwner[]
   orgContacts           ConsortiumContact[]
+  ownedBoatAssets       BoatAsset[]        @relation("BoatAssetOwner")
+  loanedBoatAssets      BoatAsset[]        @relation("BoatAssetLoanFrom")
+  expenseClaims         ExpenseClaim[]     @relation("ExpenseClaimClaimant")
+  orgTransactions       OrgTransaction[]   @relation("OrgTransactionCounterparty")
+  createdOrgTransactions OrgTransaction[]  @relation("OrgTransactionCreator")
 
   @@unique([email])
   @@map("user")
@@ -104,6 +109,10 @@ model Consortium {
   documentCategories ConsortiumDocumentCategory[]
   documents ConsortiumDocument[]
   contacts  ConsortiumContact[]
+  bankAccounts OrgBankAccount[]
+  transactions OrgTransaction[]
+  expenseClaims ExpenseClaim[]
+  boatPurchases BoatPurchase[]
 
   @@index([createdByUserId])
   @@map("consortium")
@@ -183,10 +192,12 @@ model ConsortiumDocument {
   categoryId   String
   category     ConsortiumDocumentCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   title        String
+  purpose      DocumentPurpose?
   sortOrder    Int                        @default(0)
   createdAt    DateTime                   @default(now())
   updatedAt    DateTime                   @updatedAt
   versions     ConsortiumDocumentVersion[]
+  expenseClaimLinks ExpenseClaimDocument[]
 
   @@index([consortiumId, categoryId, sortOrder])
   @@map("consortium_document")
@@ -413,6 +424,44 @@ enum BoatDocumentKind {
   link
 }
 
+enum DocumentPurpose {
+  receipt
+  invoice
+  photo
+  manual
+  warranty
+  other
+}
+
+enum AssetOwnership {
+  BOAT
+  ORG
+  USER
+  EXTERNAL
+}
+
+enum AssetWorkType {
+  install
+  service
+  repair
+  other
+}
+
+enum TransactionType {
+  expense
+  income
+  transfer
+  reimbursement
+}
+
+enum ExpenseClaimStatus {
+  draft
+  submitted
+  approved
+  paid
+  rejected
+}
+
 model Boat {
   id                 String                 @id @default(cuid())
   consortiumId       String?
@@ -430,6 +479,11 @@ model Boat {
   shares             BoatShare[]
   members            BoatMember[]
   memberInvites      MemberInvite[]
+  assets             BoatAsset[]
+  purchases          BoatPurchase[]
+  assetWork          AssetWork[]
+  orgTransactions    OrgTransaction[]
+  expenseClaims      ExpenseClaim[]
 
   @@index([userId, updatedAt])
   @@index([consortiumId])
@@ -504,10 +558,14 @@ model BoatDocument {
   categoryId String
   category   BoatDocumentCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   title      String
+  purpose    DocumentPurpose?
   sortOrder  Int                    @default(0)
   createdAt  DateTime               @default(now())
   updatedAt  DateTime               @updatedAt
   versions   BoatDocumentVersion[]
+  assetLinks    BoatAssetDocument[]
+  purchaseLinks BoatPurchaseDocument[]
+  workLinks     AssetWorkDocument[]
 
   @@index([boatId, categoryId, sortOrder])
   @@map("boat_document")
@@ -755,4 +813,215 @@ model DeletedRoute {
   deletedAt DateTime @default(now())
 
   @@map("deleted_route")
+}
+
+model BoatAsset {
+  id               String         @id @default(cuid())
+  boatId           String
+  name             String
+  description      String?
+  ownership        AssetOwnership
+  ownedByUserId    String?
+  onLoanFromUserId String?
+  installedAt      DateTime?
+  sortOrder        Int            @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  boat           Boat                 @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  ownedByUser    User?                @relation("BoatAssetOwner", fields: [ownedByUserId], references: [id], onDelete: SetNull)
+  onLoanFromUser User?                @relation("BoatAssetLoanFrom", fields: [onLoanFromUserId], references: [id], onDelete: SetNull)
+  purchaseLines  BoatPurchaseLine[]
+  workRecords    AssetWork[]
+  documentLinks  BoatAssetDocument[]
+
+  @@index([boatId, sortOrder])
+  @@map("boat_asset")
+}
+
+model BoatPurchase {
+  id           String    @id @default(cuid())
+  boatId       String
+  orgId        String?
+  supplierName String?
+  purchasedAt  DateTime?
+  notes        String?
+  totalAmount  Decimal?  @db.Decimal(12, 2)
+  currency     String    @default("EUR")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  boat          Boat                   @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  org           Consortium?            @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  lines         BoatPurchaseLine[]
+  documentLinks BoatPurchaseDocument[]
+  expenseClaims ExpenseClaim[]
+  transactions  OrgTransaction[]
+
+  @@index([boatId, purchasedAt])
+  @@index([orgId])
+  @@map("boat_purchase")
+}
+
+model BoatPurchaseLine {
+  id          String   @id @default(cuid())
+  purchaseId  String
+  description String
+  quantity    Decimal? @db.Decimal(12, 3)
+  unitPrice   Decimal? @db.Decimal(12, 2)
+  amount      Decimal  @db.Decimal(12, 2)
+  assetId     String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  purchase BoatPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  asset    BoatAsset?   @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@index([purchaseId, sortOrder])
+  @@map("boat_purchase_line")
+}
+
+model AssetWork {
+  id           String        @id @default(cuid())
+  assetId      String
+  boatId       String
+  type         AssetWorkType
+  performedAt  DateTime?
+  description  String?
+  costAmount   Decimal?      @db.Decimal(12, 2)
+  costCurrency String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  asset         BoatAsset           @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  boat          Boat                @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  documentLinks AssetWorkDocument[]
+
+  @@index([assetId, performedAt])
+  @@index([boatId])
+  @@map("asset_work")
+}
+
+model BoatAssetDocument {
+  id         String @id @default(cuid())
+  assetId    String
+  documentId String
+
+  asset    BoatAsset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  document BoatDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, documentId])
+  @@map("boat_asset_document")
+}
+
+model BoatPurchaseDocument {
+  id         String @id @default(cuid())
+  purchaseId String
+  documentId String
+
+  purchase BoatPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  document BoatDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([purchaseId, documentId])
+  @@map("boat_purchase_document")
+}
+
+model AssetWorkDocument {
+  id         String @id @default(cuid())
+  workId     String
+  documentId String
+
+  work     AssetWork    @relation(fields: [workId], references: [id], onDelete: Cascade)
+  document BoatDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([workId, documentId])
+  @@map("asset_work_document")
+}
+
+model OrgBankAccount {
+  id               String    @id @default(cuid())
+  orgId            String
+  name             String
+  currency         String    @default("EUR")
+  openingBalance   Decimal   @default(0) @db.Decimal(12, 2)
+  openingBalanceAt DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  org          Consortium       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  transactions OrgTransaction[]
+
+  @@index([orgId])
+  @@map("org_bank_account")
+}
+
+model OrgTransaction {
+  id                 String          @id @default(cuid())
+  orgId              String
+  bankAccountId      String
+  type               TransactionType
+  amount             Decimal         @db.Decimal(12, 2)
+  currency           String          @default("EUR")
+  occurredAt         DateTime
+  description        String
+  boatId             String?
+  purchaseId         String?
+  expenseClaimId     String?         @unique
+  counterpartyUserId String?
+  createdByUserId    String
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  org              Consortium      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  bankAccount      OrgBankAccount  @relation(fields: [bankAccountId], references: [id], onDelete: Restrict)
+  boat             Boat?           @relation(fields: [boatId], references: [id], onDelete: SetNull)
+  purchase         BoatPurchase?   @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+  expenseClaim     ExpenseClaim?   @relation("PaidExpenseClaim", fields: [expenseClaimId], references: [id], onDelete: SetNull)
+  counterpartyUser User?           @relation("OrgTransactionCounterparty", fields: [counterpartyUserId], references: [id], onDelete: SetNull)
+  createdBy        User            @relation("OrgTransactionCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([orgId, occurredAt])
+  @@index([boatId])
+  @@index([bankAccountId])
+  @@map("org_transaction")
+}
+
+model ExpenseClaim {
+  id                String             @id @default(cuid())
+  orgId             String
+  claimantUserId    String
+  boatId            String?
+  purchaseId        String?
+  status            ExpenseClaimStatus @default(draft)
+  amount            Decimal            @db.Decimal(12, 2)
+  currency          String             @default("EUR")
+  description       String
+  incurredAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  org             Consortium             @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  claimant        User                   @relation("ExpenseClaimClaimant", fields: [claimantUserId], references: [id], onDelete: Restrict)
+  boat            Boat?                  @relation(fields: [boatId], references: [id], onDelete: SetNull)
+  purchase        BoatPurchase?          @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+  paidTransaction OrgTransaction?        @relation("PaidExpenseClaim")
+  documentLinks   ExpenseClaimDocument[]
+
+  @@index([orgId, status])
+  @@index([boatId])
+  @@index([claimantUserId])
+  @@map("expense_claim")
+}
+
+model ExpenseClaimDocument {
+  id         String @id @default(cuid())
+  claimId    String
+  documentId String
+
+  claim    ExpenseClaim       @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  document ConsortiumDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([claimId, documentId])
+  @@map("expense_claim_document")
 }

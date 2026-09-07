@@ -4,6 +4,7 @@ import type {
   BoatDocumentVersion,
   BoatDocumentsPayload,
 } from '../domain/boat'
+import type { DocumentPurpose } from '../domain/boat-assets'
 import { apiUrl } from './app-origin'
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -43,12 +44,18 @@ export async function createBoatDocumentCategory(
 
 export async function createBoatDocumentUpload(
   boatId: string,
-  input: { title: string; categoryId: string; file: File },
+  input: {
+    title: string
+    categoryId: string
+    file: File
+    purpose?: DocumentPurpose | null
+  },
 ): Promise<BoatDocument> {
   const form = new FormData()
   form.append('title', input.title)
   form.append('categoryId', input.categoryId)
   form.append('file', input.file)
+  if (input.purpose) form.append('purpose', input.purpose)
   const data = await api<{ document: BoatDocument }>(
     `/api/boats/${boatId}/documents`,
     { method: 'POST', body: form },
@@ -58,7 +65,12 @@ export async function createBoatDocumentUpload(
 
 export async function createBoatDocumentLink(
   boatId: string,
-  input: { title: string; categoryId: string; url: string },
+  input: {
+    title: string
+    categoryId: string
+    url: string
+    purpose?: DocumentPurpose | null
+  },
 ): Promise<BoatDocument> {
   const data = await api<{ document: BoatDocument }>(
     `/api/boats/${boatId}/documents`,
@@ -93,7 +105,11 @@ export async function updateBoatDocumentLink(
 
 export async function updateBoatDocumentMetadata(
   documentId: string,
-  patch: { title?: string; categoryId?: string },
+  patch: {
+    title?: string
+    categoryId?: string
+    purpose?: DocumentPurpose | null
+  },
 ): Promise<BoatDocument> {
   const data = await api<{ document: BoatDocument }>(
     `/api/boats/documents/${documentId}`,

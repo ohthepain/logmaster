@@ -1,4 +1,5 @@
 import type { BoatIconId } from '../lib/boat-icons'
+import type { DocumentPurpose } from './boat-assets'
 
 export type BoatDocumentKind = 'upload' | 'link'
 
@@ -28,6 +29,7 @@ export type BoatDocument = {
   boatId: string
   categoryId: string
   title: string
+  purpose: DocumentPurpose | null
   sortOrder: number
   createdAt: string
   updatedAt: string

@@ -158,6 +158,7 @@ function serializeDocument(document: {
   consortiumId: string
   categoryId: string
   title: string
+  purpose: string | null
   sortOrder: number
   createdAt: Date
   updatedAt: Date
@@ -183,6 +184,7 @@ function serializeDocument(document: {
     orgId: document.consortiumId,
     categoryId: document.categoryId,
     title: document.title,
+    purpose: document.purpose,
     sortOrder: document.sortOrder,
     createdAt: document.createdAt.toISOString(),
     updatedAt: document.updatedAt.toISOString(),
@@ -241,6 +243,26 @@ function isValidHttpUrl(value: string): boolean {
   } catch {
     return false
   }
+}
+
+const DOCUMENT_PURPOSES = [
+  'receipt',
+  'invoice',
+  'photo',
+  'manual',
+  'warranty',
+  'other',
+] as const
+
+function parseDocumentPurpose(
+  value: unknown,
+): (typeof DOCUMENT_PURPOSES)[number] | null | undefined {
+  if (value === undefined) return undefined
+  if (value === null || value === '') return null
+  const str = String(value)
+  return DOCUMENT_PURPOSES.includes(str as (typeof DOCUMENT_PURPOSES)[number])
+    ? (str as (typeof DOCUMENT_PURPOSES)[number])
+    : null
 }
 
 export const consortiaMediaRoutes = new Hono()
@@ -460,6 +482,7 @@ consortiaMediaRoutes.post('/:orgId/documents', async (c) => {
       file.name.trim() ||
       'Document'
     const categoryId = String(body.categoryId ?? '').trim()
+    const purpose = parseDocumentPurpose(body.purpose)
     if (!categoryId) return c.json({ error: 'Category is required' }, 400)
 
     const category = await getOwnedCategory(userId, consortium.id, categoryId)
@@ -490,6 +513,7 @@ consortiaMediaRoutes.post('/:orgId/documents', async (c) => {
         consortiumId: consortium.id,
         categoryId,
         title,
+        purpose: purpose ?? undefined,
         sortOrder: maxSort + 1,
         versions: {
           create: {
@@ -520,10 +544,12 @@ consortiaMediaRoutes.post('/:orgId/documents', async (c) => {
     categoryId?: string
     url?: string
     kind?: string
+    purpose?: string | null
   }
   const title = body.title?.trim()
   const categoryId = body.categoryId?.trim()
   const url = body.url?.trim()
+  const purpose = parseDocumentPurpose(body.purpose)
   if (!title) return c.json({ error: 'Title is required' }, 400)
   if (!categoryId) return c.json({ error: 'Category is required' }, 400)
   if (!url) return c.json({ error: 'URL is required' }, 400)
@@ -543,6 +569,7 @@ consortiaMediaRoutes.post('/:orgId/documents', async (c) => {
       consortiumId: consortium.id,
       categoryId,
       title,
+      purpose: purpose ?? undefined,
       sortOrder: maxSort + 1,
       versions: {
         create: {
@@ -636,11 +663,13 @@ consortiaMediaRoutes.patch('/documents/:documentId', async (c) => {
     title?: string
     categoryId?: string
     url?: string
+    purpose?: string | null
   }
 
   const data: {
     title?: string
     categoryId?: string
+    purpose?: (typeof DOCUMENT_PURPOSES)[number] | null
     updatedAt: Date
   } = { updatedAt: new Date() }
 
@@ -648,6 +677,10 @@ consortiaMediaRoutes.patch('/documents/:documentId', async (c) => {
     const title = body.title.trim()
     if (!title) return c.json({ error: 'Title is required' }, 400)
     data.title = title
+  }
+
+  if (body.purpose !== undefined) {
+    data.purpose = parseDocumentPurpose(body.purpose) ?? null
   }
 
   if (body.categoryId !== undefined) {

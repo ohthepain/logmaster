@@ -32,6 +32,8 @@ import { consortiaRoutes } from './routes/consortia'
 import { consortiaMediaRoutes } from './routes/consortia-media'
 import { memberInvitesRoutes } from './routes/member-invites'
 import { boatMembersRoutes } from './routes/boat-members'
+import { boatAssetsRoutes } from './routes/boat-assets'
+import { orgAccountingRoutes } from './routes/org-accounting'
 import { isAisStreamConfigured } from './ais/aisstream-client'
 
 const corsOrigins = getTrustedOrigins()
@@ -73,6 +75,7 @@ app.route('/logbook', logbookStoryMediaRoutes)
 app.route('/boats', boatsRoutes)
 app.route('/boats', boatSharesRoutes)
 app.route('/boats', boatMembersRoutes)
+app.route('/boats', boatAssetsRoutes)
 app.route('/profile', profileRoutes)
 app.route('/crew', crewRoutes)
 app.route('/location', locationRoutes)
@@ -89,6 +92,7 @@ app.route('/gpx-import', gpxImportRoutes)
 app.route('/routes', routesApi)
 app.route('/orgs', consortiaRoutes)
 app.route('/orgs', consortiaMediaRoutes)
+app.route('/orgs', orgAccountingRoutes)
 app.route('/member-invites', memberInvitesRoutes)
 app.route('/places', placesRoutes)
 app.route('/ais', aisRoutes)
