@@ -260,15 +260,22 @@ model Media {
   @@map("media")
 }
 
+enum BoatDocumentKind {
+  upload
+  link
+}
+
 model Boat {
-  id        String      @id @default(cuid())
-  userId    String
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String
-  iconId    String      @default("medium")
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  photos    BoatPhoto[]
+  id                 String                 @id @default(cuid())
+  userId             String
+  user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  iconId             String                 @default("medium")
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  photos             BoatPhoto[]
+  documentCategories BoatDocumentCategory[]
+  documents          BoatDocument[]
 
   @@index([userId, updatedAt])
   @@map("boat")
@@ -288,6 +295,54 @@ model BoatPhoto {
 
   @@index([boatId, sortOrder])
   @@map("boat_photo")
+}
+
+model BoatDocumentCategory {
+  id        String         @id @default(cuid())
+  boatId    String
+  boat      Boat           @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  name      String
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  documents BoatDocument[]
+
+  @@unique([boatId, name])
+  @@index([boatId, sortOrder])
+  @@map("boat_document_category")
+}
+
+model BoatDocument {
+  id         String                 @id @default(cuid())
+  boatId     String
+  boat       Boat                   @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   BoatDocumentCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  title      String
+  sortOrder  Int                    @default(0)
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+  versions   BoatDocumentVersion[]
+
+  @@index([boatId, categoryId, sortOrder])
+  @@map("boat_document")
+}
+
+model BoatDocumentVersion {
+  id            String           @id @default(cuid())
+  documentId    String
+  document      BoatDocument     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  kind          BoatDocumentKind
+  s3Key         String?
+  mimeType      String?
+  url           String?
+  fileName      String?
+  createdAt     DateTime         @default(now())
+
+  @@unique([documentId, versionNumber])
+  @@index([documentId, versionNumber])
+  @@map("boat_document_version")
 }
 
 enum CrewInviteStatus {

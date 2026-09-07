@@ -12,6 +12,7 @@ type BoatIconSelectorProps = {
   className?: string
   /** Use when opening the picker from inside another modal. */
   pickerLayer?: 'base' | 'overlay'
+  variant?: 'default' | 'icon'
 }
 
 export function BoatIconSelector({
@@ -20,8 +21,41 @@ export function BoatIconSelector({
   disabled = false,
   className,
   pickerLayer = 'base',
+  variant = 'default',
 }: BoatIconSelectorProps) {
   const [pickerOpen, setPickerOpen] = useState(false)
+
+  if (variant === 'icon') {
+    return (
+      <>
+        <button
+          type="button"
+          disabled={disabled}
+          aria-label="Change map icon"
+          onClick={() => setPickerOpen(true)}
+          className={cn(
+            'shrink-0 p-0 transition-opacity hover:opacity-80 disabled:opacity-60',
+            className,
+          )}
+        >
+          <img
+            src={boatIconSrc(value)}
+            alt=""
+            draggable={false}
+            className="h-10 w-auto object-contain sm:h-12"
+          />
+        </button>
+
+        <BoatIconPickerDialog
+          open={pickerOpen}
+          value={value}
+          onClose={() => setPickerOpen(false)}
+          onSelect={onChange}
+          layer={pickerLayer}
+        />
+      </>
+    )
+  }
 
   return (
     <div className={className}>

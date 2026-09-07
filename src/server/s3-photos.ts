@@ -111,3 +111,39 @@ export function extensionForStoryMime(mimeType: string): string {
   }
   return extensionForMime(mimeType)
 }
+
+export function boatDocumentS3Key(
+  userId: string,
+  boatId: string,
+  documentId: string,
+  versionId: string,
+  ext: string,
+): string {
+  return `users/${userId}/boats/${boatId}/documents/${documentId}/${versionId}.${ext}`
+}
+
+export function extensionForDocumentMime(mimeType: string, fileName?: string): string {
+  if (mimeType === 'application/pdf') return 'pdf'
+  if (mimeType === 'text/plain') return 'txt'
+  if (mimeType === 'text/csv') return 'csv'
+  if (mimeType === 'application/msword') return 'doc'
+  if (
+    mimeType ===
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ) {
+    return 'docx'
+  }
+  if (mimeType === 'application/vnd.ms-excel') return 'xls'
+  if (
+    mimeType ===
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  ) {
+    return 'xlsx'
+  }
+  if (mimeType.startsWith('image/')) return extensionForMime(mimeType)
+  if (fileName?.includes('.')) {
+    const ext = fileName.split('.').pop()?.toLowerCase()
+    if (ext && ext.length <= 8) return ext
+  }
+  return 'bin'
+}

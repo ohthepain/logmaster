@@ -1,5 +1,44 @@
 import type { BoatIconId } from '../lib/boat-icons'
 
+export type BoatDocumentKind = 'upload' | 'link'
+
+export type BoatDocumentVersion = {
+  id: string
+  documentId: string
+  versionNumber: number
+  kind: BoatDocumentKind
+  mimeType: string | null
+  url: string | null
+  fileName: string | null
+  createdAt: string
+  contentUrl: string | null
+}
+
+export type BoatDocumentCategory = {
+  id: string
+  boatId: string
+  name: string
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type BoatDocument = {
+  id: string
+  boatId: string
+  categoryId: string
+  title: string
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+  currentVersion: BoatDocumentVersion
+}
+
+export type BoatDocumentsPayload = {
+  categories: BoatDocumentCategory[]
+  documents: BoatDocument[]
+}
+
 export type BoatPhoto = {
   id: string
   boatId: string
