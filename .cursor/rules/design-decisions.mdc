@@ -51,11 +51,28 @@ Dev server runs on **port 3020** (`pnpm dev`).
 
 ## Data model
 
-Core entities: **Trip** → **LogEntry** → **Media**, plus Better Auth user tables and **Boat** → **BoatPhoto** (user-owned, photos in `S3_BUCKET_PHOTOS`).
+Core entities: **Trip** → **LogEntry** → **Media**, plus Better Auth user tables and **Boat** → **BoatPhoto** (consortium-owned, photos in `S3_BUCKET_PHOTOS`).
 
 - Log entries use typed events (`SAILS_UP`, `ANCHOR_DROPPED`, `NOTE`, `PHOTO`, etc.) — see `src/domain/logbook.ts`.
 - Entries carry `synced` and soft-delete (`deleted`) flags for offline sync.
 - Domain types live in `src/domain/`; keep UI and API aligned with these types.
+
+## Permissions
+
+**Boats and orgs are separate.** A personal boat is owned via `Boat.userId` with its own photos and documents. An **org** is an optional group for syndicate operations: shared org documents, contacts, members, scheduling context, and one or more attached boats.
+
+- **Boat access:** creator (`userId`) has full access; **share owners** get member-level boat/trip access; if the boat is attached to an org, org members also get access per role.
+- **Org access:** membership roles only — not implied by boat ownership alone. Attach a boat to an org explicitly via `/api/orgs/:id/boats`.
+- **`createdByUserId`** on an org is audit/display only — it does not gate access.
+- **Roles:** `OWNER`, `ADMIN`, `MEMBER`, `VIEWER` on org membership — mapped to privileges in `src/server/permissions/`.
+- **Boat shares:** each boat has a fixed `shareCount`. Shares are ordered by `sequence` (0-based, stable display order for scheduling). Each share can have multiple owners who split that share equally. Shares live on the boat; they do not require an org.
+- **Share slots:** every share index `0 … shareCount-1` exists as a row even when unassigned, so scheduling UIs stay consistent.
+- **Visibility** on the org: `PRIVATE` (members only), `UNLISTED` (share link/token), `PUBLIC` (discoverable — future).
+- **Boat log access:** trip creator (`Trip.userId`) or anyone with boat access (owner, share owner, org member for attached boats) via `Trip.boatId`.
+- **Routes** follow the same pattern: creator-owned, with boat-linked routes visible to users with boat access.
+- **Inheritance:** photos, documents, log entries, and other child resources inherit access from their container (boat or trip via boat).
+- **Crew vs org:** crew roster (`CrewMember`) is for trip logging UX. Accepting a crew invite adds org `MEMBER` only when the inviter has boats attached to an org. Adding a share owner grants org membership only when the boat is attached to an org.
+- **API:** `/api/orgs/…` for org management; `/api/boats/:id/shares` for share structure and owners; authorization checks via `canAccess()` in route handlers.
 
 ## Offline-first behaviour
 
@@ -65,8 +82,9 @@ Core entities: **Trip** → **LogEntry** → **Media**, plus Better Auth user ta
 
 ## API conventions
 
-- Logbook routes: `/api/logbook/…` (`src/server/routes/logbook.ts`).
-- Boats routes: `/api/boats/…` (`src/server/routes/boats.ts`) — auth required; photo bytes at `/api/boats/photos/:id/content`.
+- Logbook routes: `/api/logbook/…` (`src/server/routes/logbook.ts`) — auth required; scoped by boat/org access.
+- Boats routes: `/api/boats/…` (`src/server/routes/boats.ts`) — auth required; boat ownership/shares/org membership; photo bytes at `/api/boats/photos/:id/content`.
+- Org routes: `/api/orgs/…` (`src/server/routes/consortia.ts`) — member list, add, role change, remove.
 - Admin routes: `/api/admin/…` (pg-boss, countries/geo imports).
 - Health check: `/api/health`.
 - Use Hono sub-routers; mount new domains on `src/server/hono.ts`.

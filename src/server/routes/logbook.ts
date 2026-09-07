@@ -4,8 +4,24 @@ import {
   deleteTripsFromLogbook,
   getDeletedTripIds,
 } from '../deleted-trips'
+import {
+  canAccess,
+  tripAccessFilter,
+} from '../permissions'
+import { getSessionUserId } from '../session'
 
 const db = prisma as any
+
+function unauthorized() {
+  return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    status: 401,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+async function requireUserId(c: { req: { raw: { headers: Headers } } }) {
+  return getSessionUserId(c.req.raw.headers)
+}
 
 function parseDate(value: unknown) {
   if (typeof value !== 'string') return null
@@ -13,12 +29,16 @@ function parseDate(value: unknown) {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-function toTrip(data: Record<string, unknown>) {
+function toTrip(
+  data: Record<string, unknown>,
+  userId?: string | null,
+) {
   const startedAt = parseDate(data.startedAt) ?? new Date()
   const createdAt = parseDate(data.createdAt) ?? startedAt
   const updatedAt = parseDate(data.updatedAt) ?? startedAt
   return {
     id: String(data.id ?? crypto.randomUUID()),
+    userId: userId ?? null,
     boatName: String(data.boatName ?? 'Unknown boat'),
     registration: (data.registration as string | null | undefined) ?? null,
     skipper: (data.skipper as string | null | undefined) ?? null,
@@ -174,16 +194,88 @@ function toMedia(data: Record<string, unknown>) {
   }
 }
 
+async function prepareTripForSync(
+  userId: string,
+  data: Record<string, unknown>,
+) {
+  const tripId = String(data.id ?? crypto.randomUUID())
+  const existing = await db.trip.findUnique({ where: { id: tripId } })
+
+  if (existing) {
+    if (existing.userId === null) {
+      if (existing.boatId) {
+        const allowed = await canAccess(userId, 'edit', {
+          type: 'boat',
+          id: existing.boatId,
+        })
+        if (!allowed) {
+          throw new Error(`Forbidden: cannot update trip ${tripId}`)
+        }
+      }
+      return toTrip(data, userId)
+    }
+
+    const allowed = await canAccess(userId, 'edit', { type: 'trip', id: tripId })
+    if (!allowed) {
+      throw new Error(`Forbidden: cannot update trip ${tripId}`)
+    }
+    return toTrip(data, existing.userId ?? userId)
+  }
+
+  return toTrip(data, userId)
+}
+
+async function assertCanEditTrip(
+  userId: string,
+  tripId: string,
+  allowedFromBatch: Set<string>,
+) {
+  if (allowedFromBatch.has(tripId)) return
+  const allowed = await canAccess(userId, 'edit', { type: 'trip', id: tripId })
+  if (!allowed) {
+    throw new Error(`Forbidden: cannot update trip ${tripId}`)
+  }
+}
+
 export const logbookRoutes = new Hono()
 
 logbookRoutes.get('/bootstrap', async (c) => {
-  const [trips, legs, logEntries, tripTracks, media, deletedTripIds] =
+  const userId = await requireUserId(c)
+  if (!userId) return unauthorized()
+
+  const tripWhere = await tripAccessFilter(userId)
+  const trips = await db.trip.findMany({
+    where: tripWhere,
+    orderBy: [{ updatedAt: 'desc' }],
+  })
+  const tripIds = trips.map((trip: { id: string }) => trip.id)
+
+  const [legs, logEntries, tripTracks, media, deletedTripIds] =
     await Promise.all([
-    db.trip.findMany({ orderBy: [{ updatedAt: 'desc' }] }),
-    db.leg.findMany({ orderBy: [{ tripId: 'asc' }, { sequence: 'asc' }] }),
-    db.logEntry.findMany({ orderBy: [{ timestamp: 'asc' }] }),
-    db.tripTrack.findMany({ orderBy: [{ startedAt: 'asc' }] }),
-    db.media.findMany({ orderBy: [{ createdAt: 'asc' }] }),
+    tripIds.length > 0
+      ? db.leg.findMany({
+          where: { tripId: { in: tripIds } },
+          orderBy: [{ tripId: 'asc' }, { sequence: 'asc' }],
+        })
+      : [],
+    tripIds.length > 0
+      ? db.logEntry.findMany({
+          where: { tripId: { in: tripIds } },
+          orderBy: [{ timestamp: 'asc' }],
+        })
+      : [],
+    tripIds.length > 0
+      ? db.tripTrack.findMany({
+          where: { tripId: { in: tripIds } },
+          orderBy: [{ startedAt: 'asc' }],
+        })
+      : [],
+    tripIds.length > 0
+      ? db.media.findMany({
+          where: { logEntry: { tripId: { in: tripIds } } },
+          orderBy: [{ createdAt: 'asc' }],
+        })
+      : [],
     getDeletedTripIds(),
   ])
   return c.json({
@@ -200,6 +292,9 @@ logbookRoutes.get('/bootstrap', async (c) => {
 
 logbookRoutes.post('/sync', async (c) => {
   try {
+    const userId = await requireUserId(c)
+    if (!userId) return unauthorized()
+
     const body = (await c.req.json().catch(() => ({}))) as {
       trips?: Record<string, unknown>[]
       legs?: Record<string, unknown>[]
@@ -223,10 +318,32 @@ logbookRoutes.post('/sync', async (c) => {
     )
 
     if (deletedTripIds.length > 0) {
+      for (const tripId of deletedTripIds) {
+        const allowed = await canAccess(userId, 'manage', {
+          type: 'trip',
+          id: tripId,
+        })
+        if (!allowed) {
+          return c.json({ error: `Forbidden: cannot delete trip ${tripId}` }, 403)
+        }
+      }
       await deleteTripsFromLogbook(deletedTripIds)
     }
 
     if (deletedMediaIds.length > 0) {
+      const mediaRows = await db.media.findMany({
+        where: { id: { in: deletedMediaIds } },
+        include: { logEntry: { select: { tripId: true } } },
+      })
+      for (const row of mediaRows) {
+        const allowed = await canAccess(userId, 'edit', {
+          type: 'trip',
+          id: row.logEntry.tripId,
+        })
+        if (!allowed) {
+          return c.json({ error: 'Forbidden: cannot delete media' }, 403)
+        }
+      }
       await db.media.deleteMany({
         where: { id: { in: deletedMediaIds } },
       })
@@ -259,12 +376,35 @@ logbookRoutes.post('/sync', async (c) => {
       tracksToUpsert.length > 0 ||
       mediaToUpsert.length > 0
     ) {
+      const preparedTrips = await Promise.all(
+        tripsToUpsert.map((trip) => prepareTripForSync(userId, trip)),
+      )
+      const allowedTripIds = new Set(preparedTrips.map((trip) => trip.id))
+
+      for (const leg of legsToUpsert) {
+        await assertCanEditTrip(userId, String(leg.tripId), allowedTripIds)
+      }
+      for (const entry of entriesToUpsert) {
+        await assertCanEditTrip(userId, String(entry.tripId), allowedTripIds)
+      }
+      for (const track of tracksToUpsert) {
+        await assertCanEditTrip(userId, String(track.tripId), allowedTripIds)
+      }
+      for (const item of mediaToUpsert) {
+        const logEntry = await db.logEntry.findUnique({
+          where: { id: String(item.logEntryId) },
+          select: { tripId: true },
+        })
+        if (!logEntry) continue
+        await assertCanEditTrip(userId, logEntry.tripId, allowedTripIds)
+      }
+
       await prisma.$transaction([
-      ...tripsToUpsert.map((trip) =>
+      ...preparedTrips.map((trip) =>
         db.trip.upsert({
-          where: { id: String(trip.id) },
-          create: toTrip(trip) as any,
-          update: toTrip(trip) as any,
+          where: { id: trip.id },
+          create: trip as any,
+          update: trip as any,
         }),
       ),
       ...legsToUpsert.map((leg) =>
@@ -298,13 +438,26 @@ logbookRoutes.post('/sync', async (c) => {
       ])
     }
 
+    const tripWhere = await tripAccessFilter(userId)
     const [savedTrips, savedLegs, savedEntries, savedTracks, savedMedia, savedDeletedTripIds] =
       await Promise.all([
-      db.trip.findMany({ orderBy: [{ updatedAt: 'desc' }] }),
-      db.leg.findMany({ orderBy: [{ tripId: 'asc' }, { sequence: 'asc' }] }),
-      db.logEntry.findMany({ orderBy: [{ timestamp: 'asc' }] }),
-      db.tripTrack.findMany({ orderBy: [{ startedAt: 'asc' }] }),
-      db.media.findMany({ orderBy: [{ createdAt: 'asc' }] }),
+      db.trip.findMany({ where: tripWhere, orderBy: [{ updatedAt: 'desc' }] }),
+      db.leg.findMany({
+        where: { trip: tripWhere },
+        orderBy: [{ tripId: 'asc' }, { sequence: 'asc' }],
+      }),
+      db.logEntry.findMany({
+        where: { trip: tripWhere },
+        orderBy: [{ timestamp: 'asc' }],
+      }),
+      db.tripTrack.findMany({
+        where: { trip: tripWhere },
+        orderBy: [{ startedAt: 'asc' }],
+      }),
+      db.media.findMany({
+        where: { logEntry: { trip: tripWhere } },
+        orderBy: [{ createdAt: 'asc' }],
+      }),
       getDeletedTripIds(),
     ])
 
@@ -322,6 +475,7 @@ logbookRoutes.post('/sync', async (c) => {
     console.error('[logbook/sync]', error)
     const message =
       error instanceof Error ? error.message : 'Failed to sync logbook'
-    return c.json({ error: message }, 500)
+    const status = message.startsWith('Forbidden') ? 403 : 500
+    return c.json({ error: message }, status)
   }
 })

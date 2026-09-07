@@ -1,9 +1,9 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Plus, Sailboat, Trash2 } from 'lucide-react'
+import { Plus, Sailboat } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { AddBoatModal } from '../../../components/AddBoatModal'
-import { defaultBoatPhoto } from '../../../domain/boat'
+import { BoatListCards } from '../../../components/BoatListCards'
 import type { Boat } from '../../../domain/boat'
 import { useSession } from '../../../lib/auth-client'
 import { deleteBoat, fetchBoats } from '../../../lib/boats-api'
@@ -117,7 +117,7 @@ function BoatsPage() {
         </div>
       ) : boats.length === 0 ? (
         <div className="page-wrap px-3 sm:px-4">
-          <section className="rounded-2xl bg-[var(--panel)] px-6 py-12 text-center">
+          <section className="rounded-2xl bg-[var(--panel)] px-6 py-10 text-center">
             <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-[var(--brand-muted)]">
               <Sailboat className="size-6 text-[var(--brand)]" />
             </div>
@@ -138,56 +138,10 @@ function BoatsPage() {
           </section>
         </div>
       ) : (
-        <div className="space-y-8">
-          {boats.map((boat) => {
-            const cover = defaultBoatPhoto(boat.photos)
-            return (
-              <article key={boat.id} className="group">
-                <div className="page-wrap px-3 sm:px-4">
-                  <div className="relative overflow-hidden rounded-2xl bg-[var(--panel)]">
-                    <Link
-                      to="/boats/$boatId"
-                      params={{ boatId: boat.id }}
-                      className="block no-underline"
-                    >
-                      <div className="aspect-[16/10] w-full overflow-hidden sm:aspect-[5/3]">
-                        {cover ? (
-                          <img
-                            src={cover.imageUrl}
-                            alt={boat.name}
-                            className="size-full object-cover transition duration-300 group-hover:scale-[1.02]"
-                          />
-                        ) : (
-                          <div className="flex size-full items-center justify-center bg-[var(--panel)]">
-                            <Sailboat className="size-10 text-[var(--sea-ink-soft)]" />
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => void handleDelete(boat)}
-                      className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-[var(--overlay)] px-2.5 py-1.5 text-[11px] font-semibold text-white opacity-90 transition sm:opacity-0 sm:group-hover:opacity-100"
-                      aria-label={`Delete ${boat.name}`}
-                    >
-                      <Trash2 className="size-3.5" />
-                      Delete
-                    </button>
-                  </div>
-                  <Link
-                    to="/boats/$boatId"
-                    params={{ boatId: boat.id }}
-                    className="mt-3 block no-underline"
-                  >
-                    <h2 className="m-0 text-[1.35rem] font-semibold leading-tight text-[var(--sea-ink)] sm:text-2xl">
-                      {boat.name}
-                    </h2>
-                  </Link>
-                </div>
-              </article>
-            )
-          })}
-        </div>
+        <BoatListCards
+          boats={boats}
+          onDelete={(boat) => void handleDelete(boat)}
+        />
       )}
 
       <AddBoatModal

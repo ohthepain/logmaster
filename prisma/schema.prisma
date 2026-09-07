@@ -42,6 +42,19 @@ enum MediaType {
   attachment
 }
 
+enum ConsortiumMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum Visibility {
+  PRIVATE
+  UNLISTED
+  PUBLIC
+}
+
 model User {
   id                   String    @id
   name                 String
@@ -54,15 +67,146 @@ model User {
   sessions      Session[]
   accounts      Account[]
   boats         Boat[]
+  createdConsortia       Consortium[]      @relation("CreatedConsortia")
+  consortiumMemberships  ConsortiumMember[]
   ownedCrewMembers       CrewMember[]   @relation("OwnedCrewMembers")
   linkedAsCrewMember     CrewMember[]   @relation("LinkedCrewMembers")
   sentCrewInvites        CrewInvite[]   @relation("SentCrewInvites")
   acceptedCrewInvites    CrewInvite[]   @relation("AcceptedCrewInvites")
+  sentMemberInvites      MemberInvite[] @relation("SentMemberInvites")
+  acceptedMemberInvites  MemberInvite[] @relation("AcceptedMemberInvites")
+  boatMemberships        BoatMember[]
   sentFriendRequests     FriendRequest[] @relation("SentFriendRequests")
   receivedFriendRequests FriendRequest[] @relation("ReceivedFriendRequests")
+  createdTrips           Trip[]         @relation("CreatedTrips")
+  createdRoutes          Route[]        @relation("CreatedRoutes")
+  boatShareOwnerships    BoatShareOwner[]
+  orgContacts           ConsortiumContact[]
 
   @@unique([email])
   @@map("user")
+}
+
+model Consortium {
+  id              String     @id @default(cuid())
+  name            String
+  createdByUserId String
+  visibility      Visibility @default(PRIVATE)
+  shareToken      String?    @unique
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  createdBy User               @relation("CreatedConsortia", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  members   ConsortiumMember[]
+  memberInvites MemberInvite[]
+  boats     Boat[]
+  photos    ConsortiumPhoto[]
+  documentCategories ConsortiumDocumentCategory[]
+  documents ConsortiumDocument[]
+  contacts  ConsortiumContact[]
+
+  @@index([createdByUserId])
+  @@map("consortium")
+}
+
+model ConsortiumMember {
+  id           String               @id @default(cuid())
+  consortiumId String
+  userId       String
+  role         ConsortiumMemberRole
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  consortium Consortium @relation(fields: [consortiumId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([consortiumId, userId])
+  @@index([userId])
+  @@map("consortium_member")
+}
+
+model ConsortiumPhoto {
+  id            String     @id @default(cuid())
+  consortiumId  String
+  consortium    Consortium @relation(fields: [consortiumId], references: [id], onDelete: Cascade)
+  s3Key         String
+  mimeType      String     @default("image/jpeg")
+  caption       String?
+  isDefault     Boolean    @default(false)
+  sortOrder     Int        @default(0)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([consortiumId, sortOrder])
+  @@map("consortium_photo")
+}
+
+model ConsortiumContact {
+  id           String     @id @default(cuid())
+  consortiumId String
+  userId       String?
+  consortium   Consortium @relation(fields: [consortiumId], references: [id], onDelete: Cascade)
+  user         User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  displayName  String
+  email        String?
+  phone        String?
+  whatsapp     String?
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([consortiumId, userId])
+  @@index([consortiumId, displayName])
+  @@index([userId])
+  @@map("consortium_contact")
+}
+
+model ConsortiumDocumentCategory {
+  id           String     @id @default(cuid())
+  consortiumId String
+  consortium   Consortium @relation(fields: [consortiumId], references: [id], onDelete: Cascade)
+  name         String
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  documents    ConsortiumDocument[]
+
+  @@unique([consortiumId, name])
+  @@index([consortiumId, sortOrder])
+  @@map("consortium_document_category")
+}
+
+model ConsortiumDocument {
+  id           String                     @id @default(cuid())
+  consortiumId String
+  consortium   Consortium                 @relation(fields: [consortiumId], references: [id], onDelete: Cascade)
+  categoryId   String
+  category     ConsortiumDocumentCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  title        String
+  sortOrder    Int                        @default(0)
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+  versions     ConsortiumDocumentVersion[]
+
+  @@index([consortiumId, categoryId, sortOrder])
+  @@map("consortium_document")
+}
+
+model ConsortiumDocumentVersion {
+  id            String           @id @default(cuid())
+  documentId    String
+  document      ConsortiumDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  kind          BoatDocumentKind
+  s3Key         String?
+  mimeType      String?
+  url           String?
+  fileName      String?
+  createdAt     DateTime         @default(now())
+
+  @@unique([documentId, versionNumber])
+  @@index([documentId, versionNumber])
+  @@map("consortium_document_version")
 }
 
 model Session {
@@ -111,6 +255,7 @@ model Verification {
 
 model Trip {
   id             String      @id @default(cuid())
+  userId         String?
   boatName       String
   registration   String?
   skipper        String?
@@ -139,12 +284,15 @@ model Trip {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
+  createdBy  User?        @relation("CreatedTrips", fields: [userId], references: [id], onDelete: SetNull)
   logEntries     LogEntry[]
   legs           Leg[]
   tripTracks     TripTrack[]
   storyMedia     TripStoryMedia[]
 
   @@index([status, startedAt])
+  @@index([userId])
+  @@index([boatId])
   @@map("trip")
 }
 
@@ -267,18 +415,55 @@ enum BoatDocumentKind {
 
 model Boat {
   id                 String                 @id @default(cuid())
+  consortiumId       String?
   userId             String
   user               User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   name               String
   iconId             String                 @default("medium")
+  shareCount         Int                    @default(1)
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
+  consortium         Consortium?            @relation(fields: [consortiumId], references: [id], onDelete: SetNull)
   photos             BoatPhoto[]
   documentCategories BoatDocumentCategory[]
   documents          BoatDocument[]
+  shares             BoatShare[]
+  members            BoatMember[]
+  memberInvites      MemberInvite[]
 
   @@index([userId, updatedAt])
+  @@index([consortiumId])
   @@map("boat")
+}
+
+model BoatShare {
+  id        String   @id @default(cuid())
+  boatId    String
+  sequence  Int
+  label     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  boat   Boat             @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  owners BoatShareOwner[]
+
+  @@unique([boatId, sequence])
+  @@index([boatId, sequence])
+  @@map("boat_share")
+}
+
+model BoatShareOwner {
+  id        String   @id @default(cuid())
+  shareId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  share BoatShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([shareId, userId])
+  @@index([userId])
+  @@map("boat_share_owner")
 }
 
 model BoatPhoto {
@@ -350,6 +535,54 @@ enum CrewInviteStatus {
   ACCEPTED
   EXPIRED
   CANCELLED
+}
+
+enum MemberInviteKind {
+  ORG
+  BOAT
+}
+
+model BoatMember {
+  id        String               @id @default(cuid())
+  boatId    String
+  userId    String
+  role      ConsortiumMemberRole
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  boat Boat @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([boatId, userId])
+  @@index([userId])
+  @@map("boat_member")
+}
+
+model MemberInvite {
+  id               String               @id @default(cuid())
+  kind             MemberInviteKind
+  orgId            String?
+  boatId           String?
+  inviterUserId    String
+  inviteeEmail     String?
+  token            String               @unique
+  role             ConsortiumMemberRole @default(MEMBER)
+  status           CrewInviteStatus     @default(PENDING)
+  acceptedByUserId String?
+  expiresAt        DateTime
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  org        Consortium? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  boat       Boat?       @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  inviter    User        @relation("SentMemberInvites", fields: [inviterUserId], references: [id], onDelete: Cascade)
+  acceptedBy User?       @relation("AcceptedMemberInvites", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([inviterUserId, status])
+  @@index([inviteeEmail, status])
+  @@index([orgId, status])
+  @@index([boatId, status])
+  @@map("member_invite")
 }
 
 enum FriendRequestStatus {
@@ -439,6 +672,7 @@ enum RouteMediaType {
 
 model Route {
   id                String          @id @default(cuid())
+  userId            String?
   title             String
   description       String?
   boatId            String?
@@ -449,10 +683,12 @@ model Route {
   updatedAt         DateTime        @updatedAt
   synced            Boolean         @default(false)
 
+  createdBy   User?         @relation("CreatedRoutes", fields: [userId], references: [id], onDelete: SetNull)
   waypoints   RouteWaypoint[]
   annotations RouteAnnotation[]
 
   @@index([updatedAt])
+  @@index([userId])
   @@map("route")
 }
 

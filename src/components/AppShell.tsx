@@ -17,6 +17,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const hideChrome =
     NO_CHROME.has(pathname) ||
     pathname.startsWith('/crew/invite/') ||
+    pathname.startsWith('/invite/') ||
     isTripStoryRoute(pathname)
   const mapOverlayHeader = isTripDetailImmersiveRoute(pathname)
 

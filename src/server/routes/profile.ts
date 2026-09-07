@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { acceptPendingInvitesForEmail } from '../member-invites'
 import { prisma } from '../db'
 import { getSessionUserId } from '../session'
 import {
@@ -76,6 +77,10 @@ profileRoutes.get('/', async (c) => {
 
   const user = await db.user.findUnique({ where: { id: userId } })
   if (!user) return c.json({ error: 'User not found' }, 404)
+
+  void acceptPendingInvitesForEmail(user.id, user.email).catch((error) => {
+    console.error('[profile] accept pending invites failed', error)
+  })
 
   return c.json({ user: serializeUser(user) })
 })

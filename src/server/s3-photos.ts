@@ -122,6 +122,25 @@ export function boatDocumentS3Key(
   return `users/${userId}/boats/${boatId}/documents/${documentId}/${versionId}.${ext}`
 }
 
+export function consortiumPhotoS3Key(
+  userId: string,
+  consortiumId: string,
+  photoId: string,
+  ext: string,
+): string {
+  return `users/${userId}/consortia/${consortiumId}/${photoId}.${ext}`
+}
+
+export function consortiumDocumentS3Key(
+  userId: string,
+  consortiumId: string,
+  documentId: string,
+  versionId: string,
+  ext: string,
+): string {
+  return `users/${userId}/consortia/${consortiumId}/documents/${documentId}/${versionId}.${ext}`
+}
+
 export function extensionForDocumentMime(mimeType: string, fileName?: string): string {
   if (mimeType === 'application/pdf') return 'pdf'
   if (mimeType === 'text/plain') return 'txt'

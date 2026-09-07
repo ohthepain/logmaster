@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { sendCrewInviteEmail } from '../email/ses'
 import { prisma } from '../db'
+import { ensureConsortiumMember } from '../permissions'
 import { getSessionUserId } from '../session'
 import {
   crewMemberPhotoS3Key,
@@ -747,6 +748,28 @@ crewRoutes.post('/invites/accept', async (c) => {
       update: {},
     }),
   ])
+
+  const inviterBoatConsortia = await db.boat.findMany({
+    where: {
+      consortiumId: { not: null },
+      consortium: {
+        members: {
+          some: {
+            userId: invite.inviterUserId,
+            role: { in: ['OWNER', 'ADMIN'] },
+          },
+        },
+      },
+    },
+    select: { consortiumId: true },
+    distinct: ['consortiumId'],
+  })
+
+  for (const boat of inviterBoatConsortia) {
+    if (boat.consortiumId) {
+      await ensureConsortiumMember(boat.consortiumId, user.id, 'MEMBER')
+    }
+  }
 
   return c.json({ ok: true })
 })

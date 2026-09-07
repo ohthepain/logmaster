@@ -11,6 +11,7 @@ import { logbookStoryMediaRoutes } from './routes/logbook-story-media'
 import { logbookRoutes } from './routes/logbook'
 import { logbookTrackRoutes } from './routes/logbook-tracks'
 import { boatsRoutes } from './routes/boats'
+import { boatSharesRoutes } from './routes/boat-shares'
 import { profileRoutes } from './routes/profile'
 import { crewRoutes } from './routes/crew'
 import { locationRoutes } from './routes/location'
@@ -27,6 +28,10 @@ import { gpxImportRoutes } from './routes/gpx-import'
 import { placesRoutes } from './routes/places'
 import { aisRoutes } from './routes/ais'
 import { routesApi } from './routes/routes'
+import { consortiaRoutes } from './routes/consortia'
+import { consortiaMediaRoutes } from './routes/consortia-media'
+import { memberInvitesRoutes } from './routes/member-invites'
+import { boatMembersRoutes } from './routes/boat-members'
 import { isAisStreamConfigured } from './ais/aisstream-client'
 
 const corsOrigins = getTrustedOrigins()
@@ -66,6 +71,8 @@ app.route('/logbook', logbookRoutes)
 app.route('/logbook', logbookTrackRoutes)
 app.route('/logbook', logbookStoryMediaRoutes)
 app.route('/boats', boatsRoutes)
+app.route('/boats', boatSharesRoutes)
+app.route('/boats', boatMembersRoutes)
 app.route('/profile', profileRoutes)
 app.route('/crew', crewRoutes)
 app.route('/location', locationRoutes)
@@ -80,5 +87,8 @@ app.route('/marinas', marinaRoutes)
 app.route('/osm-points', osmPointTileRoutes)
 app.route('/gpx-import', gpxImportRoutes)
 app.route('/routes', routesApi)
+app.route('/orgs', consortiaRoutes)
+app.route('/orgs', consortiaMediaRoutes)
+app.route('/member-invites', memberInvitesRoutes)
 app.route('/places', placesRoutes)
 app.route('/ais', aisRoutes)

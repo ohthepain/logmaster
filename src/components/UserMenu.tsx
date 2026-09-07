@@ -1,5 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import {
+  Building2,
   ChevronRight,
   CircleUser,
   LoaderCircle,
@@ -384,6 +385,15 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     aria-label="Account options"
                     className="mt-7 border-t border-[var(--line)] pt-2"
                   >
+                    {user ? (
+                      <TextMenuButton
+                        icon={<Building2 className="size-5" />}
+                        label="Orgs"
+                        onClick={() =>
+                          navigateFromMenu(() => void navigate({ to: '/orgs' }))
+                        }
+                      />
+                    ) : null}
                     {isAdmin ? (
                       <TextMenuButton
                         icon={<ShieldCheck className="size-5" />}

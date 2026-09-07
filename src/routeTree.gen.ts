@@ -20,6 +20,7 @@ import { Route as MainAboutRouteImport } from './routes/_main/about'
 import { Route as MainTripsIndexRouteImport } from './routes/_main/trips/index'
 import { Route as MainRoutesIndexRouteImport } from './routes/_main/routes/index'
 import { Route as MainResetPasswordIndexRouteImport } from './routes/_main/reset-password/index'
+import { Route as MainOrgsIndexRouteImport } from './routes/_main/orgs/index'
 import { Route as MainCrewIndexRouteImport } from './routes/_main/crew/index'
 import { Route as MainBoatsIndexRouteImport } from './routes/_main/boats/index'
 import { Route as MainAdminIndexRouteImport } from './routes/_main/admin/index'
@@ -27,15 +28,20 @@ import { Route as MainTripsTripIdRouteImport } from './routes/_main/trips/$tripI
 import { Route as MainRoutesRouteIdRouteImport } from './routes/_main/routes/$routeId'
 import { Route as MainResetPasswordTokenRouteImport } from './routes/_main/reset-password/$token'
 import { Route as MainPlacesPhotosRouteImport } from './routes/_main/places/photos'
+import { Route as MainOrgsOrgIdRouteImport } from './routes/_main/orgs/$orgId'
+import { Route as MainInviteTokenRouteImport } from './routes/_main/invite/$token'
 import { Route as MainDevTimeTravelRouteImport } from './routes/_main/dev/time-travel'
 import { Route as MainBoatsNewRouteImport } from './routes/_main/boats/new'
 import { Route as MainBoatsBoatIdRouteImport } from './routes/_main/boats/$boatId'
 import { Route as MainAdminUsersRouteImport } from './routes/_main/admin/users'
 import { Route as MainAdminTripsRouteImport } from './routes/_main/admin/trips'
 import { Route as MainAdminPgbossRouteImport } from './routes/_main/admin/pgboss'
+import { Route as MainAdminOrgsRouteImport } from './routes/_main/admin/orgs'
 import { Route as MainAdminJobManagementRouteImport } from './routes/_main/admin/job-management'
 import { Route as MainAdminCountriesRouteImport } from './routes/_main/admin/countries'
+import { Route as MainAdminConsortiaRouteImport } from './routes/_main/admin/consortia'
 import { Route as MainTripsTripIdIndexRouteImport } from './routes/_main/trips/$tripId/index'
+import { Route as MainOrgsOrgIdIndexRouteImport } from './routes/_main/orgs/$orgId/index'
 import { Route as MainAdminRegionsIndexRouteImport } from './routes/_main/admin/regions/index'
 import { Route as MainAdminJobsIndexRouteImport } from './routes/_main/admin/jobs/index'
 import { Route as MainCrewInviteTokenRouteImport } from './routes/_main/crew/invite/$token'
@@ -44,6 +50,7 @@ import { Route as MainAdminJobsMarinasRouteImport } from './routes/_main/admin/j
 import { Route as MainAdminJobsGeoFeaturesRouteImport } from './routes/_main/admin/jobs/geo-features'
 import { Route as MainTripsTripIdStoryIndexRouteImport } from './routes/_main/trips/$tripId/story/index'
 import { Route as MainTripsTripIdStoryEditRouteImport } from './routes/_main/trips/$tripId/story/edit'
+import { Route as MainOrgsOrgIdContactsContactIdRouteImport } from './routes/_main/orgs/$orgId/contacts/$contactId'
 
 const MainRouteRoute = MainRouteRouteImport.update({
   id: '/_main',
@@ -99,6 +106,11 @@ const MainResetPasswordIndexRoute = MainResetPasswordIndexRouteImport.update({
   path: '/reset-password/',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainOrgsIndexRoute = MainOrgsIndexRouteImport.update({
+  id: '/orgs/',
+  path: '/orgs/',
+  getParentRoute: () => MainRouteRoute,
+} as any)
 const MainCrewIndexRoute = MainCrewIndexRouteImport.update({
   id: '/crew/',
   path: '/crew/',
@@ -134,6 +146,16 @@ const MainPlacesPhotosRoute = MainPlacesPhotosRouteImport.update({
   path: '/places/photos',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainOrgsOrgIdRoute = MainOrgsOrgIdRouteImport.update({
+  id: '/orgs/$orgId',
+  path: '/orgs/$orgId',
+  getParentRoute: () => MainRouteRoute,
+} as any)
+const MainInviteTokenRoute = MainInviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => MainRouteRoute,
+} as any)
 const MainDevTimeTravelRoute = MainDevTimeTravelRouteImport.update({
   id: '/dev/time-travel',
   path: '/dev/time-travel',
@@ -164,6 +186,11 @@ const MainAdminPgbossRoute = MainAdminPgbossRouteImport.update({
   path: '/admin/pgboss',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainAdminOrgsRoute = MainAdminOrgsRouteImport.update({
+  id: '/admin/orgs',
+  path: '/admin/orgs',
+  getParentRoute: () => MainRouteRoute,
+} as any)
 const MainAdminJobManagementRoute = MainAdminJobManagementRouteImport.update({
   id: '/admin/job-management',
   path: '/admin/job-management',
@@ -174,10 +201,20 @@ const MainAdminCountriesRoute = MainAdminCountriesRouteImport.update({
   path: '/admin/countries',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainAdminConsortiaRoute = MainAdminConsortiaRouteImport.update({
+  id: '/admin/consortia',
+  path: '/admin/consortia',
+  getParentRoute: () => MainRouteRoute,
+} as any)
 const MainTripsTripIdIndexRoute = MainTripsTripIdIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => MainTripsTripIdRoute,
+} as any)
+const MainOrgsOrgIdIndexRoute = MainOrgsOrgIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MainOrgsOrgIdRoute,
 } as any)
 const MainAdminRegionsIndexRoute = MainAdminRegionsIndexRouteImport.update({
   id: '/admin/regions/',
@@ -222,6 +259,12 @@ const MainTripsTripIdStoryEditRoute =
     path: '/story/edit',
     getParentRoute: () => MainTripsTripIdRoute,
   } as any)
+const MainOrgsOrgIdContactsContactIdRoute =
+  MainOrgsOrgIdContactsContactIdRouteImport.update({
+    id: '/contacts/$contactId',
+    path: '/contacts/$contactId',
+    getParentRoute: () => MainOrgsOrgIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof MainIndexRoute
@@ -231,14 +274,18 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof MainSignInRoute
   '/terms': typeof MainTermsRoute
   '/api/$': typeof ApiSplatRoute
+  '/admin/consortia': typeof MainAdminConsortiaRoute
   '/admin/countries': typeof MainAdminCountriesRoute
   '/admin/job-management': typeof MainAdminJobManagementRoute
+  '/admin/orgs': typeof MainAdminOrgsRoute
   '/admin/pgboss': typeof MainAdminPgbossRoute
   '/admin/trips': typeof MainAdminTripsRoute
   '/admin/users': typeof MainAdminUsersRoute
   '/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/boats/new': typeof MainBoatsNewRoute
   '/dev/time-travel': typeof MainDevTimeTravelRoute
+  '/invite/$token': typeof MainInviteTokenRoute
+  '/orgs/$orgId': typeof MainOrgsOrgIdRouteWithChildren
   '/places/photos': typeof MainPlacesPhotosRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/routes/$routeId': typeof MainRoutesRouteIdRoute
@@ -246,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof MainAdminIndexRoute
   '/boats/': typeof MainBoatsIndexRoute
   '/crew/': typeof MainCrewIndexRoute
+  '/orgs/': typeof MainOrgsIndexRoute
   '/reset-password/': typeof MainResetPasswordIndexRoute
   '/routes/': typeof MainRoutesIndexRoute
   '/trips/': typeof MainTripsIndexRoute
@@ -255,7 +303,9 @@ export interface FileRoutesByFullPath {
   '/crew/invite/$token': typeof MainCrewInviteTokenRoute
   '/admin/jobs/': typeof MainAdminJobsIndexRoute
   '/admin/regions/': typeof MainAdminRegionsIndexRoute
+  '/orgs/$orgId/': typeof MainOrgsOrgIdIndexRoute
   '/trips/$tripId/': typeof MainTripsTripIdIndexRoute
+  '/orgs/$orgId/contacts/$contactId': typeof MainOrgsOrgIdContactsContactIdRoute
   '/trips/$tripId/story/edit': typeof MainTripsTripIdStoryEditRoute
   '/trips/$tripId/story/': typeof MainTripsTripIdStoryIndexRoute
 }
@@ -267,20 +317,24 @@ export interface FileRoutesByTo {
   '/terms': typeof MainTermsRoute
   '/api/$': typeof ApiSplatRoute
   '/': typeof MainIndexRoute
+  '/admin/consortia': typeof MainAdminConsortiaRoute
   '/admin/countries': typeof MainAdminCountriesRoute
   '/admin/job-management': typeof MainAdminJobManagementRoute
+  '/admin/orgs': typeof MainAdminOrgsRoute
   '/admin/pgboss': typeof MainAdminPgbossRoute
   '/admin/trips': typeof MainAdminTripsRoute
   '/admin/users': typeof MainAdminUsersRoute
   '/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/boats/new': typeof MainBoatsNewRoute
   '/dev/time-travel': typeof MainDevTimeTravelRoute
+  '/invite/$token': typeof MainInviteTokenRoute
   '/places/photos': typeof MainPlacesPhotosRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/routes/$routeId': typeof MainRoutesRouteIdRoute
   '/admin': typeof MainAdminIndexRoute
   '/boats': typeof MainBoatsIndexRoute
   '/crew': typeof MainCrewIndexRoute
+  '/orgs': typeof MainOrgsIndexRoute
   '/reset-password': typeof MainResetPasswordIndexRoute
   '/routes': typeof MainRoutesIndexRoute
   '/trips': typeof MainTripsIndexRoute
@@ -290,7 +344,9 @@ export interface FileRoutesByTo {
   '/crew/invite/$token': typeof MainCrewInviteTokenRoute
   '/admin/jobs': typeof MainAdminJobsIndexRoute
   '/admin/regions': typeof MainAdminRegionsIndexRoute
+  '/orgs/$orgId': typeof MainOrgsOrgIdIndexRoute
   '/trips/$tripId': typeof MainTripsTripIdIndexRoute
+  '/orgs/$orgId/contacts/$contactId': typeof MainOrgsOrgIdContactsContactIdRoute
   '/trips/$tripId/story/edit': typeof MainTripsTripIdStoryEditRoute
   '/trips/$tripId/story': typeof MainTripsTripIdStoryIndexRoute
 }
@@ -304,14 +360,18 @@ export interface FileRoutesById {
   '/_main/terms': typeof MainTermsRoute
   '/api/$': typeof ApiSplatRoute
   '/_main/': typeof MainIndexRoute
+  '/_main/admin/consortia': typeof MainAdminConsortiaRoute
   '/_main/admin/countries': typeof MainAdminCountriesRoute
   '/_main/admin/job-management': typeof MainAdminJobManagementRoute
+  '/_main/admin/orgs': typeof MainAdminOrgsRoute
   '/_main/admin/pgboss': typeof MainAdminPgbossRoute
   '/_main/admin/trips': typeof MainAdminTripsRoute
   '/_main/admin/users': typeof MainAdminUsersRoute
   '/_main/boats/$boatId': typeof MainBoatsBoatIdRoute
   '/_main/boats/new': typeof MainBoatsNewRoute
   '/_main/dev/time-travel': typeof MainDevTimeTravelRoute
+  '/_main/invite/$token': typeof MainInviteTokenRoute
+  '/_main/orgs/$orgId': typeof MainOrgsOrgIdRouteWithChildren
   '/_main/places/photos': typeof MainPlacesPhotosRoute
   '/_main/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/_main/routes/$routeId': typeof MainRoutesRouteIdRoute
@@ -319,6 +379,7 @@ export interface FileRoutesById {
   '/_main/admin/': typeof MainAdminIndexRoute
   '/_main/boats/': typeof MainBoatsIndexRoute
   '/_main/crew/': typeof MainCrewIndexRoute
+  '/_main/orgs/': typeof MainOrgsIndexRoute
   '/_main/reset-password/': typeof MainResetPasswordIndexRoute
   '/_main/routes/': typeof MainRoutesIndexRoute
   '/_main/trips/': typeof MainTripsIndexRoute
@@ -328,7 +389,9 @@ export interface FileRoutesById {
   '/_main/crew/invite/$token': typeof MainCrewInviteTokenRoute
   '/_main/admin/jobs/': typeof MainAdminJobsIndexRoute
   '/_main/admin/regions/': typeof MainAdminRegionsIndexRoute
+  '/_main/orgs/$orgId/': typeof MainOrgsOrgIdIndexRoute
   '/_main/trips/$tripId/': typeof MainTripsTripIdIndexRoute
+  '/_main/orgs/$orgId/contacts/$contactId': typeof MainOrgsOrgIdContactsContactIdRoute
   '/_main/trips/$tripId/story/edit': typeof MainTripsTripIdStoryEditRoute
   '/_main/trips/$tripId/story/': typeof MainTripsTripIdStoryIndexRoute
 }
@@ -342,14 +405,18 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/terms'
     | '/api/$'
+    | '/admin/consortia'
     | '/admin/countries'
     | '/admin/job-management'
+    | '/admin/orgs'
     | '/admin/pgboss'
     | '/admin/trips'
     | '/admin/users'
     | '/boats/$boatId'
     | '/boats/new'
     | '/dev/time-travel'
+    | '/invite/$token'
+    | '/orgs/$orgId'
     | '/places/photos'
     | '/reset-password/$token'
     | '/routes/$routeId'
@@ -357,6 +424,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/boats/'
     | '/crew/'
+    | '/orgs/'
     | '/reset-password/'
     | '/routes/'
     | '/trips/'
@@ -366,7 +434,9 @@ export interface FileRouteTypes {
     | '/crew/invite/$token'
     | '/admin/jobs/'
     | '/admin/regions/'
+    | '/orgs/$orgId/'
     | '/trips/$tripId/'
+    | '/orgs/$orgId/contacts/$contactId'
     | '/trips/$tripId/story/edit'
     | '/trips/$tripId/story/'
   fileRoutesByTo: FileRoutesByTo
@@ -378,20 +448,24 @@ export interface FileRouteTypes {
     | '/terms'
     | '/api/$'
     | '/'
+    | '/admin/consortia'
     | '/admin/countries'
     | '/admin/job-management'
+    | '/admin/orgs'
     | '/admin/pgboss'
     | '/admin/trips'
     | '/admin/users'
     | '/boats/$boatId'
     | '/boats/new'
     | '/dev/time-travel'
+    | '/invite/$token'
     | '/places/photos'
     | '/reset-password/$token'
     | '/routes/$routeId'
     | '/admin'
     | '/boats'
     | '/crew'
+    | '/orgs'
     | '/reset-password'
     | '/routes'
     | '/trips'
@@ -401,7 +475,9 @@ export interface FileRouteTypes {
     | '/crew/invite/$token'
     | '/admin/jobs'
     | '/admin/regions'
+    | '/orgs/$orgId'
     | '/trips/$tripId'
+    | '/orgs/$orgId/contacts/$contactId'
     | '/trips/$tripId/story/edit'
     | '/trips/$tripId/story'
   id:
@@ -414,14 +490,18 @@ export interface FileRouteTypes {
     | '/_main/terms'
     | '/api/$'
     | '/_main/'
+    | '/_main/admin/consortia'
     | '/_main/admin/countries'
     | '/_main/admin/job-management'
+    | '/_main/admin/orgs'
     | '/_main/admin/pgboss'
     | '/_main/admin/trips'
     | '/_main/admin/users'
     | '/_main/boats/$boatId'
     | '/_main/boats/new'
     | '/_main/dev/time-travel'
+    | '/_main/invite/$token'
+    | '/_main/orgs/$orgId'
     | '/_main/places/photos'
     | '/_main/reset-password/$token'
     | '/_main/routes/$routeId'
@@ -429,6 +509,7 @@ export interface FileRouteTypes {
     | '/_main/admin/'
     | '/_main/boats/'
     | '/_main/crew/'
+    | '/_main/orgs/'
     | '/_main/reset-password/'
     | '/_main/routes/'
     | '/_main/trips/'
@@ -438,7 +519,9 @@ export interface FileRouteTypes {
     | '/_main/crew/invite/$token'
     | '/_main/admin/jobs/'
     | '/_main/admin/regions/'
+    | '/_main/orgs/$orgId/'
     | '/_main/trips/$tripId/'
+    | '/_main/orgs/$orgId/contacts/$contactId'
     | '/_main/trips/$tripId/story/edit'
     | '/_main/trips/$tripId/story/'
   fileRoutesById: FileRoutesById
@@ -527,6 +610,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainResetPasswordIndexRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/orgs/': {
+      id: '/_main/orgs/'
+      path: '/orgs'
+      fullPath: '/orgs/'
+      preLoaderRoute: typeof MainOrgsIndexRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/crew/': {
       id: '/_main/crew/'
       path: '/crew'
@@ -576,6 +666,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainPlacesPhotosRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/orgs/$orgId': {
+      id: '/_main/orgs/$orgId'
+      path: '/orgs/$orgId'
+      fullPath: '/orgs/$orgId'
+      preLoaderRoute: typeof MainOrgsOrgIdRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
+    '/_main/invite/$token': {
+      id: '/_main/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof MainInviteTokenRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/dev/time-travel': {
       id: '/_main/dev/time-travel'
       path: '/dev/time-travel'
@@ -618,6 +722,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAdminPgbossRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/admin/orgs': {
+      id: '/_main/admin/orgs'
+      path: '/admin/orgs'
+      fullPath: '/admin/orgs'
+      preLoaderRoute: typeof MainAdminOrgsRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/admin/job-management': {
       id: '/_main/admin/job-management'
       path: '/admin/job-management'
@@ -632,12 +743,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAdminCountriesRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/admin/consortia': {
+      id: '/_main/admin/consortia'
+      path: '/admin/consortia'
+      fullPath: '/admin/consortia'
+      preLoaderRoute: typeof MainAdminConsortiaRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/trips/$tripId/': {
       id: '/_main/trips/$tripId/'
       path: '/'
       fullPath: '/trips/$tripId/'
       preLoaderRoute: typeof MainTripsTripIdIndexRouteImport
       parentRoute: typeof MainTripsTripIdRoute
+    }
+    '/_main/orgs/$orgId/': {
+      id: '/_main/orgs/$orgId/'
+      path: '/'
+      fullPath: '/orgs/$orgId/'
+      preLoaderRoute: typeof MainOrgsOrgIdIndexRouteImport
+      parentRoute: typeof MainOrgsOrgIdRoute
     }
     '/_main/admin/regions/': {
       id: '/_main/admin/regions/'
@@ -695,8 +820,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainTripsTripIdStoryEditRouteImport
       parentRoute: typeof MainTripsTripIdRoute
     }
+    '/_main/orgs/$orgId/contacts/$contactId': {
+      id: '/_main/orgs/$orgId/contacts/$contactId'
+      path: '/contacts/$contactId'
+      fullPath: '/orgs/$orgId/contacts/$contactId'
+      preLoaderRoute: typeof MainOrgsOrgIdContactsContactIdRouteImport
+      parentRoute: typeof MainOrgsOrgIdRoute
+    }
   }
 }
+
+interface MainOrgsOrgIdRouteChildren {
+  MainOrgsOrgIdIndexRoute: typeof MainOrgsOrgIdIndexRoute
+  MainOrgsOrgIdContactsContactIdRoute: typeof MainOrgsOrgIdContactsContactIdRoute
+}
+
+const MainOrgsOrgIdRouteChildren: MainOrgsOrgIdRouteChildren = {
+  MainOrgsOrgIdIndexRoute: MainOrgsOrgIdIndexRoute,
+  MainOrgsOrgIdContactsContactIdRoute: MainOrgsOrgIdContactsContactIdRoute,
+}
+
+const MainOrgsOrgIdRouteWithChildren = MainOrgsOrgIdRoute._addFileChildren(
+  MainOrgsOrgIdRouteChildren,
+)
 
 interface MainTripsTripIdRouteChildren {
   MainTripsTripIdIndexRoute: typeof MainTripsTripIdIndexRoute
@@ -721,14 +867,18 @@ interface MainRouteRouteChildren {
   MainSignInRoute: typeof MainSignInRoute
   MainTermsRoute: typeof MainTermsRoute
   MainIndexRoute: typeof MainIndexRoute
+  MainAdminConsortiaRoute: typeof MainAdminConsortiaRoute
   MainAdminCountriesRoute: typeof MainAdminCountriesRoute
   MainAdminJobManagementRoute: typeof MainAdminJobManagementRoute
+  MainAdminOrgsRoute: typeof MainAdminOrgsRoute
   MainAdminPgbossRoute: typeof MainAdminPgbossRoute
   MainAdminTripsRoute: typeof MainAdminTripsRoute
   MainAdminUsersRoute: typeof MainAdminUsersRoute
   MainBoatsBoatIdRoute: typeof MainBoatsBoatIdRoute
   MainBoatsNewRoute: typeof MainBoatsNewRoute
   MainDevTimeTravelRoute: typeof MainDevTimeTravelRoute
+  MainInviteTokenRoute: typeof MainInviteTokenRoute
+  MainOrgsOrgIdRoute: typeof MainOrgsOrgIdRouteWithChildren
   MainPlacesPhotosRoute: typeof MainPlacesPhotosRoute
   MainResetPasswordTokenRoute: typeof MainResetPasswordTokenRoute
   MainRoutesRouteIdRoute: typeof MainRoutesRouteIdRoute
@@ -736,6 +886,7 @@ interface MainRouteRouteChildren {
   MainAdminIndexRoute: typeof MainAdminIndexRoute
   MainBoatsIndexRoute: typeof MainBoatsIndexRoute
   MainCrewIndexRoute: typeof MainCrewIndexRoute
+  MainOrgsIndexRoute: typeof MainOrgsIndexRoute
   MainResetPasswordIndexRoute: typeof MainResetPasswordIndexRoute
   MainRoutesIndexRoute: typeof MainRoutesIndexRoute
   MainTripsIndexRoute: typeof MainTripsIndexRoute
@@ -754,14 +905,18 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainSignInRoute: MainSignInRoute,
   MainTermsRoute: MainTermsRoute,
   MainIndexRoute: MainIndexRoute,
+  MainAdminConsortiaRoute: MainAdminConsortiaRoute,
   MainAdminCountriesRoute: MainAdminCountriesRoute,
   MainAdminJobManagementRoute: MainAdminJobManagementRoute,
+  MainAdminOrgsRoute: MainAdminOrgsRoute,
   MainAdminPgbossRoute: MainAdminPgbossRoute,
   MainAdminTripsRoute: MainAdminTripsRoute,
   MainAdminUsersRoute: MainAdminUsersRoute,
   MainBoatsBoatIdRoute: MainBoatsBoatIdRoute,
   MainBoatsNewRoute: MainBoatsNewRoute,
   MainDevTimeTravelRoute: MainDevTimeTravelRoute,
+  MainInviteTokenRoute: MainInviteTokenRoute,
+  MainOrgsOrgIdRoute: MainOrgsOrgIdRouteWithChildren,
   MainPlacesPhotosRoute: MainPlacesPhotosRoute,
   MainResetPasswordTokenRoute: MainResetPasswordTokenRoute,
   MainRoutesRouteIdRoute: MainRoutesRouteIdRoute,
@@ -769,6 +924,7 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainAdminIndexRoute: MainAdminIndexRoute,
   MainBoatsIndexRoute: MainBoatsIndexRoute,
   MainCrewIndexRoute: MainCrewIndexRoute,
+  MainOrgsIndexRoute: MainOrgsIndexRoute,
   MainResetPasswordIndexRoute: MainResetPasswordIndexRoute,
   MainRoutesIndexRoute: MainRoutesIndexRoute,
   MainTripsIndexRoute: MainTripsIndexRoute,

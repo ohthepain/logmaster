@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { prisma } from '../db'
+import { canAccess } from '../permissions'
 import { getSessionUserId } from '../session'
 import {
   readTrackObjectBytes,
@@ -70,7 +71,13 @@ function serializeTripTrack(track: Record<string, unknown>, includePayload: bool
 export const logbookTrackRoutes = new Hono()
 
 logbookTrackRoutes.get('/trips/:tripId/tracks', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401)
+
   const tripId = c.req.param('tripId')
+  const allowed = await canAccess(userId, 'view', { type: 'trip', id: tripId })
+  if (!allowed) return c.json({ error: 'Trip not found' }, 404)
+
   const tracks = await db.tripTrack.findMany({
     where: { tripId },
     orderBy: [{ startedAt: 'asc' }],
@@ -83,12 +90,28 @@ logbookTrackRoutes.get('/trips/:tripId/tracks', async (c) => {
 })
 
 logbookTrackRoutes.post('/tracks/sync', async (c) => {
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401)
+
   const body = (await c.req.json().catch(() => ({}))) as {
     tripTracks?: Record<string, unknown>[]
   }
   const tripTracks = body.tripTracks ?? []
   if (tripTracks.length === 0) {
     return c.json({ tripTracks: [] })
+  }
+
+  for (const track of tripTracks) {
+    const allowed = await canAccess(userId, 'edit', {
+      type: 'trip',
+      id: String(track.tripId),
+    })
+    if (!allowed) {
+      return c.json(
+        { error: `Forbidden: cannot update track for trip ${track.tripId}` },
+        403,
+      )
+    }
   }
 
   const saved = await prisma.$transaction(
@@ -122,6 +145,15 @@ logbookTrackRoutes.put('/tracks/:trackId/content', async (c) => {
   if (!storageKey || !sha256) {
     return c.json({ error: 'Missing track upload headers' }, 400)
   }
+
+  const track = await db.tripTrack.findUnique({ where: { id: trackId } })
+  if (!track) return c.json({ error: 'Track not found' }, 404)
+  const allowed = await canAccess(userId, 'edit', {
+    type: 'trip',
+    id: track.tripId,
+  })
+  if (!allowed) return c.json({ error: 'Forbidden' }, 403)
+
   if (!storageKey.startsWith(`tracks/${userId}/`)) {
     return c.json({ error: 'Invalid track storage key' }, 403)
   }
@@ -145,6 +177,14 @@ logbookTrackRoutes.get('/tracks/:trackId/content', async (c) => {
   const trackId = c.req.param('trackId')
   const track = await db.tripTrack.findUnique({ where: { id: trackId } })
   if (!track) return c.json({ error: 'Track not found' }, 404)
+
+  const userId = await getSessionUserId(c.req.raw.headers)
+  if (!userId) return c.json({ error: 'Unauthorized' }, 401)
+  const allowed = await canAccess(userId, 'view', {
+    type: 'trip',
+    id: track.tripId,
+  })
+  if (!allowed) return c.json({ error: 'Track not found' }, 404)
 
   if (track.storage === 'inline') {
     if (!track.payload) return c.json({ error: 'Track payload missing' }, 404)

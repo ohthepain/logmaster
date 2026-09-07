@@ -1,16 +1,33 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { BoatDocumentsTab } from '../../../components/BoatDocumentsTab'
+import { BoatPhotosTab } from '../../../components/BoatPhotosTab'
+import { BoatSharesTab } from '../../../components/BoatSharesTab'
+import { BoatIconSelector } from '../../../components/BoatIconSelector'
+import {
+  InviteMemberModal,
+  ResourceMembersTab,
+} from '../../../components/ResourceMembersTab'
 import type { Boat } from '../../../domain/boat'
-import { fetchBoat, updateBoat } from '../../../lib/boats-api'
+import type { MemberInvite } from '../../../domain/member-invite'
+import type { ResourceMember } from '../../../domain/member-invite'
+import type { OrgMemberRole } from '../../../domain/org'
+import {
+  cancelBoatInvite,
+  createBoatInviteLink,
+  fetchBoat,
+  fetchBoatMembers,
+  inviteBoatMember,
+  removeBoatMember,
+  updateBoat,
+  updateBoatMemberRole,
+} from '../../../lib/boats-api'
 import type { BoatIconId } from '../../../lib/boat-icons'
 import { isBoatIconId } from '../../../lib/boat-icons'
 import { cn } from '../../../lib/cn'
-import { BoatIconSelector } from '../../../components/BoatIconSelector'
-import { BoatDocumentsTab } from '../../../components/BoatDocumentsTab'
-import { BoatPhotosTab } from '../../../components/BoatPhotosTab'
 
-type BoatDetailTab = 'photos' | 'documents'
+type BoatDetailTab = 'photos' | 'documents' | 'members' | 'shares'
 
 type BoatDetailSearch = {
   tab?: BoatDetailTab
@@ -19,7 +36,12 @@ type BoatDetailSearch = {
 export const Route = createFileRoute('/_main/boats/$boatId')({
   validateSearch: (search: Record<string, unknown>): BoatDetailSearch => {
     const tab = search.tab
-    if (tab === 'photos' || tab === 'documents') {
+    if (
+      tab === 'photos' ||
+      tab === 'documents' ||
+      tab === 'members' ||
+      tab === 'shares'
+    ) {
       return { tab }
     }
     return {}
@@ -30,12 +52,15 @@ export const Route = createFileRoute('/_main/boats/$boatId')({
 function BoatDetailPage() {
   const { boatId } = Route.useParams()
   const { tab: tabFromSearch } = Route.useSearch()
-  const tab = tabFromSearch ?? 'photos'
   const navigate = useNavigate()
   const [boat, setBoat] = useState<Boat | null>(null)
+  const [members, setMembers] = useState<ResourceMember[]>([])
+  const [pendingInvites, setPendingInvites] = useState<MemberInvite[]>([])
+  const [canManageMembers, setCanManageMembers] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [savingIcon, setSavingIcon] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
 
   const setTab = useCallback(
     (next: BoatDetailTab) => {
@@ -52,7 +77,14 @@ function BoatDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      setBoat(await fetchBoat(boatId))
+      const [boatData, membersData] = await Promise.all([
+        fetchBoat(boatId),
+        fetchBoatMembers(boatId),
+      ])
+      setBoat(boatData)
+      setMembers(membersData.members)
+      setPendingInvites(membersData.pendingInvites)
+      setCanManageMembers(membersData.canManageMembers)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load boat')
       setBoat(null)
@@ -103,6 +135,10 @@ function BoatDetailPage() {
     )
   }
 
+  const tabRaw = tabFromSearch ?? 'photos'
+  const tab: BoatDetailTab =
+    tabRaw === 'shares' && !boat.orgId ? 'photos' : tabRaw
+
   return (
     <main className="page-wrap px-3 pb-24 pt-4 sm:px-4">
       <p className="mb-2 text-sm">
@@ -113,16 +149,28 @@ function BoatDetailPage() {
           ← Boats
         </Link>
       </p>
-      <div className="flex items-center gap-3">
-        <BoatIconSelector
-          variant="icon"
-          value={isBoatIconId(boat.iconId) ? boat.iconId : 'medium'}
-          onChange={(iconId) => void handleIconChange(iconId)}
-          disabled={savingIcon}
-        />
-        <h1 className="brand-title m-0 min-w-0 text-[2.35rem] leading-none sm:text-[2.75rem]">
-          {boat.name}
-        </h1>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <BoatIconSelector
+            variant="icon"
+            value={isBoatIconId(boat.iconId) ? boat.iconId : 'medium'}
+            onChange={(iconId) => void handleIconChange(iconId)}
+            disabled={savingIcon}
+          />
+          <h1 className="brand-title m-0 min-w-0 text-[2.35rem] leading-none sm:text-[2.75rem]">
+            {boat.name}
+          </h1>
+        </div>
+        {boat.orgId && boat.orgName ? (
+          <Link
+            to="/orgs/$orgId"
+            params={{ orgId: boat.orgId }}
+            search={{ tab: 'boats' }}
+            className="mt-1 inline-flex shrink-0 items-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] no-underline transition hover:bg-[var(--link-bg-hover)] sm:mt-2"
+          >
+            Org: {boat.orgName}
+          </Link>
+        ) : null}
       </div>
 
       <div
@@ -134,6 +182,8 @@ function BoatDetailPage() {
           [
             ['photos', 'Photos'],
             ['documents', 'Documents'],
+            ...(boat.orgId ? [['shares', 'Shares'] as const] : []),
+            ['members', 'Members'],
           ] as const
         ).map(([value, label]) => {
           const selected = tab === value
@@ -143,7 +193,7 @@ function BoatDetailPage() {
               type="button"
               role="tab"
               aria-selected={selected}
-              onClick={() => setTab(value)}
+              onClick={() => setTab(value as BoatDetailTab)}
               className={cn(
                 'rounded-full px-4 py-2 text-sm font-semibold transition',
                 selected
@@ -157,13 +207,105 @@ function BoatDetailPage() {
         })}
       </div>
 
-      <div role="tabpanel" aria-label={tab === 'photos' ? 'Photos' : 'Documents'}>
+      <div role="tabpanel" className="mt-6">
         {tab === 'photos' ? (
           <BoatPhotosTab boat={boat} onBoatChange={setBoat} />
-        ) : (
+        ) : null}
+        {tab === 'documents' ? (
           <BoatDocumentsTab boatId={boat.id} />
-        )}
+        ) : null}
+        {tab === 'shares' && boat.orgId ? (
+          <BoatSharesTab boatId={boat.id} />
+        ) : null}
+        {tab === 'members' ? (
+          <ResourceMembersTab
+            members={members}
+            pendingInvites={pendingInvites}
+            canManageMembers={canManageMembers}
+            onInvite={() => setInviteOpen(true)}
+            onCreateLink={async () => {
+              try {
+                const invite = await createBoatInviteLink(boatId)
+                setPendingInvites((current) => [invite, ...current])
+                await navigator.clipboard.writeText(invite.inviteUrl)
+                toast.success('Invite link created and copied')
+              } catch (e) {
+                toast.error(
+                  e instanceof Error ? e.message : 'Failed to create invite link',
+                )
+              }
+            }}
+            onRoleChange={async (member, role: OrgMemberRole) => {
+              try {
+                const updated = await updateBoatMemberRole(
+                  boatId,
+                  member.userId,
+                  role,
+                )
+                setMembers((current) =>
+                  current.map((item) =>
+                    item.userId === updated.userId ? updated : item,
+                  ),
+                )
+                toast.success('Role updated')
+              } catch (e) {
+                toast.error(
+                  e instanceof Error ? e.message : 'Failed to update role',
+                )
+              }
+            }}
+            onRemove={async (member) => {
+              if (
+                !window.confirm(`Remove ${member.user.name} from this boat?`)
+              ) {
+                return
+              }
+              try {
+                await removeBoatMember(boatId, member.userId)
+                setMembers((current) =>
+                  current.filter((item) => item.userId !== member.userId),
+                )
+                toast.success('Member removed')
+              } catch (e) {
+                toast.error(
+                  e instanceof Error ? e.message : 'Failed to remove member',
+                )
+              }
+            }}
+            onCancelInvite={async (invite) => {
+              try {
+                await cancelBoatInvite(boatId, invite.id)
+                setPendingInvites((current) =>
+                  current.filter((item) => item.id !== invite.id),
+                )
+                toast.success('Invite cancelled')
+              } catch (e) {
+                toast.error(
+                  e instanceof Error ? e.message : 'Failed to cancel invite',
+                )
+              }
+            }}
+          />
+        ) : null}
       </div>
+
+      <InviteMemberModal
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        title="Invite boat member"
+        onSubmit={async ({ email, role }) => {
+          const result = await inviteBoatMember(boatId, { email, role })
+          if (result.member) {
+            setMembers((current) => [...current, result.member])
+            return { kind: 'member' as const, message: `Added ${email}` }
+          }
+          setPendingInvites((current) => [result.invite, ...current])
+          return {
+            kind: 'invite' as const,
+            message: `Invite sent to ${email}`,
+          }
+        }}
+      />
     </main>
   )
 }

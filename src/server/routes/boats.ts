@@ -2,6 +2,12 @@ import { Hono } from 'hono'
 import { defaultBoatPhoto } from '../../domain/boat'
 import { DEFAULT_BOAT_ICON_ID, isBoatIconId } from '../../lib/boat-icons'
 import { prisma } from '../db'
+import {
+  boatAccessFilter,
+  canAccess,
+  initializeBoatShares,
+  type Privilege,
+} from '../permissions'
 import { getSessionUserId } from '../session'
 import {
   deletePhotoObject,
@@ -58,13 +64,16 @@ function serializePhoto(photo: {
   }
 }
 
-function serializeBoat(boat: {
+export function serializeBoat(boat: {
   id: string
   userId: string
+  consortiumId: string | null
+  shareCount: number
   name: string
   iconId: string
   createdAt: Date
   updatedAt: Date
+  consortium?: { id: string; name: string } | null
   photos: Array<{
     id: string
     boatId: string
@@ -83,6 +92,10 @@ function serializeBoat(boat: {
   return {
     id: boat.id,
     userId: boat.userId,
+    consortiumId: boat.consortiumId,
+    orgId: boat.consortium?.id ?? boat.consortiumId,
+    orgName: boat.consortium?.name ?? null,
+    shareCount: boat.shareCount,
     name: boat.name,
     iconId: isBoatIconId(boat.iconId) ? boat.iconId : DEFAULT_BOAT_ICON_ID,
     createdAt: boat.createdAt.toISOString(),
@@ -92,20 +105,77 @@ function serializeBoat(boat: {
   }
 }
 
-async function getOwnedBoat(userId: string, boatId: string) {
-  return db.boat.findFirst({
-    where: { id: boatId, userId },
+async function getBoatForUser(
+  userId: string,
+  boatId: string,
+  privilege: Privilege,
+) {
+  const allowed = await canAccess(userId, privilege, { type: 'boat', id: boatId })
+  if (!allowed) return null
+  return db.boat.findUnique({
+    where: { id: boatId },
     include: {
+      consortium: { select: { id: true, name: true } },
       photos: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
     },
   })
 }
 
-async function getOwnedPhoto(userId: string, photoId: string) {
-  return db.boatPhoto.findFirst({
-    where: { id: photoId, boat: { userId } },
+async function getPhotoForUser(
+  userId: string,
+  photoId: string,
+  privilege: Privilege,
+) {
+  const photo = await db.boatPhoto.findUnique({
+    where: { id: photoId },
     include: { boat: true },
   })
+  if (!photo) return null
+  const allowed = await canAccess(userId, privilege, {
+    type: 'boat',
+    id: photo.boatId,
+  })
+  if (!allowed) return null
+  return photo
+}
+
+async function getDocumentForUser(
+  userId: string,
+  documentId: string,
+  privilege: Privilege,
+) {
+  const document = await db.boatDocument.findUnique({
+    where: { id: documentId },
+    include: {
+      boat: true,
+      versions: { orderBy: { versionNumber: 'desc' } },
+    },
+  })
+  if (!document) return null
+  const allowed = await canAccess(userId, privilege, {
+    type: 'boat',
+    id: document.boatId,
+  })
+  if (!allowed) return null
+  return document
+}
+
+async function getDocumentVersionForUser(
+  userId: string,
+  versionId: string,
+  privilege: Privilege,
+) {
+  const version = await db.boatDocumentVersion.findUnique({
+    where: { id: versionId },
+    include: { document: { include: { boat: true } } },
+  })
+  if (!version) return null
+  const allowed = await canAccess(userId, privilege, {
+    type: 'boat',
+    id: version.document.boatId,
+  })
+  if (!allowed) return null
+  return version
 }
 
 function serializeDocumentVersion(version: {
@@ -199,30 +269,16 @@ async function ensureDefaultDocumentCategory(boatId: string) {
   })
 }
 
-async function getOwnedDocument(userId: string, documentId: string) {
-  return db.boatDocument.findFirst({
-    where: { id: documentId, boat: { userId } },
-    include: {
-      boat: true,
-      versions: { orderBy: { versionNumber: 'desc' } },
-    },
-  })
-}
-
-async function getOwnedDocumentVersion(userId: string, versionId: string) {
-  return db.boatDocumentVersion.findFirst({
-    where: { id: versionId, document: { boat: { userId } } },
-    include: { document: { include: { boat: true } } },
-  })
-}
-
 async function getOwnedCategory(
   userId: string,
   boatId: string,
   categoryId: string,
+  privilege: Privilege = 'edit',
 ) {
+  const allowed = await canAccess(userId, privilege, { type: 'boat', id: boatId })
+  if (!allowed) return null
   return db.boatDocumentCategory.findFirst({
-    where: { id: categoryId, boatId, boat: { userId } },
+    where: { id: categoryId, boatId },
   })
 }
 
@@ -242,7 +298,7 @@ boatsRoutes.get('/', async (c) => {
   if (!userId) return unauthorized()
 
   const boats = await db.boat.findMany({
-    where: { userId },
+    where: await boatAccessFilter(userId),
     orderBy: [{ updatedAt: 'desc' }],
     include: {
       photos: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
@@ -259,15 +315,34 @@ boatsRoutes.post('/', async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as {
     name?: string
     iconId?: string
+    consortiumId?: string
+    shareCount?: number
   }
   const name = body.name?.trim()
   if (!name) return c.json({ error: 'Name is required' }, 400)
   const iconId = isBoatIconId(body.iconId) ? body.iconId : DEFAULT_BOAT_ICON_ID
+  const shareCount =
+    typeof body.shareCount === 'number' && body.shareCount >= 1
+      ? Math.floor(body.shareCount)
+      : 1
+
+  let consortiumId = body.consortiumId?.trim() || null
+  if (consortiumId) {
+    const allowed = await canAccess(userId, 'admin', {
+      type: 'consortium',
+      id: consortiumId,
+    })
+    if (!allowed) {
+      return c.json({ error: 'Org not found' }, 404)
+    }
+  }
 
   const boat = await db.boat.create({
-    data: { userId, name, iconId },
+    data: { userId, name, iconId, consortiumId, shareCount },
     include: { photos: true },
   })
+
+  await initializeBoatShares(boat.id, shareCount, userId)
 
   await db.boatDocumentCategory.create({
     data: {
@@ -300,7 +375,7 @@ boatsRoutes.get('/:boatId', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const boat = await getOwnedBoat(userId, c.req.param('boatId'))
+  const boat = await getBoatForUser(userId, c.req.param('boatId'), 'view')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   return c.json({ boat: serializeBoat(boat) })
@@ -310,7 +385,7 @@ boatsRoutes.patch('/:boatId', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const boat = await getOwnedBoat(userId, c.req.param('boatId'))
+  const boat = await getBoatForUser(userId, c.req.param('boatId'), 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const body = (await c.req.json().catch(() => ({}))) as {
@@ -348,7 +423,7 @@ boatsRoutes.delete('/:boatId', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const boat = await getOwnedBoat(userId, c.req.param('boatId'))
+  const boat = await getBoatForUser(userId, c.req.param('boatId'), 'manage')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   for (const photo of boat.photos) {
@@ -380,7 +455,7 @@ boatsRoutes.post('/:boatId/photos', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const boat = await getOwnedBoat(userId, c.req.param('boatId'))
+  const boat = await getBoatForUser(userId, c.req.param('boatId'), 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const body = await c.req.parseBody()
@@ -428,7 +503,7 @@ boatsRoutes.patch('/photos/:photoId', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const existing = await getOwnedPhoto(userId, c.req.param('photoId'))
+  const existing = await getPhotoForUser(userId, c.req.param('photoId'), 'edit')
   if (!existing) return c.json({ error: 'Photo not found' }, 404)
 
   const body = (await c.req.json().catch(() => ({}))) as {
@@ -466,7 +541,7 @@ boatsRoutes.delete('/photos/:photoId', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const existing = await getOwnedPhoto(userId, c.req.param('photoId'))
+  const existing = await getPhotoForUser(userId, c.req.param('photoId'), 'manage')
   if (!existing) return c.json({ error: 'Photo not found' }, 404)
 
   try {
@@ -502,7 +577,7 @@ boatsRoutes.get('/photos/:photoId/content', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const existing = await getOwnedPhoto(userId, c.req.param('photoId'))
+  const existing = await getPhotoForUser(userId, c.req.param('photoId'), 'view')
   if (!existing) return c.json({ error: 'Photo not found' }, 404)
 
   try {
@@ -526,7 +601,7 @@ boatsRoutes.get('/:boatId/documents', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const boat = await getOwnedBoat(userId, c.req.param('boatId'))
+  const boat = await getBoatForUser(userId, c.req.param('boatId'), 'view')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   await ensureDefaultDocumentCategory(boat.id)
@@ -557,7 +632,7 @@ boatsRoutes.post('/:boatId/document-categories', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const boat = await getOwnedBoat(userId, c.req.param('boatId'))
+  const boat = await getBoatForUser(userId, c.req.param('boatId'), 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const body = (await c.req.json().catch(() => ({}))) as { name?: string }
@@ -593,7 +668,7 @@ boatsRoutes.post('/:boatId/documents', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const boat = await getOwnedBoat(userId, c.req.param('boatId'))
+  const boat = await getBoatForUser(userId, c.req.param('boatId'), 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const contentType = c.req.header('content-type') ?? ''
@@ -718,7 +793,7 @@ boatsRoutes.patch('/documents/:documentId', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const existing = await getOwnedDocument(userId, c.req.param('documentId'))
+  const existing = await getDocumentForUser(userId, c.req.param('documentId'), 'edit')
   if (!existing) return c.json({ error: 'Document not found' }, 404)
 
   const contentType = c.req.header('content-type') ?? ''
@@ -848,7 +923,7 @@ boatsRoutes.delete('/documents/:documentId', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const existing = await getOwnedDocument(userId, c.req.param('documentId'))
+  const existing = await getDocumentForUser(userId, c.req.param('documentId'), 'manage')
   if (!existing) return c.json({ error: 'Document not found' }, 404)
 
   const versions = await db.boatDocumentVersion.findMany({
@@ -879,7 +954,11 @@ boatsRoutes.get('/documents/versions/:versionId/content', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const existing = await getOwnedDocumentVersion(userId, c.req.param('versionId'))
+  const existing = await getDocumentVersionForUser(
+    userId,
+    c.req.param('versionId'),
+    'view',
+  )
   if (!existing || existing.kind !== 'upload' || !existing.s3Key) {
     return c.json({ error: 'Document not found' }, 404)
   }
@@ -908,7 +987,7 @@ boatsRoutes.get('/documents/:documentId/versions', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const existing = await getOwnedDocument(userId, c.req.param('documentId'))
+  const existing = await getDocumentForUser(userId, c.req.param('documentId'), 'view')
   if (!existing) return c.json({ error: 'Document not found' }, 404)
 
   const versions = await db.boatDocumentVersion.findMany({

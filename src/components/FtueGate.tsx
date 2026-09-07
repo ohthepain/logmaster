@@ -32,7 +32,7 @@ export function FtueGate({ children }: { children: React.ReactNode }) {
   const [showFtue, setShowFtue] = useState(false);
   const [forceShow, setForceShow] = useState(false);
 
-  const skipFtueForRoute = FTUE_SKIP_PATHS.has(pathname) || pathname.startsWith("/crew/invite/");
+  const skipFtueForRoute = FTUE_SKIP_PATHS.has(pathname) || pathname.startsWith("/crew/invite/") || pathname.startsWith("/invite/");
 
   useEffect(() => {
     let cancelled = false;

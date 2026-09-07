@@ -158,6 +158,104 @@ adminRoutes.delete('/trips/:tripId', async (c) => {
   return c.json({ ok: true })
 })
 
+function serializeAdminOrg(consortium: {
+  id: string
+  name: string
+  createdByUserId: string
+  visibility: string
+  createdAt: Date
+  updatedAt: Date
+  createdBy: { id: string; name: string; email: string }
+  _count: { members: number; boats: number }
+}) {
+  return {
+    id: consortium.id,
+    name: consortium.name,
+    ownerUserId: consortium.createdByUserId,
+    owner: consortium.createdBy,
+    visibility: consortium.visibility,
+    memberCount: consortium._count.members,
+    boatCount: consortium._count.boats,
+    createdAt: consortium.createdAt.toISOString(),
+    updatedAt: consortium.updatedAt.toISOString(),
+  }
+}
+
+adminRoutes.get('/orgs', async (c) => {
+  const orgs = await db.consortium.findMany({
+    orderBy: [{ updatedAt: 'desc' }],
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+      _count: { select: { members: true, boats: true } },
+    },
+  })
+  return c.json({
+    orgs: orgs.map(serializeAdminOrg),
+  })
+})
+
+adminRoutes.patch('/orgs/:orgId', async (c) => {
+  const orgId = c.req.param('orgId')
+  const body = (await c.req.json().catch(() => ({}))) as {
+    ownerUserId?: string
+  }
+  const ownerUserId = body.ownerUserId?.trim()
+  if (!ownerUserId) {
+    return c.json({ error: 'ownerUserId is required' }, 400)
+  }
+
+  const existing = await db.consortium.findUnique({
+    where: { id: orgId },
+  })
+  if (!existing) return c.json({ error: 'Org not found' }, 404)
+
+  const owner = await db.user.findUnique({
+    where: { id: ownerUserId },
+    select: { id: true, name: true, email: true },
+  })
+  if (!owner) return c.json({ error: 'User not found' }, 404)
+
+  await db.$transaction([
+    db.consortium.update({
+      where: { id: orgId },
+      data: { createdByUserId: ownerUserId, updatedAt: new Date() },
+    }),
+    db.consortiumMember.upsert({
+      where: {
+        consortiumId_userId: { consortiumId: orgId, userId: ownerUserId },
+      },
+      create: {
+        consortiumId: orgId,
+        userId: ownerUserId,
+        role: 'OWNER',
+      },
+      update: { role: 'OWNER' },
+    }),
+  ])
+
+  const updated = await db.consortium.findUnique({
+    where: { id: orgId },
+    include: {
+      createdBy: { select: { id: true, name: true, email: true } },
+      _count: { select: { members: true, boats: true } },
+    },
+  })
+  if (!updated) return c.json({ error: 'Org not found' }, 404)
+
+  return c.json({ org: serializeAdminOrg(updated) })
+})
+
+adminRoutes.delete('/orgs/:orgId', async (c) => {
+  const orgId = c.req.param('orgId')
+  const existing = await db.consortium.findUnique({
+    where: { id: orgId },
+  })
+  if (!existing) return c.json({ error: 'Org not found' }, 404)
+
+  await db.consortium.delete({ where: { id: orgId } })
+  return c.json({ ok: true })
+})
+
 const MAX_JOBS = 500
 const SUPPORTED_JOB_QUEUES = [
   BUILD_GEO_FEATURES_QUEUE,

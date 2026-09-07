@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { prisma } from '../db'
+import { canAccess } from '../permissions'
 import { getSessionUserId } from '../session'
 import {
   extensionForStoryMime,
@@ -27,6 +28,9 @@ logbookStoryMediaRoutes.post('/trips/:tripId/story/media', async (c) => {
   const tripId = c.req.param('tripId')
   const trip = await db.trip.findUnique({ where: { id: tripId } })
   if (!trip) return c.json({ error: 'Trip not found' }, 404)
+
+  const allowed = await canAccess(userId, 'edit', { type: 'trip', id: tripId })
+  if (!allowed) return c.json({ error: 'Trip not found' }, 404)
 
   const body = await c.req.parseBody()
   const file = body.file
@@ -67,11 +71,18 @@ logbookStoryMediaRoutes.get(
   async (c) => {
     const tripId = c.req.param('tripId')
     const mediaId = c.req.param('mediaId')
+    const shareToken = c.req.query('token') ?? undefined
 
     const media = await db.tripStoryMedia.findFirst({
       where: { id: mediaId, tripId },
     })
     if (!media) return c.json({ error: 'Media not found' }, 404)
+
+    const userId = await getSessionUserId(c.req.raw.headers)
+    const allowed = await canAccess(userId, 'view', { type: 'trip', id: tripId }, {
+      shareToken,
+    })
+    if (!allowed) return c.json({ error: 'Media not found' }, 404)
 
     try {
       const object = await getPhotoObject(media.s3Key)

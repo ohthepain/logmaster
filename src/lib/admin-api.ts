@@ -47,6 +47,38 @@ export async function deleteAdminTrip(tripId: string): Promise<void> {
   await api(`/api/admin/trips/${tripId}`, { method: 'DELETE' })
 }
 
+export type AdminOrg = {
+  id: string
+  name: string
+  ownerUserId: string
+  owner: { id: string; name: string; email: string }
+  visibility: string
+  memberCount: number
+  boatCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export async function fetchAdminOrgs(): Promise<AdminOrg[]> {
+  const data = await api<{ orgs: AdminOrg[] }>('/api/admin/orgs')
+  return data.orgs
+}
+
+export async function updateAdminOrgOwner(
+  orgId: string,
+  ownerUserId: string,
+): Promise<AdminOrg> {
+  const data = await api<{ org: AdminOrg }>(`/api/admin/orgs/${orgId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ ownerUserId }),
+  })
+  return data.org
+}
+
+export async function deleteAdminOrg(orgId: string): Promise<void> {
+  await api(`/api/admin/orgs/${orgId}`, { method: 'DELETE' })
+}
+
 export async function cancelAdminJob(jobId: string): Promise<{ jobId: string }> {
   const data = await api<{ jobId: string }>(
     `/api/admin/jobs/${encodeURIComponent(jobId)}/cancel`,

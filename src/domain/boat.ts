@@ -57,6 +57,9 @@ export type Boat = {
   userId: string
   name: string
   iconId: BoatIconId
+  orgId: string | null
+  orgName: string | null
+  shareCount: number
   createdAt: string
   updatedAt: string
   photos: BoatPhoto[]

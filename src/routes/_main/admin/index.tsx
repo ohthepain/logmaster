@@ -68,6 +68,18 @@ function AdminHome() {
           </li>
           <li>
             <Link
+              to="/admin/orgs"
+              className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
+            >
+              Orgs
+            </Link>
+            <span className="text-[var(--sea-ink-soft)]"> — </span>
+            <span className="text-[var(--sea-ink-soft)]">
+              view, reassign owner, and delete organizations
+            </span>
+          </li>
+          <li>
+            <Link
               to="/admin/job-management"
               className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
             >

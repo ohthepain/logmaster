@@ -1,4 +1,10 @@
 import type { Boat } from '../domain/boat'
+import type {
+  InviteMemberResult,
+  MemberInvite,
+  ResourceMember,
+} from '../domain/member-invite'
+import type { OrgMemberRole } from '../domain/org'
 import type { BoatIconId } from './boat-icons'
 import { apiUrl } from './app-origin'
 
@@ -15,7 +21,14 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   })
   if (!response.ok) {
     const text = await response.text().catch(() => '')
-    throw new Error(text || `Request failed (${response.status})`)
+    let message = text
+    try {
+      const parsed = JSON.parse(text) as { error?: string }
+      message = parsed.error ?? text
+    } catch {
+      // keep raw text
+    }
+    throw new Error(message || `Request failed (${response.status})`)
   }
   return response.json() as Promise<T>
 }
@@ -79,4 +92,66 @@ export async function updateBoatPhoto(
 
 export async function deleteBoatPhoto(photoId: string): Promise<void> {
   await api(`/api/boats/photos/${photoId}`, { method: 'DELETE' })
+}
+
+export async function fetchBoatMembers(boatId: string): Promise<{
+  members: ResourceMember[]
+  pendingInvites: MemberInvite[]
+  canManageMembers: boolean
+}> {
+  const data = await api<{
+    members: ResourceMember[]
+    pendingInvites: MemberInvite[]
+    canManageMembers: boolean
+  }>(`/api/boats/${boatId}/members`)
+  return data
+}
+
+export async function inviteBoatMember(
+  boatId: string,
+  input: { email: string; role?: OrgMemberRole; sendEmail?: boolean },
+): Promise<InviteMemberResult> {
+  return api<InviteMemberResult>(`/api/boats/${boatId}/members`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function createBoatInviteLink(
+  boatId: string,
+  role: OrgMemberRole = 'MEMBER',
+): Promise<MemberInvite> {
+  const data = await api<{ invite: MemberInvite }>(
+    `/api/boats/${boatId}/invite-link`,
+    { method: 'POST', body: JSON.stringify({ role }) },
+  )
+  return data.invite
+}
+
+export async function updateBoatMemberRole(
+  boatId: string,
+  memberUserId: string,
+  role: OrgMemberRole,
+): Promise<ResourceMember> {
+  const data = await api<{ member: ResourceMember }>(
+    `/api/boats/${boatId}/members/${memberUserId}`,
+    { method: 'PATCH', body: JSON.stringify({ role }) },
+  )
+  return data.member
+}
+
+export async function removeBoatMember(
+  boatId: string,
+  memberUserId: string,
+): Promise<void> {
+  await api(`/api/boats/${boatId}/members/${memberUserId}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function cancelBoatInvite(
+  boatId: string,
+  inviteId: string,
+): Promise<void> {
+  await api(`/api/boats/${boatId}/invites/${inviteId}`, { method: 'DELETE' })
 }
