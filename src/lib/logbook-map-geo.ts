@@ -16,9 +16,10 @@ import {
 } from './log-entry-map-marker'
 import {
   defaultMapLogEntryLayerToggles,
-  filterEntriesForMapLogLayers,
-  type MapLogEntryLayerToggles,
+  filterEntriesForMapLogLayers
+  
 } from './map-log-entry-layers'
+import type {MapLogEntryLayerToggles} from './map-log-entry-layers';
 import { buildTripTracksGeoJson, trackSampleMapPoints } from './trip-track-geo'
 import { isWaypointMapKind, waypointMapColor } from './waypoint-map-style'
 

@@ -3,9 +3,10 @@ import { persist } from 'zustand/middleware'
 import {
   pauseDevTripRetripState,
   resumeDevTripRetripState,
-  retripWithTimescale,
-  type DevTripRetrip,
+  retripWithTimescale
+  
 } from '../lib/dev-trip-retrip'
+import type {DevTripRetrip} from '../lib/dev-trip-retrip';
 import {
   clearDevPositionOverride,
   setLocationAccessEnabled,

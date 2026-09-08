@@ -22,8 +22,8 @@ export function tripTrackDistanceMeters(
 export function distanceFromPositionSamples(samples: PositionTrackSample[]): number {
   let total = 0
   for (let index = 1; index < samples.length; index += 1) {
-    const previous = samples[index - 1]!
-    const current = samples[index]!
+    const previous = samples[index - 1]
+    const current = samples[index]
     total += haversineMeters(
       previous.latitude,
       previous.longitude,

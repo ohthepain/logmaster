@@ -3,9 +3,10 @@ import { prisma } from '../db'
 import {
   assertCanChangeBoatMemberRole,
   assertCanRemoveBoatMember,
-  canAccess,
-  type ConsortiumMemberRole,
+  canAccess
+  
 } from '../permissions'
+import type {ConsortiumMemberRole} from '../permissions';
 import {
   createBoatMemberInvite,
   normalizeInviteEmail,

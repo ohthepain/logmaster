@@ -16,7 +16,7 @@ const entry = (partial: Partial<LogEntry> & Pick<LogEntry, 'id' | 'type'>): LogE
     updatedAt: '2026-06-01T10:00:00.000Z',
     synced: false,
     ...partial,
-  }) as LogEntry
+  })
 
 const media = (partial: Partial<Media> & Pick<Media, 'id' | 'logEntryId'>): Media =>
   ({
@@ -26,7 +26,7 @@ const media = (partial: Partial<Media> & Pick<Media, 'id' | 'logEntryId'>): Medi
     updatedAt: '2026-06-01T10:00:00.000Z',
     synced: false,
     ...partial,
-  }) as Media
+  })
 
 describe('trip-playback-media-timeline', () => {
   it('detects media on MEDIA entries and attached media', () => {

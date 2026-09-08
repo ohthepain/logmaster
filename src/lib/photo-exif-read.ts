@@ -44,11 +44,11 @@ export async function readPhotoGpsFromFile(
   if (!Array.isArray(latDms) || !Array.isArray(lonDms)) return null
 
   const latitude = piexif.GPSHelper.dmsRationalToDeg(
-    latDms as number[][],
+    latDms,
     latRef,
   )
   const longitude = piexif.GPSHelper.dmsRationalToDeg(
-    lonDms as number[][],
+    lonDms,
     lonRef,
   )
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null

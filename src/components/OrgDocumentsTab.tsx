@@ -18,9 +18,10 @@ import {
   resolveDocumentLinkTitle,
 } from '../lib/document-title'
 import {
-  openOrgDocumentRecord,
-  type OrgDocumentViewerPayload,
+  openOrgDocumentRecord
+  
 } from '../lib/org-document-open'
+import type {OrgDocumentViewerPayload} from '../lib/org-document-open';
 import { cn } from '../lib/cn'
 import { ResourceSectionHeader } from './NotificationBellToggle'
 import { Modal } from './Modal'
@@ -118,8 +119,8 @@ export function OrgDocumentsTab({ orgId }: OrgDocumentsTabProps) {
       await openOrgDocumentRecord(document, {
         onOpenViewer: setDocumentViewer,
       })
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open document')
+    } catch (openError) {
+      toast.error(openError instanceof Error ? openError.message : 'Failed to open document')
     }
   }
 

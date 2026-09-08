@@ -41,7 +41,7 @@ async function readResponseTextWithLimit(
   }
 
   return new TextDecoder().decode(
-    chunks.length === 1 ? chunks[0]! : concatUint8Arrays(chunks, total),
+    chunks.length === 1 ? chunks[0] : concatUint8Arrays(chunks, total),
   )
 }
 

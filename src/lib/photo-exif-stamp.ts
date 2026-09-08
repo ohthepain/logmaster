@@ -222,12 +222,19 @@ function binaryStringToBytes(binary: string): Uint8Array {
   return bytes
 }
 
+function toBlobPart(bytes: Uint8Array): BlobPart {
+  return bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer
+}
+
 function dataUrlToFile(dataUrl: string, fileName: string): File {
   const bytes = jpegDataUrlToBytes(dataUrl)
   const commaIndex = dataUrl.indexOf(',')
   const header = commaIndex >= 0 ? dataUrl.slice(0, commaIndex) : ''
   const mimeType = header.match(/data:(.*?);base64/)?.[1] ?? 'image/jpeg'
-  return new File([bytes], fileName, { type: mimeType })
+  return new File([toBlobPart(bytes)], fileName, { type: mimeType })
 }
 
 /** Decode a JPEG data URL (or piexif binary JPEG string) into bytes. */
@@ -262,7 +269,7 @@ function stampJpegDataUrl(
   const stampedDataUrl = exifBytes ? piexif.insert(exifBytes, dataUrl) : dataUrl
   const saveName = stampedFileName(fileName)
   const bytes = jpegDataUrlToBytes(stampedDataUrl)
-  const file = new File([bytes], saveName, { type: 'image/jpeg' })
+  const file = new File([toBlobPart(bytes)], saveName, { type: 'image/jpeg' })
   return { file, dataUrl: stampedDataUrl }
 }
 
@@ -322,7 +329,7 @@ export async function stampPhotoSrc(
   }
   const dataUrl = await readStampedFile(stampedFile)
   const bytes = jpegDataUrlToBytes(dataUrl)
-  const file = new File([bytes], stampedFile.name, { type: stampedFile.type })
+  const file = new File([toBlobPart(bytes)], stampedFile.name, { type: stampedFile.type })
   return { file, dataUrl }
 }
 

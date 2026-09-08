@@ -10,11 +10,12 @@ import {
   countEnabledPlaybackViews,
   defaultPlaybackViewState,
   enabledGraphPlaybackPanelIds,
-  sanitizePlaybackViewState,
-  type PlaybackPanelId,
-  type PlaybackPanelOption,
-  type PlaybackViewState,
+  sanitizePlaybackViewState
+  
+  
+  
 } from '../lib/trip-playback-panels'
+import type {PlaybackPanelId, PlaybackPanelOption, PlaybackViewState} from '../lib/trip-playback-panels';
 import { TripPlaybackMultiGraph } from './TripPlaybackMultiGraph'
 
 type TripPlaybackInstrumentGraphProps = {

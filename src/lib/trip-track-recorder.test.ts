@@ -26,7 +26,7 @@ describe('trip track recorder', () => {
 
     expect(sealedDuringAppend).toHaveLength(1)
     expect(sealedDuringAppend[0]?.sampleCount).toBe(5_000)
-    expect(decodeTripTrack(sealedDuringAppend[0]!)).toHaveLength(5_000)
+    expect(decodeTripTrack(sealedDuringAppend[0])).toHaveLength(5_000)
     expect(recorder.sealTrip('trip-1')).toHaveLength(0)
   })
 

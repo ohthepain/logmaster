@@ -4,10 +4,11 @@ import type { MapDataLayerId } from '../../../lib/map-data-layers'
 import { getMapDataLayer } from '../../../lib/map-data-layers'
 import {
   fetchPlacePhotos,
-  placePhotoMediaUrl,
-  type PlacePhoto,
-  type PlacePhotoAttribution,
+  placePhotoMediaUrl
+  
+  
 } from '../../../lib/places-photos-api'
+import type {PlacePhoto, PlacePhotoAttribution} from '../../../lib/places-photos-api';
 
 type PlacePhotosSearch = {
   lat: number

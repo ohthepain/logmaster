@@ -6,6 +6,7 @@ import type {
   ScalarTrackSample,
   TripTrack,
   WindTrackSample,
+  ScalarTrackDeltaV1,
 } from '../domain/trip-track'
 import {
   decodeInstrumentTrack,
@@ -14,7 +15,6 @@ import {
   instrumentTracksForTrip,
   isInstrumentTrack,
   tripTracksForTrip,
-  type ScalarTrackDeltaV1,
 } from '../domain/trip-track'
 import { gpxFieldMeta, gpxFieldMetaForTrackKind, isGpxImportScalarTrackKind, parseGpxTrackKind } from './gpx-field-meta'
 import type { TripPlaybackRange } from './trip-playback'
@@ -71,8 +71,8 @@ export function deriveSogFromPositionSamples(
 ): ScalarTrackSample[] {
   const derived: ScalarTrackSample[] = []
   for (let index = 1; index < samples.length; index += 1) {
-    const previous = samples[index - 1]!
-    const current = samples[index]!
+    const previous = samples[index - 1]
+    const current = samples[index]
     const startMs = validDateMs(previous.time)
     const endMs = validDateMs(current.time)
     if (startMs == null || endMs == null || endMs <= startMs) continue
@@ -161,8 +161,8 @@ export function interpolatePlaybackGraphValue(
   timeMs: number,
 ): number | null {
   if (points.length === 0) return null
-  let before = points[0]!
-  let after = points[points.length - 1]!
+  let before = points[0]
+  let after = points[points.length - 1]
   for (const point of points) {
     if (point.timeMs <= timeMs) before = point
     if (point.timeMs >= timeMs) {
@@ -326,7 +326,7 @@ export function playbackGraphSeriesForPanel(
     id: panelId,
     label,
     shortLabel,
-    color: PLAYBACK_GRAPH_COLORS[colorIndex % PLAYBACK_GRAPH_COLORS.length]!,
+    color: PLAYBACK_GRAPH_COLORS[colorIndex % PLAYBACK_GRAPH_COLORS.length],
     points,
     unit: playbackPanelUnit(panelId),
     scaleGroup: playbackGraphScaleGroup(panelId),

@@ -50,7 +50,7 @@ type TripDetailHeroProps = {
   onInitialMapViewportSettled?: () => void;
 };
 
-export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(function TripDetailHero(
+export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(function TripDetailHeroView(
   {
   trip,
   cover,

@@ -16,7 +16,6 @@ import type { MemberInvite, ResourceMember } from '../../../../domain/member-inv
 import type {
   Org,
   OrgContact,
-  OrgMemberRole,
 } from '../../../../domain/org'
 import {
   cancelOrgInvite,

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { LogEntry } from '../domain/logbook'
 import {
-  encodePositionTrackSamples,
-  type TripTrack,
+  encodePositionTrackSamples
+  
 } from '../domain/trip-track'
+import type {TripTrack} from '../domain/trip-track';
 import { buildTripSignalKExport } from './signalk-export'
 import {
   collectWaypointsFromEntries,

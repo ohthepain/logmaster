@@ -319,14 +319,14 @@ export function downsampleGpxPoints(
   maxPoints: number,
 ): GpxTrackPoint[] {
   if (points.length <= maxPoints) return points
-  if (maxPoints < 2) return [points[0]!]
+  if (maxPoints < 2) return [points[0]]
 
-  const sampled: GpxTrackPoint[] = [points[0]!]
+  const sampled: GpxTrackPoint[] = [points[0]]
   const step = (points.length - 1) / (maxPoints - 1)
   for (let index = 1; index < maxPoints - 1; index += 1) {
-    sampled.push(points[Math.round(index * step)]!)
+    sampled.push(points[Math.round(index * step)])
   }
-  sampled.push(points[points.length - 1]!)
+  sampled.push(points[points.length - 1])
   return sampled
 }
 
@@ -574,7 +574,7 @@ export function mergeGpxRawDocuments(rawDocuments: GpxRawDocument[]): ParsedGpxT
     throw new GpxImportError('No GPX files were provided.')
   }
   if (rawDocuments.length === 1) {
-    return finalizeParsedGpx(rawDocuments[0]!)
+    return finalizeParsedGpx(rawDocuments[0])
   }
 
   const trackSegments = rawDocuments.flatMap((document) => document.trackSegments)
@@ -603,7 +603,7 @@ export function parseAndMergeGpx(files: GpxImportFile[]): ParsedGpxTrack {
     throw new GpxImportError('No GPX files were provided.')
   }
   if (files.length === 1) {
-    return parseGpx(files[0]!.gpxXml)
+    return parseGpx(files[0].gpxXml)
   }
   return mergeGpxRawDocuments(files.map((file) => parseGpxRaw(file.gpxXml)))
 }
@@ -653,7 +653,7 @@ export function nearestTrackPointTime(
 ): string | null {
   if (points.length === 0) return null
 
-  let nearest = points[0]!
+  let nearest = points[0]
   let nearestDistance = Number.POSITIVE_INFINITY
 
   for (const point of points) {
@@ -733,7 +733,7 @@ export async function readGpxImportFilesFromFileList(
     throw new GpxImportError('No GPX files were found in that selection.')
   }
 
-  if (gpxFiles.length === 1 && isLikelyGpxExportFolder(gpxFiles[0]!)) {
+  if (gpxFiles.length === 1 && isLikelyGpxExportFolder(gpxFiles[0])) {
     throw new GpxFolderImportNeededError()
   }
 

@@ -20,10 +20,11 @@ import {
   collectWaypointsFromEntries,
   dedupeLogEntryExports,
   dedupeWaypointExports,
-  exportableLogEntries,
-  type SignalKLogEntryExport,
-  type SignalKWaypointExport,
+  exportableLogEntries
+  
+  
 } from './signalk-log-entries'
+import type {SignalKLogEntryExport, SignalKWaypointExport} from './signalk-log-entries';
 import { isOpenPositionTrack } from './trip-track-recorder'
 
 const KNOTS_TO_MS = 0.514444

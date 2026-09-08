@@ -58,7 +58,7 @@ function readPositionPayload(message: Record<string, unknown> | undefined): Posi
   ]) {
     const payload = message[key]
     if (payload && typeof payload === 'object') {
-      return payload as PositionPayload
+      return payload
     }
   }
   return null
@@ -90,7 +90,7 @@ function normalizeStaticRecord(raw: Record<string, unknown>): StaticPayload {
   if (destination) payload.Destination = destination
 
   if (source.Dimension && typeof source.Dimension === 'object') {
-    payload.Dimension = source.Dimension as StaticPayload['Dimension']
+    payload.Dimension = source.Dimension
   }
 
   return payload

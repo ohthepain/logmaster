@@ -19,9 +19,10 @@ import { generateLegColor } from './leg-colors'
 import {
   parseSignalKImportJson,
   SIGNALK_IMPORT_SOURCE,
-  signalKImportBoatName,
-  type ParsedSignalKImport,
+  signalKImportBoatName
+  
 } from './signalk-import'
+import type {ParsedSignalKImport} from './signalk-import';
 import type { SignalKLogEntryExport, SignalKWaypointExport } from './signalk-log-entries'
 
 function makeId() {
@@ -54,8 +55,8 @@ function buildPositionTripTrack(
     encoding: encodingForTrackKind('position'),
     payload: encodePositionTrackSamples(samples),
     sampleCount: samples.length,
-    startedAt: samples[0]!.time,
-    endedAt: samples[samples.length - 1]!.time,
+    startedAt: samples[0].time,
+    endedAt: samples[samples.length - 1].time,
     createdAt: now,
     updatedAt: now,
     synced: false,
@@ -81,8 +82,8 @@ function buildScalarTripTrack(
     encoding: 'scalar-delta-v1',
     payload: encodeScalarTrackSamples(samples),
     sampleCount: samples.length,
-    startedAt: samples[0]!.time,
-    endedAt: samples[samples.length - 1]!.time,
+    startedAt: samples[0].time,
+    endedAt: samples[samples.length - 1].time,
     createdAt: now,
     updatedAt: now,
     synced: false,
@@ -108,8 +109,8 @@ function buildAngleTripTrack(
     encoding: 'angle-delta-v1',
     payload: encodeAngleTrackSamples(samples),
     sampleCount: samples.length,
-    startedAt: samples[0]!.time,
-    endedAt: samples[samples.length - 1]!.time,
+    startedAt: samples[0].time,
+    endedAt: samples[samples.length - 1].time,
     createdAt: now,
     updatedAt: now,
     synced: false,
@@ -131,8 +132,8 @@ function buildWindTripTrack(tripId: string, samples: WindTrackSample[]): TripTra
     encoding: 'wind-delta-v1',
     payload: encodeWindTrackSamples(samples),
     sampleCount: samples.length,
-    startedAt: samples[0]!.time,
-    endedAt: samples[samples.length - 1]!.time,
+    startedAt: samples[0].time,
+    endedAt: samples[samples.length - 1].time,
     createdAt: now,
     updatedAt: now,
     synced: false,
@@ -277,8 +278,8 @@ function buildImportedLogEntries(
 
 function buildLeg(tripId: string, parsed: ParsedSignalKImport): Leg {
   const now = nowIso()
-  const first = parsed.positionSamples[0]!
-  const last = parsed.positionSamples[parsed.positionSamples.length - 1]!
+  const first = parsed.positionSamples[0]
+  const last = parsed.positionSamples[parsed.positionSamples.length - 1]
   return {
     id: makeId(),
     tripId,
@@ -303,12 +304,12 @@ export function buildTripFromSignalK(
   },
 ): SignalKImportedTrip {
   const parsed = parseSignalKImportJson(json)
-  const startedAt = parsed.positionSamples[0]!.time
-  const completedAt = parsed.positionSamples[parsed.positionSamples.length - 1]!.time
+  const startedAt = parsed.positionSamples[0].time
+  const completedAt = parsed.positionSamples[parsed.positionSamples.length - 1].time
   const boatName = signalKImportBoatName(parsed, options?.fileName, options?.boatName)
   const tripId = makeId()
   const now = nowIso()
-  const firstPoint = parsed.positionSamples[0]!
+  const firstPoint = parsed.positionSamples[0]
   const leg = buildLeg(tripId, parsed)
 
   const trip: Trip = {

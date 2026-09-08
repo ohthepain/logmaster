@@ -57,7 +57,7 @@ function MemberInvitePage() {
     !preview?.inviteeEmail ||
     (Boolean(user && preview) &&
       user!.email.trim().toLowerCase() ===
-        preview!.inviteeEmail!.toLowerCase())
+        preview.inviteeEmail.toLowerCase())
 
   const targetLabel = preview?.kind === 'ORG' ? 'organization' : 'boat'
   const destination =

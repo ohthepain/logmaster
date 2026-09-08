@@ -174,7 +174,7 @@ export function parseSignalKLogEntryExport(value: unknown): SignalKLogEntryExpor
     heading: typeof value.heading === 'number' ? value.heading : null,
     notes: typeof value.notes === 'string' ? value.notes : null,
     data: isRecord(value.data) ? value.data : null,
-    weather: isRecord(value.weather) ? (value.weather as WeatherSnapshot) : null,
+    weather: isRecord(value.weather) ? (value.weather) : null,
   }
 }
 

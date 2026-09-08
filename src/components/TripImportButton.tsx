@@ -30,7 +30,7 @@ type DirectoryPickerWindow = Window & {
 }
 
 export const TripImportButton = forwardRef<TripImportButtonHandle, TripImportButtonProps>(
-  function TripImportButton(
+  function TripImportButtonView(
     {
       onImported,
       onRouteImported,

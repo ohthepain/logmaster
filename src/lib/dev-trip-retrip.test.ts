@@ -7,9 +7,10 @@ import {
   retripDurationMs,
   retripSourceElapsedMs,
   retripSourceTimeMs,
-  retripWithTimescale,
-  type DevTripRetrip,
+  retripWithTimescale
+  
 } from './dev-trip-retrip'
+import type {DevTripRetrip} from './dev-trip-retrip';
 
 const trip: Trip = {
   id: 'source',

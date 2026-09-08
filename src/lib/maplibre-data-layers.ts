@@ -13,10 +13,9 @@ import {
   mapDataLayerAuxiliaryLayerId,
   mapDataLayerCircleLayerId,
   mapDataLayerRenderLayerId,
-  mapDataLayerSymbolLayerId,
+  mapDataLayerSymbolLayerId, resolveMapDataLayerToggle, resolveMapDataLayerToggles 
 } from './map-data-layers'
 import type {MapDataLayerDefinition, MapDataLayerId, MapDataLayerToggles, OsmPointDatasetId} from './map-data-layers';
-import { resolveMapDataLayerToggle, resolveMapDataLayerToggles } from './map-data-layers';
 import {
   hazardIconImageExpression,
   hazardIconSizeExpression,

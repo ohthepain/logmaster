@@ -33,13 +33,13 @@ function projectOntoPolyline(
   let totalLength = 0
 
   for (let index = 0; index < points.length - 1; index += 1) {
-    totalLength += Math.sqrt(distanceSquared(points[index]!, points[index + 1]!))
+    totalLength += Math.sqrt(distanceSquared(points[index], points[index + 1]))
   }
   if (totalLength === 0) return 0
 
   for (let index = 0; index < points.length - 1; index += 1) {
-    const start = points[index]!
-    const end = points[index + 1]!
+    const start = points[index]
+    const end = points[index + 1]
     const segmentLength = Math.sqrt(distanceSquared(start, end))
     const t = segmentLength === 0
       ? 0

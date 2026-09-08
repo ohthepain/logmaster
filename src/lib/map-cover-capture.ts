@@ -62,7 +62,7 @@ export async function isBlankMapSnapshot(dataUrl: string | null): Promise<boolea
       const pixels = context.getImageData(0, 0, 32, 32).data
       let luminanceSum = 0
       for (let index = 0; index < pixels.length; index += 4) {
-        luminanceSum += pixels[index]! + pixels[index + 1]! + pixels[index + 2]!
+        luminanceSum += pixels[index] + pixels[index + 1] + pixels[index + 2]
       }
       const averageLuminance = luminanceSum / (pixels.length / 4) / 3
       resolve(averageLuminance < 8)

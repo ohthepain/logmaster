@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { prisma } from '../db'
-import { canAccess, type Privilege } from '../permissions'
+import { canAccess  } from '../permissions'
+import type {Privilege} from '../permissions';
 import { getSessionUserId } from '../session'
 import { fireOrgDocumentsNotification } from '../notifications/route-hooks'
 import {

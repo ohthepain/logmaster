@@ -7,9 +7,10 @@ import {
 } from './waypoint-map-style'
 import {
   routeMapMarkerImageId,
-  ROUTE_MAP_ICON_KINDS,
-  type RouteMapIconKind,
+  ROUTE_MAP_ICON_KINDS
+  
 } from './route-map-marker'
+import type {RouteMapIconKind} from './route-map-marker';
 
 export const ROUTE_MAP_MARKER_SIZE = 64
 export const ROUTE_MAP_MARKER_PIXEL_RATIO = 2

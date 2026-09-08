@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import type { LogEntry } from '../domain/logbook'
+import type { LogEntry, Trip } from '../domain/logbook'
 import {
   encodeAngleTrackSamples,
   encodePositionTrackSamples,
   encodeScalarTrackSamples,
-  encodeWindTrackSamples,
-  type TripTrack,
+  encodeWindTrackSamples
+  
 } from '../domain/trip-track'
+import type {TripTrack} from '../domain/trip-track';
 import { buildTripSignalKExport } from './signalk-export'
 import { parseSignalKImportJson } from './signalk-import'
 import { buildTripFromSignalK } from './signalk-trip-import'
@@ -270,7 +271,7 @@ describe('signalk-import', () => {
       },
     ]
 
-    let currentTrip = trip
+    let currentTrip: Trip = trip
     let currentTracks = tracks
     let currentEntries = entries
     let baselineSize = 0
@@ -280,7 +281,7 @@ describe('signalk-import', () => {
     let baselineTrackCount = 0
 
     const stableExportSize = (
-      exportTrip: typeof trip,
+      exportTrip: Trip,
       exportTracks: TripTrack[],
       exportEntries: LogEntry[],
     ) => {
@@ -359,8 +360,8 @@ describe('signalk-import', () => {
         encoding: 'delta-v1',
         payload: encodePositionTrackSamples(positionSamples),
         sampleCount,
-        startedAt: positionSamples[0]!.time,
-        endedAt: positionSamples[sampleCount - 1]!.time,
+        startedAt: positionSamples[0].time,
+        endedAt: positionSamples[sampleCount - 1].time,
         createdAt: '2026-06-01T09:00:00.000Z',
         updatedAt: '2026-06-01T09:00:00.000Z',
         synced: false,
@@ -371,7 +372,7 @@ describe('signalk-import', () => {
       },
     ]
 
-    let currentTrip = trip
+    let currentTrip: Trip = trip
     let currentTracks = tracks
     let currentEntries: LogEntry[] = []
     let baselinePositionCount = 0

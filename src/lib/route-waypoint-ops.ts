@@ -1,5 +1,5 @@
 import type { LogEntry } from '../domain/logbook'
-import type { Route, RouteWaypoint } from '../domain/route'
+import type { RouteWaypoint } from '../domain/route'
 
 export function sortWaypointsBySequence(waypoints: RouteWaypoint[]): RouteWaypoint[] {
   return [...waypoints].sort((a, b) => a.sequence - b.sequence)

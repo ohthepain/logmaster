@@ -5,9 +5,10 @@ import { prisma } from '../db'
 import {
   boatAccessFilter,
   canAccess,
-  initializeBoatShares,
-  type Privilege,
+  initializeBoatShares
+  
 } from '../permissions'
+import type {Privilege} from '../permissions';
 import { getSessionUserId } from '../session'
 import {
   deletePhotoObject,
@@ -352,7 +353,7 @@ boatsRoutes.post('/', async (c) => {
       ? Math.floor(body.shareCount)
       : 1
 
-  let consortiumId = body.consortiumId?.trim() || null
+  const consortiumId = body.consortiumId?.trim() || null
   if (consortiumId) {
     const allowed = await canAccess(userId, 'admin', {
       type: 'consortium',
@@ -709,6 +710,9 @@ boatsRoutes.post('/:boatId/documents', async (c) => {
   if (contentType.includes('multipart/form-data')) {
     const body = await c.req.parseBody()
     const file = body.file
+    if (!(file instanceof File)) {
+      return c.json({ error: 'file is required' }, 400)
+    }
     const title =
       String(body.title ?? '').trim() ||
       file.name.replace(/\.[^.]+$/, '').trim() ||
@@ -716,9 +720,6 @@ boatsRoutes.post('/:boatId/documents', async (c) => {
       'Document'
     const categoryId = String(body.categoryId ?? '').trim()
     const purpose = parseDocumentPurpose(body.purpose)
-    if (!(file instanceof File)) {
-      return c.json({ error: 'file is required' }, 400)
-    }
     if (!categoryId) return c.json({ error: 'Category is required' }, 400)
 
     const category = await getOwnedCategory(userId, boat.id, categoryId)

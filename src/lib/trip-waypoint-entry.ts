@@ -22,7 +22,7 @@ export type TripWaypointEntryInput = {
   latitude: number
   longitude: number
   timestamp?: string
-  notes?: string | null
+  notes?: string
   data: Record<string, unknown>
 }
 
@@ -39,7 +39,7 @@ export function buildTripWaypointEntryInput(
     latitude: input.latitude,
     longitude: input.longitude,
     timestamp: input.timestamp,
-    notes,
+    notes: notes ?? undefined,
     data: {
       waypoint: true,
       source: 'manual',
@@ -77,7 +77,7 @@ export function withTripWaypointName(
   data: Record<string, unknown> | null | undefined,
   name: string | null | undefined,
 ): Record<string, unknown> {
-  const next = { ...(data ?? {}), waypoint: true, source: 'manual' }
+  const next: Record<string, unknown> = { ...(data ?? {}), waypoint: true, source: 'manual' }
   const trimmed = name?.trim() || ''
   if (trimmed) {
     next.place = {

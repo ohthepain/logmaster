@@ -1,4 +1,5 @@
 import type { BoatDocumentVersion } from './boat'
+import type { ExpenseClaim, OrgTransaction } from './org-accounting'
 
 export type AssetOwnership = 'BOAT' | 'ORG' | 'USER' | 'EXTERNAL'
 
@@ -107,8 +108,8 @@ export type BoatAccountingSummary = {
     currentBalance: string
   }>
   purchases: BoatPurchase[]
-  expenseClaims: import('./org-accounting').ExpenseClaim[]
-  transactions: import('./org-accounting').OrgTransaction[]
+  expenseClaims: ExpenseClaim[]
+  transactions: OrgTransaction[]
   workCosts: Array<{
     id: string
     assetId: string

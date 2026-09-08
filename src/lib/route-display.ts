@@ -67,8 +67,8 @@ export function routePlannedDistanceMeters(waypoints: RouteWaypoint[]): number |
 
   let total = 0
   for (let index = 1; index < ordered.length; index += 1) {
-    const previous = ordered[index - 1]!
-    const current = ordered[index]!
+    const previous = ordered[index - 1]
+    const current = ordered[index]
     total += haversineMeters(
       previous.latitude,
       previous.longitude,

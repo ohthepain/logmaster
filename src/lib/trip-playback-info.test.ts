@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   encodePositionTrackSamples,
   encodeScalarTrackSamples,
-  encodeWindTrackSamples,
-  type TripTrack,
+  encodeWindTrackSamples
+  
 } from '../domain/trip-track'
+import type {TripTrack} from '../domain/trip-track';
 import { tripPlaybackInfoAt } from './trip-playback-info'
 
 const tripId = 'trip-1'

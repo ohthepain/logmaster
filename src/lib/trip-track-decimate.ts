@@ -10,11 +10,11 @@ export function decimatePositionSamples(
   if (samples.length <= maxPoints) return samples
   if (maxPoints < 2) return samples.slice(0, 1)
 
-  const result: PositionTrackSample[] = [samples[0]!]
+  const result: PositionTrackSample[] = [samples[0]]
   const step = (samples.length - 1) / (maxPoints - 1)
   for (let index = 1; index < maxPoints - 1; index += 1) {
-    result.push(samples[Math.round(index * step)]!)
+    result.push(samples[Math.round(index * step)])
   }
-  result.push(samples[samples.length - 1]!)
+  result.push(samples[samples.length - 1])
   return result
 }

@@ -7,7 +7,7 @@ import {
   gpxImportBoatName,
   nearestTrackPointTime,
   parseGpx,
-  type GpxTrackPoint,
+  
   isLikelyGpxExportFolder,
   mergeGpxRawDocuments,
   parseAndMergeGpx,
@@ -16,8 +16,9 @@ import {
   partitionGpxImportFiles,
   classifyGpxDocument,
   readGpxImportFilesFromFileList,
-  GpxFolderImportNeededError,
+  GpxFolderImportNeededError
 } from './gpx-import'
+import type {GpxTrackPoint} from './gpx-import';
 
 const SAMPLE_GPX = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="logmaster-test">

@@ -2,7 +2,8 @@ import { Link } from '@tanstack/react-router'
 import { ArrowLeft, Camera, Check, LocateFixed, Map, Mic, PenLine } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { LogEntryContentStack, type EntryContentBlock } from './LogEntryContentStack'
+import { LogEntryContentStack  } from './LogEntryContentStack'
+import type {EntryContentBlock} from './LogEntryContentStack';
 import { LogEntryPositionMap } from './LogEntryPositionMap'
 import { Modal } from './Modal'
 import {

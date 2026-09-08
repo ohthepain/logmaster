@@ -3,9 +3,10 @@ import {
   encodeAngleTrackSamples,
   encodePositionTrackSamples,
   encodeScalarTrackSamples,
-  encodeWindTrackSamples,
-  type TripTrack,
+  encodeWindTrackSamples
+  
 } from '../domain/trip-track'
+import type {TripTrack} from '../domain/trip-track';
 import { buildTripSignalKExport } from './signalk-export'
 
 const trip = {
@@ -146,8 +147,8 @@ describe('signalk-export', () => {
         encoding: 'delta-v1',
         payload,
         sampleCount: 2,
-        startedAt: samples[0]!.time,
-        endedAt: samples[1]!.time,
+        startedAt: samples[0].time,
+        endedAt: samples[1].time,
         createdAt: '2026-06-01T09:00:00.000Z',
         updatedAt: '2026-06-01T09:05:00.000Z',
         synced: false,
@@ -160,8 +161,8 @@ describe('signalk-export', () => {
         encoding: 'delta-v1',
         payload,
         sampleCount: 2,
-        startedAt: samples[0]!.time,
-        endedAt: samples[1]!.time,
+        startedAt: samples[0].time,
+        endedAt: samples[1].time,
         createdAt: '2026-06-01T09:00:00.000Z',
         updatedAt: '2026-06-01T09:05:00.000Z',
         synced: false,

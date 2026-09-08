@@ -22,12 +22,13 @@ import {
   gpxScalarSamplesForField,
   nearestTrackPointTime,
   parseAndMergeGpx,
-  parseGpxRaw,
-  type GpxImportFile,
-  type GpxTrackPoint,
-  type GpxTrackSegment,
-  type GpxWaypoint,
+  parseGpxRaw
+  
+  
+  
+  
 } from './gpx-import'
+import type {GpxImportFile, GpxTrackPoint, GpxTrackSegment, GpxWaypoint} from './gpx-import';
 import { generateLegColor } from './leg-colors'
 
 function makeId() {
@@ -162,8 +163,8 @@ function buildPositionTripTrack(
     encoding: encodingForTrackKind('position'),
     payload: encodePositionTrackSamples(samples),
     sampleCount: samples.length,
-    startedAt: samples[0]!.time,
-    endedAt: samples[samples.length - 1]!.time,
+    startedAt: samples[0].time,
+    endedAt: samples[samples.length - 1].time,
     createdAt: now,
     updatedAt: now,
     synced: false,
@@ -189,8 +190,8 @@ function buildScalarTripTrack(
     encoding: 'scalar-delta-v1',
     payload: encodeScalarTrackSamples(samples),
     sampleCount: samples.length,
-    startedAt: samples[0]!.time,
-    endedAt: samples[samples.length - 1]!.time,
+    startedAt: samples[0].time,
+    endedAt: samples[samples.length - 1].time,
     createdAt: now,
     updatedAt: now,
     synced: false,
@@ -279,7 +280,7 @@ export function buildTripFromGpxFiles(
   const boatName = gpxImportBoatName(parsed, primaryGpxFileName(files), options?.boatName)
   const tripId = makeId()
   const now = nowIso()
-  const firstPoint = parsed.points[0]!
+  const firstPoint = parsed.points[0]
 
   const trip: Trip = {
     id: tripId,

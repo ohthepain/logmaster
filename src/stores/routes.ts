@@ -5,12 +5,14 @@ import type {
   RouteMedia,
   RouteWaypoint,
 } from '../domain/route'
-import { buildRouteFromGpxFiles, type GpxImportedRoute } from '../lib/gpx-route-import'
+import { buildRouteFromGpxFiles  } from '../lib/gpx-route-import'
+import type {GpxImportedRoute} from '../lib/gpx-route-import';
 import {
   GpxImportError,
-  partitionGpxImportFiles,
-  type GpxImportFile,
+  partitionGpxImportFiles
+  
 } from '../lib/gpx-import'
+import type {GpxImportFile} from '../lib/gpx-import';
 import {
   addPendingRouteId,
   addPendingDeletedRouteId,

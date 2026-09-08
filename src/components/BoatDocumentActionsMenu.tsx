@@ -18,9 +18,10 @@ import { documentTitleFromFileName } from '../lib/document-title'
 import {
   boatDocumentOpenTarget,
   boatDocumentVersionOpenTarget,
-  openBoatDocument,
-  type BoatDocumentViewerPayload,
+  openBoatDocument
+  
 } from '../lib/boat-document-open'
+import type {BoatDocumentViewerPayload} from '../lib/boat-document-open';
 import { cn } from '../lib/cn'
 import { BoatDocumentCategoryField } from './BoatDocumentCategoryField'
 import { Modal } from './Modal'

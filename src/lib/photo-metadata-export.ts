@@ -8,9 +8,10 @@ import {
   copyTextToClipboard,
   jpegDataUrlToBytes,
   stampPhotoSrc,
-  stampedPhotoSaveName,
-  type PhotoExifStampInput,
+  stampedPhotoSaveName
+  
 } from './photo-exif-stamp'
+import type {PhotoExifStampInput} from './photo-exif-stamp';
 
 export type PhotoMetadataExportResult = {
   saved: boolean

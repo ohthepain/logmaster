@@ -1,10 +1,11 @@
 import {
   encodePositionTrackSamples,
-  encodingForTrackKind,
-  type PositionTrackSample,
-  type TripTrack,
-  type TripTrackSource,
+  encodingForTrackKind
+  
+  
+  
 } from '../domain/trip-track'
+import type {PositionTrackSample, TripTrack, TripTrackSource} from '../domain/trip-track';
 import { TRIP_TRACK_CHUNK_MAX_MS, TRIP_TRACK_CHUNK_MAX_SAMPLES } from './trip-track-payload'
 
 export type SealedTripTrack = TripTrack
@@ -67,8 +68,8 @@ function buildPositionTrackFromSamples(
     encoding: encodingForTrackKind('position'),
     payload,
     sampleCount: samples.length,
-    startedAt: samples[0]!.time,
-    endedAt: samples[samples.length - 1]!.time,
+    startedAt: samples[0].time,
+    endedAt: samples[samples.length - 1].time,
     createdAt: now,
     updatedAt: now,
     synced: false,
@@ -128,7 +129,7 @@ export class TripTrackRecorder {
     const spanMs =
       chunk.samples.length >= 2
         ? Date.parse(chunk.samples.at(-1)!.time) -
-          Date.parse(chunk.samples[0]!.time)
+          Date.parse(chunk.samples[0].time)
         : 0
 
     if (
@@ -189,7 +190,7 @@ export class TripTrackRecorder {
       encoding: encodingForTrackKind('position'),
       payload,
       sampleCount: chunk.samples.length,
-      startedAt: chunk.samples[0]!.time,
+      startedAt: chunk.samples[0].time,
       endedAt: chunk.samples.at(-1)!.time,
       createdAt: now,
       updatedAt: now,

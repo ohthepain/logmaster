@@ -8,6 +8,7 @@ import {
   aisVesselIconId,
 } from '../domain/ais-vessel-categories'
 import { escapeHtml } from './osm-feature-display'
+import { getGeoJsonSource } from './maplibre-source'
 
 export const AIS_VESSELS_SOURCE_ID = 'ais-vessels'
 export const AIS_VESSELS_LAYER_ID = 'ais-vessel-symbols'
@@ -139,7 +140,7 @@ export function updateAisMapLayerData(
   map: maplibregl.Map,
   collection: FeatureCollection<Point>,
 ) {
-  const source = map.getSource(AIS_VESSELS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined
+  const source = getGeoJsonSource(map, AIS_VESSELS_SOURCE_ID)
   if (!source) return
   source.setData(collection)
 }
@@ -347,7 +348,7 @@ export function bindAisMapLayerPopups(
     if (!feature?.properties) return
     onSelect(
       aisVesselPopupFromFeatureProperties(
-        feature.properties as Record<string, unknown>,
+        feature.properties,
         [event.lngLat.lng, event.lngLat.lat],
       ),
     )

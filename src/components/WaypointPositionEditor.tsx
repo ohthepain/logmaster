@@ -14,9 +14,8 @@ import {
   scheduleSeamarkTileRefresh,
 } from '../lib/maplibre-sailing-map-setup'
 import { applySailingLogMapTheme, SailingMapColors } from '../lib/maplibre-sailing-theme'
-import { queryTappableMapDataFeatures } from '../lib/maplibre-data-layers'
+import { queryTappableMapDataFeatures, installMapDataLayers  } from '../lib/maplibre-data-layers'
 import { defaultRasterMapId } from '../lib/map-styles'
-import { installMapDataLayers } from '../lib/maplibre-data-layers'
 import {
   centerMapOnCurrentLocation,
   centerMapOnPoint,

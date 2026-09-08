@@ -1,8 +1,9 @@
 import type { Route, RouteWaypoint } from '../domain/route'
 import {
-  dedupeWaypointExports,
-  type SignalKWaypointExport,
+  dedupeWaypointExports
+  
 } from './signalk-log-entries'
+import type {SignalKWaypointExport} from './signalk-log-entries';
 import { sortRouteWaypoints } from './route-map-geo'
 
 function routeWaypointToSignalK(

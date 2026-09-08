@@ -26,8 +26,15 @@ async function fileToBytes(file: File): Promise<Uint8Array> {
   return bytes
 }
 
+function toBlobPart(bytes: Uint8Array): BlobPart {
+  return bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer
+}
+
 function bytesToBlob(bytes: Uint8Array, mimeType: string): Blob {
-  return new Blob([bytes], { type: mimeType || 'application/octet-stream' })
+  return new Blob([toBlobPart(bytes)], { type: mimeType || 'application/octet-stream' })
 }
 
 function downloadBlob(fileName: string, blob: Blob): boolean {
@@ -59,7 +66,7 @@ export function downloadBytes(
   mimeType: string,
 ): boolean {
   assertNonEmptyBytes(bytes, fileName)
-  const blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' })
+  const blob = new Blob([toBlobPart(bytes)], { type: mimeType || 'application/octet-stream' })
   if (blob.size <= 0) {
     throw new Error(`Cannot download empty file (${fileName})`)
   }
@@ -72,7 +79,7 @@ async function pickPhotoSaveHandle(
   if (!('showSaveFilePicker' in window)) return null
 
   return (
-    window as Window & {
+    window as unknown as Window & {
       showSaveFilePicker: (options: {
         suggestedName: string
         types: Array<{ description: string; accept: Record<string, string[]> }>
@@ -107,7 +114,7 @@ async function writeBytesToHandle(
 ): Promise<void> {
   const writable = await handle.createWritable()
   try {
-    await writable.write(new Blob([bytes]))
+    await writable.write(new Blob([toBlobPart(bytes)]))
     await writable.close()
     const saved = await handle.getFile()
     if (saved.size <= 0) {
@@ -191,7 +198,7 @@ async function saveBlobWithPicker(
       : { [mimeType]: [`.${extension}`] }
 
   const handle = await (
-    window as Window & {
+    window as unknown as Window & {
       showSaveFilePicker: (options: {
         suggestedName: string
         types: Array<{ description: string; accept: Record<string, string[]> }>

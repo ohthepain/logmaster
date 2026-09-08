@@ -8,9 +8,10 @@ import type { TripPlaybackPosition } from '../lib/trip-playback'
 import { tripPlaybackInfoAt, tripPlaybackAvailableTrackLabels } from '../lib/trip-playback-info'
 import {
   PLAYBACK_SPEEDS,
-  PlaybackSpeedControl,
-  type PlaybackSpeed,
+  PlaybackSpeedControl
+  
 } from './PlaybackSpeedControl'
+import type {PlaybackSpeed} from './PlaybackSpeedControl';
 import { TripMapChromeButton } from './TripMapChromeButton'
 
 type TripPlaybackInfoPanelRetrip = {

@@ -1,10 +1,11 @@
 import type { Route, RouteWaypoint } from '../domain/route'
 import {
   GPX_IMPORT_SOURCE,
-  parseGpxRoute,
-  type GpxImportFile,
-  type GpxWaypoint,
+  parseGpxRoute
+  
+  
 } from './gpx-import'
+import type {GpxImportFile, GpxWaypoint} from './gpx-import';
 
 function makeId() {
   return crypto.randomUUID()

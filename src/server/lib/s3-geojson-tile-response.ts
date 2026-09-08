@@ -1,4 +1,5 @@
-import { GetObjectCommand, NoSuchKey, S3Client } from '@aws-sdk/client-s3'
+import type { S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, NoSuchKey } from '@aws-sdk/client-s3'
 import { gzipSync } from 'node:zlib'
 
 const EMPTY_GEOJSON_GZ = gzipSync(

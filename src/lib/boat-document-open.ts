@@ -2,9 +2,10 @@ import type { BoatDocument, BoatDocumentVersion } from '../domain/boat'
 import {
   cacheFileNameForBoatDocument,
   getBoatDocumentViewKind,
-  isBoatDocumentViewable,
-  type BoatDocumentViewKind,
+  isBoatDocumentViewable
+  
 } from './boat-document-viewer'
+import type {BoatDocumentViewKind} from './boat-document-viewer';
 import { apiUrl } from './app-origin'
 import { isNativePlatform } from './platform'
 

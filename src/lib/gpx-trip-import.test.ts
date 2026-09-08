@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   decodePositionTrackSamples,
-  decodeScalarTrackSamples,
-  type ScalarTrackDeltaV1,
-  type TripTrackDeltaV1,
+  decodeScalarTrackSamples
+  
+  
 } from '../domain/trip-track'
+import type {ScalarTrackDeltaV1, TripTrackDeltaV1} from '../domain/trip-track';
 import { GPX_MS_TO_KNOTS } from './gpx-field-meta'
 import { buildTripFromGpx, buildTripFromGpxFiles } from './gpx-trip-import'
 

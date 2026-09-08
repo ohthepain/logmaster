@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   encodePositionTrackSamples,
-  encodeScalarTrackSamples,
-  type TripTrack,
+  encodeScalarTrackSamples
+  
 } from '../domain/trip-track'
+import type {TripTrack} from '../domain/trip-track';
 import {
   availablePlaybackPanels,
   buildPlaybackGraphSeries,

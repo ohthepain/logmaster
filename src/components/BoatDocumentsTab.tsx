@@ -18,9 +18,10 @@ import {
   resolveDocumentLinkTitle,
 } from '../lib/document-title'
 import {
-  openBoatDocumentRecord,
-  type BoatDocumentViewerPayload,
+  openBoatDocumentRecord
+  
 } from '../lib/boat-document-open'
+import type {BoatDocumentViewerPayload} from '../lib/boat-document-open';
 import { cn } from '../lib/cn'
 import { ResourceSectionHeader } from './NotificationBellToggle'
 import { Modal } from './Modal'
@@ -118,8 +119,8 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
       await openBoatDocumentRecord(document, {
         onOpenViewer: setDocumentViewer,
       })
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open document')
+    } catch (openError) {
+      toast.error(openError instanceof Error ? openError.message : 'Failed to open document')
     }
   }
 

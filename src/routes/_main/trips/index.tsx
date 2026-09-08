@@ -3,9 +3,10 @@ import { Map as MapIcon, MapPin, Sailboat } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AddButton } from '../../../components/AddButton'
 import {
-  TripImportButton,
-  type TripImportButtonHandle,
+  TripImportButton
+  
 } from '../../../components/TripImportButton'
+import type {TripImportButtonHandle} from '../../../components/TripImportButton';
 import { GpxUrlImportButton } from '../../../components/GpxUrlImportButton'
 import { StartTripLauncher } from '../../../components/StartTripLauncher'
 import { TripActionsMenu } from '../../../components/TripActionsMenu'

@@ -1,5 +1,4 @@
-import type { PositionTrackSample } from '../domain/trip-track'
-import type { TripTrack } from '../domain/trip-track'
+import type { PositionTrackSample, TripTrack  } from '../domain/trip-track'
 import {
   decodeTripTrack,
   positionTracksForTrip,

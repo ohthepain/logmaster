@@ -10,6 +10,7 @@ import {
   isWaypointMapKind,
   waypointMapColor,
 } from './waypoint-map-style'
+import type { WaypointMapKind } from './waypoint-map-style'
 import {
   LOG_ENTRY_MAP_ICON_KINDS,
   logEntryMapMarkerImageId,
@@ -24,7 +25,7 @@ function isMediaMarkerKind(kind: LogEntryMapIconKind): boolean {
   return kind === 'media-photo' || kind === 'media-video'
 }
 
-function isWaypointMarkerKind(kind: LogEntryMapIconKind): boolean {
+function isWaypointMarkerKind(kind: LogEntryMapIconKind): kind is WaypointMapKind {
   return isWaypointMapKind(kind)
 }
 

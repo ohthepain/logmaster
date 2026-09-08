@@ -12,8 +12,7 @@ import {
   ResourceMembersTab,
 } from '../../../../components/ResourceMembersTab'
 import type { Boat } from '../../../../domain/boat'
-import type { MemberInvite } from '../../../../domain/member-invite'
-import type { ResourceMember } from '../../../../domain/member-invite'
+import type { MemberInvite, ResourceMember  } from '../../../../domain/member-invite'
 import type { OrgMemberRole } from '../../../../domain/org'
 import {
   cancelBoatInvite,
@@ -206,7 +205,7 @@ function BoatDetailPage() {
               type="button"
               role="tab"
               aria-selected={selected}
-              onClick={() => setTab(value as BoatDetailTab)}
+              onClick={() => setTab(value)}
               className={cn(
                 'rounded-full px-4 py-2 text-sm font-semibold transition',
                 selected

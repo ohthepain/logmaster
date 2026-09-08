@@ -37,9 +37,10 @@ import { RouteMap } from './RouteMap'
 import { RouteWaypointComposerModal } from './RouteWaypointComposerModal'
 import { TripMapChromeButton } from './TripMapChromeButton'
 import {
-  TripImportButton,
-  type TripImportButtonHandle,
+  TripImportButton
+  
 } from './TripImportButton'
+import type {TripImportButtonHandle} from './TripImportButton';
 import {
   routeAnnotationsForRoute,
   routeWaypointsForRoute,
@@ -328,8 +329,8 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
 
     const orderedIds = waypoints.map((waypoint) => waypoint.id)
     ;[orderedIds[index], orderedIds[targetIndex]] = [
-      orderedIds[targetIndex]!,
-      orderedIds[index]!,
+      orderedIds[targetIndex],
+      orderedIds[index],
     ]
 
     try {

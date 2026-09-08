@@ -21,10 +21,10 @@ import { defaultTripTitle } from '../lib/trip-display'
 import {
   bootstrapLogbook,
   hasPendingSync,
-  syncLogbook,
-  type SyncLogbookOptions,
+  syncLogbook
+  
 } from '../lib/logbook-sync'
-import type { LogbookSnapshot } from '../lib/logbook-sync'
+import type {SyncLogbookOptions, LogbookSnapshot } from '../lib/logbook-sync';
 import {
   mergeLegs,
   rebuildLegsForTrip,
@@ -48,13 +48,15 @@ import {
 } from '../lib/media-entry'
 import { buildTripFromGpxFiles } from '../lib/gpx-trip-import'
 import { buildTripFromSignalK } from '../lib/signalk-trip-import'
-import { GpxImportError, partitionGpxImportFiles, type GpxImportFile } from '../lib/gpx-import'
+import { GpxImportError, partitionGpxImportFiles  } from '../lib/gpx-import'
+import type {GpxImportFile} from '../lib/gpx-import';
 import { SignalKImportError } from '../lib/signalk-import'
 import {
   buildTripWaypointEntryInput,
-  isTripWaypointEntry,
-  type TripWaypointInput,
+  isTripWaypointEntry
+  
 } from '../lib/trip-waypoint-entry'
+import type {TripWaypointInput} from '../lib/trip-waypoint-entry';
 import { routeWaypointsToTripEntries } from '../lib/route-waypoint-ops'
 import { routeWaypointsForRoute, useRoutesStore } from './routes'
 import {

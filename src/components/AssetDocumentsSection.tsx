@@ -11,9 +11,10 @@ import { DOCUMENT_PURPOSE_LABELS } from '../domain/boat-assets'
 import { linkBoatDocument } from '../lib/boat-assets-api'
 import {
   boatDocumentVersionOpenTarget,
-  openBoatDocument,
-  type BoatDocumentViewerPayload,
+  openBoatDocument
+  
 } from '../lib/boat-document-open'
+import type {BoatDocumentViewerPayload} from '../lib/boat-document-open';
 import { getBoatDocumentViewKind } from '../lib/boat-document-viewer'
 import { fetchBoatDocuments, fetchLinkDocumentTitle } from '../lib/boat-documents-api'
 import { apiUrl } from '../lib/app-origin'

@@ -2,7 +2,6 @@ import { entryInstrumentData } from '../domain/instrument-data'
 import type { LogEntry } from '../domain/logbook'
 import type {
   AngleTrackSample,
-  InstrumentTrackKind,
   PositionTrackSample,
   ScalarTrackSample,
   TripTrack,
@@ -243,7 +242,7 @@ export function tripPlaybackInfoAt(
     const meta = instrumentTrackMeta(track.kind)
     const samples = decodeInstrumentTrack(track)
 
-    switch (track.kind as InstrumentTrackKind) {
+    switch (track.kind) {
       case 'sog': {
         const value = interpolateScalar(samples as ScalarTrackSample[], timeMs)
         pushLine(lines, seen, meta.label, value != null ? formatKnots(value) : null)

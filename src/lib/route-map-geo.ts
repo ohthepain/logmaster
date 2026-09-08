@@ -1,9 +1,10 @@
 import type { RouteWaypoint } from '../domain/route'
 import {
   routeMapMarkerImageId,
-  routeWaypointIconKind,
-  type RouteMapIconKind,
+  routeWaypointIconKind
+  
 } from './route-map-marker'
+import type {RouteMapIconKind} from './route-map-marker';
 import {
   ROUTE_FINISH_WAYPOINT_COLOR,
   ROUTE_START_WAYPOINT_COLOR,
@@ -88,10 +89,10 @@ export function routeMapPoints(waypoints: RouteWaypoint[]): MapLngLat[] {
 
 export function mapPointsToBounds(points: MapLngLat[]) {
   if (points.length === 0) return null
-  let west = points[0]!.longitude
-  let east = points[0]!.longitude
-  let south = points[0]!.latitude
-  let north = points[0]!.latitude
+  let west = points[0].longitude
+  let east = points[0].longitude
+  let south = points[0].latitude
+  let north = points[0].latitude
   for (const point of points) {
     west = Math.min(west, point.longitude)
     east = Math.max(east, point.longitude)

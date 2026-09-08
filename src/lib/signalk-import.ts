@@ -14,12 +14,13 @@ import {
   parseSignalKWaypointExport,
   parseSignalKWaypointsValue,
   SIGNALK_LOG_ENTRY_PATH,
-  SIGNALK_WAYPOINTS_PATH,
-  type SignalKLogEntryExport,
-  type SignalKWaypointExport,
+  SIGNALK_WAYPOINTS_PATH
+  
+  
 } from './signalk-log-entries'
+import type {SignalKLogEntryExport, SignalKWaypointExport} from './signalk-log-entries';
 
-export const SIGNALK_IMPORT_SOURCE = 'signalk-import'
+export const SIGNALK_IMPORT_SOURCE = 'signalk'
 
 const MS_TO_KNOTS = 1 / 0.514444
 
@@ -113,7 +114,7 @@ function extractDeltas(document: unknown): SignalKDeltaLike[] {
   }
 
   if (Array.isArray(document.updates)) {
-    return [document as SignalKDeltaLike]
+    return [document]
   }
 
   throw new SignalKImportError('No Signal K deltas were found in this file.')
@@ -358,8 +359,8 @@ export function parseSignalKImportJson(json: string): ParsedSignalKImport {
 
         if (path === SIGNALK_LOG_ENTRY_PATH) {
           if (!parseLogEntriesFromDeltas) continue
-          const entry = parseSignalKLogEntryExport(value)
-          if (entry) logEntries.push(entry)
+          const logEntry = parseSignalKLogEntryExport(value)
+          if (logEntry) logEntries.push(logEntry)
           continue
         }
 
@@ -416,7 +417,7 @@ export function parseSignalKImportJson(json: string): ParsedSignalKImport {
             const baseMs =
               dedupedWaypoints[0]?.timestamp &&
               Number.isFinite(Date.parse(dedupedWaypoints[0].timestamp))
-                ? Date.parse(dedupedWaypoints[0].timestamp!)
+                ? Date.parse(dedupedWaypoints[0].timestamp)
                 : Date.now()
             return {
               time:

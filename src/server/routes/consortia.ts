@@ -13,9 +13,10 @@ import {
   assertCanRemoveMember,
   canAccess,
   createConsortiumWithOwner,
-  getUserConsortiumIds,
-  type ConsortiumMemberRole,
+  getUserConsortiumIds
+  
 } from '../permissions'
+import type {ConsortiumMemberRole} from '../permissions';
 import {
   getContactIdsForMembers,
   linkContactToMember,
@@ -736,7 +737,7 @@ consortiaRoutes.get('/:orgId/members', async (c) => {
 
   const contactIds = await getContactIdsForMembers(
     consortiumId,
-    members.map((member: { userId: string }) => member.userId),
+    members.map((member: Parameters<typeof serializeMember>[0]) => member.userId),
   )
 
   const pendingInvites = await db.memberInvite.findMany({
@@ -750,7 +751,7 @@ consortiaRoutes.get('/:orgId/members', async (c) => {
   })
 
   return c.json({
-    members: members.map((member: { userId: string }) =>
+    members: members.map((member: Parameters<typeof serializeMember>[0]) =>
       serializeMember(member, contactIds.get(member.userId) ?? null),
     ),
     pendingInvites: pendingInvites.map(serializeMemberInvite),

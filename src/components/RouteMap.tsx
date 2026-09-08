@@ -87,7 +87,7 @@ type RouteMapProps = {
   onWaypointClick?: (waypointId: string) => void
 }
 
-export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(function RouteMap(
+export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(function RouteMapView(
   {
     route,
     waypoints,
@@ -178,7 +178,7 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(function RouteM
       return
     }
     if (points.length > 0) {
-      centerMapOnPoint(map, points[0]!, SAILING_MAP_FOCUS_ZOOM)
+      centerMapOnPoint(map, points[0], SAILING_MAP_FOCUS_ZOOM)
     }
   }, [waypoints])
 
@@ -361,7 +361,7 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(function RouteM
     if (bounds) {
       fitMapToTripTrack(map, bounds)
     } else if (points.length > 0) {
-      centerMapOnPoint(map, points[0]!, SAILING_MAP_FOCUS_ZOOM)
+      centerMapOnPoint(map, points[0], SAILING_MAP_FOCUS_ZOOM)
     } else {
       initialFitDoneRef.current = true
       notifyInitialViewportSettled()

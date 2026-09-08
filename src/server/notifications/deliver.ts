@@ -1,3 +1,4 @@
+import type { PgBoss } from 'pg-boss'
 import { sendNotificationEmail } from '../email/notifications'
 import { sendPushToUser } from './push'
 import { prisma } from '../db'
@@ -13,7 +14,7 @@ import {
 
 const db = prisma as any
 
-let bossPromise: Promise<import('pg-boss').PgBoss | null> | null = null
+let bossPromise: Promise<PgBoss | null> | null = null
 
 async function getBossOptional() {
   if (!process.env.DATABASE_URL) return null
@@ -108,7 +109,7 @@ export async function processNotificationPushJob(
 }
 
 export async function registerNotificationWorkers(
-  boss: import('pg-boss').PgBoss,
+  boss: PgBoss,
 ): Promise<void> {
   await boss.createQueue(SEND_NOTIFICATION_EMAIL_QUEUE)
   await boss.createQueue(SEND_NOTIFICATION_PUSH_QUEUE)

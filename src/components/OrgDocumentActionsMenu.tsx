@@ -18,9 +18,10 @@ import { documentTitleFromFileName } from '../lib/document-title'
 import {
   orgDocumentOpenTarget,
   orgDocumentVersionOpenTarget,
-  openOrgDocument,
-  type OrgDocumentViewerPayload,
+  openOrgDocument
+  
 } from '../lib/org-document-open'
+import type {OrgDocumentViewerPayload} from '../lib/org-document-open';
 import { cn } from '../lib/cn'
 import { OrgDocumentCategoryField } from './OrgDocumentCategoryField'
 import { Modal } from './Modal'

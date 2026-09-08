@@ -4,7 +4,8 @@ import {
   getUserConsortiumIds,
 } from './consortium'
 import { getBoatMemberRole, getUserBoatMemberIds } from './boat-members'
-import { roleHasPrivilege, strongestRole, type ConsortiumMemberRole, type Privilege } from './roles'
+import { roleHasPrivilege, strongestRole   } from './roles'
+import type {ConsortiumMemberRole, Privilege} from './roles';
 
 const db = prisma as any
 

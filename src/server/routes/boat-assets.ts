@@ -6,7 +6,8 @@ import type {
 } from '../../domain/boat-assets'
 import { computeBankBalance } from '../../domain/org-accounting'
 import { prisma } from '../db'
-import { canAccess, type Privilege } from '../permissions'
+import { canAccess  } from '../permissions'
+import type {Privilege} from '../permissions';
 import { getSessionUserId } from '../session'
 import {
   serializeExpenseClaim,
@@ -436,7 +437,7 @@ boatAssetsRoutes.post('/:boatId/assets', async (c) => {
       _max: { sortOrder: true },
     }))._max.sortOrder ?? -1
 
-  const ownership = body.ownership as AssetOwnership
+  const ownership = body.ownership
   const userFields = userOwnershipFields(ownership, body.ownedByUserId)
 
   const asset = await db.boatAsset.create({
