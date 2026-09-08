@@ -52,6 +52,7 @@ resource "aws_ecs_task_definition" "app" {
         { name = "EMAIL_APP_NAME", value = var.email_app_name },
         { name = "AUTH_REQUIRE_EMAIL_VERIFICATION", value = var.auth_require_email_verification ? "true" : "false" },
         { name = "SES_CONFIGURATION_SET", value = var.ses_configuration_set },
+        { name = "APNS_PRODUCTION", value = local.apns_production ? "true" : "false" },
       ]
 
       secrets = [
@@ -82,6 +83,22 @@ resource "aws_ecs_task_definition" "app" {
         {
           name      = "AISSTREAM_API_KEY"
           valueFrom = "${aws_secretsmanager_secret.app.arn}:AISSTREAM_API_KEY::"
+        },
+        {
+          name      = "APNS_KEY"
+          valueFrom = "${aws_secretsmanager_secret.app.arn}:APNS_KEY::"
+        },
+        {
+          name      = "APNS_KEY_ID"
+          valueFrom = "${aws_secretsmanager_secret.app.arn}:APNS_KEY_ID::"
+        },
+        {
+          name      = "APNS_TEAM_ID"
+          valueFrom = "${aws_secretsmanager_secret.app.arn}:APNS_TEAM_ID::"
+        },
+        {
+          name      = "APNS_BUNDLE_ID"
+          valueFrom = "${aws_secretsmanager_secret.app.arn}:APNS_BUNDLE_ID::"
         },
       ]
 

@@ -34,6 +34,7 @@ import { memberInvitesRoutes } from './routes/member-invites'
 import { boatMembersRoutes } from './routes/boat-members'
 import { boatAssetsRoutes } from './routes/boat-assets'
 import { orgAccountingRoutes } from './routes/org-accounting'
+import { notificationsRoutes } from './routes/notifications'
 import { isAisStreamConfigured } from './ais/aisstream-client'
 
 const corsOrigins = getTrustedOrigins()
@@ -94,5 +95,6 @@ app.route('/orgs', consortiaRoutes)
 app.route('/orgs', consortiaMediaRoutes)
 app.route('/orgs', orgAccountingRoutes)
 app.route('/member-invites', memberInvitesRoutes)
+app.route('/notifications', notificationsRoutes)
 app.route('/places', placesRoutes)
 app.route('/ais', aisRoutes)

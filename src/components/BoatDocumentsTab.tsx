@@ -22,6 +22,7 @@ import {
   type BoatDocumentViewerPayload,
 } from '../lib/boat-document-open'
 import { cn } from '../lib/cn'
+import { ResourceSectionHeader } from './NotificationBellToggle'
 import { Modal } from './Modal'
 import { BoatDocumentCategoryField } from './BoatDocumentCategoryField'
 import { BoatDocumentViewerModal } from './BoatDocumentViewerModal'
@@ -240,7 +241,8 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
 
   return (
     <>
-      <div className="mt-5 flex flex-wrap items-center gap-2">
+      <ResourceSectionHeader title="Documents" topic="BOAT_DOCUMENTS" boatId={boatId} />
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => openAdd('upload')}

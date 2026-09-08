@@ -62,6 +62,7 @@ model User {
   emailVerified        Boolean   @default(false)
   image                String?
   tutorialCompletedAt  DateTime?
+  notificationDefaults Json?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   sessions      Session[]
@@ -87,9 +88,94 @@ model User {
   expenseClaims         ExpenseClaim[]     @relation("ExpenseClaimClaimant")
   orgTransactions       OrgTransaction[]   @relation("OrgTransactionCounterparty")
   createdOrgTransactions OrgTransaction[]  @relation("OrgTransactionCreator")
+  notificationSubscriptions NotificationSubscription[]
+  notifications             Notification[]
+  pushDevices                 PushDevice[]
 
   @@unique([email])
   @@map("user")
+}
+
+enum NotificationTopic {
+  BOAT_PHOTOS
+  BOAT_DOCUMENTS
+  BOAT_ASSETS
+  BOAT_MEMBERS
+  BOAT_SHARES
+  BOAT_TRIPS_COMPLETED
+  ORG_MEMBERS
+  ORG_DOCUMENTS
+  ORG_CONTACTS
+  ORG_BOATS
+  ADMIN_JOBS
+}
+
+enum PushDevicePlatform {
+  web
+  ios
+  android
+}
+
+model NotificationSubscription {
+  id           String            @id @default(cuid())
+  userId       String
+  topic        NotificationTopic
+  scopeKey     String
+  boatId       String?
+  orgId        String?
+  enabled      Boolean           @default(true)
+  emailEnabled Boolean           @default(true)
+  pushEnabled  Boolean           @default(true)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  boat Boat? @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  org  Consortium? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topic, scopeKey])
+  @@index([boatId])
+  @@index([orgId])
+  @@map("notification_subscription")
+}
+
+model Notification {
+  id          String            @id @default(cuid())
+  userId      String
+  topic       NotificationTopic
+  title       String
+  body        String
+  linkUrl     String?
+  actorUserId String?
+  metadata    Json?
+  readAt      DateTime?
+  createdAt   DateTime          @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@map("notification")
+}
+
+model PushDevice {
+  id        String             @id @default(cuid())
+  userId    String
+  platform  PushDevicePlatform
+  token     String
+  endpoint  String?
+  p256dh    String?
+  auth      String?
+  userAgent String?
+  lastSeenAt DateTime          @default(now())
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform, token])
+  @@index([userId])
+  @@map("push_device")
 }
 
 model Consortium {
@@ -113,6 +199,7 @@ model Consortium {
   transactions OrgTransaction[]
   expenseClaims ExpenseClaim[]
   boatPurchases BoatPurchase[]
+  notificationSubscriptions NotificationSubscription[]
 
   @@index([createdByUserId])
   @@map("consortium")
@@ -484,6 +571,7 @@ model Boat {
   assetWork          AssetWork[]
   orgTransactions    OrgTransaction[]
   expenseClaims      ExpenseClaim[]
+  notificationSubscriptions NotificationSubscription[]
 
   @@index([userId, updatedAt])
   @@index([consortiumId])

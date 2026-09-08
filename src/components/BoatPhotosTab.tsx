@@ -8,6 +8,7 @@ import {
   uploadBoatPhoto,
 } from '../lib/boats-api'
 import { cn } from '../lib/cn'
+import { ResourceSectionHeader } from './NotificationBellToggle'
 
 type BoatPhotosTabProps = {
   boat: Boat
@@ -100,7 +101,8 @@ export function BoatPhotosTab({ boat, onBoatChange }: BoatPhotosTabProps) {
 
   return (
     <>
-      <div className="mt-5 flex flex-wrap items-center gap-2">
+      <ResourceSectionHeader title="Photos" topic="BOAT_PHOTOS" boatId={boat.id} />
+      <div className="flex flex-wrap items-center gap-2">
         <input
           ref={fileInputRef}
           type="file"

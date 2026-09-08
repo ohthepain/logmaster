@@ -9,6 +9,10 @@ import {
   tripAccessFilter,
 } from '../permissions'
 import { getSessionUserId } from '../session'
+import {
+  fireNotification,
+  notifyBoatTripCompleted,
+} from '../notifications/events'
 
 const db = prisma as any
 
@@ -359,6 +363,27 @@ logbookRoutes.post('/sync', async (c) => {
     const entriesToUpsert = logEntries.filter(
       (entry) => !tombstoneIds.has(String(entry.tripId)),
     )
+    const endTripCandidates = entriesToUpsert.filter(
+      (entry) => String(entry.type) === 'END_TRIP',
+    )
+    const existingEndTripIds =
+      endTripCandidates.length > 0
+        ? new Set(
+            (
+              await db.logEntry.findMany({
+                where: {
+                  id: {
+                    in: endTripCandidates.map((entry) => String(entry.id)),
+                  },
+                },
+                select: { id: true },
+              })
+            ).map((row: { id: string }) => row.id),
+          )
+        : new Set<string>()
+    const newEndTripEntries = endTripCandidates.filter(
+      (entry) => !existingEndTripIds.has(String(entry.id)),
+    )
     const tracksToUpsert = tripTracks.filter(
       (track) => !tombstoneIds.has(String(track.tripId)),
     )
@@ -436,6 +461,30 @@ logbookRoutes.post('/sync', async (c) => {
         }),
       ),
       ])
+    }
+
+    if (newEndTripEntries.length > 0) {
+      for (const entry of newEndTripEntries) {
+        const trip = await db.trip.findUnique({
+          where: { id: String(entry.tripId) },
+          select: {
+            id: true,
+            title: true,
+            boatId: true,
+            boat: { select: { id: true, name: true } },
+          },
+        })
+        if (!trip?.boatId || !trip.boat) continue
+        fireNotification(
+          notifyBoatTripCompleted({
+            boatId: trip.boat.id,
+            boatName: trip.boat.name,
+            tripId: trip.id,
+            tripTitle: trip.title || 'Trip',
+            actorUserId: userId,
+          }),
+        )
+      }
     }
 
     const tripWhere = await tripAccessFilter(userId)

@@ -2,8 +2,8 @@ import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Building2, Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { AddOrgModal } from '../../../components/AddOrgModal'
+import { OrgIcon, orgIconPhoto } from '../../../components/OrgIcon'
 import type { Org } from '../../../domain/org'
-import { defaultOrgPhoto } from '../../../domain/org'
 import { useSession } from '../../../lib/auth-client'
 import { fetchOrgs } from '../../../lib/orgs-api'
 
@@ -129,29 +129,16 @@ function OrgsPage() {
         <div className="page-wrap px-3 sm:px-4">
           <ul className="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3">
             {orgs.map((org) => {
-              const cover =
-                org.defaultPhoto ?? defaultOrgPhoto(org.photos)
+              const icon = orgIconPhoto(org)
               return (
                 <li key={org.id}>
                   <Link
                     to="/orgs/$orgId"
                     params={{ orgId: org.id }}
-                    className="group flex h-56 flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] no-underline shadow-sm transition hover:border-[var(--chip-line)] hover:shadow-md sm:h-64"
+                    className="group flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 no-underline shadow-sm transition hover:border-[var(--chip-line)] hover:shadow-md"
                   >
-                    <div className="min-h-0 flex-1 overflow-hidden bg-[var(--panel)]">
-                      {cover ? (
-                        <img
-                          src={cover.imageUrl}
-                          alt=""
-                          className="size-full object-cover transition duration-300 group-hover:scale-[1.02]"
-                        />
-                      ) : (
-                        <div className="flex size-full items-center justify-center bg-[var(--panel)]">
-                          <Building2 className="size-10 text-[var(--sea-ink-soft)]" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex min-h-0 flex-1 flex-col justify-center border-t border-[var(--line)] px-4 py-3">
+                    <OrgIcon photo={icon} size="md" />
+                    <div className="min-w-0 flex-1">
                       <h2 className="m-0 truncate text-lg font-semibold leading-tight text-[var(--sea-ink)]">
                         {org.name}
                       </h2>

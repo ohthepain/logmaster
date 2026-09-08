@@ -222,6 +222,17 @@ export async function uploadOrgPhoto(orgId: string, file: File): Promise<OrgPhot
   return data.photo
 }
 
+export async function updateOrgPhoto(
+  photoId: string,
+  input: Partial<{ caption: string | null; isDefault: boolean }>,
+): Promise<OrgPhoto> {
+  const data = await api<{ photo: OrgPhoto }>(`/api/orgs/photos/${photoId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+  return data.photo
+}
+
 export async function deleteOrgPhoto(photoId: string): Promise<void> {
   await api(`/api/orgs/photos/${photoId}`, { method: 'DELETE' })
 }

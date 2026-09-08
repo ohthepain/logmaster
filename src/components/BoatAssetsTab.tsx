@@ -18,6 +18,7 @@ import {
   uploadAndLinkAssetDocument,
 } from "../lib/boat-assets-api";
 import { cn } from "../lib/cn";
+import { ResourceSectionHeader } from "./NotificationBellToggle";
 import { Modal } from "./Modal";
 
 type BoatAssetsTabProps = {
@@ -145,20 +146,24 @@ export function BoatAssetsTab({ boatId, boatName, orgName, members }: BoatAssets
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="brand-title m-0 text-xl">Assets</h2>
-        <button
-          type="button"
-          onClick={() => setAssetModal({ mode: "create" })}
-          className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)]"
-        >
-          <Plus className="h-4 w-4" />
-          Add asset
-        </button>
-      </div>
+      <ResourceSectionHeader
+        title="Assets"
+        topic="BOAT_ASSETS"
+        boatId={boatId}
+        actions={
+          <button
+            type="button"
+            onClick={() => setAssetModal({ mode: "create" })}
+            className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)]"
+          >
+            <Plus className="h-4 w-4" />
+            Add asset
+          </button>
+        }
+      />
 
       {assets.length === 0 ? (
-        <p className="text-sm text-[var(--sea-ink-soft)]">No equipment or assets recorded yet.</p>
+        <p className="text-sm text-[var(--sea-ink-soft)]">No assets recorded yet.</p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           {assets.map((asset) => {

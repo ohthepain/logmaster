@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { AttachBoatToOrgModal } from '../../../../components/AttachBoatToOrgModal'
 import { OrgDocumentsTab } from '../../../../components/OrgDocumentsTab'
 import { OrgAccountingTab } from '../../../../components/OrgAccountingTab'
+import { OrgIconSelector } from '../../../../components/OrgIcon'
 import {
   InviteMemberModal,
   ResourceMembersTab,
@@ -31,6 +32,7 @@ import {
   updateOrgMemberRole,
 } from '../../../../lib/orgs-api'
 import { cn } from '../../../../lib/cn'
+import { ResourceSectionHeader } from '../../../../components/NotificationBellToggle'
 import { useSession } from '../../../../lib/auth-client'
 
 type OrgDetailTab = 'members' | 'documents' | 'contacts' | 'boats' | 'accounting'
@@ -75,11 +77,12 @@ function OrgDetailPage() {
   const [savingName, setSavingName] = useState(false)
   const session = useSession()
   const currentUserId = session.data?.user?.id
-  const canManageAccounting = members.some(
+  const canManageOrg = members.some(
     (member) =>
       member.userId === currentUserId &&
       (member.role === 'OWNER' || member.role === 'ADMIN'),
   )
+  const canManageAccounting = canManageOrg
 
   const setTab = useCallback(
     (next: OrgDetailTab) => {
@@ -174,7 +177,13 @@ function OrgDetailPage() {
         </Link>
       </p>
 
-      <div>
+      <div className="flex min-w-0 items-center gap-3">
+        <OrgIconSelector
+          org={org}
+          onOrgChange={setOrg}
+          disabled={!canManageOrg}
+        />
+        <div className="min-w-0 flex-1">
         {editingName ? (
           <div className="flex flex-wrap items-center gap-2">
             <input
@@ -212,6 +221,7 @@ function OrgDetailPage() {
             {org.name}
           </button>
         )}
+        </div>
       </div>
 
       <div
@@ -255,6 +265,8 @@ function OrgDetailPage() {
             members={members}
             pendingInvites={pendingInvites}
             memberDetailOrgId={orgId}
+            notificationTopic="ORG_MEMBERS"
+            notificationOrgId={orgId}
             onInvite={() => setInviteOpen(true)}
             onCreateLink={async () => {
               try {
@@ -351,6 +363,7 @@ function OrgDetailPage() {
 
         {tab === 'boats' ? (
           <BoatsTab
+            orgId={orgId}
             boats={org.boats ?? []}
             onAdd={() => setAddBoatOpen(true)}
           />
@@ -403,27 +416,34 @@ function OrgDetailPage() {
 }
 
 function BoatsTab({
+  orgId,
   boats,
   onAdd,
 }: {
+  orgId: string
   boats: Array<{ id: string; name: string }>
   onAdd: () => void
 }) {
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-          {boats.length} {boats.length === 1 ? 'boat' : 'boats'}
-        </p>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
-        >
-          <Plus className="size-4" />
-          Add boat
-        </button>
-      </div>
+      <ResourceSectionHeader
+        title="Boats"
+        topic="ORG_BOATS"
+        orgId={orgId}
+        actions={
+          <button
+            type="button"
+            onClick={onAdd}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
+          >
+            <Plus className="size-4" />
+            Add boat
+          </button>
+        }
+      />
+      <p className="mb-4 text-sm text-[var(--sea-ink-soft)]">
+        {boats.length} {boats.length === 1 ? 'boat' : 'boats'}
+      </p>
 
       {boats.length === 0 ? (
         <p className="text-sm text-[var(--sea-ink-soft)]">
@@ -464,20 +484,24 @@ function ContactsTab({
 }) {
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-          {contacts.length} non-member{' '}
-          {contacts.length === 1 ? 'contact' : 'contacts'}
-        </p>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
-        >
-          <Plus className="size-4" />
-          Add contact
-        </button>
-      </div>
+      <ResourceSectionHeader
+        title="Contacts"
+        topic="ORG_CONTACTS"
+        orgId={orgId}
+        actions={
+          <button
+            type="button"
+            onClick={onAdd}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
+          >
+            <Plus className="size-4" />
+            Add contact
+          </button>
+        }
+      />
+      <p className="mb-4 text-sm text-[var(--sea-ink-soft)]">
+        {contacts.length} non-member {contacts.length === 1 ? 'contact' : 'contacts'}
+      </p>
 
       {contacts.length === 0 ? (
         <p className="text-sm text-[var(--sea-ink-soft)]">

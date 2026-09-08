@@ -37,7 +37,7 @@ Public URLs:
 4. **Environment tfvars** — edit `terraform/environments/staging/terraform.tfvars` and `production/terraform.tfvars`:
    - Set `network_state_bucket` to the bootstrap `state_bucket` value.
    - Set `alb_certificate_arn` to an ACM certificate in **eu-central-1** for each hostname (`staging.logmaster.live`, `logmaster.live`).
-   - Optionally set `google_client_*_secret_arn` and `maptiler_api_key_secret_arn` for OAuth and map tiles.
+   - Optionally set `google_client_*_secret_arn`, `maptiler_api_key_secret_arn`, and `apns_key_secret_arn` for OAuth, map tiles, and iOS push.
 
 5. **App backend config** — copy `terraform/backend.hcl.example` → `terraform/backend.hcl` with the same bucket and lock table.
 
@@ -155,7 +155,7 @@ Terraform creates per-environment secrets:
 | Secret | Keys |
 |--------|------|
 | `logmaster-{env}-database` | `DATABASE_URL` |
-| `logmaster-{env}-app` | `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AWS_SES_FROM_EMAIL`, `MAPTILER_API_KEY`, `AISSTREAM_API_KEY` |
+| `logmaster-{env}-app` | `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AWS_SES_FROM_EMAIL`, `MAPTILER_API_KEY`, `AISSTREAM_API_KEY`, `APNS_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID` |
 
 Optional third-party values can be pulled from existing account-level Secrets Manager ARNs via tfvars (`google_client_id_secret_arn`, etc.).
 
@@ -172,6 +172,13 @@ Optional third-party values can be pulled from existing account-level Secrets Ma
 2. Run `./scripts/set-aisstream-secrets.sh staging` (reads `AISSTREAM_API_KEY` from `.env`, merges into the app secret, forces ECS redeploy).
 
 Do **not** put the API key in tfvars — only the Secrets Manager ARN. Keep the key in `.env` locally and in AWS Secrets Manager.
+
+**iOS push (APNS) on deploy:** ECS reads `APNS_KEY` (`.p8` file contents), `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_BUNDLE_ID` from the app secret, and `APNS_PRODUCTION` from the task environment (defaults to `true` in production, `false` in staging). If `APNS_KEY` is empty, native iOS push is skipped. Either:
+
+1. Create an account-level secret with the `.p8` contents (plain string), set `apns_key_id`, `apns_team_id`, and `apns_bundle_id` in `environments/{env}/terraform.tfvars`, set `apns_key_secret_arn`, and `terraform apply`, or
+2. Run `./scripts/set-apns-secrets.sh production` (reads `APNS_KEY_PATH` or `APNS_KEY` plus IDs from `.env`, merges into the app secret, forces ECS redeploy).
+
+Do **not** put the `.p8` key in tfvars — only the Secrets Manager ARN. Keep the key in gitignored `secrets/apns/` locally.
 
 In Google Cloud, add redirect URIs for each environment:
 

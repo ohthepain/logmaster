@@ -22,6 +22,10 @@ import {
   fetchLinkPageTitle,
   isFetchablePublicHttpUrl,
 } from '../link-page-title'
+import {
+  fireBoatDocumentsNotification,
+  fireBoatPhotosNotification,
+} from '../notifications/route-hooks'
 
 const db = prisma as any
 
@@ -518,6 +522,8 @@ boatsRoutes.post('/:boatId/photos', async (c) => {
     data: { updatedAt: new Date() },
   })
 
+  fireBoatPhotosNotification(userId, boat, 'uploaded a photo.')
+
   return c.json({ photo: serializePhoto(photo) }, 201)
 })
 
@@ -556,6 +562,8 @@ boatsRoutes.patch('/photos/:photoId', async (c) => {
     data: { updatedAt: new Date() },
   })
 
+  fireBoatPhotosNotification(userId, existing.boat, 'updated a photo.')
+
   return c.json({ photo: serializePhoto(photo) })
 })
 
@@ -591,6 +599,8 @@ boatsRoutes.delete('/photos/:photoId', async (c) => {
     where: { id: existing.boatId },
     data: { updatedAt: new Date() },
   })
+
+  fireBoatPhotosNotification(userId, existing.boat, 'deleted a photo.')
 
   return c.json({ ok: true })
 })
@@ -683,6 +693,8 @@ boatsRoutes.post('/:boatId/document-categories', async (c) => {
     data: { updatedAt: new Date() },
   })
 
+  fireBoatDocumentsNotification(userId, boat, 'added a document category.')
+
   return c.json({ category: serializeDocumentCategory(category) }, 201)
 })
 
@@ -760,6 +772,8 @@ boatsRoutes.post('/:boatId/documents', async (c) => {
       data: { updatedAt: new Date() },
     })
 
+    fireBoatDocumentsNotification(userId, boat, 'uploaded a document.')
+
     return c.json({ document: serializeDocument(document) }, 201)
   }
 
@@ -812,6 +826,8 @@ boatsRoutes.post('/:boatId/documents', async (c) => {
     where: { id: boat.id },
     data: { updatedAt: new Date() },
   })
+
+  fireBoatDocumentsNotification(userId, boat, 'added a document link.')
 
   return c.json({ document: serializeDocument(document) }, 201)
 })
@@ -875,6 +891,8 @@ boatsRoutes.patch('/documents/:documentId', async (c) => {
       where: { id: existing.boatId },
       data: { updatedAt: new Date() },
     })
+
+    fireBoatDocumentsNotification(userId, existing.boat, 'updated a document.')
 
     return c.json({ document: serializeDocument(document) })
   }
@@ -949,6 +967,8 @@ boatsRoutes.patch('/documents/:documentId', async (c) => {
     data: { updatedAt: new Date() },
   })
 
+  fireBoatDocumentsNotification(userId, existing.boat, 'updated a document.')
+
   return c.json({ document: serializeDocument(document) })
 })
 
@@ -979,6 +999,8 @@ boatsRoutes.delete('/documents/:documentId', async (c) => {
     where: { id: existing.boatId },
     data: { updatedAt: new Date() },
   })
+
+  fireBoatDocumentsNotification(userId, existing.boat, 'deleted a document.')
 
   return c.json({ ok: true })
 })

@@ -3,6 +3,7 @@ import { cn } from '../lib/cn'
 import DevModeToggle from './DevModeToggle'
 import { DevComponentLabel } from './DevComponentLabel'
 import ThemeToggle from './ThemeToggle'
+import { NotificationInbox } from './NotificationInbox'
 import { UserMenu } from './UserMenu'
 
 type HeaderProps = {
@@ -60,6 +61,7 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
         <div className="flex items-center justify-end gap-2">
           <DevModeToggle mapOverlay={mapOverlay} />
           {!mapOverlay ? <ThemeToggle /> : null}
+          <NotificationInbox mapOverlay={mapOverlay} />
           <UserMenu mapOverlay={mapOverlay} />
         </div>
       </div>

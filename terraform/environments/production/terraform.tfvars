@@ -26,5 +26,12 @@ ses_configuration_set = "logmaster-live"
 # Optional: existing Secrets Manager ARNs for third-party credentials
 # google_client_id_secret_arn     = "arn:aws:secretsmanager:eu-central-1:ACCOUNT_ID:secret:..."
 # google_client_secret_secret_arn = "arn:aws:secretsmanager:eu-central-1:ACCOUNT_ID:secret:..."
-maptiler_api_key_secret_arn     = "arn:aws:secretsmanager:eu-central-1:320205321328:secret:maptiler-api-key-QqfHsd"
-aisstream_api_key_secret_arn    = "arn:aws:secretsmanager:eu-central-1:320205321328:secret:aisstream-api-key-OIoEmc"
+maptiler_api_key_secret_arn  = "arn:aws:secretsmanager:eu-central-1:320205321328:secret:maptiler-api-key-UwRgH7"
+aisstream_api_key_secret_arn = "arn:aws:secretsmanager:eu-central-1:320205321328:secret:aisstream-api-key-OIoEmc"
+
+# Apple Push Notification service (iOS native push)
+apns_key_id    = "X9H5N9ZRZQ"
+apns_team_id   = "RPGSNMH65P"
+apns_bundle_id = "live.logmaster.app"
+# apns_key_secret_arn = "arn:aws:secretsmanager:eu-central-1:ACCOUNT_ID:secret:apns-key-..."
+# Or after deploy: ./scripts/set-apns-secrets.sh production

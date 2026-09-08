@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { prisma } from '../db'
 import { canAccess, type Privilege } from '../permissions'
 import { getSessionUserId } from '../session'
+import { fireOrgDocumentsNotification } from '../notifications/route-hooks'
 import {
   consortiumDocumentS3Key,
   consortiumPhotoS3Key,
@@ -343,6 +344,44 @@ consortiaMediaRoutes.get('/photos/:photoId/content', async (c) => {
   }
 })
 
+consortiaMediaRoutes.patch('/photos/:photoId', async (c) => {
+  const userId = await requireUserId(c)
+  if (!userId) return unauthorized()
+
+  const existing = await getPhotoForUser(userId, c.req.param('photoId'), 'edit')
+  if (!existing) return c.json({ error: 'Photo not found' }, 404)
+
+  const body = (await c.req.json().catch(() => ({}))) as {
+    caption?: string | null
+    isDefault?: boolean
+  }
+
+  if (body.isDefault === true) {
+    await db.consortiumPhoto.updateMany({
+      where: { consortiumId: existing.consortiumId, isDefault: true },
+      data: { isDefault: false },
+    })
+  }
+
+  const photo = await db.consortiumPhoto.update({
+    where: { id: existing.id },
+    data: {
+      ...(body.caption !== undefined
+        ? { caption: body.caption?.trim() || null }
+        : {}),
+      ...(body.isDefault !== undefined ? { isDefault: body.isDefault } : {}),
+      updatedAt: new Date(),
+    },
+  })
+
+  await db.consortium.update({
+    where: { id: existing.consortiumId },
+    data: { updatedAt: new Date() },
+  })
+
+  return c.json({ photo: serializePhoto(photo) })
+})
+
 consortiaMediaRoutes.delete('/photos/:photoId', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
@@ -455,6 +494,8 @@ consortiaMediaRoutes.post('/:orgId/document-categories', async (c) => {
     data: { updatedAt: new Date() },
   })
 
+  fireOrgDocumentsNotification(userId, consortium, 'added a document category.')
+
   return c.json({ category: serializeDocumentCategory(category) }, 201)
 })
 
@@ -536,6 +577,8 @@ consortiaMediaRoutes.post('/:orgId/documents', async (c) => {
       data: { updatedAt: new Date() },
     })
 
+    fireOrgDocumentsNotification(userId, consortium, 'uploaded a document.')
+
     return c.json({ document: serializeDocument(document) }, 201)
   }
 
@@ -588,6 +631,8 @@ consortiaMediaRoutes.post('/:orgId/documents', async (c) => {
     where: { id: consortium.id },
     data: { updatedAt: new Date() },
   })
+
+  fireOrgDocumentsNotification(userId, consortium, 'added a document link.')
 
   return c.json({ document: serializeDocument(document) }, 201)
 })
@@ -655,6 +700,8 @@ consortiaMediaRoutes.patch('/documents/:documentId', async (c) => {
       where: { id: existing.consortiumId },
       data: { updatedAt: new Date() },
     })
+
+    fireOrgDocumentsNotification(userId, existing.consortium, 'updated a document.')
 
     return c.json({ document: serializeDocument(document) })
   }
@@ -729,6 +776,8 @@ consortiaMediaRoutes.patch('/documents/:documentId', async (c) => {
     data: { updatedAt: new Date() },
   })
 
+  fireOrgDocumentsNotification(userId, existing.consortium, 'updated a document.')
+
   return c.json({ document: serializeDocument(document) })
 })
 
@@ -767,6 +816,8 @@ consortiaMediaRoutes.delete('/documents/:documentId', async (c) => {
     where: { id: existing.consortiumId },
     data: { updatedAt: new Date() },
   })
+
+  fireOrgDocumentsNotification(userId, existing.consortium, 'deleted a document.')
 
   return c.json({ ok: true })
 })

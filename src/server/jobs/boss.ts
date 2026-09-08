@@ -12,6 +12,8 @@ import {
   handleBuildOsmPointsBatches,
 } from './osm-points'
 import { MARINA_QUEUE_EXPIRE_SECONDS } from './marina-job-expire'
+import { registerNotificationWorkers } from '../notifications/deliver'
+import { wrapJobHandlerWithNotifications } from './job-notifications'
 
 let boss: PgBoss | null = null
 let startPromise: Promise<PgBoss> | null = null
@@ -45,7 +47,10 @@ export async function getBoss(): Promise<PgBoss> {
           batchSize: 1,
           pollingIntervalSeconds: 10,
         },
-        handleBuildGeoFeaturesBatches,
+        wrapJobHandlerWithNotifications(
+          BUILD_GEO_FEATURES_QUEUE,
+          handleBuildGeoFeaturesBatches,
+        ),
       )
       await b.work(
         BUILD_MARINAS_QUEUE,
@@ -54,7 +59,10 @@ export async function getBoss(): Promise<PgBoss> {
           batchSize: 1,
           pollingIntervalSeconds: 10,
         },
-        handleBuildMarinasBatches,
+        wrapJobHandlerWithNotifications(
+          BUILD_MARINAS_QUEUE,
+          handleBuildMarinasBatches,
+        ),
       )
       await b.work(
         BUILD_OSM_POINTS_QUEUE,
@@ -63,8 +71,12 @@ export async function getBoss(): Promise<PgBoss> {
           batchSize: 1,
           pollingIntervalSeconds: 10,
         },
-        handleBuildOsmPointsBatches,
+        wrapJobHandlerWithNotifications(
+          BUILD_OSM_POINTS_QUEUE,
+          handleBuildOsmPointsBatches,
+        ),
       )
+      await registerNotificationWorkers(b)
       registered = true
     }
     boss = b

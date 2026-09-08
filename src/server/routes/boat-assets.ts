@@ -12,6 +12,7 @@ import {
   serializeExpenseClaim,
   serializeOrgTransaction,
 } from './org-accounting'
+import { fireBoatAssetsNotification } from '../notifications/route-hooks'
 
 const db = prisma as any
 
@@ -275,7 +276,7 @@ async function getBoatForAccess(
   if (!allowed) return null
   return db.boat.findUnique({
     where: { id: boatId },
-    select: { id: true, consortiumId: true },
+    select: { id: true, name: true, consortiumId: true },
   })
 }
 
@@ -451,6 +452,8 @@ boatAssetsRoutes.post('/:boatId/assets', async (c) => {
     include: assetInclude,
   })
 
+  fireBoatAssetsNotification(userId, boat, `added asset “${name}”.`)
+
   return c.json({ asset: serializeAsset(asset) }, 201)
 })
 
@@ -511,6 +514,8 @@ boatAssetsRoutes.patch('/:boatId/assets/:assetId', async (c) => {
     include: assetInclude,
   })
 
+  fireBoatAssetsNotification(userId, boat, `updated asset “${asset.name}”.`)
+
   return c.json({ asset: serializeAsset(asset) })
 })
 
@@ -527,6 +532,7 @@ boatAssetsRoutes.delete('/:boatId/assets/:assetId', async (c) => {
   if (!existing) return c.json({ error: 'Asset not found' }, 404)
 
   await db.boatAsset.delete({ where: { id: assetId } })
+  fireBoatAssetsNotification(userId, boat, `removed asset “${existing.name}”.`)
   return c.json({ ok: true })
 })
 
@@ -785,6 +791,12 @@ boatAssetsRoutes.post('/:boatId/assets/:assetId/work', async (c) => {
       },
     },
   })
+
+  fireBoatAssetsNotification(
+    userId,
+    boat,
+    `logged work on asset “${work.asset.name}”.`,
+  )
 
   return c.json({ work: serializeWork(work) }, 201)
 })

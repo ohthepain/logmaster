@@ -4,6 +4,7 @@ locals {
 
   # Must match the hostname users use in the browser (OAuth redirect_uri = this + /api/auth/callback/google).
   better_auth_url = local.is_prod ? "https://logmaster.live" : "https://staging.logmaster.live"
+  apns_production = var.apns_production != null ? var.apns_production : local.is_prod
 
   # Single source of truth for ECS Secrets Manager and `terraform output database_url`.
   # sslmode=require matches AWS RDS TLS expectations (some accounts enable rds.force_ssl).

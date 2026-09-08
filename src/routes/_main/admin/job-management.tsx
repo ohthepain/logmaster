@@ -2,6 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { JobOutputViewer } from '../../../components/admin/JobOutputViewer'
 import { AdminPageShell } from '../../../components/admin/AdminPageShell'
+import { NotificationBellToggle } from '../../../components/NotificationBellToggle'
 import { cancelAdminJob, rerunAdminJob } from '../../../lib/admin-api'
 import type { UnifiedAdminJobRow, UnifiedAdminJobsPayload } from '../../../lib/admin-jobs'
 import {
@@ -123,6 +124,9 @@ function AdminJobManagementPage() {
       title="Jobs"
       description="All background job runs across geo features and marinas. Run pnpm worker in a separate terminal to process queued jobs."
     >
+      <div className="mb-4 flex justify-end">
+        <NotificationBellToggle topic="ADMIN_JOBS" label="Admin jobs" />
+      </div>
       <JobOutputViewer
         jobId={outputJob?.id ?? null}
         title={outputJob?.title ?? ''}

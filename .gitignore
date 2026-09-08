@@ -22,3 +22,4 @@ terraform/bootstrap/terraform.tfstate
 terraform/bootstrap/terraform.tfstate.backup
 
 /generated/prisma
+secrets/

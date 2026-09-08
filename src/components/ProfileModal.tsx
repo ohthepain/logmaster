@@ -12,6 +12,11 @@ import {
   uploadProfilePhoto,
 } from '../lib/profile-api'
 import { cn } from '../lib/cn'
+import {
+  fetchNotificationDefaults,
+  updateNotificationDefaults,
+} from '../lib/notifications-api'
+import { enablePushOnDevice } from './PushNotificationsRegister'
 
 type ProfileModalProps = {
   open: boolean
@@ -29,17 +34,29 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
   const [savingName, setSavingName] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [removingPhoto, setRemovingPhoto] = useState(false)
+  const [emailNotifications, setEmailNotifications] = useState(true)
+  const [pushNotifications, setPushNotifications] = useState(true)
+  const [savingNotificationDefaults, setSavingNotificationDefaults] = useState(false)
+  const [enablingPush, setEnablingPush] = useState(false)
 
   useEffect(() => {
     if (!open || !user) return
     setName(user.name || '')
+    void fetchNotificationDefaults()
+      .then(({ defaults }) => {
+        setEmailNotifications(defaults.email)
+        setPushNotifications(defaults.push)
+      })
+      .catch(() => {
+        // ignore
+      })
   }, [open, user])
 
   if (!open || !user) return null
 
   const photoSrc = profilePhotoUrl(user.image, photoVersion)
   const hasCustomPhoto = isCustomProfilePhoto(user.image)
-  const busy = savingName || uploadingPhoto || removingPhoto
+  const busy = savingName || uploadingPhoto || removingPhoto || savingNotificationDefaults || enablingPush
 
   const refreshSession = async () => {
     await session.refetch()
@@ -186,6 +203,73 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
         <p className="m-0 text-xs leading-6 text-[var(--sea-ink-soft)]">
           Signed in as {user.email}
         </p>
+
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3">
+          <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
+            Notification defaults
+          </p>
+          <p className="mt-1 mb-3 text-xs leading-5 text-[var(--sea-ink-soft)]">
+            Used when you enable bell subscriptions on boat and org tabs.
+          </p>
+          <label className="mb-2 flex items-center gap-2 text-sm text-[var(--sea-ink)]">
+            <input
+              type="checkbox"
+              checked={emailNotifications}
+              onChange={(e) => setEmailNotifications(e.target.checked)}
+              disabled={busy}
+            />
+            Email notifications
+          </label>
+          <label className="flex items-center gap-2 text-sm text-[var(--sea-ink)]">
+            <input
+              type="checkbox"
+              checked={pushNotifications}
+              onChange={(e) => setPushNotifications(e.target.checked)}
+              disabled={busy}
+            />
+            Push notifications
+          </label>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setSavingNotificationDefaults(true)
+                void updateNotificationDefaults({
+                  email: emailNotifications,
+                  push: pushNotifications,
+                })
+                  .then(() => toast.success('Notification defaults saved'))
+                  .catch((e) =>
+                    toast.error(
+                      e instanceof Error ? e.message : 'Failed to save defaults',
+                    ),
+                  )
+                  .finally(() => setSavingNotificationDefaults(false))
+              }}
+              className="rounded-full border border-[var(--chip-line)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)] disabled:opacity-60"
+            >
+              {savingNotificationDefaults ? 'Saving…' : 'Save defaults'}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setEnablingPush(true)
+                void enablePushOnDevice()
+                  .catch((e) =>
+                    toast.error(
+                      e instanceof Error ? e.message : 'Failed to enable push',
+                    ),
+                  )
+                  .finally(() => setEnablingPush(false))
+              }}
+              className="rounded-full border border-[var(--chip-line)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)] disabled:opacity-60"
+            >
+              {enablingPush ? 'Enabling…' : 'Enable push on this device'}
+            </button>
+          </div>
+        </div>
 
         <div className="flex flex-wrap gap-2">
           <button

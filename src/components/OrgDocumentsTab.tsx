@@ -22,6 +22,7 @@ import {
   type OrgDocumentViewerPayload,
 } from '../lib/org-document-open'
 import { cn } from '../lib/cn'
+import { ResourceSectionHeader } from './NotificationBellToggle'
 import { Modal } from './Modal'
 import { OrgDocumentCategoryField } from './OrgDocumentCategoryField'
 import { OrgDocumentViewerModal } from './OrgDocumentViewerModal'
@@ -240,7 +241,8 @@ export function OrgDocumentsTab({ orgId }: OrgDocumentsTabProps) {
 
   return (
     <>
-      <div className="mt-5 flex flex-wrap items-center gap-2">
+      <ResourceSectionHeader title="Documents" topic="ORG_DOCUMENTS" orgId={orgId} />
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => openAdd('upload')}

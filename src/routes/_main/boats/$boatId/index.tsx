@@ -28,6 +28,7 @@ import {
 import type { BoatIconId } from '../../../../lib/boat-icons'
 import { isBoatIconId } from '../../../../lib/boat-icons'
 import { cn } from '../../../../lib/cn'
+import { NotificationBellToggle } from '../../../../components/NotificationBellToggle'
 
 type BoatDetailTab = 'photos' | 'documents' | 'assets' | 'accounting' | 'members' | 'shares'
 
@@ -175,6 +176,12 @@ function BoatDetailPage() {
             Org: {boat.orgName}
           </Link>
         ) : null}
+        <NotificationBellToggle
+          topic="BOAT_TRIPS_COMPLETED"
+          boatId={boat.id}
+          label="Completed trips"
+          className="mt-1 sm:mt-2"
+        />
       </div>
 
       <div
@@ -239,6 +246,8 @@ function BoatDetailPage() {
             members={members}
             pendingInvites={pendingInvites}
             canManageMembers={canManageMembers}
+            notificationTopic="BOAT_MEMBERS"
+            notificationBoatId={boatId}
             onInvite={() => setInviteOpen(true)}
             onCreateLink={async () => {
               try {

@@ -1,17 +1,22 @@
-import { access } from 'node:fs/promises'
+import { access, copyFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { generateSW } from 'workbox-build'
 
 const clientDir = resolve('dist/client')
 const swDest = resolve(clientDir, 'sw.js')
+const pushHandlerSource = resolve('public/push-sw.js')
+const pushHandlerDest = resolve(clientDir, 'push-sw.js')
 
 await access(resolve(clientDir, 'offline.html'))
+await access(pushHandlerSource)
+await copyFile(pushHandlerSource, pushHandlerDest)
 
 const { count, size, warnings } = await generateSW({
   swDest,
   globDirectory: clientDir,
   globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,webmanifest}'],
   globIgnores: ['sw.js', 'sw.js.map'],
+  importScripts: ['push-sw.js'],
   navigateFallbackDenylist: [
     /^\/api\//,
     /^\/sign-in/,

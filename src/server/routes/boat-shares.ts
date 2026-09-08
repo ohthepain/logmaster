@@ -10,6 +10,7 @@ import {
 } from '../permissions/boat-shares'
 import { canAccess } from '../permissions'
 import { getSessionUserId } from '../session'
+import { fireBoatSharesNotification } from '../notifications/route-hooks'
 
 const db = prisma as any
 
@@ -71,9 +72,12 @@ boatSharesRoutes.patch('/:boatId/shares', async (c) => {
 
     const boat = await db.boat.findUnique({
       where: { id: boatId },
-      select: { shareCount: true },
+      select: { shareCount: true, name: true },
     })
     const shares = await loadBoatShares(boatId)
+    if (boat) {
+      fireBoatSharesNotification(userId, boat, 'updated share structure.')
+    }
     return c.json({ shareCount: boat?.shareCount ?? shares.length, shares })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to update shares'
@@ -100,8 +104,11 @@ boatSharesRoutes.patch('/:boatId/shares/:shareId', async (c) => {
 
   const boat = await db.boat.findUnique({
     where: { id: boatId },
-    select: { shareCount: true },
+    select: { shareCount: true, name: true },
   })
+  if (boat) {
+    fireBoatSharesNotification(userId, boat, 'updated a share label.')
+  }
   return c.json({ shareCount: boat?.shareCount ?? shares.length, shares })
 })
 
@@ -148,8 +155,11 @@ boatSharesRoutes.post('/:boatId/shares/:shareId/owners', async (c) => {
 
   const updatedBoat = await db.boat.findUnique({
     where: { id: boatId },
-    select: { shareCount: true },
+    select: { shareCount: true, name: true },
   })
+  if (updatedBoat) {
+    fireBoatSharesNotification(userId, updatedBoat, 'assigned a share owner.')
+  }
   return c.json({
     shareCount: updatedBoat?.shareCount ?? result.shares.length,
     shares: result.shares,
@@ -171,8 +181,11 @@ boatSharesRoutes.delete('/:boatId/shares/:shareId/owners/:ownerUserId', async (c
 
   const boat = await db.boat.findUnique({
     where: { id: boatId },
-    select: { shareCount: true },
+    select: { shareCount: true, name: true },
   })
+  if (boat) {
+    fireBoatSharesNotification(userId, boat, 'removed a share owner.')
+  }
   return c.json({
     shareCount: boat?.shareCount ?? result.shares.length,
     shares: result.shares,

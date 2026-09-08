@@ -22,6 +22,11 @@ import {
   unlinkContactFromMember,
 } from '../org-contacts'
 import { getSessionUserId } from '../session'
+import {
+  fireOrgBoatsNotification,
+  fireOrgContactsNotification,
+  fireOrgMembersNotification,
+} from '../notifications/route-hooks'
 
 const db = prisma as any
 const DEFAULT_DOCUMENT_CATEGORY = 'Miscellaneous'
@@ -51,6 +56,13 @@ async function requireUser(c: { req: { raw: { headers: Headers } } }) {
   const userId = await requireUserId(c)
   if (!userId) return null
   return db.user.findUnique({ where: { id: userId } })
+}
+
+async function getOrgSummary(orgId: string) {
+  return db.consortium.findUnique({
+    where: { id: orgId },
+    select: { id: true, name: true },
+  })
 }
 
 function isConsortiumMemberRole(value: string): value is ConsortiumMemberRole {
@@ -407,6 +419,11 @@ consortiaRoutes.post('/:orgId/boats', async (c) => {
     select: { id: true, name: true },
   })
 
+  const org = await getOrgSummary(consortiumId)
+  if (org) {
+    fireOrgBoatsNotification(userId, org, `attached boat “${boat.name}”.`)
+  }
+
   return c.json({ boat }, 201)
 })
 
@@ -465,6 +482,11 @@ consortiaRoutes.post('/:orgId/contacts', async (c) => {
     where: { id: consortiumId },
     data: { updatedAt: new Date() },
   })
+
+  const org = await getOrgSummary(consortiumId)
+  if (org) {
+    fireOrgContactsNotification(userId, org, `added contact “${displayName}”.`)
+  }
 
   return c.json({ contact: serializeContact(contact) }, 201)
 })
@@ -654,6 +676,11 @@ consortiaRoutes.patch('/:orgId/contacts/:contactId', async (c) => {
     },
   })
 
+  const org = await getOrgSummary(consortiumId)
+  if (org) {
+    fireOrgContactsNotification(userId, org, 'updated a contact.')
+  }
+
   return c.json({ contact: serializeContact(contact) })
 })
 
@@ -681,6 +708,10 @@ consortiaRoutes.delete('/:orgId/contacts/:contactId', async (c) => {
   }
 
   await db.consortiumContact.delete({ where: { id: contactId } })
+  const org = await getOrgSummary(consortiumId)
+  if (org) {
+    fireOrgContactsNotification(userId, org, 'removed a contact.')
+  }
   return c.json({ ok: true })
 })
 
@@ -796,6 +827,11 @@ consortiaRoutes.post('/:orgId/members', async (c) => {
 
   const linked = await linkContactToMember(consortiumId, targetUserId)
 
+  const org = await getOrgSummary(consortiumId)
+  if (org) {
+    fireOrgMembersNotification(user.id, org, 'added a member.')
+  }
+
   return c.json({ member: serializeMember(member, linked?.id ?? null) }, 201)
 })
 
@@ -896,6 +932,11 @@ consortiaRoutes.patch('/:orgId/members/:memberUserId', async (c) => {
 
   const contactIds = await getContactIdsForMembers(consortiumId, [memberUserId])
 
+  const org = await getOrgSummary(consortiumId)
+  if (org) {
+    fireOrgMembersNotification(userId, org, 'changed a member role.')
+  }
+
   return c.json({
     member: serializeMember(member, contactIds.get(memberUserId) ?? null),
   })
@@ -925,6 +966,11 @@ consortiaRoutes.delete('/:orgId/members/:memberUserId', async (c) => {
   })
 
   await unlinkContactFromMember(consortiumId, memberUserId)
+
+  const org = await getOrgSummary(consortiumId)
+  if (org) {
+    fireOrgMembersNotification(userId, org, 'removed a member.')
+  }
 
   return c.json({ ok: true })
 })

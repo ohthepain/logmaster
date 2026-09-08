@@ -18,6 +18,7 @@ let package = Package(
         .package(name: "CapacitorFilesystem", path: "../../../node_modules/.pnpm/@capacitor+filesystem@8.1.3_@capacitor+core@8.4.2/node_modules/@capacitor/filesystem"),
         .package(name: "CapacitorGeolocation", path: "../../../node_modules/.pnpm/@capacitor+geolocation@8.2.0_@capacitor+core@8.4.2/node_modules/@capacitor/geolocation"),
         .package(name: "CapacitorLocalNotifications", path: "../../../node_modules/.pnpm/@capacitor+local-notifications@8.2.1_@capacitor+core@8.4.2/node_modules/@capacitor/local-notifications"),
+        .package(name: "CapacitorPushNotifications", path: "../../../node_modules/.pnpm/@capacitor+push-notifications@8.1.2_@capacitor+core@8.4.2/node_modules/@capacitor/push-notifications"),
         .package(name: "CapacitorShare", path: "../../../node_modules/.pnpm/@capacitor+share@8.0.1_@capacitor+core@8.4.2/node_modules/@capacitor/share"),
         .package(name: "CapawesomeCapacitorGoogleSignIn", path: "../../../node_modules/.pnpm/@capawesome+capacitor-google-sign-in@0.1.3_@capacitor+core@8.4.2/node_modules/@capawesome/capacitor-google-sign-in"),
         .package(name: "LogmasterAppleMap", path: "../../../node_modules/.pnpm/logmaster-apple-map@file+plugins+logmaster-apple-map_@capacitor+core@8.4.2/node_modules/logmaster-apple-map")
@@ -34,6 +35,7 @@ let package = Package(
                 .product(name: "CapacitorFilesystem", package: "CapacitorFilesystem"),
                 .product(name: "CapacitorGeolocation", package: "CapacitorGeolocation"),
                 .product(name: "CapacitorLocalNotifications", package: "CapacitorLocalNotifications"),
+                .product(name: "CapacitorPushNotifications", package: "CapacitorPushNotifications"),
                 .product(name: "CapacitorShare", package: "CapacitorShare"),
                 .product(name: "CapawesomeCapacitorGoogleSignIn", package: "CapawesomeCapacitorGoogleSignIn"),
                 .product(name: "LogmasterAppleMap", package: "LogmasterAppleMap")

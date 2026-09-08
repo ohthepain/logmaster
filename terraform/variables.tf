@@ -169,6 +169,36 @@ variable "aisstream_api_key_secret_arn" {
   default     = ""
 }
 
+variable "apns_key_secret_arn" {
+  type        = string
+  description = "Optional existing Secrets Manager ARN for Apple APNS .p8 key (plain string file contents)."
+  default     = ""
+}
+
+variable "apns_key_id" {
+  type        = string
+  description = "Apple APNS key ID (10 characters)."
+  default     = ""
+}
+
+variable "apns_team_id" {
+  type        = string
+  description = "Apple Developer Team ID."
+  default     = ""
+}
+
+variable "apns_bundle_id" {
+  type        = string
+  description = "iOS app bundle ID used as the APNS topic."
+  default     = "live.logmaster.app"
+}
+
+variable "apns_production" {
+  type        = bool
+  description = "Use APNS production endpoint. Defaults to true for production workspace, false for staging."
+  default     = null
+}
+
 variable "alb_certificate_arn" {
   type        = string
   description = "ACM certificate ARN for the ALB HTTPS listener (must be in the same region)."

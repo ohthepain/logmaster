@@ -13,6 +13,8 @@ import { CrewAvatar } from './CrewAvatar'
 import { Modal } from './Modal'
 import { profilePhotoUrl } from '../lib/profile-api'
 import { cn } from '../lib/cn'
+import { NotificationBellToggle } from './NotificationBellToggle'
+import type { NotificationTopic } from '../domain/notifications'
 
 type InviteMemberModalProps = {
   open: boolean
@@ -125,6 +127,9 @@ type ResourceMembersTabProps = {
   pendingInvites: MemberInvite[]
   canManageMembers?: boolean
   memberDetailOrgId?: string
+  notificationTopic?: NotificationTopic
+  notificationBoatId?: string
+  notificationOrgId?: string
   onInvite: () => void
   onCreateLink: () => void
   onRoleChange: (member: ResourceMember, role: OrgMemberRole) => void
@@ -146,6 +151,9 @@ export function ResourceMembersTab({
   pendingInvites,
   canManageMembers = true,
   memberDetailOrgId,
+  notificationTopic,
+  notificationBoatId,
+  notificationOrgId,
   onInvite,
   onCreateLink,
   onRoleChange,
@@ -157,12 +165,21 @@ export function ResourceMembersTab({
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-          {members.length} {members.length === 1 ? 'member' : 'members'}
-          {pendingInvites.length > 0
-            ? ` · ${pendingInvites.length} pending`
-            : ''}
-        </p>
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
+            {members.length} {members.length === 1 ? 'member' : 'members'}
+            {pendingInvites.length > 0
+              ? ` · ${pendingInvites.length} pending`
+              : ''}
+          </p>
+          {notificationTopic ? (
+            <NotificationBellToggle
+              topic={notificationTopic}
+              boatId={notificationBoatId}
+              orgId={notificationOrgId}
+            />
+          ) : null}
+        </div>
         {canManageMembers ? (
           <div className="flex flex-wrap items-center gap-3">
             <button

@@ -13,6 +13,7 @@ import {
 } from '../lib/boat-shares-api'
 import { CrewAvatar } from './CrewAvatar'
 import { profilePhotoUrl } from '../lib/profile-api'
+import { ResourceSectionHeader } from './NotificationBellToggle'
 
 type BoatSharesTabProps = {
   boatId: string
@@ -153,6 +154,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
 
   return (
     <div>
+      <ResourceSectionHeader title="Shares" topic="BOAT_SHARES" boatId={boatId} />
       {canManageShares ? (
         <div className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3">
           <label className="block min-w-[8rem] flex-1">
