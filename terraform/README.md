@@ -1,57 +1,54 @@
 # AWS infrastructure (Terraform)
 
+Uses **[shared-aws](https://github.com/ohthepain/shared-aws)** for VPC, RDS, and ALB. This stack owns ECS, tenant DB/role, target group, and listener rules.
+
 Layout:
 
-1. **`bootstrap/`** — run once locally with the **local** backend. Creates versioned S3 state bucket (`{project}-tf-state-{account_id}`) and DynamoDB table `{project}-terraform-locks`.
-2. **`network/`** — shared VPC (2 public AZs, IGW, no NAT), plus a **shared** ECR repository `logmaster-app`. Remote state in S3 key `network/terraform.tfstate`.
-3. **`/` (this directory)** — application stack per **workspace** `staging` and `production`. Single S3 key `app/terraform.tfstate` with workspace isolation. Reads VPC + ECR from the network state.
+1. **`shared-aws`** (separate repo) — VPC, shared RDS, shared ALB. Remote state key `shared/terraform.tfstate`.
+2. **`bootstrap/`** (legacy) — logmaster state bucket; still used for this app's Terraform state.
+3. **`/` (this directory)** — application stack per workspace `staging` and `production`. Reads shared-aws outputs via `data.terraform_remote_state.shared`.
 
-Region: **eu-central-1**. Compute: **ECS Fargate ARM64 (Graviton)**. App listens on port **3000**.
+See [MIGRATION.md](./MIGRATION.md) for cutover from legacy per-app RDS/ALB.
 
-Public URLs:
+Region: **eu-central-1**. Compute: **ECS Fargate ARM64**. App listens on port **3000**.
 
-| Environment | Domain |
-|-------------|--------|
-| staging | https://staging.logmaster.live |
-| production | https://logmaster.live |
+| Environment | Domain | ALB rule priority |
+|-------------|--------|-------------------|
+| staging | https://staging.logmaster.live | 100 |
+| production | https://logmaster.live | 110 |
 
 ## Order of operations
 
-1. **Bootstrap** (once per AWS account):
-
-   ```bash
-   ./scripts/bootstrap-apply.sh
-   ```
-
-   Note the outputs `state_bucket` and `lock_table`.
-
-2. **Network backend config** — copy `terraform/network/backend.hcl.example` → `terraform/network/backend.hcl` and set `bucket` / `dynamodb_table` from bootstrap outputs.
-
-3. **Network stack**:
-
-   ```bash
-   ./scripts/network-init.sh
-   cd terraform/network && terraform apply
-   ```
-
-4. **Environment tfvars** — edit `terraform/environments/staging/terraform.tfvars` and `production/terraform.tfvars`:
-   - Set `network_state_bucket` to the bootstrap `state_bucket` value.
-   - Set `alb_certificate_arn` to an ACM certificate in **eu-central-1** for each hostname (`staging.logmaster.live`, `logmaster.live`).
-   - Optionally set `google_client_*_secret_arn`, `maptiler_api_key_secret_arn`, and `apns_key_secret_arn` for OAuth, map tiles, and iOS push.
-
-5. **App backend config** — copy `terraform/backend.hcl.example` → `terraform/backend.hcl` with the same bucket and lock table.
-
-6. **App stack** (per environment):
+1. Apply **shared-aws** (`bootstrap` → `network` → `shared`) — see shared-aws README.
+2. Set `shared_state_bucket` in `environments/*/terraform.tfvars` to the shared-aws bootstrap bucket.
+3. Add GitHub secret `AWS_SHARED_TF_STATE_BUCKET` for CI deploy jobs.
+4. **App backend config** — copy `terraform/backend.hcl.example` → `terraform/backend.hcl` (logmaster state bucket).
+5. **App stack** (per environment):
 
    ```bash
    ./scripts/tf-init.sh
    ./scripts/tf-plan.sh staging
    ./scripts/tf-apply.sh staging
-   ./scripts/tf-plan.sh production
-   ./scripts/tf-apply.sh production
    ```
 
 The selected workspace **must** match `environment` in the tfvars file (enforced by a `check` block).
+
+## Legacy layout (deprecated)
+
+The per-app `terraform/network/` stack (VPC + ECR) and per-env RDS/ALB are replaced by shared-aws. Decommission after migration — see MIGRATION.md.
+
+---
+
+<!-- Original README sections below remain valid for ECS, secrets, SES, deploy flow, etc. -->
+
+# AWS infrastructure (Terraform) — app stack details
+
+Layout (historical reference):
+
+1. **`bootstrap/`** — run once locally with the **local** backend. Creates versioned S3 state bucket (`{project}-tf-state-{account_id}`) and DynamoDB table `{project}-terraform-locks`.
+2. **`network/`** — **deprecated** — replaced by shared-aws VPC.
+3. **`/` (this directory)** — application stack per **workspace** `staging` and `production`.
+
 
 ## backend.hcl setup
 
