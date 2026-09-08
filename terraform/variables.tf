@@ -168,3 +168,9 @@ variable "alb_certificate_arn" {
   type        = string
   description = "ACM certificate ARN for the ALB HTTPS listener (must be in the same region)."
 }
+
+variable "apply_tenant_database_resources" {
+  type        = bool
+  default     = false
+  description = "Create tenant role/database via the postgresql provider (requires VPC access to shared RDS). Leave false for local apply; use scripts/provision-tenant-db.sh or scripts/run-tenant-db-apply.sh instead."
+}

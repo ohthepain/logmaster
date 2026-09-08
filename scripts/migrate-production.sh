@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SHARED_ROOT="${SHARED_AWS_ROOT:-$(cd "$ROOT/../shared-aws" 2>/dev/null && pwd || true)}"
+for candidate in \
+  "${SHARED_AWS_ROOT:-}" \
+  "$ROOT/../shared-aws" \
+  "$ROOT/../../shared-aws"; do
+  if [[ -n "$candidate" && -d "$candidate/terraform/shared" ]]; then
+    SHARED_ROOT="$(cd "$candidate" && pwd)"
+    break
+  fi
+done
 ENV=production
 TENANT="logmaster_${ENV}"
 
