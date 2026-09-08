@@ -132,6 +132,26 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* iOS Safari/WKWebView zooms focused inputs when font-size < 16px. */
+@media (hover: none) and (pointer: coarse) {
+  :is(
+    input:not(
+        [type="checkbox"],
+        [type="radio"],
+        [type="range"],
+        [type="file"],
+        [type="button"],
+        [type="submit"],
+        [type="reset"],
+        [type="hidden"]
+      ),
+    textarea,
+    select
+  ) {
+    font-size: 1rem !important;
+  }
+}
+
 html.ios-native-map-touch-root,
 body.ios-native-map-touch-root {
   pointer-events: none;
