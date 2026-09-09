@@ -106,6 +106,13 @@ export async function cancelOrgInvite(
   await api(`/api/orgs/${orgId}/invites/${inviteId}`, { method: 'DELETE' })
 }
 
+export async function resendOrgInvite(
+  orgId: string,
+  inviteId: string,
+): Promise<void> {
+  await api(`/api/orgs/${orgId}/invites/${inviteId}/resend`, { method: 'POST' })
+}
+
 export async function updateOrgMemberRole(
   orgId: string,
   memberUserId: string,

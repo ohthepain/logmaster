@@ -1,8 +1,11 @@
 import { sendMemberInviteEmail } from './email/ses'
 import { prisma } from './db'
+import { inviteeHasAccount } from './invite-signup'
 import {
   linkContactToMember,
 } from './org-contacts'
+import { fireOrgMembersNotification } from './notifications/route-hooks'
+import { ensureOrgMemberForBoatMember } from './permissions/consortium'
 import type { ConsortiumMemberRole } from './permissions/roles'
 
 const db = prisma as any
@@ -265,6 +268,61 @@ export async function createBoatMemberInvite(args: CreateBoatInviteArgs) {
   return invite
 }
 
+export async function resendMemberInvite(args: {
+  inviteId: string
+  kind: 'ORG' | 'BOAT'
+  scopeId: string
+  inviterName: string
+}): Promise<void> {
+  const invite = await db.memberInvite.findFirst({
+    where: {
+      id: args.inviteId,
+      kind: args.kind,
+      status: 'PENDING',
+      ...(args.kind === 'ORG'
+        ? { orgId: args.scopeId }
+        : { boatId: args.scopeId }),
+    },
+  })
+  if (!invite) {
+    throw new Error('Invite not found')
+  }
+  if (!invite.inviteeEmail) {
+    throw new Error('This invite has no email address')
+  }
+
+  const expiresAt = new Date(Date.now() + MEMBER_INVITE_TTL_MS)
+  await db.memberInvite.update({
+    where: { id: invite.id },
+    data: { expiresAt, updatedAt: new Date() },
+  })
+
+  let targetName = 'an organization'
+  let targetKind: 'org' | 'boat' = 'org'
+  if (args.kind === 'ORG' && invite.orgId) {
+    const org = await db.consortium.findUnique({
+      where: { id: invite.orgId },
+      select: { name: true },
+    })
+    targetName = org?.name ?? targetName
+  } else if (invite.boatId) {
+    const boat = await db.boat.findUnique({
+      where: { id: invite.boatId },
+      select: { name: true },
+    })
+    targetName = boat?.name ?? 'a boat'
+    targetKind = 'boat'
+  }
+
+  await sendMemberInviteEmail({
+    to: invite.inviteeEmail,
+    url: memberInviteUrl(invite.token),
+    inviterName: args.inviterName,
+    targetName,
+    targetKind,
+  })
+}
+
 export async function getMemberInvitePreview(token: string) {
   const invite = await db.memberInvite.findUnique({
     where: { token },
@@ -279,10 +337,15 @@ export async function getMemberInvitePreview(token: string) {
   const expired =
     invite.status !== 'PENDING' || invite.expiresAt.getTime() < Date.now()
 
+  const hasAccount = invite.inviteeEmail
+    ? await inviteeHasAccount(invite.inviteeEmail)
+    : false
+
   return {
     kind: invite.kind as 'ORG' | 'BOAT',
     inviterName: invite.inviter.name,
     inviteeEmail: invite.inviteeEmail,
+    inviteeHasAccount: hasAccount,
     role: invite.role as ConsortiumMemberRole,
     status: invite.status as string,
     expired,
@@ -328,6 +391,19 @@ export async function acceptMemberInvite(args: {
     throw new Error(`Sign in as ${invite.inviteeEmail} to accept this invite`)
   }
 
+  const wasOrgMember =
+    invite.kind === 'ORG' && invite.orgId
+      ? !!(await db.consortiumMember.findUnique({
+          where: {
+            consortiumId_userId: {
+              consortiumId: invite.orgId,
+              userId: args.userId,
+            },
+          },
+          select: { userId: true },
+        }))
+      : false
+
   await db.$transaction(async (tx: typeof db) => {
     if (invite.kind === 'ORG' && invite.orgId) {
       await tx.consortiumMember.upsert({
@@ -372,6 +448,14 @@ export async function acceptMemberInvite(args: {
       },
     })
   })
+
+  if (invite.kind === 'BOAT' && invite.boatId) {
+    await ensureOrgMemberForBoatMember(invite.boatId, args.userId)
+  }
+
+  if (invite.kind === 'ORG' && invite.orgId && invite.org && !wasOrgMember) {
+    fireOrgMembersNotification(args.userId, invite.org, 'joined the org.')
+  }
 
   return {
     kind: invite.kind as 'ORG' | 'BOAT',

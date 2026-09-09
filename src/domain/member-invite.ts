@@ -21,6 +21,7 @@ export type MemberInvitePreview = {
   kind: MemberInviteKind
   inviterName: string
   inviteeEmail: string | null
+  inviteeHasAccount: boolean
   role: OrgMemberRole
   status: string
   expired: boolean

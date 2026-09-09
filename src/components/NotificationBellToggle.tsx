@@ -1,4 +1,4 @@
-import { Bell, BellRing } from 'lucide-react'
+import { Bell, BellRing, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
@@ -97,12 +97,43 @@ export function NotificationBellToggle({
   )
 }
 
+const resourceIconButtonClassName =
+  'inline-flex size-9 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60'
+
+export function ResourceRefreshButton({
+  onRefresh,
+  refreshing = false,
+  className,
+}: {
+  onRefresh: () => void | Promise<void>
+  refreshing?: boolean
+  className?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => void onRefresh()}
+      disabled={refreshing}
+      aria-label="Refresh"
+      title="Refresh"
+      className={cn(resourceIconButtonClassName, className)}
+    >
+      <RefreshCw
+        className={cn('size-4', refreshing && 'animate-spin')}
+        aria-hidden
+      />
+    </button>
+  )
+}
+
 type ResourceSectionHeaderProps = {
   title: string
-  topic: NotificationTopic
+  topic?: NotificationTopic
   boatId?: string
   orgId?: string
   actions?: ReactNode
+  onRefresh?: () => void | Promise<void>
+  refreshing?: boolean
 }
 
 export function ResourceSectionHeader({
@@ -111,12 +142,19 @@ export function ResourceSectionHeader({
   boatId,
   orgId,
   actions,
+  onRefresh,
+  refreshing = false,
 }: ResourceSectionHeaderProps) {
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2">
         <h2 className="m-0 text-lg font-semibold text-[var(--sea-ink)]">{title}</h2>
-        <NotificationBellToggle topic={topic} boatId={boatId} orgId={orgId} />
+        {topic ? (
+          <NotificationBellToggle topic={topic} boatId={boatId} orgId={orgId} />
+        ) : null}
+        {onRefresh ? (
+          <ResourceRefreshButton onRefresh={onRefresh} refreshing={refreshing} />
+        ) : null}
       </div>
       {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
     </div>

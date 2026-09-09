@@ -21,6 +21,7 @@ import {
   updateOrgBankAccount,
 } from '../lib/org-accounting-api'
 import { cn } from '../lib/cn'
+import { ResourceSectionHeader } from './NotificationBellToggle'
 import { Modal } from './Modal'
 
 type OrgAccountingTabProps = {
@@ -33,13 +34,15 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
   const [transactions, setTransactions] = useState<OrgTransaction[]>([])
   const [expenseClaims, setExpenseClaims] = useState<ExpenseClaim[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [bankOpen, setBankOpen] = useState(false)
   const [txnOpen, setTxnOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (opts?: { background?: boolean }) => {
+    if (opts?.background) setRefreshing(true)
+    else setLoading(true)
     setError(null)
     try {
       const data = await fetchOrgAccounting(orgId)
@@ -50,6 +53,7 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
       setError(e instanceof Error ? e.message : 'Failed to load accounting')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [orgId])
 
@@ -112,16 +116,23 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
   if (error) {
     return (
       <div>
+        <ResourceSectionHeader
+          title="Accounting"
+          onRefresh={() => load()}
+          refreshing={refreshing}
+        />
         <p className="text-sm text-red-600">{error}</p>
-        <button type="button" onClick={() => void load()} className="mt-2 text-sm font-semibold">
-          Retry
-        </button>
       </div>
     )
   }
 
   return (
     <div className="flex flex-col gap-8">
+      <ResourceSectionHeader
+        title="Accounting"
+        onRefresh={() => load({ background: true })}
+        refreshing={refreshing}
+      />
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="brand-title m-0 text-xl">Bank accounts</h2>

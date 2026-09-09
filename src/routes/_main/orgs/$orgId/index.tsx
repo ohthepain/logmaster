@@ -27,6 +27,7 @@ import {
   fetchOrgMembers,
   inviteOrgMember,
   removeOrgMember,
+  resendOrgInvite,
   updateOrg,
   updateOrgMemberRole,
 } from '../../../../lib/orgs-api'
@@ -67,6 +68,9 @@ function OrgDetailPage() {
   const [pendingInvites, setPendingInvites] = useState<MemberInvite[]>([])
   const [contacts, setContacts] = useState<OrgContact[]>([])
   const [loading, setLoading] = useState(true)
+  const [membersRefreshing, setMembersRefreshing] = useState(false)
+  const [contactsRefreshing, setContactsRefreshing] = useState(false)
+  const [boatsRefreshing, setBoatsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [addContactOpen, setAddContactOpen] = useState(false)
@@ -119,6 +123,42 @@ function OrgDetailPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const refreshMembers = useCallback(async () => {
+    setMembersRefreshing(true)
+    try {
+      const membersData = await fetchOrgMembers(orgId)
+      setMembers(membersData.members)
+      setPendingInvites(membersData.pendingInvites)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to refresh members')
+    } finally {
+      setMembersRefreshing(false)
+    }
+  }, [orgId])
+
+  const refreshContacts = useCallback(async () => {
+    setContactsRefreshing(true)
+    try {
+      setContacts(await fetchOrgContacts(orgId))
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to refresh contacts')
+    } finally {
+      setContactsRefreshing(false)
+    }
+  }, [orgId])
+
+  const refreshBoats = useCallback(async () => {
+    setBoatsRefreshing(true)
+    try {
+      const orgData = await fetchOrg(orgId)
+      setOrg(orgData)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to refresh boats')
+    } finally {
+      setBoatsRefreshing(false)
+    }
+  }, [orgId])
 
   const handleSaveName = async () => {
     if (!org) return
@@ -266,6 +306,8 @@ function OrgDetailPage() {
             memberDetailOrgId={orgId}
             notificationTopic="ORG_MEMBERS"
             notificationOrgId={orgId}
+            onRefresh={refreshMembers}
+            refreshing={membersRefreshing}
             onInvite={() => setInviteOpen(true)}
             onCreateLink={async () => {
               try {
@@ -329,6 +371,9 @@ function OrgDetailPage() {
                 )
               }
             }}
+            onResendInvite={async (invite) => {
+              await resendOrgInvite(orgId, invite.id)
+            }}
           />
         ) : null}
 
@@ -340,6 +385,8 @@ function OrgDetailPage() {
           <ContactsTab
             orgId={orgId}
             contacts={contacts}
+            onRefresh={refreshContacts}
+            refreshing={contactsRefreshing}
             onAdd={() => setAddContactOpen(true)}
             onDelete={async (contact) => {
               if (!window.confirm(`Delete contact "${contact.displayName}"?`)) {
@@ -364,6 +411,8 @@ function OrgDetailPage() {
           <BoatsTab
             orgId={orgId}
             boats={org.boats ?? []}
+            onRefresh={refreshBoats}
+            refreshing={boatsRefreshing}
             onAdd={() => setAddBoatOpen(true)}
           />
         ) : null}
@@ -418,10 +467,14 @@ function BoatsTab({
   orgId,
   boats,
   onAdd,
+  onRefresh,
+  refreshing = false,
 }: {
   orgId: string
   boats: Array<{ id: string; name: string }>
   onAdd: () => void
+  onRefresh?: () => void | Promise<void>
+  refreshing?: boolean
 }) {
   return (
     <div>
@@ -429,6 +482,8 @@ function BoatsTab({
         title="Boats"
         topic="ORG_BOATS"
         orgId={orgId}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
         actions={
           <button
             type="button"
@@ -475,11 +530,15 @@ function ContactsTab({
   contacts,
   onAdd,
   onDelete,
+  onRefresh,
+  refreshing = false,
 }: {
   orgId: string
   contacts: OrgContact[]
   onAdd: () => void
   onDelete: (contact: OrgContact) => void
+  onRefresh?: () => void | Promise<void>
+  refreshing?: boolean
 }) {
   return (
     <div>
@@ -487,6 +546,8 @@ function ContactsTab({
         title="Contacts"
         topic="ORG_CONTACTS"
         orgId={orgId}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
         actions={
           <button
             type="button"

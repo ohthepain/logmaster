@@ -38,6 +38,7 @@ const WORK_TYPES: AssetWorkType[] = ["install", "service", "repair", "other"];
 export function BoatAssetsTab({ boatId, boatName, orgName, members }: BoatAssetsTabProps) {
   const [assets, setAssets] = useState<BoatAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assetModal, setAssetModal] = useState<AssetModalState>({ mode: "closed" });
   const [workModal, setWorkModal] = useState<WorkModalState>({ mode: "closed" });
@@ -46,8 +47,9 @@ export function BoatAssetsTab({ boatId, boatName, orgName, members }: BoatAssets
   const [workByAsset, setWorkByAsset] = useState<Record<string, AssetWork[]>>({});
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { background?: boolean }) => {
+    if (opts?.background) setRefreshing(true);
+    else setLoading(true);
     setError(null);
     try {
       const data = await fetchBoatAssets(boatId);
@@ -56,6 +58,7 @@ export function BoatAssetsTab({ boatId, boatName, orgName, members }: BoatAssets
       setError(e instanceof Error ? e.message : "Failed to load assets");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [boatId]);
 
@@ -136,10 +139,14 @@ export function BoatAssetsTab({ boatId, boatName, orgName, members }: BoatAssets
   if (error) {
     return (
       <div>
+        <ResourceSectionHeader
+          title="Assets"
+          topic="BOAT_ASSETS"
+          boatId={boatId}
+          onRefresh={() => load()}
+          refreshing={refreshing}
+        />
         <p className="text-sm text-red-600">{error}</p>
-        <button type="button" onClick={() => void load()} className="mt-2 text-sm font-semibold text-[var(--sea-ink)]">
-          Retry
-        </button>
       </div>
     );
   }
@@ -150,6 +157,8 @@ export function BoatAssetsTab({ boatId, boatName, orgName, members }: BoatAssets
         title="Assets"
         topic="BOAT_ASSETS"
         boatId={boatId}
+        onRefresh={() => load({ background: true })}
+        refreshing={refreshing}
         actions={
           <button
             type="button"

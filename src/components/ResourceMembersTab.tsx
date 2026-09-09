@@ -1,4 +1,4 @@
-import { Copy, Link2, Trash2, UserPlus, X } from 'lucide-react'
+import { Copy, Link2, Mail, Trash2, UserPlus, X } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
@@ -13,7 +13,10 @@ import { CrewAvatar } from './CrewAvatar'
 import { Modal } from './Modal'
 import { profilePhotoUrl } from '../lib/profile-api'
 import { cn } from '../lib/cn'
-import { NotificationBellToggle } from './NotificationBellToggle'
+import {
+  NotificationBellToggle,
+  ResourceRefreshButton,
+} from './NotificationBellToggle'
 import type { NotificationTopic } from '../domain/notifications'
 
 type InviteMemberModalProps = {
@@ -135,6 +138,9 @@ type ResourceMembersTabProps = {
   onRoleChange: (member: ResourceMember, role: OrgMemberRole) => void
   onRemove: (member: ResourceMember) => void
   onCancelInvite: (invite: MemberInvite) => void
+  onResendInvite?: (invite: MemberInvite) => Promise<void>
+  onRefresh?: () => void | Promise<void>
+  refreshing?: boolean
 }
 
 async function copyInviteUrl(url: string) {
@@ -159,8 +165,12 @@ export function ResourceMembersTab({
   onRoleChange,
   onRemove,
   onCancelInvite,
+  onResendInvite,
+  onRefresh,
+  refreshing = false,
 }: ResourceMembersTabProps) {
   const navigate = useNavigate()
+  const [resendingInviteId, setResendingInviteId] = useState<string | null>(null)
 
   return (
     <div>
@@ -178,6 +188,9 @@ export function ResourceMembersTab({
               boatId={notificationBoatId}
               orgId={notificationOrgId}
             />
+          ) : null}
+          {onRefresh ? (
+            <ResourceRefreshButton onRefresh={onRefresh} refreshing={refreshing} />
           ) : null}
         </div>
         {canManageMembers ? (
@@ -208,44 +221,7 @@ export function ResourceMembersTab({
         </p>
       ) : null}
 
-      {pendingInvites.length > 0 && canManageMembers ? (
-        <ul className="mb-4 m-0 list-none space-y-2 p-0">
-          {pendingInvites.map((invite) => (
-            <li
-              key={invite.id}
-              className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-3"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
-                  {invite.inviteeEmail ?? 'Open invite link'}
-                </p>
-                <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
-                  {MEMBER_ROLE_LABELS[invite.role]} · expires{' '}
-                  {new Date(invite.expiresAt).toLocaleDateString()}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => void copyInviteUrl(invite.inviteUrl)}
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)]"
-              >
-                <Copy className="size-3.5" />
-                Copy link
-              </button>
-              <button
-                type="button"
-                onClick={() => void onCancelInvite(invite)}
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-red-700 dark:text-red-300"
-              >
-                <X className="size-3.5" />
-                Cancel
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {members.length === 0 ? (
+      {members.length === 0 && pendingInvites.length === 0 ? (
         <p className="text-sm text-[var(--sea-ink-soft)]">No members yet.</p>
       ) : (
         <ul className="m-0 list-none space-y-2 p-0">
@@ -353,6 +329,77 @@ export function ResourceMembersTab({
             </li>
             )
           })}
+          {pendingInvites.map((invite) => (
+            <li
+              key={invite.id}
+              className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-3"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]">
+                  <Mail className="size-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 truncate text-sm font-semibold text-[var(--sea-ink)]">
+                    {invite.inviteeEmail ?? 'Invite link'}
+                    <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-950/60 dark:text-amber-200">
+                      Pending
+                    </span>
+                  </p>
+                  <p className="m-0 truncate text-xs text-[var(--sea-ink-soft)]">
+                    {MEMBER_ROLE_LABELS[invite.role]} · expires{' '}
+                    {new Date(invite.expiresAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              {canManageMembers ? (
+                <>
+                  {invite.inviteeEmail && onResendInvite ? (
+                    <button
+                      type="button"
+                      disabled={resendingInviteId === invite.id}
+                      onClick={() => {
+                        setResendingInviteId(invite.id)
+                        void onResendInvite(invite)
+                          .then(() => toast.success('Invite resent'))
+                          .catch((error) =>
+                            toast.error(
+                              error instanceof Error
+                                ? error.message
+                                : 'Failed to resend invite',
+                            ),
+                          )
+                          .finally(() => setResendingInviteId(null))
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)] disabled:opacity-60"
+                    >
+                      <Mail className="size-3.5" />
+                      {resendingInviteId === invite.id ? 'Sending…' : 'Resend invite'}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => void copyInviteUrl(invite.inviteUrl)}
+                    className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)]"
+                  >
+                    <Copy className="size-3.5" />
+                    Copy link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void onCancelInvite(invite)}
+                    className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-red-700 dark:text-red-300"
+                  >
+                    <X className="size-3.5" />
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <span className="rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
+                  {MEMBER_ROLE_LABELS[invite.role]}
+                </span>
+              )}
+            </li>
+          ))}
         </ul>
       )}
     </div>

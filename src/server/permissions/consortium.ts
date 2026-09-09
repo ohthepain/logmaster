@@ -110,7 +110,40 @@ export async function assertCanRemoveMember(
     }
   }
 
+  if (await hasOrgBoatMembership(consortiumId, targetUserId)) {
+    return {
+      ok: false,
+      error:
+        'Remove this person from all org boats before removing org membership.',
+    }
+  }
+
   return { ok: true }
+}
+
+export async function hasOrgBoatMembership(
+  consortiumId: string,
+  userId: string,
+): Promise<boolean> {
+  const count = await db.boatMember.count({
+    where: {
+      userId,
+      boat: { consortiumId },
+    },
+  })
+  return count > 0
+}
+
+export async function ensureOrgMemberForBoatMember(
+  boatId: string,
+  userId: string,
+) {
+  const boat = await db.boat.findUnique({
+    where: { id: boatId },
+    select: { consortiumId: true },
+  })
+  if (!boat?.consortiumId) return null
+  return ensureConsortiumMember(boat.consortiumId, userId, 'MEMBER')
 }
 
 export async function ensureConsortiumMember(

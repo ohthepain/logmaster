@@ -13,9 +13,16 @@ import { ResourceSectionHeader } from './NotificationBellToggle'
 type BoatPhotosTabProps = {
   boat: Boat
   onBoatChange: (boat: Boat) => void
+  onRefresh?: () => void | Promise<void>
+  refreshing?: boolean
 }
 
-export function BoatPhotosTab({ boat, onBoatChange }: BoatPhotosTabProps) {
+export function BoatPhotosTab({
+  boat,
+  onBoatChange,
+  onRefresh,
+  refreshing = false,
+}: BoatPhotosTabProps) {
   const [uploading, setUploading] = useState(false)
   const [activePhoto, setActivePhoto] = useState<BoatPhoto | null>(null)
   const [captionDraft, setCaptionDraft] = useState('')
@@ -101,7 +108,13 @@ export function BoatPhotosTab({ boat, onBoatChange }: BoatPhotosTabProps) {
 
   return (
     <>
-      <ResourceSectionHeader title="Photos" topic="BOAT_PHOTOS" boatId={boat.id} />
+      <ResourceSectionHeader
+        title="Photos"
+        topic="BOAT_PHOTOS"
+        boatId={boat.id}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+      />
       <div className="flex flex-wrap items-center gap-2">
         <input
           ref={fileInputRef}

@@ -155,3 +155,10 @@ export async function cancelBoatInvite(
 ): Promise<void> {
   await api(`/api/boats/${boatId}/invites/${inviteId}`, { method: 'DELETE' })
 }
+
+export async function resendBoatInvite(
+  boatId: string,
+  inviteId: string,
+): Promise<void> {
+  await api(`/api/boats/${boatId}/invites/${inviteId}/resend`, { method: 'POST' })
+}

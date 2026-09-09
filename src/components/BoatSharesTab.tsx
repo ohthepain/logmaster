@@ -24,6 +24,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
   const [shares, setShares] = useState<BoatShareSummary[]>([])
   const [canManageShares, setCanManageShares] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [shareCountDraft, setShareCountDraft] = useState('1')
   const [savingCount, setSavingCount] = useState(false)
@@ -54,8 +55,9 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
     [],
   )
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (opts?: { background?: boolean }) => {
+    if (opts?.background) setRefreshing(true)
+    else setLoading(true)
     setError(null)
     try {
       applyPayload(await fetchBoatShares(boatId))
@@ -63,6 +65,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
       setError(e instanceof Error ? e.message : 'Failed to load shares')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [applyPayload, boatId])
 
@@ -149,12 +152,29 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
   }
 
   if (error) {
-    return <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+    return (
+      <div>
+        <ResourceSectionHeader
+          title="Shares"
+          topic="BOAT_SHARES"
+          boatId={boatId}
+          onRefresh={() => load()}
+          refreshing={refreshing}
+        />
+        <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+      </div>
+    )
   }
 
   return (
     <div>
-      <ResourceSectionHeader title="Shares" topic="BOAT_SHARES" boatId={boatId} />
+      <ResourceSectionHeader
+        title="Shares"
+        topic="BOAT_SHARES"
+        boatId={boatId}
+        onRefresh={() => load({ background: true })}
+        refreshing={refreshing}
+      />
       {canManageShares ? (
         <div className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3">
           <label className="block min-w-[8rem] flex-1">

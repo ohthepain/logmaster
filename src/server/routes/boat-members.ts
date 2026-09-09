@@ -3,13 +3,14 @@ import { prisma } from '../db'
 import {
   assertCanChangeBoatMemberRole,
   assertCanRemoveBoatMember,
-  canAccess
-  
+  canAccess,
+  ensureOrgMemberForBoatMember,
 } from '../permissions'
 import type {ConsortiumMemberRole} from '../permissions';
 import {
   createBoatMemberInvite,
   normalizeInviteEmail,
+  resendMemberInvite,
   serializeMemberInvite,
 } from '../member-invites'
 import { getSessionUserId } from '../session'
@@ -230,6 +231,8 @@ boatMembersRoutes.post('/:boatId/members', async (c) => {
     },
   })
 
+  await ensureOrgMemberForBoatMember(boatId, targetUserId)
+
   const boatSummary = await getBoatSummary(boatId)
   if (boatSummary) {
     notifyBoatMembers(user.id, boatSummary, 'added a member.')
@@ -339,6 +342,33 @@ boatMembersRoutes.delete('/:boatId/members/:memberUserId', async (c) => {
   }
 
   return c.json({ ok: true })
+})
+
+boatMembersRoutes.post('/:boatId/invites/:inviteId/resend', async (c) => {
+  const user = await requireUser(c)
+  if (!user) return unauthorized()
+
+  const boatId = c.req.param('boatId')
+  const allowed = await canManageBoatMembers(user.id, boatId)
+  if (!allowed) return forbiddenMemberManagement()
+
+  try {
+    await resendMemberInvite({
+      inviteId: c.req.param('inviteId'),
+      kind: 'BOAT',
+      scopeId: boatId,
+      inviterName: user.name,
+    })
+    return c.json({ ok: true })
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to resend invite'
+    const status = message === 'Invite not found' ? 404 : 400
+    if (message !== 'Invite not found' && message !== 'This invite has no email address') {
+      console.error('[boat-members] resend invite failed', error)
+    }
+    return c.json({ error: message }, status)
+  }
 })
 
 boatMembersRoutes.delete('/:boatId/invites/:inviteId', async (c) => {

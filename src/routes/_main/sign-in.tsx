@@ -20,25 +20,39 @@ function safeRedirectPath(raw: string | undefined): string {
   }
 }
 
-type SignInSearch = { redirect?: string; forgot?: string }
+type SignInSearch = {
+  redirect?: string
+  forgot?: string
+  email?: string
+  mode?: 'sign-in' | 'sign-up'
+}
 
 export const Route = createFileRoute('/_main/sign-in')({
   validateSearch: (search: Record<string, unknown>): SignInSearch => {
     const r = search.redirect
     const forgot = search.forgot
+    const email = search.email
+    const mode = search.mode
     const out: SignInSearch = {}
     if (typeof r === 'string' && r.trim()) {
       const t = r.trim()
       if (t.startsWith('/') && !t.startsWith('//')) out.redirect = t
     }
     if (forgot === '1' || forgot === 'true') out.forgot = '1'
+    if (typeof email === 'string' && email.trim()) out.email = email.trim()
+    if (mode === 'sign-in' || mode === 'sign-up') out.mode = mode
     return out
   },
   component: SignInPage,
 })
 
 function SignInPage() {
-  const { redirect: redirectParam, forgot: forgotParam } = Route.useSearch()
+  const {
+    redirect: redirectParam,
+    forgot: forgotParam,
+    email: emailParam,
+    mode: modeParam,
+  } = Route.useSearch()
   const afterAuthPath = useMemo(
     () => safeRedirectPath(redirectParam),
     [redirectParam],
@@ -58,6 +72,8 @@ function SignInPage() {
         if (afterAuthPath !== '/') {
           u.searchParams.set('redirect', afterAuthPath)
         }
+        if (emailParam) u.searchParams.set('email', emailParam)
+        if (modeParam) u.searchParams.set('mode', modeParam)
         window.location.href = u.toString()
         return
       }
@@ -66,7 +82,7 @@ function SignInPage() {
       provider: 'google',
       callbackURL: afterAuthPath,
     })
-  }, [afterAuthPath])
+  }, [afterAuthPath, emailParam, modeParam])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -165,6 +181,14 @@ function SignInPage() {
               <SignInPanel
                 afterAuthPath={afterAuthPath}
                 initialForgotOpen={forgotParam === '1'}
+                initialEmail={emailParam}
+                initialMode={modeParam}
+                inviteRedirectPath={
+                  redirectParam?.startsWith('/invite/') ||
+                  redirectParam?.startsWith('/crew/invite/')
+                    ? afterAuthPath
+                    : undefined
+                }
               />
             </div>
           </div>

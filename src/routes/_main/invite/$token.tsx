@@ -1,9 +1,13 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CrewAvatar } from '../../../components/CrewAvatar'
 import type { MemberInvitePreview } from '../../../domain/member-invite'
-import { useSession } from '../../../lib/auth-client'
+import { signOutToSignIn, useSession } from '../../../lib/auth-client'
+import {
+  buildInviteSignInSearch,
+  normalizeEmailForCompare,
+} from '../../../lib/invite-auth-search'
 import {
   acceptMemberInvite,
   fetchMemberInvitePreview,
@@ -22,6 +26,9 @@ function MemberInvitePage() {
   const [accepting, setAccepting] = useState(false)
   const [accepted, setAccepted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const autoAcceptStarted = useRef(false)
+
+  const inviteRedirect = `/invite/${token}`
 
   useEffect(() => {
     setLoading(true)
@@ -36,28 +43,40 @@ function MemberInvitePage() {
       })
   }, [token])
 
-  const handleAccept = async () => {
+  const handleAccept = useCallback(async () => {
     setAccepting(true)
     try {
-      const result = await acceptMemberInvite(token)
+      await acceptMemberInvite(token)
       setAccepted(true)
-      toast.success(`Joined ${result.targetName}`)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to accept invite')
     } finally {
       setAccepting(false)
     }
-  }
-
-  const signInSearch = {
-    redirect: `/invite/${token}`,
-  }
+  }, [token])
 
   const emailMatches =
     !preview?.inviteeEmail ||
     (Boolean(user && preview) &&
-      user!.email.trim().toLowerCase() ===
-        preview.inviteeEmail.toLowerCase())
+      normalizeEmailForCompare(user!.email) ===
+        normalizeEmailForCompare(preview.inviteeEmail))
+
+  useEffect(() => {
+    if (
+      autoAcceptStarted.current ||
+      !user ||
+      !preview ||
+      accepted ||
+      accepting ||
+      preview.expired ||
+      preview.status !== 'PENDING' ||
+      !emailMatches
+    ) {
+      return
+    }
+    autoAcceptStarted.current = true
+    void handleAccept()
+  }, [user, preview, accepted, accepting, emailMatches, handleAccept])
 
   const targetLabel = preview?.kind === 'ORG' ? 'organization' : 'boat'
   const destination =
@@ -66,6 +85,29 @@ function MemberInvitePage() {
       : preview?.kind === 'BOAT' && preview.targetId
         ? { to: '/boats/$boatId' as const, params: { boatId: preview.targetId } }
         : null
+
+  const showSuccess =
+    accepted ||
+    (preview?.status === 'ACCEPTED' && Boolean(user) && emailMatches)
+
+  const signUpSearch = buildInviteSignInSearch({
+    redirect: inviteRedirect,
+    email: preview?.inviteeEmail,
+    mode: 'sign-up',
+  })
+  const signInSearch = buildInviteSignInSearch({
+    redirect: inviteRedirect,
+    email: preview?.inviteeEmail,
+    mode: 'sign-in',
+  })
+
+  const handleAcceptAsNewUser = () => {
+    const params = new URLSearchParams()
+    params.set('redirect', inviteRedirect)
+    if (preview?.inviteeEmail) params.set('email', preview.inviteeEmail)
+    params.set('mode', 'sign-up')
+    void signOutToSignIn(params.toString())
+  }
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-[var(--bg-base)] px-6 py-12">
@@ -96,13 +138,17 @@ function MemberInvitePage() {
           <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
             Invite unavailable
           </h1>
-        ) : accepted ? (
+        ) : showSuccess ? (
           <>
             <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
               You&apos;re in
             </h1>
             <p className="text-sm text-[var(--sea-ink-soft)]">
-              You joined {preview.targetName}.
+              You have been added to{' '}
+              <strong className="text-[var(--sea-ink)]">
+                {preview.targetName}
+              </strong>
+              .
             </p>
             {destination ? (
               <Link
@@ -123,6 +169,13 @@ function MemberInvitePage() {
               Ask {preview.inviterName} to send a new invite.
             </p>
           </>
+        ) : accepting ? (
+          <>
+            <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
+              {preview.kind === 'ORG' ? 'Organization invite' : 'Boat invite'}
+            </h1>
+            <p className="text-sm text-[var(--sea-ink-soft)]">Accepting…</p>
+          </>
         ) : (
           <>
             <CrewAvatar
@@ -141,42 +194,56 @@ function MemberInvitePage() {
                 {preview.targetName}
               </strong>{' '}
               as {preview.role.toLowerCase()}.
-              {!user
-                ? ' Sign in or create an account to accept.'
-                : null}
             </p>
 
             {!user ? (
-              <Link
-                to="/sign-in"
-                search={signInSearch}
-                className="inline-flex rounded-xl bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] no-underline"
-              >
-                Sign in to accept
-              </Link>
-            ) : !emailMatches ? (
-              <div className="space-y-3">
-                <p className="text-sm text-red-700 dark:text-red-300">
-                  Sign in as {preview.inviteeEmail} to accept this invite.
-                </p>
+              preview.inviteeHasAccount ? (
                 <Link
                   to="/sign-in"
                   search={signInSearch}
-                  className="inline-flex rounded-xl border border-[var(--line)] px-4 py-3 text-sm font-semibold text-[var(--sea-ink)] no-underline"
+                  className="inline-flex rounded-xl bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] no-underline"
                 >
-                  Switch account
+                  Sign in to accept
                 </Link>
-              </div>
-            ) : (
-              <button
-                type="button"
-                disabled={accepting}
-                onClick={() => void handleAccept()}
-                className="inline-flex rounded-xl bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
-              >
-                {accepting ? 'Accepting…' : 'Accept invite'}
-              </button>
-            )}
+              ) : (
+                <Link
+                  to="/sign-in"
+                  search={signUpSearch}
+                  className="inline-flex rounded-xl bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] no-underline"
+                >
+                  Accept
+                </Link>
+              )
+            ) : !emailMatches ? (
+              preview.inviteeHasAccount ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    Sign in as {preview.inviteeEmail} to accept this invite.
+                  </p>
+                  <Link
+                    to="/sign-in"
+                    search={signInSearch}
+                    className="inline-flex rounded-xl border border-[var(--line)] px-4 py-3 text-sm font-semibold text-[var(--sea-ink)] no-underline"
+                  >
+                    Switch account
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    This invite was sent to {preview.inviteeEmail}. You&apos;re
+                    signed in as {user.email}.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleAcceptAsNewUser}
+                    className="inline-flex rounded-xl bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)]"
+                  >
+                    Accept
+                  </button>
+                </div>
+              )
+            ) : null}
           </>
         )}
       </div>

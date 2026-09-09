@@ -1,13 +1,17 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CrewAvatar } from '../../../../components/CrewAvatar'
 import type { CrewInvitePreview } from '../../../../domain/crew'
-import { useSession } from '../../../../lib/auth-client'
+import { signOutToSignIn, useSession } from '../../../../lib/auth-client'
 import {
   acceptCrewInvite,
   fetchCrewInvitePreview,
 } from '../../../../lib/crew-api'
+import {
+  buildInviteSignInSearch,
+  normalizeEmailForCompare,
+} from '../../../../lib/invite-auth-search'
 
 export const Route = createFileRoute('/_main/crew/invite/$token')({
   component: CrewInvitePage,
@@ -22,6 +26,9 @@ function CrewInvitePage() {
   const [accepting, setAccepting] = useState(false)
   const [accepted, setAccepted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const autoAcceptStarted = useRef(false)
+
+  const inviteRedirect = `/crew/invite/${token}`
 
   useEffect(() => {
     setLoading(true)
@@ -36,26 +43,62 @@ function CrewInvitePage() {
       })
   }, [token])
 
-  const handleAccept = async () => {
+  const handleAccept = useCallback(async () => {
     setAccepting(true)
     try {
       await acceptCrewInvite(token)
       setAccepted(true)
-      toast.success('Crew invite accepted')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to accept invite')
     } finally {
       setAccepting(false)
     }
-  }
-
-  const signInSearch = {
-    redirect: `/crew/invite/${token}`,
-  }
+  }, [token])
 
   const emailMatches =
     Boolean(user && preview) &&
-    user!.email.trim().toLowerCase() === preview!.inviteeEmail.toLowerCase()
+    normalizeEmailForCompare(user!.email) ===
+      normalizeEmailForCompare(preview!.inviteeEmail)
+
+  useEffect(() => {
+    if (
+      autoAcceptStarted.current ||
+      !user ||
+      !preview ||
+      accepted ||
+      accepting ||
+      preview.expired ||
+      preview.status !== 'PENDING' ||
+      !emailMatches
+    ) {
+      return
+    }
+    autoAcceptStarted.current = true
+    void handleAccept()
+  }, [user, preview, accepted, accepting, emailMatches, handleAccept])
+
+  const showSuccess =
+    accepted ||
+    (preview?.status === 'ACCEPTED' && Boolean(user) && emailMatches)
+
+  const signUpSearch = buildInviteSignInSearch({
+    redirect: inviteRedirect,
+    email: preview?.inviteeEmail,
+    mode: 'sign-up',
+  })
+  const signInSearch = buildInviteSignInSearch({
+    redirect: inviteRedirect,
+    email: preview?.inviteeEmail,
+    mode: 'sign-in',
+  })
+
+  const handleAcceptAsNewUser = () => {
+    const params = new URLSearchParams()
+    params.set('redirect', inviteRedirect)
+    if (preview?.inviteeEmail) params.set('email', preview.inviteeEmail)
+    params.set('mode', 'sign-up')
+    void signOutToSignIn(params.toString())
+  }
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-[var(--bg-base)] px-6 py-12">
@@ -100,14 +143,18 @@ function CrewInvitePage() {
               Go to Crew
             </Link>
           </>
-        ) : accepted ? (
+        ) : showSuccess ? (
           <>
             <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
               You&apos;re on the crew
             </h1>
             <p className="text-sm text-[var(--sea-ink-soft)]">
-              {preview.inviterName} will need to accept your friend request
-              before you appear as friends.
+              You have been added as{' '}
+              <strong className="text-[var(--sea-ink)]">
+                {preview.crewMemberName}
+              </strong>{' '}
+              on {preview.inviterName}&apos;s crew. They will need to accept
+              your friend request before you appear as friends.
             </p>
             <Link
               to="/crew"
@@ -132,6 +179,13 @@ function CrewInvitePage() {
               Go to Crew
             </Link>
           </>
+        ) : accepting ? (
+          <>
+            <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
+              Crew invite
+            </h1>
+            <p className="text-sm text-[var(--sea-ink-soft)]">Accepting…</p>
+          </>
         ) : (
           <>
             <CrewAvatar
@@ -155,36 +209,53 @@ function CrewInvitePage() {
             </p>
 
             {!user ? (
-              <Link
-                to="/sign-in"
-                search={signInSearch}
-                className="inline-flex rounded-xl bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] no-underline"
-              >
-                Sign in to accept
-              </Link>
-            ) : !emailMatches ? (
-              <div className="space-y-3">
-                <p className="text-sm text-red-700 dark:text-red-300">
-                  Sign in as {preview.inviteeEmail} to accept this invite.
-                </p>
+              preview.inviteeHasAccount ? (
                 <Link
                   to="/sign-in"
                   search={signInSearch}
-                  className="inline-flex rounded-xl border border-[var(--line)] px-4 py-3 text-sm font-semibold text-[var(--sea-ink)] no-underline"
+                  className="inline-flex rounded-xl bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] no-underline"
                 >
-                  Switch account
+                  Sign in to accept
                 </Link>
-              </div>
-            ) : (
-              <button
-                type="button"
-                disabled={accepting}
-                onClick={() => void handleAccept()}
-                className="inline-flex rounded-xl bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
-              >
-                {accepting ? 'Accepting…' : 'Accept invite'}
-              </button>
-            )}
+              ) : (
+                <Link
+                  to="/sign-in"
+                  search={signUpSearch}
+                  className="inline-flex rounded-xl bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] no-underline"
+                >
+                  Accept
+                </Link>
+              )
+            ) : !emailMatches ? (
+              preview.inviteeHasAccount ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    Sign in as {preview.inviteeEmail} to accept this invite.
+                  </p>
+                  <Link
+                    to="/sign-in"
+                    search={signInSearch}
+                    className="inline-flex rounded-xl border border-[var(--line)] px-4 py-3 text-sm font-semibold text-[var(--sea-ink)] no-underline"
+                  >
+                    Switch account
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    This invite was sent to {preview.inviteeEmail}. You&apos;re
+                    signed in as {user.email}.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleAcceptAsNewUser}
+                    className="inline-flex rounded-xl bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)]"
+                  >
+                    Accept
+                  </button>
+                </div>
+              )
+            ) : null}
           </>
         )}
       </div>

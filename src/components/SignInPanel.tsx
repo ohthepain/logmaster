@@ -1,9 +1,19 @@
 import { Link } from '@tanstack/react-router'
 import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
-import { ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react'
-import { authClient, signIn, signUp } from '../lib/auth-client'
-import { passwordResetCallbackUrl } from '../lib/password-reset-url'
+import { ArrowRight, Eye, EyeOff, Lock, Mail, MailCheck } from 'lucide-react'
+import { authClient, signIn, signOut, signUp } from '../lib/auth-client'
+import { getAppOrigin } from '../lib/app-origin'
+import { acceptCrewInvite } from '../lib/crew-api'
+import {
+  normalizeEmailForCompare,
+  parseInviteFromRedirect,
+} from '../lib/invite-auth-search'
+import { acceptMemberInvite } from '../lib/member-invites-api'
+import {
+  emailVerificationCallbackUrl,
+  passwordResetCallbackUrl,
+} from '../lib/password-reset-url'
 import {
   signInWithGoogleNative,
   supportsNativeGoogleSignIn,
@@ -17,6 +27,9 @@ type SignInPanelProps = {
   onAuthSuccess?: () => void
   embedded?: boolean
   initialForgotOpen?: boolean
+  initialEmail?: string
+  initialMode?: 'sign-in' | 'sign-up'
+  inviteRedirectPath?: string
 }
 
 export function SignInPanel({
@@ -24,9 +37,12 @@ export function SignInPanel({
   onAuthSuccess,
   embedded = false,
   initialForgotOpen = false,
+  initialEmail = '',
+  initialMode = 'sign-in',
+  inviteRedirectPath,
 }: SignInPanelProps) {
-  const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
-  const [email, setEmail] = useState('')
+  const [mode, setMode] = useState<'sign-in' | 'sign-up'>(initialMode)
+  const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
@@ -36,6 +52,9 @@ export function SignInPanel({
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('')
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false)
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false)
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<
+    string | null
+  >(null)
 
   const finishAuth = useCallback(() => {
     if (onAuthSuccess) {
@@ -143,17 +162,46 @@ export function SignInPanel({
           email,
           password,
           name: name || email,
-          callbackURL: afterAuthPath,
+          callbackURL: emailVerificationCallbackUrl(getAppOrigin()),
         })
         if (result.error) {
           toast.error(result.error.message ?? 'Sign up failed')
           return
         }
-        toast.success(
-          'Account created. Check your email to verify if required.',
-        )
-        setMode('sign-in')
-        setTab('password')
+
+        const invite = inviteRedirectPath
+          ? parseInviteFromRedirect(inviteRedirectPath)
+          : null
+        const inviteEmail = initialEmail
+          ? normalizeEmailForCompare(initialEmail)
+          : null
+        const signedUpEmail = normalizeEmailForCompare(email)
+        const inviteSignupMatch =
+          invite != null &&
+          inviteEmail != null &&
+          signedUpEmail === inviteEmail
+
+        if (inviteSignupMatch) {
+          try {
+            if (invite.kind === 'member') {
+              await acceptMemberInvite(invite.token)
+            } else {
+              await acceptCrewInvite(invite.token)
+            }
+            toast.success('Invite accepted')
+          } catch (e) {
+            toast.error(
+              e instanceof Error ? e.message : 'Failed to accept invite',
+            )
+          }
+          finishAuth()
+          return
+        }
+
+        // Better Auth may auto-create a session; sign out so FTUE / home does not treat signup as signed in.
+        await signOut()
+        setPendingVerificationEmail(email.trim())
+        setPassword('')
       }
     } finally {
       setLoading(false)
@@ -184,16 +232,17 @@ export function SignInPanel({
     }
   }
 
-  const resendVerification = async () => {
-    if (!email.trim()) {
+  const resendVerification = async (targetEmail?: string) => {
+    const address = (targetEmail ?? email).trim()
+    if (!address) {
       toast.error('Enter your email')
       return
     }
     setLoading(true)
     try {
       const result = await authClient.sendVerificationEmail({
-        email: email.trim(),
-        callbackURL: afterAuthPath,
+        email: address,
+        callbackURL: emailVerificationCallbackUrl(getAppOrigin()),
       })
       if (result.error) {
         toast.error(result.error.message ?? 'Could not send verification email')
@@ -208,6 +257,67 @@ export function SignInPanel({
   const emailInputId = embedded ? 'ftue-email' : 'email'
   const passwordInputId = embedded ? 'ftue-password' : 'password'
   const nameInputId = embedded ? 'ftue-name' : 'name'
+
+  if (pendingVerificationEmail) {
+    return (
+      <div
+        className={`w-full max-w-md scroll-mt-[calc(env(safe-area-inset-top,0px)+3rem)]${
+          embedded ? ' pt-2' : ''
+        }`}
+      >
+        <DevComponentLabel name="SignInPanel" />
+        <div className="mb-6 flex justify-center">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-[var(--chip-bg)] text-[var(--sea-ink)]">
+            <MailCheck size={28} strokeWidth={1.75} />
+          </div>
+        </div>
+        <h2
+          className="text-[var(--sea-ink)] mb-2 text-center"
+          style={{ fontSize: '1.875rem', fontWeight: 700 }}
+        >
+          Check your email
+        </h2>
+        <p className="text-[var(--sea-ink-soft)] text-center leading-relaxed mb-6">
+          We sent a confirmation link to{' '}
+          <span className="font-medium text-[var(--sea-ink)]">
+            {pendingVerificationEmail}
+          </span>
+          . Open it to verify your account, then sign in.
+        </p>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void resendVerification(pendingVerificationEmail)}
+          className="mb-3 w-full py-3 rounded-xl border border-[var(--line)] font-medium text-sm text-[var(--sea-ink)] hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
+        >
+          {loading ? 'Sending…' : 'Resend confirmation email'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setPendingVerificationEmail(null)
+            setMode('sign-in')
+            setTab('password')
+            setEmail(pendingVerificationEmail)
+          }}
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm text-[var(--btn-text)] bg-[var(--btn-bg)] transition hover:opacity-90"
+        >
+          <span>Back to sign in</span>
+          <ArrowRight size={16} />
+        </button>
+        {!embedded && (
+          <p className="text-center mt-4">
+            <Link
+              to="/"
+              className="text-sm text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]"
+            >
+              ← Trips
+            </Link>
+          </p>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div
@@ -341,6 +451,11 @@ export function SignInPanel({
               className="w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] text-sm outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
             />
           </div>
+          {mode === 'sign-up' && initialEmail && inviteRedirectPath ? (
+            <p className="mt-1.5 text-xs text-[var(--sea-ink-soft)]">
+              Use the email this invite was sent to.
+            </p>
+          ) : null}
         </div>
 
         {(mode === 'sign-up' || tab === 'password') && (
@@ -419,7 +534,7 @@ export function SignInPanel({
           <button
             type="button"
             className="underline underline-offset-2 hover:text-[var(--sea-ink)]"
-            onClick={resendVerification}
+            onClick={() => void resendVerification()}
           >
             Resend verification email
           </button>

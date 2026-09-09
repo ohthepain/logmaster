@@ -20,3 +20,8 @@ export const authClient = createAuthClient({
 })
 
 export const { signIn, signUp, signOut, useSession } = authClient
+
+export async function signOutToSignIn(search?: string) {
+  await signOut()
+  window.location.href = search ? `/sign-in?${search}` : '/sign-in'
+}

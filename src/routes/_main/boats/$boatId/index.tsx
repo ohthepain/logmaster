@@ -21,6 +21,7 @@ import {
   fetchBoatMembers,
   inviteBoatMember,
   removeBoatMember,
+  resendBoatInvite,
   updateBoat,
   updateBoatMemberRole,
 } from '../../../../lib/boats-api'
@@ -62,6 +63,8 @@ function BoatDetailPage() {
   const [pendingInvites, setPendingInvites] = useState<MemberInvite[]>([])
   const [canManageMembers, setCanManageMembers] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [membersRefreshing, setMembersRefreshing] = useState(false)
+  const [photosRefreshing, setPhotosRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savingIcon, setSavingIcon] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
@@ -100,6 +103,32 @@ function BoatDetailPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const refreshMembers = useCallback(async () => {
+    setMembersRefreshing(true)
+    try {
+      const membersData = await fetchBoatMembers(boatId)
+      setMembers(membersData.members)
+      setPendingInvites(membersData.pendingInvites)
+      setCanManageMembers(membersData.canManageMembers)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to refresh members')
+    } finally {
+      setMembersRefreshing(false)
+    }
+  }, [boatId])
+
+  const refreshPhotos = useCallback(async () => {
+    setPhotosRefreshing(true)
+    try {
+      const boatData = await fetchBoat(boatId)
+      setBoat(boatData)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to refresh photos')
+    } finally {
+      setPhotosRefreshing(false)
+    }
+  }, [boatId])
 
   const handleIconChange = async (nextIconId: BoatIconId) => {
     if (!boat || boat.iconId === nextIconId) return
@@ -221,7 +250,12 @@ function BoatDetailPage() {
 
       <div role="tabpanel" className="mt-6">
         {tab === 'photos' ? (
-          <BoatPhotosTab boat={boat} onBoatChange={setBoat} />
+          <BoatPhotosTab
+            boat={boat}
+            onBoatChange={setBoat}
+            onRefresh={refreshPhotos}
+            refreshing={photosRefreshing}
+          />
         ) : null}
         {tab === 'documents' ? (
           <BoatDocumentsTab boatId={boat.id} />
@@ -247,6 +281,8 @@ function BoatDetailPage() {
             canManageMembers={canManageMembers}
             notificationTopic="BOAT_MEMBERS"
             notificationBoatId={boatId}
+            onRefresh={refreshMembers}
+            refreshing={membersRefreshing}
             onInvite={() => setInviteOpen(true)}
             onCreateLink={async () => {
               try {
@@ -309,6 +345,9 @@ function BoatDetailPage() {
                   e instanceof Error ? e.message : 'Failed to cancel invite',
                 )
               }
+            }}
+            onResendInvite={async (invite) => {
+              await resendBoatInvite(boatId, invite.id)
             }}
           />
         ) : null}

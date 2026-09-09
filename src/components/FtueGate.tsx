@@ -2,7 +2,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { createPortal } from "react-dom";
 import { useRouterState } from "@tanstack/react-router";
 import { useSession } from "../lib/auth-client";
-import { clearFtueCompletedLocally, isFtueCompletedLocally, markFtueCompletedLocally } from "../lib/ftue";
+import {
+  clearFtueCompletedLocally,
+  isFtueCompletedLocally,
+  markFtueCompletedLocally,
+} from "../lib/ftue";
 import { setIosMapTouchCaptureSuspended } from "../lib/native/ios-map-touch-suspend";
 import { getNativePlatform } from "../lib/platform";
 import { completeTutorial, fetchProfile, resetTutorial as resetTutorialApi } from "../lib/profile-api";
@@ -14,7 +18,7 @@ type FtueContextValue = {
 
 const FtueContext = createContext<FtueContextValue | null>(null);
 
-const FTUE_SKIP_PATHS = new Set(["/reset-password"]);
+const FTUE_SKIP_PATHS = new Set(["/reset-password", "/sign-in"]);
 
 export function useFtue() {
   const context = useContext(FtueContext);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  emailVerificationCallbackUrl,
   passwordResetCallbackUrl,
   passwordResetEmailUrl,
 } from './password-reset-url'
@@ -20,5 +21,13 @@ describe('passwordResetEmailUrl', () => {
     expect(passwordResetCallbackUrl('https://staging.logmaster.live/')).toBe(
       'https://staging.logmaster.live/reset-password',
     )
+  })
+})
+
+describe('emailVerificationCallbackUrl', () => {
+  it('redirects to sign-in after verification', () => {
+    expect(
+      emailVerificationCallbackUrl('https://staging.logmaster.live'),
+    ).toBe('https://staging.logmaster.live/sign-in')
   })
 })

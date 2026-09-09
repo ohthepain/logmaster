@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { sendCrewInviteEmail } from '../email/ses'
+import { inviteeHasAccount } from '../invite-signup'
 import { prisma } from '../db'
 import { ensureConsortiumMember } from '../permissions'
 import { getSessionUserId } from '../session'
@@ -653,9 +654,14 @@ crewRoutes.get('/invites/preview/:token', async (c) => {
   const expired =
     invite.status !== 'PENDING' || invite.expiresAt.getTime() < Date.now()
 
+  const hasAccount = invite.inviteeEmail
+    ? await inviteeHasAccount(invite.inviteeEmail)
+    : false
+
   return c.json({
     inviterName: invite.inviter.name,
     inviteeEmail: invite.inviteeEmail,
+    inviteeHasAccount: hasAccount,
     crewMemberName: invite.crewMember.displayName ?? 'Crew member',
     status: invite.status,
     expired,

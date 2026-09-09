@@ -6,6 +6,7 @@ import { prisma } from '../db'
 import {
   createOrgMemberInvite,
   normalizeInviteEmail,
+  resendMemberInvite,
   serializeMemberInvite,
 } from '../member-invites'
 import {
@@ -13,8 +14,8 @@ import {
   assertCanRemoveMember,
   canAccess,
   createConsortiumWithOwner,
-  getUserConsortiumIds
-  
+  ensureConsortiumMember,
+  getUserConsortiumIds,
 } from '../permissions'
 import type {ConsortiumMemberRole} from '../permissions';
 import {
@@ -419,6 +420,14 @@ consortiaRoutes.post('/:orgId/boats', async (c) => {
     data: { consortiumId, updatedAt: new Date() },
     select: { id: true, name: true },
   })
+
+  const boatMembers = await db.boatMember.findMany({
+    where: { boatId },
+    select: { userId: true },
+  })
+  for (const member of boatMembers) {
+    await ensureConsortiumMember(consortiumId, member.userId, 'MEMBER')
+  }
 
   const org = await getOrgSummary(consortiumId)
   if (org) {
@@ -864,6 +873,36 @@ consortiaRoutes.post('/:orgId/invite-link', async (c) => {
     const message =
       error instanceof Error ? error.message : 'Failed to create invite link'
     return c.json({ error: message }, 409)
+  }
+})
+
+consortiaRoutes.post('/:orgId/invites/:inviteId/resend', async (c) => {
+  const user = await requireUser(c)
+  if (!user) return unauthorized()
+
+  const consortiumId = c.req.param('orgId')
+  const allowed = await canAccess(user.id, 'admin', {
+    type: 'consortium',
+    id: consortiumId,
+  })
+  if (!allowed) return c.json({ error: 'Org not found' }, 403)
+
+  try {
+    await resendMemberInvite({
+      inviteId: c.req.param('inviteId'),
+      kind: 'ORG',
+      scopeId: consortiumId,
+      inviterName: user.name,
+    })
+    return c.json({ ok: true })
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Failed to resend invite'
+    const status = message === 'Invite not found' ? 404 : 400
+    if (message !== 'Invite not found' && message !== 'This invite has no email address') {
+      console.error('[consortia] resend invite failed', error)
+    }
+    return c.json({ error: message }, status)
   }
 })
 

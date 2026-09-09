@@ -1,5 +1,7 @@
 environment = "production"
 
+auth_require_email_verification = true
+
 shared_state_bucket = "shared-aws-tf-state-320205321328"
 
 alb_certificate_arn = "arn:aws:acm:eu-central-1:320205321328:certificate/2c09ddb3-0bbb-4a1e-99a0-b4d1fdada5f1"

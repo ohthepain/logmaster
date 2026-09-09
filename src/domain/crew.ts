@@ -64,6 +64,7 @@ export type CrewPayload = {
 export type CrewInvitePreview = {
   inviterName: string
   inviteeEmail: string
+  inviteeHasAccount: boolean
   crewMemberName: string
   status: CrewInviteStatus
   expired: boolean

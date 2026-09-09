@@ -7,7 +7,11 @@ import {
   sendPasswordResetEmail,
   sendVerifyEmailEmail,
 } from './email/ses'
-import { passwordResetEmailUrl } from '../lib/password-reset-url'
+import {
+  emailVerificationCallbackUrl,
+  passwordResetEmailUrl,
+} from '../lib/password-reset-url'
+import { hasPendingInviteForEmail } from './invite-signup'
 
 const baseURL = process.env.BETTER_AUTH_URL ?? 'http://localhost:3020'
 const secret =
@@ -87,7 +91,12 @@ export const auth = betterAuth({
   emailVerification: {
     sendOnSignUp: true,
     sendVerificationEmail: async ({ user, url }) => {
-      await sendVerifyEmailEmail(user.email, url)
+      const verifyUrl = new URL(url, baseURL)
+      verifyUrl.searchParams.set(
+        'callbackURL',
+        emailVerificationCallbackUrl(baseURL),
+      )
+      await sendVerifyEmailEmail(user.email, verifyUrl.toString())
     },
   },
   emailAndPassword: {
@@ -108,4 +117,16 @@ export const auth = betterAuth({
       },
     }),
   ],
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          if (await hasPendingInviteForEmail(user.email)) {
+            return { data: { ...user, emailVerified: true } }
+          }
+          return { data: user }
+        },
+      },
+    },
+  },
 })

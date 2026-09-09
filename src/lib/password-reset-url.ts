@@ -3,6 +3,11 @@ export function passwordResetCallbackUrl(origin: string): string {
   return `${origin.replace(/\/$/, '')}/reset-password`
 }
 
+/** Where users land after clicking the verify-email link. */
+export function emailVerificationCallbackUrl(origin: string): string {
+  return `${origin.replace(/\/$/, '')}/sign-in`
+}
+
 /** Email link: hits the auth API, which validates the token and redirects to the app. */
 export function passwordResetEmailUrl(args: {
   origin: string

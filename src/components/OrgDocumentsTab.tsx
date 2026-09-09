@@ -44,6 +44,7 @@ export function OrgDocumentsTab({ orgId }: OrgDocumentsTabProps) {
   const [categories, setCategories] = useState<OrgDocumentCategory[]>([])
   const [documents, setDocuments] = useState<OrgDocument[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [addMode, setAddMode] = useState<AddMode>(null)
   const [busy, setBusy] = useState(false)
@@ -59,8 +60,9 @@ export function OrgDocumentsTab({ orgId }: OrgDocumentsTabProps) {
   const [documentViewer, setDocumentViewer] =
     useState<OrgDocumentViewerPayload | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (opts?: { background?: boolean }) => {
+    if (opts?.background) setRefreshing(true)
+    else setLoading(true)
     setError(null)
     try {
       const data = await fetchOrgDocuments(orgId)
@@ -76,6 +78,7 @@ export function OrgDocumentsTab({ orgId }: OrgDocumentsTabProps) {
       setError(e instanceof Error ? e.message : 'Failed to load documents')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [orgId])
 
@@ -228,21 +231,27 @@ export function OrgDocumentsTab({ orgId }: OrgDocumentsTabProps) {
   if (error) {
     return (
       <div className="mt-6 space-y-3">
+        <ResourceSectionHeader
+          title="Documents"
+          topic="ORG_DOCUMENTS"
+          orgId={orgId}
+          onRefresh={() => load()}
+          refreshing={refreshing}
+        />
         <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2 text-sm font-semibold text-[var(--sea-ink)]"
-        >
-          Retry
-        </button>
       </div>
     )
   }
 
   return (
     <>
-      <ResourceSectionHeader title="Documents" topic="ORG_DOCUMENTS" orgId={orgId} />
+      <ResourceSectionHeader
+        title="Documents"
+        topic="ORG_DOCUMENTS"
+        orgId={orgId}
+        onRefresh={() => load({ background: true })}
+        refreshing={refreshing}
+      />
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"

@@ -72,6 +72,8 @@ Core entities: **Trip** → **LogEntry** → **Media**, plus Better Auth user ta
 - **Routes** follow the same pattern: creator-owned, with boat-linked routes visible to users with boat access.
 - **Inheritance:** photos, documents, log entries, and other child resources inherit access from their container (boat or trip via boat).
 - **Crew vs org:** crew roster (`CrewMember`) is for trip logging UX. Accepting a crew invite adds org `MEMBER` only when the inviter has boats attached to an org. Adding a share owner grants org membership only when the boat is attached to an org.
+- **Boat members vs org:** joining an org-attached boat (invite accept or direct add) auto-adds org `MEMBER` as a separate `ConsortiumMember` record. Attaching a boat to an org backfills org membership for existing boat members. Org membership is not auto-removed when boat membership ends — remove from org manually after removing from all org boats.
+- **Org member removal:** cannot remove an org member while they still have a `BoatMember` row on any boat attached to that org.
 - **API:** `/api/orgs/…` for org management; `/api/boats/:id/shares` for share structure and owners; authorization checks via `canAccess()` in route handlers.
 
 ## Offline-first behaviour

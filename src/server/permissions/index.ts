@@ -8,6 +8,8 @@ export {
   assertCanChangeMemberRole,
   assertCanRemoveMember,
   ensureConsortiumMember,
+  ensureOrgMemberForBoatMember,
+  hasOrgBoatMembership,
 } from './consortium'
 export {
   getBoatMemberRole,

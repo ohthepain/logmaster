@@ -19,7 +19,7 @@ import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import type { Boat } from '../domain/boat'
 import type { CrewPayload } from '../domain/crew'
-import { signOut, useSession } from '../lib/auth-client'
+import { signOutToSignIn, useSession } from '../lib/auth-client'
 import {
   formatAppBuildFooter,
   getAppEnvironmentLabel,
@@ -422,7 +422,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                         showChevron={false}
                         onClick={() => {
                           setOpen(false)
-                          void signOut()
+                          void signOutToSignIn()
                         }}
                       />
                     ) : (

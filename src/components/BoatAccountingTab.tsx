@@ -11,6 +11,7 @@ import {
 } from '../lib/boat-assets-api'
 import { createExpenseClaim as createOrgExpenseClaim } from '../lib/org-accounting-api'
 import { cn } from '../lib/cn'
+import { ResourceSectionHeader } from './NotificationBellToggle'
 import { Modal } from './Modal'
 
 type BoatAccountingTabProps = {
@@ -21,12 +22,14 @@ type BoatAccountingTabProps = {
 export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
   const [accounting, setAccounting] = useState<BoatAccountingSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [purchaseOpen, setPurchaseOpen] = useState(false)
   const [claimOpen, setClaimOpen] = useState<BoatPurchase | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (opts?: { background?: boolean }) => {
+    if (opts?.background) setRefreshing(true)
+    else setLoading(true)
     setError(null)
     try {
       const data = await fetchBoatAccounting(boatId)
@@ -35,6 +38,7 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
       setError(e instanceof Error ? e.message : 'Failed to load accounting')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }, [boatId])
 
@@ -49,16 +53,23 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
   if (error || !accounting) {
     return (
       <div>
+        <ResourceSectionHeader
+          title="Accounting"
+          onRefresh={() => load()}
+          refreshing={refreshing}
+        />
         <p className="text-sm text-red-600">{error ?? 'Failed to load'}</p>
-        <button type="button" onClick={() => void load()} className="mt-2 text-sm font-semibold">
-          Retry
-        </button>
       </div>
     )
   }
 
   return (
     <div className="flex flex-col gap-8">
+      <ResourceSectionHeader
+        title="Accounting"
+        onRefresh={() => load({ background: true })}
+        refreshing={refreshing}
+      />
       {orgId ? (
         accounting.bankAccounts.length > 0 ? (
           <section>
