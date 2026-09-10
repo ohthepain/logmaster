@@ -450,7 +450,9 @@ function OrgDetailPage() {
                 )
               }
             }}
-            getContactLink={(contact) => {
+            getContactLink={(
+              contact,
+            ): { to: string; params: Record<string, string> } => {
               if ('boatId' in contact && typeof contact.boatId === 'string') {
                 return {
                   to: '/boats/$boatId/contacts/$contactId',
