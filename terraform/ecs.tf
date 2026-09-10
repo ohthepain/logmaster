@@ -3,7 +3,8 @@ resource "aws_ecs_cluster" "main" {
 
   setting {
     name  = "containerInsights"
-    value = local.is_prod ? "enabled" : "disabled"
+    # value = local.is_prod ? "enabled" : "disabled"
+    value = "disabled"
   }
 }
 
