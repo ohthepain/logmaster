@@ -68,7 +68,7 @@ variable "uploads_cors_allowed_origins" {
 variable "ses_from_email" {
   type        = string
   default     = "no-reply@logmaster.live"
-  description = "From address stored in Secrets Manager (must be on a verified SES identity for this account/region)."
+  description = "From address stored in SSM Parameter Store (must be on a verified SES identity for this account/region)."
 }
 
 variable "ses_configuration_set" {
@@ -110,33 +110,39 @@ variable "google_auth_enabled" {
   default = true
 }
 
-variable "google_client_id_secret_arn" {
+variable "bootstrap_from_legacy_secrets_manager" {
+  type        = bool
+  default     = true
+  description = "Seed new SSM parameters from existing logmaster-{env}-database / logmaster-{env}-app Secrets Manager secrets on cutover. Set false after migration."
+}
+
+variable "google_client_id_parameter_name" {
   type        = string
-  description = "Optional existing Secrets Manager ARN for Google OAuth client ID."
+  description = "Optional SSM name for shared Google OAuth client ID (bootstrap into per-env GOOGLE_CLIENT_ID on new environments)."
   default     = ""
 }
 
-variable "google_client_secret_secret_arn" {
+variable "google_client_secret_parameter_name" {
   type        = string
-  description = "Optional existing Secrets Manager ARN for Google OAuth client secret."
+  description = "Optional SSM name for shared Google OAuth client secret."
   default     = ""
 }
 
-variable "maptiler_api_key_secret_arn" {
+variable "maptiler_api_key_parameter_name" {
   type        = string
-  description = "Optional existing Secrets Manager ARN for MapTiler API key."
-  default     = ""
+  description = "SSM Parameter Store name for shared MapTiler API key."
+  default     = "/logmaster/account/maptiler-api-key"
 }
 
-variable "aisstream_api_key_secret_arn" {
+variable "aisstream_api_key_parameter_name" {
   type        = string
-  description = "Optional existing Secrets Manager ARN for AISStream.io API key."
-  default     = ""
+  description = "SSM Parameter Store name for shared AISStream.io API key."
+  default     = "/logmaster/account/aisstream-api-key"
 }
 
-variable "apns_key_secret_arn" {
+variable "apns_key_parameter_name" {
   type        = string
-  description = "Optional existing Secrets Manager ARN for Apple APNS .p8 key (plain string file contents)."
+  description = "SSM Parameter Store name for shared Apple APNS .p8 key (plain string file contents). Leave empty if not using a shared account parameter."
   default     = ""
 }
 

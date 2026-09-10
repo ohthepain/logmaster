@@ -39,6 +39,15 @@ Set `BETTER_AUTH_URL` to the same origin you use in the browser (e.g. `http://lo
 `pnpm dev`) so OAuth state cookies validate. Optional: `pnpm worker` in another terminal to process
 background map data jobs if the API process does not run the worker.
 
+### Secrets
+
+We are using AWS Systems Manager Parameter Store for secrets. Except that for the db we use Secrets Manager.
+This is due to costs. Secrets Manager seemed worth it for the automatic rotation for the db root password.
+
+To update secrets moving forward ...
+./scripts/set-google-oauth-secrets.sh staging
+./scripts/set-maptiler-secrets.sh production
+
 ### Google sign-in
 
 Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to `.env` (see `.env.example`). In Google Cloud Console, configure:

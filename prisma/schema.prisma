@@ -49,6 +49,13 @@ enum ConsortiumMemberRole {
   VIEWER
 }
 
+enum ContactResourceArea {
+  PHOTOS
+  DOCUMENTS
+  ASSETS
+  ACCOUNTING
+}
+
 enum Visibility {
   PRIVATE
   UNLISTED
@@ -83,6 +90,7 @@ model User {
   createdRoutes          Route[]        @relation("CreatedRoutes")
   boatShareOwnerships    BoatShareOwner[]
   orgContacts           ConsortiumContact[]
+  boatContacts          BoatContact[]
   ownedBoatAssets       BoatAsset[]        @relation("BoatAssetOwner")
   loanedBoatAssets      BoatAsset[]        @relation("BoatAssetLoanFrom")
   expenseClaims         ExpenseClaim[]     @relation("ExpenseClaimClaimant")
@@ -106,6 +114,7 @@ enum NotificationTopic {
   ORG_MEMBERS
   ORG_DOCUMENTS
   ORG_CONTACTS
+  BOAT_CONTACTS
   ORG_BOATS
   ADMIN_JOBS
 }
@@ -248,6 +257,7 @@ model ConsortiumContact {
   phone        String?
   whatsapp     String?
   notes        String?
+  grants       ContactResourceArea[] @default([])
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -565,6 +575,7 @@ model Boat {
   documents          BoatDocument[]
   shares             BoatShare[]
   members            BoatMember[]
+  contacts           BoatContact[]
   memberInvites      MemberInvite[]
   assets             BoatAsset[]
   purchases          BoatPurchase[]
@@ -702,6 +713,27 @@ model BoatMember {
   @@unique([boatId, userId])
   @@index([userId])
   @@map("boat_member")
+}
+
+model BoatContact {
+  id          String                @id @default(cuid())
+  boatId      String
+  userId      String?
+  displayName String
+  email       String?
+  phone       String?
+  whatsapp    String?
+  notes       String?
+  grants      ContactResourceArea[] @default([])
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  boat Boat  @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([boatId, displayName])
+  @@index([userId])
+  @@map("boat_contact")
 }
 
 model MemberInvite {

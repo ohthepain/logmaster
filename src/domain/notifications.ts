@@ -3,6 +3,7 @@ export type NotificationTopic =
   | 'BOAT_DOCUMENTS'
   | 'BOAT_ASSETS'
   | 'BOAT_MEMBERS'
+  | 'BOAT_CONTACTS'
   | 'BOAT_SHARES'
   | 'BOAT_TRIPS_COMPLETED'
   | 'ORG_MEMBERS'
@@ -57,6 +58,7 @@ export const NOTIFICATION_TOPIC_LABELS: Record<NotificationTopic, string> = {
   BOAT_DOCUMENTS: 'Documents',
   BOAT_ASSETS: 'Assets',
   BOAT_MEMBERS: 'Members',
+  BOAT_CONTACTS: 'Contacts',
   BOAT_SHARES: 'Shares',
   BOAT_TRIPS_COMPLETED: 'Completed trips',
   ORG_MEMBERS: 'Members',
@@ -71,6 +73,7 @@ export const BOAT_NOTIFICATION_TOPICS: NotificationTopic[] = [
   'BOAT_DOCUMENTS',
   'BOAT_ASSETS',
   'BOAT_MEMBERS',
+  'BOAT_CONTACTS',
   'BOAT_SHARES',
   'BOAT_TRIPS_COMPLETED',
 ]

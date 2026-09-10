@@ -25,5 +25,5 @@ terraform apply \
   -target='postgresql_role.tenant[0]' \
   -target='postgresql_database.tenant[0]' \
   -target='postgresql_grant.tenant_database[0]' \
-  -target=aws_secretsmanager_secret_version.database \
+  -target=aws_ssm_parameter.database_url \
   "${@:2}"

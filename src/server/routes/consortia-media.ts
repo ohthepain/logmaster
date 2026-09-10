@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import { prisma } from '../db'
-import { canAccess  } from '../permissions'
+import { canAccess, getOrgContactGrants  } from '../permissions'
+import { canAccessOrgResource } from '../contact-utils'
+import type {ContactResourceArea} from '../../domain/contact';
 import type {Privilege} from '../permissions';
 import { getSessionUserId } from '../session'
 import { fireOrgDocumentsNotification } from '../notifications/route-hooks'
@@ -59,16 +61,37 @@ async function getConsortiumForUser(
   consortiumId: string,
   privilege: Privilege,
 ) {
-  const allowed = await canAccess(userId, privilege, {
-    type: 'consortium',
-    id: consortiumId,
-  })
+  const allowed =
+    (await canAccess(userId, privilege, {
+      type: 'consortium',
+      id: consortiumId,
+    })) ||
+    (privilege === 'view' &&
+      (await getOrgContactGrants(userId, consortiumId)).length > 0)
   if (!allowed) return null
   return db.consortium.findUnique({
     where: { id: consortiumId },
     include: {
       photos: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
     },
+  })
+}
+
+async function getConsortiumForArea(
+  userId: string,
+  consortiumId: string,
+  area: ContactResourceArea,
+  privilege: Privilege,
+) {
+  const allowed = await canAccessOrgResource(
+    userId,
+    consortiumId,
+    area,
+    privilege,
+  )
+  if (!allowed) return null
+  return db.consortium.findUnique({
+    where: { id: consortiumId },
   })
 }
 
@@ -103,10 +126,12 @@ async function getDocumentForUser(
     },
   })
   if (!document) return null
-  const allowed = await canAccess(userId, privilege, {
-    type: 'consortium',
-    id: document.consortiumId,
-  })
+  const allowed = await canAccessOrgResource(
+    userId,
+    document.consortiumId,
+    'DOCUMENTS',
+    privilege,
+  )
   if (!allowed) return null
   return document
 }
@@ -121,10 +146,12 @@ async function getDocumentVersionForUser(
     include: { document: { include: { consortium: true } } },
   })
   if (!version) return null
-  const allowed = await canAccess(userId, privilege, {
-    type: 'consortium',
-    id: version.document.consortiumId,
-  })
+  const allowed = await canAccessOrgResource(
+    userId,
+    version.document.consortiumId,
+    'DOCUMENTS',
+    privilege,
+  )
   if (!allowed) return null
   return version
 }
@@ -427,9 +454,11 @@ consortiaMediaRoutes.get('/:orgId/documents', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const consortium = await getConsortiumForUser(
+  const orgId = c.req.param('orgId')
+  const consortium = await getConsortiumForArea(
     userId,
-    c.req.param('orgId'),
+    orgId,
+    'DOCUMENTS',
     'view',
   )
   if (!consortium) return c.json({ error: 'Org not found' }, 404)

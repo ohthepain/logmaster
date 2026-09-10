@@ -58,47 +58,47 @@ resource "aws_ecs_task_definition" "app" {
       secrets = [
         {
           name      = "DATABASE_URL"
-          valueFrom = "${aws_secretsmanager_secret.database.arn}:DATABASE_URL::"
+          valueFrom = aws_ssm_parameter.database_url.arn
         },
         {
           name      = "BETTER_AUTH_SECRET"
-          valueFrom = "${aws_secretsmanager_secret.app.arn}:BETTER_AUTH_SECRET::"
+          valueFrom = aws_ssm_parameter.better_auth_secret.arn
         },
         {
           name      = "GOOGLE_CLIENT_ID"
-          valueFrom = "${aws_secretsmanager_secret.app.arn}:GOOGLE_CLIENT_ID::"
+          valueFrom = aws_ssm_parameter.google_client_id.arn
         },
         {
           name      = "GOOGLE_CLIENT_SECRET"
-          valueFrom = "${aws_secretsmanager_secret.app.arn}:GOOGLE_CLIENT_SECRET::"
+          valueFrom = aws_ssm_parameter.google_client_secret.arn
         },
         {
           name      = "AWS_SES_FROM_EMAIL"
-          valueFrom = "${aws_secretsmanager_secret.app.arn}:AWS_SES_FROM_EMAIL::"
+          valueFrom = aws_ssm_parameter.ses_from_email.arn
         },
         {
           name      = "MAPTILER_API_KEY"
-          valueFrom = "${aws_secretsmanager_secret.app.arn}:MAPTILER_API_KEY::"
+          valueFrom = aws_ssm_parameter.maptiler_api_key.arn
         },
         {
           name      = "AISSTREAM_API_KEY"
-          valueFrom = "${aws_secretsmanager_secret.app.arn}:AISSTREAM_API_KEY::"
+          valueFrom = aws_ssm_parameter.aisstream_api_key.arn
         },
         {
           name      = "APNS_KEY"
-          valueFrom = "${aws_secretsmanager_secret.app.arn}:APNS_KEY::"
+          valueFrom = aws_ssm_parameter.apns_key.arn
         },
         {
           name      = "APNS_KEY_ID"
-          valueFrom = "${aws_secretsmanager_secret.app.arn}:APNS_KEY_ID::"
+          valueFrom = aws_ssm_parameter.apns_key_id.arn
         },
         {
           name      = "APNS_TEAM_ID"
-          valueFrom = "${aws_secretsmanager_secret.app.arn}:APNS_TEAM_ID::"
+          valueFrom = aws_ssm_parameter.apns_team_id.arn
         },
         {
           name      = "APNS_BUNDLE_ID"
-          valueFrom = "${aws_secretsmanager_secret.app.arn}:APNS_BUNDLE_ID::"
+          valueFrom = aws_ssm_parameter.apns_bundle_id.arn
         },
       ]
 

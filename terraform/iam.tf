@@ -18,8 +18,8 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_managed" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-resource "aws_iam_role_policy" "ecs_execution_secrets" {
-  name = "${local.name_prefix}-ecs-exec-secrets"
+resource "aws_iam_role_policy" "ecs_execution_ssm" {
+  name = "${local.name_prefix}-ecs-exec-ssm"
   role = aws_iam_role.ecs_execution.id
 
   policy = jsonencode({
@@ -28,11 +28,21 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
       {
         Effect = "Allow"
         Action = [
-          "secretsmanager:GetSecretValue",
+          "ssm:GetParameters",
+          "ssm:GetParameter",
         ]
         Resource = [
-          aws_secretsmanager_secret.database.arn,
-          aws_secretsmanager_secret.app.arn,
+          aws_ssm_parameter.database_url.arn,
+          aws_ssm_parameter.better_auth_secret.arn,
+          aws_ssm_parameter.google_client_id.arn,
+          aws_ssm_parameter.google_client_secret.arn,
+          aws_ssm_parameter.ses_from_email.arn,
+          aws_ssm_parameter.maptiler_api_key.arn,
+          aws_ssm_parameter.aisstream_api_key.arn,
+          aws_ssm_parameter.apns_key.arn,
+          aws_ssm_parameter.apns_key_id.arn,
+          aws_ssm_parameter.apns_team_id.arn,
+          aws_ssm_parameter.apns_bundle_id.arn,
         ]
       },
       {
@@ -43,7 +53,7 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
         Resource = ["*"]
         Condition = {
           StringEquals = {
-            "kms:ViaService" = "secretsmanager.${data.aws_region.current.name}.amazonaws.com"
+            "kms:ViaService" = "ssm.${data.aws_region.current.name}.amazonaws.com"
           }
         }
       }

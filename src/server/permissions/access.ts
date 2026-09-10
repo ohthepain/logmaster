@@ -4,6 +4,10 @@ import {
   getUserConsortiumIds,
 } from './consortium'
 import { getBoatMemberRole, getUserBoatMemberIds } from './boat-members'
+import {
+  getUserContactBoatIds,
+  getUserContactOrgIds,
+} from './contacts'
 import { roleHasPrivilege, strongestRole   } from './roles'
 import type {ConsortiumMemberRole, Privilege} from './roles';
 
@@ -213,8 +217,11 @@ export async function requireAccess(
 }
 
 export async function accessibleConsortiumFilter(userId: string) {
-  const consortiumIds = await getUserConsortiumIds(userId)
-  return consortiumIds
+  const [memberOrgIds, contactOrgIds] = await Promise.all([
+    getUserConsortiumIds(userId),
+    getUserContactOrgIds(userId),
+  ])
+  return [...new Set([...memberOrgIds, ...contactOrgIds])]
 }
 
 async function shareOwnedBoatIds(userId: string): Promise<string[]> {
@@ -229,11 +236,12 @@ async function shareOwnedBoatIds(userId: string): Promise<string[]> {
 }
 
 async function accessibleBoatIds(userId: string): Promise<string[]> {
-  const [consortiumIds, memberBoatIds] = await Promise.all([
+  const [consortiumIds, memberBoatIds, contactBoatIds] = await Promise.all([
     getUserConsortiumIds(userId),
     getUserBoatMemberIds(userId),
+    getUserContactBoatIds(userId),
   ])
-  const [consortiumBoats, ownedBoats, shareBoats, explicitMemberBoats] =
+  const [consortiumBoats, ownedBoats, shareBoats, explicitMemberBoats, guestBoats] =
     await Promise.all([
     consortiumIds.length > 0
       ? db.boat.findMany({
@@ -256,6 +264,12 @@ async function accessibleBoatIds(userId: string): Promise<string[]> {
           select: { id: true },
         })
       : [],
+    contactBoatIds.length > 0
+      ? db.boat.findMany({
+          where: { id: { in: contactBoatIds } },
+          select: { id: true },
+        })
+      : [],
   ])
 
   return [
@@ -264,6 +278,7 @@ async function accessibleBoatIds(userId: string): Promise<string[]> {
       ...ownedBoats.map((b: { id: string }) => b.id),
       ...shareBoats.map((b: { id: string }) => b.id),
       ...explicitMemberBoats.map((b: { id: string }) => b.id),
+      ...guestBoats.map((b: { id: string }) => b.id),
     ]),
   ]
 }
@@ -291,10 +306,12 @@ export async function routeAccessFilter(userId: string) {
 }
 
 export async function boatAccessFilter(userId: string) {
-  const [consortiumIds, memberBoatIds, shareBoatIds] = await Promise.all([
+  const [consortiumIds, memberBoatIds, shareBoatIds, contactBoatIds] =
+    await Promise.all([
     getUserConsortiumIds(userId),
     getUserBoatMemberIds(userId),
     shareOwnedBoatIds(userId),
+    getUserContactBoatIds(userId),
   ])
 
   return {
@@ -305,6 +322,7 @@ export async function boatAccessFilter(userId: string) {
         : []),
       ...(shareBoatIds.length > 0 ? [{ id: { in: shareBoatIds } }] : []),
       ...(memberBoatIds.length > 0 ? [{ id: { in: memberBoatIds } }] : []),
+      ...(contactBoatIds.length > 0 ? [{ id: { in: contactBoatIds } }] : []),
     ],
   }
 }

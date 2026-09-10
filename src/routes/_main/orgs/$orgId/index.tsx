@@ -1,7 +1,6 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Mail, Plus, Sailboat, Trash2 } from 'lucide-react'
+import { Plus, Sailboat } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
 import { toast } from 'sonner'
 import { AttachBoatToOrgModal } from '../../../../components/AttachBoatToOrgModal'
 import { OrgDocumentsTab } from '../../../../components/OrgDocumentsTab'
@@ -11,12 +10,14 @@ import {
   InviteMemberModal,
   ResourceMembersTab,
 } from '../../../../components/ResourceMembersTab'
-import { Modal } from '../../../../components/Modal'
+import {
+  AddContactModal,
+  ORG_CONTACT_AREAS,
+  ResourceContactsTab,
+} from '../../../../components/ResourceContactsTab'
 import type { MemberInvite, ResourceMember } from '../../../../domain/member-invite'
-import type {
-  Org,
-  OrgContact,
-} from '../../../../domain/org'
+import type { ContactResourceArea } from '../../../../domain/contact'
+import type { Org, OrgContact } from '../../../../domain/org'
 import {
   cancelOrgInvite,
   createOrgContact,
@@ -32,10 +33,16 @@ import {
   updateOrgMemberRole,
 } from '../../../../lib/orgs-api'
 import { cn } from '../../../../lib/cn'
+import type { BoatContactGroup } from '../../../../domain/contact'
 import { ResourceSectionHeader } from '../../../../components/NotificationBellToggle'
 import { useSession } from '../../../../lib/auth-client'
 
 type OrgDetailTab = 'members' | 'documents' | 'contacts' | 'boats' | 'accounting'
+
+const ORG_TAB_AREAS: Partial<Record<OrgDetailTab, ContactResourceArea>> = {
+  documents: 'DOCUMENTS',
+  accounting: 'ACCOUNTING',
+}
 
 type OrgDetailSearch = {
   tab?: OrgDetailTab
@@ -67,6 +74,12 @@ function OrgDetailPage() {
   const [members, setMembers] = useState<ResourceMember[]>([])
   const [pendingInvites, setPendingInvites] = useState<MemberInvite[]>([])
   const [contacts, setContacts] = useState<OrgContact[]>([])
+  const [boatContactGroups, setBoatContactGroups] = useState<BoatContactGroup[]>(
+    [],
+  )
+  const [contactGrants, setContactGrants] = useState<ContactResourceArea[] | null>(
+    null,
+  )
   const [loading, setLoading] = useState(true)
   const [membersRefreshing, setMembersRefreshing] = useState(false)
   const [contactsRefreshing, setContactsRefreshing] = useState(false)
@@ -102,16 +115,18 @@ function OrgDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const [orgData, membersData, contactsData] = await Promise.all([
+      const [orgPayload, membersData, contactsPayload] = await Promise.all([
         fetchOrg(orgId),
         fetchOrgMembers(orgId),
         fetchOrgContacts(orgId),
       ])
-      setOrg(orgData)
+      setOrg(orgPayload.org)
+      setContactGrants(orgPayload.contactGrants)
       setMembers(membersData.members)
       setPendingInvites(membersData.pendingInvites)
-      setContacts(contactsData)
-      setNameDraft(orgData.name)
+      setContacts(contactsPayload.orgContacts)
+      setBoatContactGroups(contactsPayload.boatContacts)
+      setNameDraft(orgPayload.org.name)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load organization')
       setOrg(null)
@@ -140,7 +155,9 @@ function OrgDetailPage() {
   const refreshContacts = useCallback(async () => {
     setContactsRefreshing(true)
     try {
-      setContacts(await fetchOrgContacts(orgId))
+      const payload = await fetchOrgContacts(orgId)
+      setContacts(payload.orgContacts)
+      setBoatContactGroups(payload.boatContacts)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to refresh contacts')
     } finally {
@@ -151,8 +168,9 @@ function OrgDetailPage() {
   const refreshBoats = useCallback(async () => {
     setBoatsRefreshing(true)
     try {
-      const orgData = await fetchOrg(orgId)
-      setOrg(orgData)
+      const orgPayload = await fetchOrg(orgId)
+      setOrg(orgPayload.org)
+      setContactGrants(orgPayload.contactGrants)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to refresh boats')
     } finally {
@@ -205,6 +223,22 @@ function OrgDetailPage() {
     )
   }
 
+  const isGuestContact = contactGrants !== null && contactGrants.length > 0
+  const tabCandidates: OrgDetailTab[] = isGuestContact
+    ? (['documents', 'accounting'] as const).filter((value) => {
+        const area = ORG_TAB_AREAS[value]
+        return area ? contactGrants.includes(area) : false
+      })
+    : ['members', 'documents', 'contacts', 'boats', 'accounting']
+  const activeTab = tabCandidates.includes(tab) ? tab : tabCandidates[0] ?? 'members'
+  const tabLabels: Record<OrgDetailTab, string> = {
+    members: 'Members',
+    documents: 'Documents',
+    contacts: 'Contacts',
+    boats: 'Boats',
+    accounting: 'Accounting',
+  }
+
   return (
     <main className="page-wrap px-3 pb-24 pt-4 sm:px-4">
       <p className="mb-2 text-sm">
@@ -220,7 +254,7 @@ function OrgDetailPage() {
         <OrgIconSelector
           org={org}
           onOrgChange={setOrg}
-          disabled={!canManageOrg}
+          disabled={!canManageOrg || isGuestContact}
         />
         <div className="min-w-0 flex-1">
         {editingName ? (
@@ -254,8 +288,9 @@ function OrgDetailPage() {
         ) : (
           <button
             type="button"
+            disabled={isGuestContact}
             onClick={() => setEditingName(true)}
-            className="brand-title m-0 block min-w-0 text-left text-[2.35rem] leading-none sm:text-[2.75rem]"
+            className="brand-title m-0 block min-w-0 text-left text-[2.35rem] leading-none sm:text-[2.75rem] disabled:cursor-default"
           >
             {org.name}
           </button>
@@ -268,16 +303,8 @@ function OrgDetailPage() {
         aria-label="Organization sections"
         className="mt-8 flex flex-wrap gap-2 border-b border-[var(--line)] pb-3"
       >
-        {(
-          [
-            ['members', 'Members'],
-            ['documents', 'Documents'],
-            ['contacts', 'Contacts'],
-            ['boats', 'Boats'],
-            ['accounting', 'Accounting'],
-          ] as const
-        ).map(([value, label]) => {
-          const selected = tab === value
+        {tabCandidates.map((value) => {
+          const selected = activeTab === value
           return (
             <button
               key={value}
@@ -292,14 +319,14 @@ function OrgDetailPage() {
                   : 'border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] hover:bg-[var(--link-bg-hover)]',
               )}
             >
-              {label}
+              {tabLabels[value]}
             </button>
           )
         })}
       </div>
 
       <div role="tabpanel" className="mt-6">
-        {tab === 'members' ? (
+        {activeTab === 'members' ? (
           <ResourceMembersTab
             members={members}
             pendingInvites={pendingInvites}
@@ -377,14 +404,17 @@ function OrgDetailPage() {
           />
         ) : null}
 
-        {tab === 'documents' ? (
+        {activeTab === 'documents' ? (
           <OrgDocumentsTab orgId={orgId} />
         ) : null}
 
-        {tab === 'contacts' ? (
-          <ContactsTab
-            orgId={orgId}
+        {activeTab === 'contacts' ? (
+          <ResourceContactsTab
             contacts={contacts}
+            boatContactGroups={boatContactGroups}
+            canManage={canManageOrg}
+            notificationTopic="ORG_CONTACTS"
+            notificationOrgId={orgId}
             onRefresh={refreshContacts}
             refreshing={contactsRefreshing}
             onAdd={() => setAddContactOpen(true)}
@@ -404,10 +434,25 @@ function OrgDetailPage() {
                 )
               }
             }}
+            getContactLink={(contact) => {
+              if ('boatId' in contact && typeof contact.boatId === 'string') {
+                return {
+                  to: '/boats/$boatId/contacts/$contactId',
+                  params: {
+                    boatId: contact.boatId,
+                    contactId: contact.id,
+                  } as Record<string, string>,
+                }
+              }
+              return {
+                to: '/orgs/$orgId/contacts/$contactId',
+                params: { orgId, contactId: contact.id },
+              }
+            }}
           />
         ) : null}
 
-        {tab === 'boats' ? (
+        {activeTab === 'boats' ? (
           <BoatsTab
             orgId={orgId}
             boats={org.boats ?? []}
@@ -417,7 +462,7 @@ function OrgDetailPage() {
           />
         ) : null}
 
-        {tab === 'accounting' ? (
+        {activeTab === 'accounting' ? (
           <OrgAccountingTab orgId={orgId} canManage={canManageAccounting} />
         ) : null}
       </div>
@@ -443,9 +488,13 @@ function OrgDetailPage() {
       <AddContactModal
         open={addContactOpen}
         onClose={() => setAddContactOpen(false)}
-        orgId={orgId}
-        onCreated={(contact) => {
+        title="Add org contact"
+        devComponentName="AddOrgContactModal"
+        grantAreas={ORG_CONTACT_AREAS}
+        onSubmit={async (input) => {
+          const contact = await createOrgContact(orgId, input)
           setContacts((current) => [...current, contact])
+          toast.success('Contact added')
         }}
       />
 
@@ -455,7 +504,7 @@ function OrgDetailPage() {
         orgId={orgId}
         existingBoatIds={(org.boats ?? []).map((boat) => boat.id)}
         onAttached={() => {
-          void fetchOrg(orgId).then(setOrg)
+          void fetchOrg(orgId).then((payload) => setOrg(payload.org))
         }}
       />
 
@@ -522,235 +571,5 @@ function BoatsTab({
         </ul>
       )}
     </div>
-  )
-}
-
-function ContactsTab({
-  orgId,
-  contacts,
-  onAdd,
-  onDelete,
-  onRefresh,
-  refreshing = false,
-}: {
-  orgId: string
-  contacts: OrgContact[]
-  onAdd: () => void
-  onDelete: (contact: OrgContact) => void
-  onRefresh?: () => void | Promise<void>
-  refreshing?: boolean
-}) {
-  return (
-    <div>
-      <ResourceSectionHeader
-        title="Contacts"
-        topic="ORG_CONTACTS"
-        orgId={orgId}
-        onRefresh={onRefresh}
-        refreshing={refreshing}
-        actions={
-          <button
-            type="button"
-            onClick={onAdd}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
-          >
-            <Plus className="size-4" />
-            Add contact
-          </button>
-        }
-      />
-      <p className="mb-4 text-sm text-[var(--sea-ink-soft)]">
-        {contacts.length} non-member {contacts.length === 1 ? 'contact' : 'contacts'}
-      </p>
-
-      {contacts.length === 0 ? (
-        <p className="text-sm text-[var(--sea-ink-soft)]">
-          No non-member contacts yet. Members appear under Members; add contacts
-          here for people who are not in the org app.
-        </p>
-      ) : (
-        <ul className="m-0 list-none space-y-2 p-0">
-          {contacts.map((contact) => (
-            <li
-              key={contact.id}
-              className="flex flex-wrap items-start gap-3 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3"
-            >
-              <Link
-                to="/orgs/$orgId/contacts/$contactId"
-                params={{ orgId, contactId: contact.id }}
-                className="min-w-0 flex-1 no-underline transition hover:opacity-80"
-              >
-                <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
-                  {contact.displayName}
-                </p>
-                {contact.email ? (
-                  <p className="m-0 mt-1 flex items-center gap-1 text-xs text-[var(--sea-ink-soft)]">
-                    <Mail className="size-3.5" />
-                    {contact.email}
-                  </p>
-                ) : null}
-                {contact.phone ? (
-                  <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">
-                    {contact.phone}
-                  </p>
-                ) : null}
-                {contact.notes ? (
-                  <p className="m-0 mt-2 text-xs leading-5 text-[var(--sea-ink-soft)]">
-                    {contact.notes}
-                  </p>
-                ) : null}
-              </Link>
-              <button
-                type="button"
-                onClick={() => void onDelete(contact)}
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-red-700 dark:text-red-300"
-              >
-                <Trash2 className="size-3.5" />
-                Delete
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
-
-function AddContactModal({
-  open,
-  onClose,
-  orgId,
-  onCreated,
-}: {
-  open: boolean
-  onClose: () => void
-  orgId: string
-  onCreated: (contact: OrgContact) => void
-}) {
-  const [displayName, setDisplayName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [whatsapp, setWhatsapp] = useState('')
-  const [notes, setNotes] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  if (!open) return null
-
-  const reset = () => {
-    setDisplayName('')
-    setEmail('')
-    setPhone('')
-    setWhatsapp('')
-    setNotes('')
-  }
-
-  const handleClose = () => {
-    if (loading) return
-    reset()
-    onClose()
-  }
-
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault()
-    const name = displayName.trim()
-    if (!name) {
-      toast.error('Name is required')
-      return
-    }
-    setLoading(true)
-    try {
-      const contact = await createOrgContact(orgId, {
-        displayName: name,
-        email: email.trim() || undefined,
-        phone: phone.trim() || undefined,
-        whatsapp: whatsapp.trim() || undefined,
-        notes: notes.trim() || undefined,
-      })
-      toast.success('Contact added')
-      onCreated(contact)
-      reset()
-      onClose()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to add contact')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <Modal title="Add contact" onClose={handleClose} devComponentName="AddOrgContactModal">
-      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
-            Name
-          </span>
-          <input
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            autoFocus
-            className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
-            Email
-          </span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
-            Phone
-          </span>
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
-            WhatsApp
-          </span>
-          <input
-            value={whatsapp}
-            onChange={(e) => setWhatsapp(e.target.value)}
-            className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
-            Notes
-          </span>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
-          />
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
-          >
-            {loading ? 'Adding…' : 'Add contact'}
-          </button>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={handleClose}
-            className="rounded-full border border-[var(--chip-line)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)]"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </Modal>
   )
 }

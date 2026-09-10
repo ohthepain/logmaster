@@ -6,6 +6,7 @@ import type {
   OrgMemberRole,
   OrgPhoto,
 } from '../domain/org'
+import type { OrgContactsPayload, ContactResourceArea } from '../domain/contact'
 import type { Boat } from '../domain/boat'
 import type {
   InviteMemberResult,
@@ -43,9 +44,13 @@ export async function fetchOrgs(): Promise<Org[]> {
   return data.orgs
 }
 
-export async function fetchOrg(orgId: string): Promise<Org> {
-  const data = await api<{ org: Org }>(`/api/orgs/${orgId}`)
-  return data.org
+export async function fetchOrg(orgId: string): Promise<{
+  org: Org
+  contactGrants: ContactResourceArea[] | null
+}> {
+  return api<{ org: Org; contactGrants: ContactResourceArea[] | null }>(
+    `/api/orgs/${orgId}`,
+  )
 }
 
 export async function createOrg(name: string): Promise<Org> {
@@ -148,6 +153,7 @@ export async function updateOrgContact(
     phone?: string | null
     whatsapp?: string | null
     notes?: string | null
+    grants?: ContactResourceArea[]
   },
 ): Promise<OrgContact> {
   const data = await api<{ contact: OrgContact }>(
@@ -168,11 +174,8 @@ export async function addOrgContactMembership(
   })
 }
 
-export async function fetchOrgContacts(orgId: string): Promise<OrgContact[]> {
-  const data = await api<{ contacts: OrgContact[] }>(
-    `/api/orgs/${orgId}/contacts`,
-  )
-  return data.contacts
+export async function fetchOrgContacts(orgId: string): Promise<OrgContactsPayload> {
+  return api<OrgContactsPayload>(`/api/orgs/${orgId}/contacts`)
 }
 
 export async function createOrgContact(
@@ -183,6 +186,7 @@ export async function createOrgContact(
     phone?: string
     whatsapp?: string
     notes?: string
+    grants?: ContactResourceArea[]
   },
 ): Promise<OrgContact> {
   const data = await api<{ contact: OrgContact }>(`/api/orgs/${orgId}/contacts`, {

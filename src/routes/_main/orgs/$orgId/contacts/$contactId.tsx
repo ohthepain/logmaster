@@ -5,7 +5,13 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { CrewAvatar } from '../../../../../components/CrewAvatar'
 import { MEMBER_ROLE_LABELS } from '../../../../../domain/member-invite'
+import type { ContactResourceArea } from '../../../../../domain/contact'
+import { formatContactGrants } from '../../../../../domain/contact'
 import type { OrgContactDetail, OrgMemberBoat, OrgMemberRole } from '../../../../../domain/org'
+import {
+  ContactGrantsEditor,
+  ORG_CONTACT_AREAS,
+} from '../../../../../components/ResourceContactsTab'
 import { boatIconSrc, isBoatIconId } from '../../../../../lib/boat-icons'
 import { profilePhotoUrl } from '../../../../../lib/profile-api'
 import {
@@ -38,7 +44,9 @@ function OrgContactDetailPage() {
   const [phoneDraft, setPhoneDraft] = useState('')
   const [whatsappDraft, setWhatsappDraft] = useState('')
   const [notesDraft, setNotesDraft] = useState('')
+  const [grantsDraft, setGrantsDraft] = useState<ContactResourceArea[]>([])
   const [saving, setSaving] = useState(false)
+  const [savingGrants, setSavingGrants] = useState(false)
   const [membershipRole, setMembershipRole] = useState<OrgMemberRole>('MEMBER')
   const [membershipLoading, setMembershipLoading] = useState(false)
 
@@ -46,14 +54,15 @@ function OrgContactDetailPage() {
     setLoading(true)
     setError(null)
     return Promise.all([fetchOrg(orgId), fetchOrgContactDetail(orgId, contactId)])
-      .then(([org, contactDetail]) => {
-        setOrgName(org.name)
+      .then(([orgPayload, contactDetail]) => {
+        setOrgName(orgPayload.org.name)
         setDetail(contactDetail)
         setDisplayNameDraft(contactDetail.contact.displayName)
         setEmailDraft(contactDetail.contact.email ?? '')
         setPhoneDraft(contactDetail.contact.phone ?? '')
         setWhatsappDraft(contactDetail.contact.whatsapp ?? '')
         setNotesDraft(contactDetail.contact.notes ?? '')
+        setGrantsDraft(contactDetail.contact.grants)
         setMembershipRole(contactDetail.member?.role ?? 'MEMBER')
       })
       .catch((e) => {
@@ -152,6 +161,24 @@ function OrgContactDetailPage() {
     }
   }
 
+  const handleSaveGrants = async () => {
+    if (!detail?.canManageGrants) return
+    setSavingGrants(true)
+    try {
+      const contact = await updateOrgContact(orgId, contactId, {
+        grants: grantsDraft,
+      })
+      setDetail((current) =>
+        current ? { ...current, contact } : current,
+      )
+      toast.success('Guest access updated')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update guest access')
+    } finally {
+      setSavingGrants(false)
+    }
+  }
+
   const backTab = detail?.member ? 'members' : 'contacts'
 
   if (loading) {
@@ -181,7 +208,8 @@ function OrgContactDetailPage() {
     )
   }
 
-  const { contact, member, boats, canEditContact, canManageMembership } = detail
+  const { contact, member, boats, canEditContact, canManageMembership, canManageGrants } =
+    detail
   const avatarName = member?.user.name ?? contact.displayName
   const avatarImage = member?.user.image ?? null
 
@@ -210,7 +238,7 @@ function OrgContactDetailPage() {
           <p className="m-0 mt-1 text-sm text-[var(--sea-ink-soft)]">
             {member
               ? `${MEMBER_ROLE_LABELS[member.role]} · org member`
-              : 'Contact · not an org member'}
+              : `Contact · ${formatContactGrants(contact.grants)}`}
           </p>
         </div>
       </div>
@@ -344,6 +372,34 @@ function OrgContactDetailPage() {
             ) : null}
           </div>
         )}
+      </section>
+
+      <section className="mt-8">
+        <h2 className="m-0 text-lg font-semibold text-[var(--sea-ink)]">
+          Guest access
+        </h2>
+        <p className="mt-2 text-sm text-[var(--sea-ink-soft)]">
+          Linked registered users can view only the selected org areas. No invite
+          is sent.
+        </p>
+        <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] p-4">
+          <ContactGrantsEditor
+            areas={ORG_CONTACT_AREAS}
+            grants={grantsDraft}
+            onChange={setGrantsDraft}
+            disabled={!canManageGrants}
+          />
+          {canManageGrants ? (
+            <button
+              type="button"
+              disabled={savingGrants}
+              onClick={() => void handleSaveGrants()}
+              className="mt-4 rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
+            >
+              {savingGrants ? 'Saving…' : 'Save guest access'}
+            </button>
+          ) : null}
+        </div>
       </section>
 
       <section className="mt-8">

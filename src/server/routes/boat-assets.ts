@@ -6,7 +6,8 @@ import type {
 } from '../../domain/boat-assets'
 import { computeBankBalance } from '../../domain/org-accounting'
 import { prisma } from '../db'
-import { canAccess  } from '../permissions'
+import { canAccessBoatResource } from '../contact-utils'
+import type {ContactResourceArea} from '../../domain/contact';
 import type {Privilege} from '../permissions';
 import { getSessionUserId } from '../session'
 import {
@@ -271,9 +272,10 @@ function serializeWork(work: {
 async function getBoatForAccess(
   userId: string,
   boatId: string,
+  area: ContactResourceArea,
   privilege: Privilege,
 ) {
-  const allowed = await canAccess(userId, privilege, { type: 'boat', id: boatId })
+  const allowed = await canAccessBoatResource(userId, boatId, area, privilege)
   if (!allowed) return null
   return db.boat.findUnique({
     where: { id: boatId },
@@ -356,7 +358,7 @@ boatAssetsRoutes.get('/:boatId/assets', async (c) => {
   if (!userId) return unauthorized()
 
   const boatId = c.req.param('boatId')
-  const boat = await getBoatForAccess(userId, boatId, 'view')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'view')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const assets = await db.boatAsset.findMany({
@@ -374,7 +376,7 @@ boatAssetsRoutes.get('/:boatId/assets/:assetId', async (c) => {
 
   const boatId = c.req.param('boatId')
   const assetId = c.req.param('assetId')
-  const boat = await getBoatForAccess(userId, boatId, 'view')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'view')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const asset = await db.boatAsset.findFirst({
@@ -413,7 +415,7 @@ boatAssetsRoutes.post('/:boatId/assets', async (c) => {
   if (!userId) return unauthorized()
 
   const boatId = c.req.param('boatId')
-  const boat = await getBoatForAccess(userId, boatId, 'edit')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const body = (await c.req.json().catch(() => ({}))) as {
@@ -464,7 +466,7 @@ boatAssetsRoutes.patch('/:boatId/assets/:assetId', async (c) => {
 
   const boatId = c.req.param('boatId')
   const assetId = c.req.param('assetId')
-  const boat = await getBoatForAccess(userId, boatId, 'edit')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const existing = await db.boatAsset.findFirst({ where: { id: assetId, boatId } })
@@ -526,7 +528,7 @@ boatAssetsRoutes.delete('/:boatId/assets/:assetId', async (c) => {
 
   const boatId = c.req.param('boatId')
   const assetId = c.req.param('assetId')
-  const boat = await getBoatForAccess(userId, boatId, 'edit')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const existing = await db.boatAsset.findFirst({ where: { id: assetId, boatId } })
@@ -542,7 +544,7 @@ boatAssetsRoutes.get('/:boatId/purchases', async (c) => {
   if (!userId) return unauthorized()
 
   const boatId = c.req.param('boatId')
-  const boat = await getBoatForAccess(userId, boatId, 'view')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'view')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const purchases = await db.boatPurchase.findMany({
@@ -559,7 +561,7 @@ boatAssetsRoutes.post('/:boatId/purchases', async (c) => {
   if (!userId) return unauthorized()
 
   const boatId = c.req.param('boatId')
-  const boat = await getBoatForAccess(userId, boatId, 'edit')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const body = (await c.req.json().catch(() => ({}))) as {
@@ -630,7 +632,7 @@ boatAssetsRoutes.patch('/:boatId/purchases/:purchaseId', async (c) => {
 
   const boatId = c.req.param('boatId')
   const purchaseId = c.req.param('purchaseId')
-  const boat = await getBoatForAccess(userId, boatId, 'edit')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const existing = await db.boatPurchase.findFirst({
@@ -709,7 +711,7 @@ boatAssetsRoutes.delete('/:boatId/purchases/:purchaseId', async (c) => {
 
   const boatId = c.req.param('boatId')
   const purchaseId = c.req.param('purchaseId')
-  const boat = await getBoatForAccess(userId, boatId, 'edit')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const existing = await db.boatPurchase.findFirst({
@@ -727,7 +729,7 @@ boatAssetsRoutes.get('/:boatId/assets/:assetId/work', async (c) => {
 
   const boatId = c.req.param('boatId')
   const assetId = c.req.param('assetId')
-  const boat = await getBoatForAccess(userId, boatId, 'view')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'view')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const asset = await db.boatAsset.findFirst({ where: { id: assetId, boatId } })
@@ -755,7 +757,7 @@ boatAssetsRoutes.post('/:boatId/assets/:assetId/work', async (c) => {
 
   const boatId = c.req.param('boatId')
   const assetId = c.req.param('assetId')
-  const boat = await getBoatForAccess(userId, boatId, 'edit')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const asset = await db.boatAsset.findFirst({ where: { id: assetId, boatId } })
@@ -808,7 +810,7 @@ boatAssetsRoutes.post('/:boatId/documents/:documentId/links', async (c) => {
 
   const boatId = c.req.param('boatId')
   const documentId = c.req.param('documentId')
-  const boat = await getBoatForAccess(userId, boatId, 'edit')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const document = await db.boatDocument.findFirst({
@@ -873,7 +875,7 @@ boatAssetsRoutes.get('/:boatId/accounting', async (c) => {
   if (!userId) return unauthorized()
 
   const boatId = c.req.param('boatId')
-  const boat = await getBoatForAccess(userId, boatId, 'view')
+  const boat = await getBoatForAccess(userId, boatId, 'ACCOUNTING', 'view')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const [purchases, workRecords] = await Promise.all([

@@ -29,6 +29,18 @@ export {
   reorderBoatShares,
 } from './boat-shares'
 export {
+  canAccessBoatArea,
+  canAccessOrgArea,
+  getBoatContactGrants,
+  getOrgContactGrants,
+  getUserContactBoatIds,
+  getUserContactOrgIds,
+  hasBoatContactGrant,
+  hasOrgContactGrant,
+  parseContactGrants,
+  resolveUserIdFromEmail,
+} from './contacts'
+export {
   canAccess,
   requireAccess,
   accessibleConsortiumFilter,

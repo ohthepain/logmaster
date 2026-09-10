@@ -2,6 +2,50 @@
 
 Phased migration preserving database data. Order: **staging → production**.
 
+## SSM Parameter Store cutover
+
+Logmaster ECS secrets moved from Secrets Manager JSON secrets to SSM Parameter Store SecureStrings.
+
+### Per environment (staging, then production)
+
+1. Copy existing values (idempotent):
+
+   ```bash
+   ./scripts/migrate-secrets-manager-to-ssm.sh staging
+   ```
+
+2. Import parameters into Terraform state (skip if Terraform creates parameters on first apply without the migration script):
+
+   ```bash
+   ./scripts/import-env-ssm-parameters.sh staging
+   ```
+
+3. Apply Terraform (switches ECS `secrets` to parameter ARNs, removes `logmaster-{env}-database` / `logmaster-{env}-app` Secrets Manager secrets when `bootstrap_from_legacy_secrets_manager = true`):
+
+   ```bash
+   ./scripts/tf-apply.sh staging
+   ```
+
+4. Force a new ECS deployment if tasks still reference an old task definition revision:
+
+   ```bash
+   aws ecs update-service --cluster logmaster-staging-cluster --service logmaster-staging-service --force-new-deployment --region eu-central-1
+   ```
+
+5. Smoke test: `/api/health`, Google OAuth, map tiles, AIS, iOS push.
+
+6. After **both** environments succeed, set in `environments/*/terraform.tfvars`:
+
+   ```hcl
+   bootstrap_from_legacy_secrets_manager = false
+   ```
+
+   and run `terraform apply` once per workspace.
+
+7. Optionally delete orphaned account-level Secrets Manager secrets (MapTiler, AISStream, etc.) once tfvars use SSM parameter names only.
+
+Shared RDS master credentials for Terraform DB provisioning remain in Secrets Manager via shared-aws until that stack migrates separately.
+
 ## Prerequisites
 
 1. Apply [shared-aws](https://github.com/ohthepain/shared-aws) (`bootstrap` → `network` → `shared`)

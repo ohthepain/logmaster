@@ -52,6 +52,7 @@ import { Route as MainAdminJobsGeoFeaturesRouteImport } from './routes/_main/adm
 import { Route as MainTripsTripIdStoryIndexRouteImport } from './routes/_main/trips/$tripId/story/index'
 import { Route as MainTripsTripIdStoryEditRouteImport } from './routes/_main/trips/$tripId/story/edit'
 import { Route as MainOrgsOrgIdContactsContactIdRouteImport } from './routes/_main/orgs/$orgId/contacts/$contactId'
+import { Route as MainBoatsBoatIdContactsContactIdRouteImport } from './routes/_main/boats/$boatId/contacts/$contactId'
 import { Route as MainBoatsBoatIdAssetsAssetIdRouteImport } from './routes/_main/boats/$boatId/assets/$assetId'
 
 const MainRouteRoute = MainRouteRouteImport.update({
@@ -272,6 +273,12 @@ const MainOrgsOrgIdContactsContactIdRoute =
     path: '/contacts/$contactId',
     getParentRoute: () => MainOrgsOrgIdRoute,
   } as any)
+const MainBoatsBoatIdContactsContactIdRoute =
+  MainBoatsBoatIdContactsContactIdRouteImport.update({
+    id: '/contacts/$contactId',
+    path: '/contacts/$contactId',
+    getParentRoute: () => MainBoatsBoatIdRoute,
+  } as any)
 const MainBoatsBoatIdAssetsAssetIdRoute =
   MainBoatsBoatIdAssetsAssetIdRouteImport.update({
     id: '/assets/$assetId',
@@ -320,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/orgs/$orgId/': typeof MainOrgsOrgIdIndexRoute
   '/trips/$tripId/': typeof MainTripsTripIdIndexRoute
   '/boats/$boatId/assets/$assetId': typeof MainBoatsBoatIdAssetsAssetIdRoute
+  '/boats/$boatId/contacts/$contactId': typeof MainBoatsBoatIdContactsContactIdRoute
   '/orgs/$orgId/contacts/$contactId': typeof MainOrgsOrgIdContactsContactIdRoute
   '/trips/$tripId/story/edit': typeof MainTripsTripIdStoryEditRoute
   '/trips/$tripId/story/': typeof MainTripsTripIdStoryIndexRoute
@@ -362,6 +370,7 @@ export interface FileRoutesByTo {
   '/orgs/$orgId': typeof MainOrgsOrgIdIndexRoute
   '/trips/$tripId': typeof MainTripsTripIdIndexRoute
   '/boats/$boatId/assets/$assetId': typeof MainBoatsBoatIdAssetsAssetIdRoute
+  '/boats/$boatId/contacts/$contactId': typeof MainBoatsBoatIdContactsContactIdRoute
   '/orgs/$orgId/contacts/$contactId': typeof MainOrgsOrgIdContactsContactIdRoute
   '/trips/$tripId/story/edit': typeof MainTripsTripIdStoryEditRoute
   '/trips/$tripId/story': typeof MainTripsTripIdStoryIndexRoute
@@ -409,6 +418,7 @@ export interface FileRoutesById {
   '/_main/orgs/$orgId/': typeof MainOrgsOrgIdIndexRoute
   '/_main/trips/$tripId/': typeof MainTripsTripIdIndexRoute
   '/_main/boats/$boatId/assets/$assetId': typeof MainBoatsBoatIdAssetsAssetIdRoute
+  '/_main/boats/$boatId/contacts/$contactId': typeof MainBoatsBoatIdContactsContactIdRoute
   '/_main/orgs/$orgId/contacts/$contactId': typeof MainOrgsOrgIdContactsContactIdRoute
   '/_main/trips/$tripId/story/edit': typeof MainTripsTripIdStoryEditRoute
   '/_main/trips/$tripId/story/': typeof MainTripsTripIdStoryIndexRoute
@@ -456,6 +466,7 @@ export interface FileRouteTypes {
     | '/orgs/$orgId/'
     | '/trips/$tripId/'
     | '/boats/$boatId/assets/$assetId'
+    | '/boats/$boatId/contacts/$contactId'
     | '/orgs/$orgId/contacts/$contactId'
     | '/trips/$tripId/story/edit'
     | '/trips/$tripId/story/'
@@ -498,6 +509,7 @@ export interface FileRouteTypes {
     | '/orgs/$orgId'
     | '/trips/$tripId'
     | '/boats/$boatId/assets/$assetId'
+    | '/boats/$boatId/contacts/$contactId'
     | '/orgs/$orgId/contacts/$contactId'
     | '/trips/$tripId/story/edit'
     | '/trips/$tripId/story'
@@ -544,6 +556,7 @@ export interface FileRouteTypes {
     | '/_main/orgs/$orgId/'
     | '/_main/trips/$tripId/'
     | '/_main/boats/$boatId/assets/$assetId'
+    | '/_main/boats/$boatId/contacts/$contactId'
     | '/_main/orgs/$orgId/contacts/$contactId'
     | '/_main/trips/$tripId/story/edit'
     | '/_main/trips/$tripId/story/'
@@ -857,6 +870,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainOrgsOrgIdContactsContactIdRouteImport
       parentRoute: typeof MainOrgsOrgIdRoute
     }
+    '/_main/boats/$boatId/contacts/$contactId': {
+      id: '/_main/boats/$boatId/contacts/$contactId'
+      path: '/contacts/$contactId'
+      fullPath: '/boats/$boatId/contacts/$contactId'
+      preLoaderRoute: typeof MainBoatsBoatIdContactsContactIdRouteImport
+      parentRoute: typeof MainBoatsBoatIdRoute
+    }
     '/_main/boats/$boatId/assets/$assetId': {
       id: '/_main/boats/$boatId/assets/$assetId'
       path: '/assets/$assetId'
@@ -870,11 +890,13 @@ declare module '@tanstack/react-router' {
 interface MainBoatsBoatIdRouteChildren {
   MainBoatsBoatIdIndexRoute: typeof MainBoatsBoatIdIndexRoute
   MainBoatsBoatIdAssetsAssetIdRoute: typeof MainBoatsBoatIdAssetsAssetIdRoute
+  MainBoatsBoatIdContactsContactIdRoute: typeof MainBoatsBoatIdContactsContactIdRoute
 }
 
 const MainBoatsBoatIdRouteChildren: MainBoatsBoatIdRouteChildren = {
   MainBoatsBoatIdIndexRoute: MainBoatsBoatIdIndexRoute,
   MainBoatsBoatIdAssetsAssetIdRoute: MainBoatsBoatIdAssetsAssetIdRoute,
+  MainBoatsBoatIdContactsContactIdRoute: MainBoatsBoatIdContactsContactIdRoute,
 }
 
 const MainBoatsBoatIdRouteWithChildren = MainBoatsBoatIdRoute._addFileChildren(

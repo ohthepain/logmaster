@@ -229,6 +229,7 @@ const BOAT_TOPIC_TABS: Partial<Record<NotificationTopic, string>> = {
   BOAT_DOCUMENTS: 'documents',
   BOAT_ASSETS: 'assets',
   BOAT_MEMBERS: 'members',
+  BOAT_CONTACTS: 'contacts',
   BOAT_SHARES: 'shares',
 }
 
@@ -287,6 +288,7 @@ const NOTIFICATION_SECTION_LABELS: Partial<Record<NotificationTopic, string>> = 
   BOAT_DOCUMENTS: 'documents updated',
   BOAT_ASSETS: 'assets updated',
   BOAT_MEMBERS: 'members updated',
+  BOAT_CONTACTS: 'contacts updated',
   BOAT_SHARES: 'shares updated',
   ORG_MEMBERS: 'members updated',
   ORG_DOCUMENTS: 'documents updated',

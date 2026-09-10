@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Merge APNS credentials into the ECS app secret and redeploy.
+# Set APNS credentials in SSM and redeploy ECS.
 set -euo pipefail
 
 ENV="${1:?usage: set-apns-secrets.sh staging|production [--no-redeploy]}"
@@ -9,9 +9,8 @@ if [[ "${2:-}" == "--no-redeploy" ]]; then
 fi
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-REGION="${AWS_REGION:-eu-central-1}"
-PROJECT="${LOGMASTER_PROJECT_NAME:-logmaster}"
-SECRET_ID="${PROJECT}-${ENV}-app"
+# shellcheck disable=SC1091
+source "$ROOT/scripts/lib/ssm-parameters.sh"
 
 if [[ -f "$ROOT/.env" ]]; then
   set -a
@@ -46,83 +45,15 @@ else
   exit 1
 fi
 
-export ENV REGION PROJECT SECRET_ID NO_REDEPLOY
-export APNS_KEY="$KEY"
-export APNS_KEY_ID APNS_TEAM_ID APNS_BUNDLE_ID
+PREFIX="$(ssm_env_prefix "$ENV")"
+ssm_put_secure "${PREFIX}/APNS_KEY" "$KEY"
+ssm_put_secure "${PREFIX}/APNS_KEY_ID" "$APNS_KEY_ID"
+ssm_put_secure "${PREFIX}/APNS_TEAM_ID" "$APNS_TEAM_ID"
+ssm_put_secure "${PREFIX}/APNS_BUNDLE_ID" "$APNS_BUNDLE_ID"
+echo "Updated ${PREFIX}/APNS_KEY, APNS_KEY_ID, APNS_TEAM_ID, APNS_BUNDLE_ID."
 
-python3 <<'PY'
-import json
-import os
-import subprocess
-import sys
+if [[ "$NO_REDEPLOY" == "true" ]]; then
+  exit 0
+fi
 
-secret_id = os.environ["SECRET_ID"]
-region = os.environ["REGION"]
-
-current = subprocess.run(
-    [
-        "aws",
-        "secretsmanager",
-        "get-secret-value",
-        "--secret-id",
-        secret_id,
-        "--region",
-        region,
-        "--query",
-        "SecretString",
-        "--output",
-        "text",
-    ],
-    check=True,
-    capture_output=True,
-    text=True,
-)
-data = json.loads(current.stdout)
-data["APNS_KEY"] = os.environ["APNS_KEY"]
-data["APNS_KEY_ID"] = os.environ["APNS_KEY_ID"]
-data["APNS_TEAM_ID"] = os.environ["APNS_TEAM_ID"]
-data["APNS_BUNDLE_ID"] = os.environ["APNS_BUNDLE_ID"]
-
-subprocess.run(
-    [
-        "aws",
-        "secretsmanager",
-        "put-secret-value",
-        "--secret-id",
-        secret_id,
-        "--region",
-        region,
-        "--secret-string",
-        json.dumps(data),
-    ],
-    check=True,
-)
-
-print(f"Updated {secret_id} with APNS_KEY, APNS_KEY_ID, APNS_TEAM_ID, APNS_BUNDLE_ID.")
-
-if os.environ.get("NO_REDEPLOY") == "true":
-    sys.exit(0)
-
-env = os.environ["ENV"]
-project = os.environ["PROJECT"]
-cluster = f"{project}-{env}-cluster"
-service = f"{project}-{env}-service"
-
-subprocess.run(
-    [
-        "aws",
-        "ecs",
-        "update-service",
-        "--cluster",
-        cluster,
-        "--service",
-        service,
-        "--force-new-deployment",
-        "--region",
-        region,
-        "--no-cli-pager",
-    ],
-    check=True,
-)
-print(f"Forced new ECS deployment on {service}.")
-PY
+force_ecs_redeploy "$ENV"

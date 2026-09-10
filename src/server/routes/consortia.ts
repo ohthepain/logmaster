@@ -15,8 +15,13 @@ import {
   canAccess,
   createConsortiumWithOwner,
   ensureConsortiumMember,
+  getOrgContactGrants,
   getUserConsortiumIds,
+  parseContactGrants,
+  resolveUserIdFromEmail,
 } from '../permissions'
+import type {ContactResourceArea} from '../../domain/contact';
+import { ORG_CONTACT_AREAS } from '../../domain/contact'
 import type {ConsortiumMemberRole} from '../permissions';
 import {
   getContactIdsForMembers,
@@ -206,6 +211,7 @@ function serializeContact(contact: {
   phone: string | null
   whatsapp?: string | null
   notes: string | null
+  grants?: ContactResourceArea[]
   createdAt: Date
   updatedAt: Date
 }) {
@@ -218,6 +224,35 @@ function serializeContact(contact: {
     phone: contact.phone,
     whatsapp: contact.whatsapp ?? null,
     notes: contact.notes,
+    grants: (contact.grants ?? []) as ContactResourceArea[],
+    createdAt: contact.createdAt.toISOString(),
+    updatedAt: contact.updatedAt.toISOString(),
+  }
+}
+
+function serializeBoatContactRow(contact: {
+  id: string
+  boatId: string
+  userId?: string | null
+  displayName: string
+  email: string | null
+  phone: string | null
+  whatsapp?: string | null
+  notes: string | null
+  grants?: ContactResourceArea[]
+  createdAt: Date
+  updatedAt: Date
+}) {
+  return {
+    id: contact.id,
+    boatId: contact.boatId,
+    userId: contact.userId ?? null,
+    displayName: contact.displayName,
+    email: contact.email,
+    phone: contact.phone,
+    whatsapp: contact.whatsapp ?? null,
+    notes: contact.notes,
+    grants: (contact.grants ?? []) as ContactResourceArea[],
     createdAt: contact.createdAt.toISOString(),
     updatedAt: contact.updatedAt.toISOString(),
   }
@@ -311,11 +346,16 @@ consortiaRoutes.get('/:orgId', async (c) => {
   if (!userId) return unauthorized()
 
   const consortiumId = c.req.param('orgId')
-  const allowed = await canAccess(userId, 'view', {
+  const memberAccess = await canAccess(userId, 'view', {
     type: 'consortium',
     id: consortiumId,
   })
-  if (!allowed) return c.json({ error: 'Org not found' }, 404)
+  const contactGrants = memberAccess
+    ? null
+    : await getOrgContactGrants(userId, consortiumId)
+  if (!memberAccess && (contactGrants?.length ?? 0) === 0) {
+    return c.json({ error: 'Org not found' }, 404)
+  }
 
   const consortium = await db.consortium.findUnique({
     where: { id: consortiumId },
@@ -327,7 +367,10 @@ consortiaRoutes.get('/:orgId', async (c) => {
   })
   if (!consortium) return c.json({ error: 'Org not found' }, 404)
 
-  return c.json({ org: serializeOrg(consortium) })
+  return c.json({
+    org: serializeOrg(consortium),
+    contactGrants,
+  })
 })
 
 consortiaRoutes.patch('/:orgId', async (c) => {
@@ -448,12 +491,31 @@ consortiaRoutes.get('/:orgId/contacts', async (c) => {
   })
   if (!allowed) return c.json({ error: 'Org not found' }, 404)
 
-  const contacts = await db.consortiumContact.findMany({
-    where: { consortiumId, userId: null },
-    orderBy: [{ displayName: 'asc' }],
-  })
+  const [orgContacts, orgBoats] = await Promise.all([
+    db.consortiumContact.findMany({
+      where: { consortiumId, userId: null },
+      orderBy: [{ displayName: 'asc' }],
+    }),
+    db.boat.findMany({
+      where: { consortiumId },
+      select: {
+        id: true,
+        name: true,
+        contacts: { orderBy: [{ displayName: 'asc' }] },
+      },
+    }),
+  ])
 
-  return c.json({ contacts: contacts.map(serializeContact) })
+  return c.json({
+    orgContacts: orgContacts.map(serializeContact),
+    boatContacts: orgBoats
+      .filter((boat: { contacts: unknown[] }) => boat.contacts.length > 0)
+      .map((boat: { id: string; name: string; contacts: Parameters<typeof serializeBoatContactRow>[0][] }) => ({
+        boatId: boat.id,
+        boatName: boat.name,
+        contacts: boat.contacts.map(serializeBoatContactRow),
+      })),
+  })
 })
 
 consortiaRoutes.post('/:orgId/contacts', async (c) => {
@@ -473,18 +535,25 @@ consortiaRoutes.post('/:orgId/contacts', async (c) => {
     phone?: string
     whatsapp?: string
     notes?: string
+    grants?: unknown
   }
   const displayName = body.displayName?.trim()
   if (!displayName) return c.json({ error: 'displayName is required' }, 400)
 
+  const grants = parseContactGrants(body.grants ?? [], ORG_CONTACT_AREAS) ?? []
+  const email = normalizeOptionalString(body.email) ?? null
+  const linkedUserId = await resolveUserIdFromEmail(email)
+
   const contact = await db.consortiumContact.create({
     data: {
       consortiumId,
+      userId: linkedUserId,
       displayName,
-      email: normalizeOptionalString(body.email) ?? null,
+      email,
       phone: normalizeOptionalString(body.phone) ?? null,
       whatsapp: normalizeOptionalString(body.whatsapp) ?? null,
       notes: normalizeOptionalString(body.notes) ?? null,
+      grants,
     },
   })
 
@@ -551,6 +620,7 @@ consortiaRoutes.get('/:orgId/contacts/:contactId', async (c) => {
     boats,
     canEditContact: isAdmin || isSelf,
     canManageMembership: isAdmin,
+    canManageGrants: isAdmin,
   })
 })
 
@@ -662,7 +732,25 @@ consortiaRoutes.patch('/:orgId/contacts/:contactId', async (c) => {
     phone?: string | null
     whatsapp?: string | null
     notes?: string | null
+    grants?: unknown
   }
+
+  let grants: ContactResourceArea[] | undefined
+  if (body.grants !== undefined) {
+    if (!isAdmin) return c.json({ error: 'Forbidden' }, 403)
+    const parsed = parseContactGrants(body.grants, ORG_CONTACT_AREAS)
+    if (parsed === null) return c.json({ error: 'Invalid grants' }, 400)
+    grants = parsed
+  }
+
+  const nextEmail =
+    body.email !== undefined
+      ? normalizeOptionalString(body.email)
+      : existing.email
+  const linkedUserId =
+    body.email !== undefined
+      ? await resolveUserIdFromEmail(nextEmail)
+      : existing.userId
 
   const contact = await db.consortiumContact.update({
     where: { id: contactId },
@@ -670,9 +758,7 @@ consortiaRoutes.patch('/:orgId/contacts/:contactId', async (c) => {
       ...(body.displayName !== undefined
         ? { displayName: body.displayName.trim() || existing.displayName }
         : {}),
-      ...(body.email !== undefined
-        ? { email: normalizeOptionalString(body.email) }
-        : {}),
+      ...(body.email !== undefined ? { email: nextEmail, userId: linkedUserId } : {}),
       ...(body.phone !== undefined
         ? { phone: normalizeOptionalString(body.phone) }
         : {}),
@@ -682,6 +768,7 @@ consortiaRoutes.patch('/:orgId/contacts/:contactId', async (c) => {
       ...(body.notes !== undefined
         ? { notes: normalizeOptionalString(body.notes) }
         : {}),
+      ...(grants !== undefined ? { grants } : {}),
       updatedAt: new Date(),
     },
   })

@@ -1,5 +1,7 @@
 environment = "production"
 
+bootstrap_from_legacy_secrets_manager = false
+
 auth_require_email_verification = true
 
 shared_state_bucket = "shared-aws-tf-state-320205321328"
@@ -18,8 +20,8 @@ ses_from_email = "no-reply@logmaster.live"
 
 ses_configuration_set = "logmaster-live"
 
-maptiler_api_key_secret_arn  = "arn:aws:secretsmanager:eu-central-1:320205321328:secret:maptiler-api-key-UwRgH7"
-aisstream_api_key_secret_arn = "arn:aws:secretsmanager:eu-central-1:320205321328:secret:aisstream-api-key-OIoEmc"
+maptiler_api_key_parameter_name  = "/logmaster/account/maptiler-api-key"
+aisstream_api_key_parameter_name = "/logmaster/account/aisstream-api-key"
 
 apns_key_id    = "X9H5N9ZRZQ"
 apns_team_id   = "RPGSNMH65P"

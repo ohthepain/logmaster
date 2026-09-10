@@ -5,9 +5,12 @@ import { prisma } from '../db'
 import {
   boatAccessFilter,
   canAccess,
+  getBoatContactGrants,
   initializeBoatShares
   
 } from '../permissions'
+import { canAccessBoatResource } from '../contact-utils'
+import type {ContactResourceArea} from '../../domain/contact';
 import type {Privilege} from '../permissions';
 import { getSessionUserId } from '../session'
 import {
@@ -115,7 +118,26 @@ async function getBoatForUser(
   boatId: string,
   privilege: Privilege,
 ) {
-  const allowed = await canAccess(userId, privilege, { type: 'boat', id: boatId })
+  const allowed =
+    (await canAccess(userId, privilege, { type: 'boat', id: boatId })) ||
+    (privilege === 'view' && (await getBoatContactGrants(userId, boatId)).length > 0)
+  if (!allowed) return null
+  return db.boat.findUnique({
+    where: { id: boatId },
+    include: {
+      consortium: { select: { id: true, name: true } },
+      photos: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
+    },
+  })
+}
+
+async function getBoatForArea(
+  userId: string,
+  boatId: string,
+  area: ContactResourceArea,
+  privilege: Privilege,
+) {
+  const allowed = await canAccessBoatResource(userId, boatId, area, privilege)
   if (!allowed) return null
   return db.boat.findUnique({
     where: { id: boatId },
@@ -136,10 +158,7 @@ async function getPhotoForUser(
     include: { boat: true },
   })
   if (!photo) return null
-  const allowed = await canAccess(userId, privilege, {
-    type: 'boat',
-    id: photo.boatId,
-  })
+  const allowed = await canAccessBoatResource(userId, photo.boatId, 'PHOTOS', privilege)
   if (!allowed) return null
   return photo
 }
@@ -157,10 +176,12 @@ async function getDocumentForUser(
     },
   })
   if (!document) return null
-  const allowed = await canAccess(userId, privilege, {
-    type: 'boat',
-    id: document.boatId,
-  })
+  const allowed = await canAccessBoatResource(
+    userId,
+    document.boatId,
+    'DOCUMENTS',
+    privilege,
+  )
   if (!allowed) return null
   return document
 }
@@ -175,10 +196,12 @@ async function getDocumentVersionForUser(
     include: { document: { include: { boat: true } } },
   })
   if (!version) return null
-  const allowed = await canAccess(userId, privilege, {
-    type: 'boat',
-    id: version.document.boatId,
-  })
+  const allowed = await canAccessBoatResource(
+    userId,
+    version.document.boatId,
+    'DOCUMENTS',
+    privilege,
+  )
   if (!allowed) return null
   return version
 }
@@ -402,10 +425,19 @@ boatsRoutes.get('/:boatId', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const boat = await getBoatForUser(userId, c.req.param('boatId'), 'view')
+  const boatId = c.req.param('boatId')
+  const boat = await getBoatForUser(userId, boatId, 'view')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
-  return c.json({ boat: serializeBoat(boat) })
+  const [memberAccess, contactGrants] = await Promise.all([
+    canAccess(userId, 'view', { type: 'boat', id: boatId }),
+    getBoatContactGrants(userId, boatId),
+  ])
+
+  return c.json({
+    boat: serializeBoat(boat),
+    contactGrants: memberAccess ? null : contactGrants,
+  })
 })
 
 boatsRoutes.patch('/:boatId', async (c) => {
@@ -634,7 +666,7 @@ boatsRoutes.get('/:boatId/documents', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const boat = await getBoatForUser(userId, c.req.param('boatId'), 'view')
+  const boat = await getBoatForArea(userId, c.req.param('boatId'), 'DOCUMENTS', 'view')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   await ensureDefaultDocumentCategory(boat.id)

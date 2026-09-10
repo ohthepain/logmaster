@@ -1,5 +1,6 @@
 import type { BoatDocumentKind } from './boat'
 import type { DocumentPurpose } from './boat-assets'
+import type { ContactResourceArea } from './contact'
 
 export type OrgMemberRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER'
 
@@ -62,6 +63,7 @@ export type OrgContact = {
   phone: string | null
   whatsapp: string | null
   notes: string | null
+  grants: ContactResourceArea[]
   createdAt: string
   updatedAt: string
 }
@@ -105,6 +107,7 @@ export type OrgContactDetail = {
   boats: OrgMemberBoat[]
   canEditContact: boolean
   canManageMembership: boolean
+  canManageGrants: boolean
 }
 
 export type Org = {

@@ -1,4 +1,5 @@
 import type { Boat } from '../domain/boat'
+import type { ContactResourceArea } from '../domain/contact'
 import type {
   InviteMemberResult,
   MemberInvite,
@@ -38,9 +39,13 @@ export async function fetchBoats(): Promise<Boat[]> {
   return data.boats
 }
 
-export async function fetchBoat(boatId: string): Promise<Boat> {
-  const data = await api<{ boat: Boat }>(`/api/boats/${boatId}`)
-  return data.boat
+export async function fetchBoat(boatId: string): Promise<{
+  boat: Boat
+  contactGrants: ContactResourceArea[] | null
+}> {
+  return api<{ boat: Boat; contactGrants: ContactResourceArea[] | null }>(
+    `/api/boats/${boatId}`,
+  )
 }
 
 export async function createBoat(

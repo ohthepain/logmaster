@@ -33,6 +33,7 @@ import { consortiaMediaRoutes } from './routes/consortia-media'
 import { memberInvitesRoutes } from './routes/member-invites'
 import { boatMembersRoutes } from './routes/boat-members'
 import { boatAssetsRoutes } from './routes/boat-assets'
+import { boatContactsRoutes } from './routes/boat-contacts'
 import { orgAccountingRoutes } from './routes/org-accounting'
 import { notificationsRoutes } from './routes/notifications'
 import { isAisStreamConfigured } from './ais/aisstream-client'
@@ -77,6 +78,7 @@ app.route('/boats', boatsRoutes)
 app.route('/boats', boatSharesRoutes)
 app.route('/boats', boatMembersRoutes)
 app.route('/boats', boatAssetsRoutes)
+app.route('/boats', boatContactsRoutes)
 app.route('/profile', profileRoutes)
 app.route('/crew', crewRoutes)
 app.route('/location', locationRoutes)

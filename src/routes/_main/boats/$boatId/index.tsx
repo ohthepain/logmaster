@@ -11,6 +11,13 @@ import {
   InviteMemberModal,
   ResourceMembersTab,
 } from '../../../../components/ResourceMembersTab'
+import {
+  AddContactModal,
+  BOAT_CONTACT_AREAS,
+  ResourceContactsTab,
+} from '../../../../components/ResourceContactsTab'
+import type { BoatContact } from '../../../../domain/contact'
+import type { ContactResourceArea } from '../../../../domain/contact'
 import type { Boat } from '../../../../domain/boat'
 import type { MemberInvite, ResourceMember  } from '../../../../domain/member-invite'
 import type { OrgMemberRole } from '../../../../domain/org'
@@ -25,12 +32,31 @@ import {
   updateBoat,
   updateBoatMemberRole,
 } from '../../../../lib/boats-api'
+import {
+  createBoatContact,
+  deleteBoatContact,
+  fetchBoatContacts,
+} from '../../../../lib/boat-contacts-api'
 import type { BoatIconId } from '../../../../lib/boat-icons'
 import { isBoatIconId } from '../../../../lib/boat-icons'
 import { cn } from '../../../../lib/cn'
 import { NotificationBellToggle } from '../../../../components/NotificationBellToggle'
 
-type BoatDetailTab = 'photos' | 'documents' | 'assets' | 'accounting' | 'members' | 'shares'
+type BoatDetailTab =
+  | 'photos'
+  | 'documents'
+  | 'assets'
+  | 'accounting'
+  | 'members'
+  | 'shares'
+  | 'contacts'
+
+const BOAT_TAB_AREAS: Partial<Record<BoatDetailTab, ContactResourceArea>> = {
+  photos: 'PHOTOS',
+  documents: 'DOCUMENTS',
+  assets: 'ASSETS',
+  accounting: 'ACCOUNTING',
+}
 
 type BoatDetailSearch = {
   tab?: BoatDetailTab
@@ -45,7 +71,8 @@ export const Route = createFileRoute('/_main/boats/$boatId/')({
       tab === 'assets' ||
       tab === 'accounting' ||
       tab === 'members' ||
-      tab === 'shares'
+      tab === 'shares' ||
+      tab === 'contacts'
     ) {
       return { tab }
     }
@@ -62,12 +89,18 @@ function BoatDetailPage() {
   const [members, setMembers] = useState<ResourceMember[]>([])
   const [pendingInvites, setPendingInvites] = useState<MemberInvite[]>([])
   const [canManageMembers, setCanManageMembers] = useState(false)
+  const [contacts, setContacts] = useState<BoatContact[]>([])
+  const [contactGrants, setContactGrants] = useState<ContactResourceArea[] | null>(
+    null,
+  )
   const [loading, setLoading] = useState(true)
   const [membersRefreshing, setMembersRefreshing] = useState(false)
+  const [contactsRefreshing, setContactsRefreshing] = useState(false)
   const [photosRefreshing, setPhotosRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savingIcon, setSavingIcon] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [addContactOpen, setAddContactOpen] = useState(false)
 
   const setTab = useCallback(
     (next: BoatDetailTab) => {
@@ -84,14 +117,17 @@ function BoatDetailPage() {
     setLoading(true)
     setError(null)
     try {
-      const [boatData, membersData] = await Promise.all([
+      const [boatData, membersData, contactsData] = await Promise.all([
         fetchBoat(boatId),
         fetchBoatMembers(boatId),
+        fetchBoatContacts(boatId),
       ])
-      setBoat(boatData)
+      setBoat(boatData.boat)
+      setContactGrants(boatData.contactGrants)
       setMembers(membersData.members)
       setPendingInvites(membersData.pendingInvites)
       setCanManageMembers(membersData.canManageMembers)
+      setContacts(contactsData)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load boat')
       setBoat(null)
@@ -118,11 +154,23 @@ function BoatDetailPage() {
     }
   }, [boatId])
 
+  const refreshContacts = useCallback(async () => {
+    setContactsRefreshing(true)
+    try {
+      setContacts(await fetchBoatContacts(boatId))
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to refresh contacts')
+    } finally {
+      setContactsRefreshing(false)
+    }
+  }, [boatId])
+
   const refreshPhotos = useCallback(async () => {
     setPhotosRefreshing(true)
     try {
       const boatData = await fetchBoat(boatId)
-      setBoat(boatData)
+      setBoat(boatData.boat)
+      setContactGrants(boatData.contactGrants)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to refresh photos')
     } finally {
@@ -169,8 +217,35 @@ function BoatDetailPage() {
   }
 
   const tabRaw = tabFromSearch ?? 'photos'
-  const tab: BoatDetailTab =
-    tabRaw === 'shares' && !boat.orgId ? 'photos' : tabRaw
+  const isGuestContact = contactGrants !== null && contactGrants.length > 0
+  const tabCandidates: BoatDetailTab[] = isGuestContact
+    ? (['photos', 'documents', 'assets', 'accounting'] as const).filter(
+        (value) => {
+          const area = BOAT_TAB_AREAS[value]
+          return area ? contactGrants.includes(area) : false
+        },
+      )
+    : [
+        'photos',
+        'documents',
+        'assets',
+        'accounting',
+        ...(boat.orgId ? (['shares'] as const) : []),
+        'contacts',
+        'members',
+      ]
+  const tab: BoatDetailTab = tabCandidates.includes(tabRaw as BoatDetailTab)
+    ? (tabRaw as BoatDetailTab)
+    : tabCandidates[0] ?? 'photos'
+  const tabLabels: Record<BoatDetailTab, string> = {
+    photos: 'Photos',
+    documents: 'Documents',
+    assets: 'Assets',
+    accounting: 'Accounting',
+    shares: 'Shares',
+    contacts: 'Contacts',
+    members: 'Members',
+  }
 
   return (
     <main className="page-wrap px-3 pb-24 pt-4 sm:px-4">
@@ -217,16 +292,7 @@ function BoatDetailPage() {
         aria-label="Boat sections"
         className="mt-8 flex flex-wrap gap-2 border-b border-[var(--line)] pb-3"
       >
-        {(
-          [
-            ['photos', 'Photos'],
-            ['documents', 'Documents'],
-            ['assets', 'Assets'],
-            ['accounting', 'Accounting'],
-            ...(boat.orgId ? [['shares', 'Shares'] as const] : []),
-            ['members', 'Members'],
-          ] as const
-        ).map(([value, label]) => {
+        {tabCandidates.map((value) => {
           const selected = tab === value
           return (
             <button
@@ -242,7 +308,7 @@ function BoatDetailPage() {
                   : 'border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] hover:bg-[var(--link-bg-hover)]',
               )}
             >
-              {label}
+              {tabLabels[value]}
             </button>
           )
         })}
@@ -273,6 +339,37 @@ function BoatDetailPage() {
         ) : null}
         {tab === 'shares' && boat.orgId ? (
           <BoatSharesTab boatId={boat.id} />
+        ) : null}
+        {tab === 'contacts' ? (
+          <ResourceContactsTab
+            contacts={contacts}
+            canManage={canManageMembers}
+            notificationTopic="BOAT_CONTACTS"
+            notificationBoatId={boatId}
+            onRefresh={refreshContacts}
+            refreshing={contactsRefreshing}
+            onAdd={() => setAddContactOpen(true)}
+            onDelete={async (contact) => {
+              if (!window.confirm(`Delete contact "${contact.displayName}"?`)) {
+                return
+              }
+              try {
+                await deleteBoatContact(boatId, contact.id)
+                setContacts((current) =>
+                  current.filter((item) => item.id !== contact.id),
+                )
+                toast.success('Contact deleted')
+              } catch (e) {
+                toast.error(
+                  e instanceof Error ? e.message : 'Failed to delete contact',
+                )
+              }
+            }}
+            getContactLink={(contact) => ({
+              to: '/boats/$boatId/contacts/$contactId',
+              params: { boatId, contactId: contact.id },
+            })}
+          />
         ) : null}
         {tab === 'members' ? (
           <ResourceMembersTab
@@ -368,6 +465,18 @@ function BoatDetailPage() {
             kind: 'invite' as const,
             message: `Invite sent to ${email}`,
           }
+        }}
+      />
+      <AddContactModal
+        open={addContactOpen}
+        onClose={() => setAddContactOpen(false)}
+        title="Add boat contact"
+        devComponentName="AddBoatContactModal"
+        grantAreas={BOAT_CONTACT_AREAS}
+        onSubmit={async (input) => {
+          const contact = await createBoatContact(boatId, input)
+          setContacts((current) => [...current, contact])
+          toast.success('Contact added')
         }}
       />
     </main>

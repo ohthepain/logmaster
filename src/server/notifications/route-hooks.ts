@@ -64,6 +64,22 @@ export function fireBoatMembersNotification(
   )
 }
 
+export function fireBoatContactsNotification(
+  userId: string,
+  boat: { id: string; name: string },
+  action: string,
+) {
+  fireNotification(
+    notifyBoatSection({
+      topic: 'BOAT_CONTACTS',
+      boatId: boat.id,
+      boatName: boat.name,
+      actorUserId: userId,
+      action,
+    }),
+  )
+}
+
 export function fireBoatSharesNotification(
   userId: string,
   boat: { id: string; name: string },

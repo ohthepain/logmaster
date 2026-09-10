@@ -8,6 +8,7 @@ import {
 import type {ExpenseClaimStatus, TransactionType} from '../../domain/org-accounting';
 import { prisma } from '../db'
 import { canAccess } from '../permissions'
+import { canAccessOrgResource } from '../contact-utils'
 import { getSessionUserId } from '../session'
 
 const db = prisma as any
@@ -171,11 +172,13 @@ async function requireOrgAccess(
   orgId: string,
   privilege: 'view' | 'edit' | 'manage',
 ) {
-  const allowed = await canAccess(userId, privilege, {
+  if (privilege === 'view') {
+    return canAccessOrgResource(userId, orgId, 'ACCOUNTING', privilege)
+  }
+  return canAccess(userId, privilege, {
     type: 'consortium',
     id: orgId,
   })
-  return allowed
 }
 
 function isTransactionType(value: string): value is TransactionType {

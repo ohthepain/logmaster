@@ -130,7 +130,7 @@ Deploy jobs authenticate via GitHub OIDC, write `backend.hcl`, init Terraform, b
 
 - **RDS PostgreSQL 16**, not publicly accessible.
 - Security group allows port 5432 from ECS tasks only.
-- `DATABASE_URL` is created by Terraform and stored in Secrets Manager (`{env}-database` secret); injected into the ECS task definition.
+- `DATABASE_URL` is created by Terraform and stored in SSM Parameter Store (`/logmaster/{env}/DATABASE_URL`); injected into the ECS task definition.
 - Do **not** put `DATABASE_URL` in GitHub secrets.
 
 ## Database migrations
@@ -145,37 +145,40 @@ export DATABASE_URL="$(terraform output -raw database_url)"
 pnpm db:migrate:deploy
 ```
 
-## Application secrets (Secrets Manager)
+## Application secrets (SSM Parameter Store)
 
-Terraform creates per-environment secrets:
+Terraform creates per-environment **SecureString** parameters under `/logmaster/{env}/`:
 
-| Secret | Keys |
-|--------|------|
-| `logmaster-{env}-database` | `DATABASE_URL` |
-| `logmaster-{env}-app` | `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AWS_SES_FROM_EMAIL`, `MAPTILER_API_KEY`, `AISSTREAM_API_KEY`, `APNS_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID` |
+| Parameter | ECS env var |
+|-----------|-------------|
+| `/logmaster/{env}/DATABASE_URL` | `DATABASE_URL` |
+| `/logmaster/{env}/BETTER_AUTH_SECRET` | `BETTER_AUTH_SECRET` |
+| `/logmaster/{env}/GOOGLE_CLIENT_ID` | `GOOGLE_CLIENT_ID` |
+| `/logmaster/{env}/GOOGLE_CLIENT_SECRET` | `GOOGLE_CLIENT_SECRET` |
+| `/logmaster/{env}/AWS_SES_FROM_EMAIL` | `AWS_SES_FROM_EMAIL` |
+| `/logmaster/{env}/MAPTILER_API_KEY` | `MAPTILER_API_KEY` |
+| `/logmaster/{env}/AISSTREAM_API_KEY` | `AISSTREAM_API_KEY` |
+| `/logmaster/{env}/APNS_KEY` | `APNS_KEY` |
+| `/logmaster/{env}/APNS_KEY_ID` | `APNS_KEY_ID` |
+| `/logmaster/{env}/APNS_TEAM_ID` | `APNS_TEAM_ID` |
+| `/logmaster/{env}/APNS_BUNDLE_ID` | `APNS_BUNDLE_ID` |
 
-Optional third-party values can be pulled from existing account-level Secrets Manager ARNs via tfvars (`google_client_id_secret_arn`, etc.).
+Shared keys (MapTiler, AISStream, Google OAuth, APNS `.p8`) live under `/logmaster/account/*`. Terraform can bootstrap new environments from those account parameters (`*_parameter_name` in tfvars). Do **not** put secret values in tfvars — only parameter **names**.
 
-**Google sign-in on deploy:** ECS reads `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` from the `logmaster-{env}-app` secret. If those keys are empty, sign-in returns `PROVIDER_NOT_FOUND`. After creating the OAuth client in Google Cloud, either:
+**Cutover from Secrets Manager:** run `./scripts/migrate-secrets-manager-to-ssm.sh {env}` before `terraform apply`, then set `bootstrap_from_legacy_secrets_manager = false` in tfvars after both environments are migrated. See [MIGRATION.md](./MIGRATION.md#ssm-parameter-store-cutover).
 
-1. Set `google_client_id_secret_arn` and `google_client_secret_secret_arn` in `environments/{env}/terraform.tfvars` and `terraform apply`, or
-2. Run `./scripts/set-google-oauth-secrets.sh staging` (reads from local `.env`, updates the app secret, forces ECS redeploy).
+**Google sign-in on deploy:** ECS reads `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` from SSM. If those values are empty, sign-in returns `PROVIDER_NOT_FOUND`. After creating the OAuth client in Google Cloud, either:
 
-**Map tiles on deploy:** ECS reads `MAPTILER_API_KEY` from the same app secret. If it is empty, `/api/map-style-vector` and `/api/map-tiles/...` return **503** and the map shows “Map style failed (503)”. Either set `maptiler_api_key_secret_arn` in tfvars and `terraform apply`, or run `./scripts/set-maptiler-secrets.sh production` (reads `MAPTILER_API_KEY` or `VITE_MAPTILER_API_KEY` from `.env`, updates the secret, redeploys).
+1. Store credentials in `/logmaster/account/google-client-id` and `google-client-secret`, set `google_client_id_parameter_name` / `google_client_secret_parameter_name` in tfvars, and `terraform apply` (new env bootstrap), or
+2. Run `./scripts/set-google-oauth-secrets.sh staging` (reads from local `.env`, updates per-env SSM parameters, forces ECS redeploy).
 
-**AIS live layer on deploy:** ECS reads `AISSTREAM_API_KEY` from the same app secret. If it is empty, `/api/ais/vessels` returns **503** and the AIS map layer stays empty. Either:
+**Map tiles on deploy:** ECS reads `MAPTILER_API_KEY` from SSM. If it is empty, `/api/map-style-vector` and `/api/map-tiles/...` return **503**. Either ensure `/logmaster/account/maptiler-api-key` exists and set `maptiler_api_key_parameter_name` in tfvars, or run `./scripts/set-maptiler-secrets.sh production`.
 
-1. Create an account-level secret (plain string API key), set `aisstream_api_key_secret_arn` in `environments/{env}/terraform.tfvars`, and `terraform apply`, or
-2. Run `./scripts/set-aisstream-secrets.sh staging` (reads `AISSTREAM_API_KEY` from `.env`, merges into the app secret, forces ECS redeploy).
+**AIS live layer on deploy:** ECS reads `AISSTREAM_API_KEY` from SSM. If it is empty, `/api/ais/vessels` returns **503**. Either ensure `/logmaster/account/aisstream-api-key` exists and set `aisstream_api_key_parameter_name` in tfvars, or run `./scripts/set-aisstream-secrets.sh staging`.
 
-Do **not** put the API key in tfvars — only the Secrets Manager ARN. Keep the key in `.env` locally and in AWS Secrets Manager.
+**iOS push (APNS) on deploy:** ECS reads `APNS_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_BUNDLE_ID` from SSM, and `APNS_PRODUCTION` from the task environment (defaults to `true` in production, `false` in staging). If `APNS_KEY` is empty, native iOS push is skipped. Either store the `.p8` in `/logmaster/account/apns-key` with tfvars `apns_key_parameter_name`, or run `./scripts/set-apns-secrets.sh production`.
 
-**iOS push (APNS) on deploy:** ECS reads `APNS_KEY` (`.p8` file contents), `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_BUNDLE_ID` from the app secret, and `APNS_PRODUCTION` from the task environment (defaults to `true` in production, `false` in staging). If `APNS_KEY` is empty, native iOS push is skipped. Either:
-
-1. Create an account-level secret with the `.p8` contents (plain string), set `apns_key_id`, `apns_team_id`, and `apns_bundle_id` in `environments/{env}/terraform.tfvars`, set `apns_key_secret_arn`, and `terraform apply`, or
-2. Run `./scripts/set-apns-secrets.sh production` (reads `APNS_KEY_PATH` or `APNS_KEY` plus IDs from `.env`, merges into the app secret, forces ECS redeploy).
-
-Do **not** put the `.p8` key in tfvars — only the Secrets Manager ARN. Keep the key in gitignored `secrets/apns/` locally.
+Keep API keys and `.p8` material in `.env` / gitignored `secrets/apns/` locally; production values live in SSM only.
 
 In Google Cloud, add redirect URIs for each environment:
 

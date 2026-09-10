@@ -9,7 +9,7 @@ locals {
   tenant_database_name = "${var.project_name}_${var.environment}"
   app_hostname         = replace(local.better_auth_url, "https://", "")
 
-  # Single source of truth for ECS Secrets Manager and `terraform output database_url`.
+  # Single source of truth for ECS SSM DATABASE_URL and `terraform output database_url`.
   database_url = "postgresql://${local.tenant_database_name}:${random_password.db_tenant.result}@${data.terraform_remote_state.shared.outputs.rds_endpoint}:5432/${local.tenant_database_name}?sslmode=require"
 }
 
@@ -17,15 +17,6 @@ check "workspace_matches_environment" {
   assert {
     condition     = terraform.workspace == var.environment
     error_message = "Terraform workspace (${terraform.workspace}) must match var.environment (${var.environment}). Use: terraform workspace select ${var.environment}"
-  }
-}
-
-check "google_auth_configured" {
-  assert {
-    condition = !var.google_auth_enabled || (
-      var.google_client_id_secret_arn != "" && var.google_client_secret_secret_arn != ""
-    )
-    error_message = "google_auth_enabled is true but google_client_id_secret_arn and google_client_secret_secret_arn are unset. Add ARNs to environments/${var.environment}/terraform.tfvars, or run scripts/set-google-oauth-secrets.sh ${var.environment} after deploy."
   }
 }
 
