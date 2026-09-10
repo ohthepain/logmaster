@@ -100,7 +100,8 @@ export function SignInPanel({
       if (result.error) {
         const message = result.error.message ?? 'Google sign in failed'
         toast.error(
-          message.includes('ECONNREFUSED') || message.toLowerCase().includes('database')
+          message.includes('ECONNREFUSED') ||
+            message.toLowerCase().includes('database')
             ? 'Sign-in server unavailable — is Postgres running?'
             : message,
         )
@@ -177,9 +178,7 @@ export function SignInPanel({
           : null
         const signedUpEmail = normalizeEmailForCompare(email)
         const inviteSignupMatch =
-          invite != null &&
-          inviteEmail != null &&
-          signedUpEmail === inviteEmail
+          invite != null && inviteEmail != null && signedUpEmail === inviteEmail
 
         if (inviteSignupMatch) {
           try {
@@ -189,9 +188,11 @@ export function SignInPanel({
               await acceptCrewInvite(invite.token)
             }
             toast.success('Invite accepted')
-          } catch (e) {
+          } catch (inviteErr) {
             toast.error(
-              e instanceof Error ? e.message : 'Failed to accept invite',
+              inviteErr instanceof Error
+                ? inviteErr.message
+                : 'Failed to accept invite',
             )
           }
           finishAuth()
@@ -520,9 +521,7 @@ export function SignInPanel({
             </>
           ) : (
             <>
-              <span>
-                {mode === 'sign-in' ? 'Sign in' : 'Create account'}
-              </span>
+              <span>{mode === 'sign-in' ? 'Sign in' : 'Create account'}</span>
               <ArrowRight size={16} />
             </>
           )}

@@ -8,9 +8,11 @@ import {
   CONTACT_AREA_LABELS,
   ORG_CONTACT_AREAS,
   formatContactGrants,
-  type BoatContactGroup,
-  type ContactResourceArea,
-  type ResourceContact,
+} from '../domain/contact'
+import type {
+  BoatContactGroup,
+  ContactResourceArea,
+  ResourceContact,
 } from '../domain/contact'
 import { Modal } from './Modal'
 import { ResourceSectionHeader } from './NotificationBellToggle'
@@ -194,7 +196,11 @@ export function AddContactModal({
   }
 
   return (
-    <Modal title={title} onClose={handleClose} devComponentName={devComponentName}>
+    <Modal
+      title={title}
+      onClose={handleClose}
+      devComponentName={devComponentName}
+    >
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
@@ -260,8 +266,8 @@ export function AddContactModal({
               onChange={setGrants}
             />
             <p className="mt-2 text-xs text-[var(--sea-ink-soft)]">
-              Linked registered users can view only the selected areas. No invite
-              is sent.
+              Linked registered users can view only the selected areas. No
+              invite is sent.
             </p>
           </div>
         ) : null}

@@ -15,8 +15,14 @@ import {
   ORG_CONTACT_AREAS,
   ResourceContactsTab,
 } from '../../../../components/ResourceContactsTab'
-import type { MemberInvite, ResourceMember } from '../../../../domain/member-invite'
-import type { ContactResourceArea } from '../../../../domain/contact'
+import type {
+  MemberInvite,
+  ResourceMember,
+} from '../../../../domain/member-invite'
+import type {
+  ContactResourceArea,
+  BoatContactGroup,
+} from '../../../../domain/contact'
 import type { Org, OrgContact } from '../../../../domain/org'
 import {
   cancelOrgInvite,
@@ -33,11 +39,15 @@ import {
   updateOrgMemberRole,
 } from '../../../../lib/orgs-api'
 import { cn } from '../../../../lib/cn'
-import type { BoatContactGroup } from '../../../../domain/contact'
 import { ResourceSectionHeader } from '../../../../components/NotificationBellToggle'
 import { useSession } from '../../../../lib/auth-client'
 
-type OrgDetailTab = 'members' | 'documents' | 'contacts' | 'boats' | 'accounting'
+type OrgDetailTab =
+  | 'members'
+  | 'documents'
+  | 'contacts'
+  | 'boats'
+  | 'accounting'
 
 const ORG_TAB_AREAS: Partial<Record<OrgDetailTab, ContactResourceArea>> = {
   documents: 'DOCUMENTS',
@@ -74,12 +84,12 @@ function OrgDetailPage() {
   const [members, setMembers] = useState<ResourceMember[]>([])
   const [pendingInvites, setPendingInvites] = useState<MemberInvite[]>([])
   const [contacts, setContacts] = useState<OrgContact[]>([])
-  const [boatContactGroups, setBoatContactGroups] = useState<BoatContactGroup[]>(
-    [],
-  )
-  const [contactGrants, setContactGrants] = useState<ContactResourceArea[] | null>(
-    null,
-  )
+  const [boatContactGroups, setBoatContactGroups] = useState<
+    BoatContactGroup[]
+  >([])
+  const [contactGrants, setContactGrants] = useState<
+    ContactResourceArea[] | null
+  >(null)
   const [loading, setLoading] = useState(true)
   const [membersRefreshing, setMembersRefreshing] = useState(false)
   const [contactsRefreshing, setContactsRefreshing] = useState(false)
@@ -202,7 +212,9 @@ function OrgDetailPage() {
   if (loading) {
     return (
       <main className="page-wrap px-3 py-8 sm:px-4">
-        <p className="text-sm text-[var(--sea-ink-soft)]">Loading organization…</p>
+        <p className="text-sm text-[var(--sea-ink-soft)]">
+          Loading organization…
+        </p>
       </main>
     )
   }
@@ -230,7 +242,9 @@ function OrgDetailPage() {
         return area ? contactGrants.includes(area) : false
       })
     : ['members', 'documents', 'contacts', 'boats', 'accounting']
-  const activeTab = tabCandidates.includes(tab) ? tab : tabCandidates[0] ?? 'members'
+  const activeTab = tabCandidates.includes(tab)
+    ? tab
+    : (tabCandidates[0] ?? 'members')
   const tabLabels: Record<OrgDetailTab, string> = {
     members: 'Members',
     documents: 'Documents',
@@ -257,44 +271,44 @@ function OrgDetailPage() {
           disabled={!canManageOrg || isGuestContact}
         />
         <div className="min-w-0 flex-1">
-        {editingName ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              autoFocus
-              className="min-w-[12rem] flex-1 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-2 text-[1.35rem] font-semibold text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20 sm:text-2xl"
-            />
+          {editingName ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                autoFocus
+                className="min-w-[12rem] flex-1 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-2 text-[1.35rem] font-semibold text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20 sm:text-2xl"
+              />
+              <button
+                type="button"
+                disabled={savingName || !nameDraft.trim()}
+                onClick={() => void handleSaveName()}
+                className="rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
+              >
+                {savingName ? 'Saving…' : 'Save'}
+              </button>
+              <button
+                type="button"
+                disabled={savingName}
+                onClick={() => {
+                  setEditingName(false)
+                  setNameDraft(org.name)
+                }}
+                className="rounded-full border border-[var(--chip-line)] px-4 py-2 text-sm font-semibold text-[var(--sea-ink)]"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
             <button
               type="button"
-              disabled={savingName || !nameDraft.trim()}
-              onClick={() => void handleSaveName()}
-              className="rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
+              disabled={isGuestContact}
+              onClick={() => setEditingName(true)}
+              className="brand-title m-0 block min-w-0 text-left text-[2.35rem] leading-none sm:text-[2.75rem] disabled:cursor-default"
             >
-              {savingName ? 'Saving…' : 'Save'}
+              {org.name}
             </button>
-            <button
-              type="button"
-              disabled={savingName}
-              onClick={() => {
-                setEditingName(false)
-                setNameDraft(org.name)
-              }}
-              className="rounded-full border border-[var(--chip-line)] px-4 py-2 text-sm font-semibold text-[var(--sea-ink)]"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            disabled={isGuestContact}
-            onClick={() => setEditingName(true)}
-            className="brand-title m-0 block min-w-0 text-left text-[2.35rem] leading-none sm:text-[2.75rem] disabled:cursor-default"
-          >
-            {org.name}
-          </button>
-        )}
+          )}
         </div>
       </div>
 
@@ -344,7 +358,9 @@ function OrgDetailPage() {
                 toast.success('Invite link created and copied')
               } catch (e) {
                 toast.error(
-                  e instanceof Error ? e.message : 'Failed to create invite link',
+                  e instanceof Error
+                    ? e.message
+                    : 'Failed to create invite link',
                 )
               }
             }}
@@ -369,7 +385,9 @@ function OrgDetailPage() {
             }}
             onRemove={async (member) => {
               if (
-                !window.confirm(`Remove ${member.user.name} from this organization?`)
+                !window.confirm(
+                  `Remove ${member.user.name} from this organization?`,
+                )
               ) {
                 return
               }
@@ -404,9 +422,7 @@ function OrgDetailPage() {
           />
         ) : null}
 
-        {activeTab === 'documents' ? (
-          <OrgDocumentsTab orgId={orgId} />
-        ) : null}
+        {activeTab === 'documents' ? <OrgDocumentsTab orgId={orgId} /> : null}
 
         {activeTab === 'contacts' ? (
           <ResourceContactsTab
@@ -441,7 +457,7 @@ function OrgDetailPage() {
                   params: {
                     boatId: contact.boatId,
                     contactId: contact.id,
-                  } as Record<string, string>,
+                  },
                 }
               }
               return {
@@ -507,7 +523,6 @@ function OrgDetailPage() {
           void fetchOrg(orgId).then((payload) => setOrg(payload.org))
         }}
       />
-
     </main>
   )
 }

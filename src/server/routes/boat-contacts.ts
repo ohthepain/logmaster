@@ -54,7 +54,7 @@ function serializeBoatContact(contact: {
     phone: contact.phone,
     whatsapp: contact.whatsapp ?? null,
     notes: contact.notes,
-    grants: (contact.grants ?? []) as ContactResourceArea[],
+    grants: (contact.grants ?? []),
     createdAt: contact.createdAt.toISOString(),
     updatedAt: contact.updatedAt.toISOString(),
   }

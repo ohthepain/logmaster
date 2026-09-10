@@ -16,10 +16,15 @@ import {
   BOAT_CONTACT_AREAS,
   ResourceContactsTab,
 } from '../../../../components/ResourceContactsTab'
-import type { BoatContact } from '../../../../domain/contact'
-import type { ContactResourceArea } from '../../../../domain/contact'
+import type {
+  BoatContact,
+  ContactResourceArea,
+} from '../../../../domain/contact'
 import type { Boat } from '../../../../domain/boat'
-import type { MemberInvite, ResourceMember  } from '../../../../domain/member-invite'
+import type {
+  MemberInvite,
+  ResourceMember,
+} from '../../../../domain/member-invite'
 import type { OrgMemberRole } from '../../../../domain/org'
 import {
   cancelBoatInvite,
@@ -90,9 +95,9 @@ function BoatDetailPage() {
   const [pendingInvites, setPendingInvites] = useState<MemberInvite[]>([])
   const [canManageMembers, setCanManageMembers] = useState(false)
   const [contacts, setContacts] = useState<BoatContact[]>([])
-  const [contactGrants, setContactGrants] = useState<ContactResourceArea[] | null>(
-    null,
-  )
+  const [contactGrants, setContactGrants] = useState<
+    ContactResourceArea[] | null
+  >(null)
   const [loading, setLoading] = useState(true)
   const [membersRefreshing, setMembersRefreshing] = useState(false)
   const [contactsRefreshing, setContactsRefreshing] = useState(false)
@@ -234,9 +239,9 @@ function BoatDetailPage() {
         'contacts',
         'members',
       ]
-  const tab: BoatDetailTab = tabCandidates.includes(tabRaw as BoatDetailTab)
-    ? (tabRaw as BoatDetailTab)
-    : tabCandidates[0] ?? 'photos'
+  const tab: BoatDetailTab = tabCandidates.includes(tabRaw)
+    ? tabRaw
+    : (tabCandidates[0] ?? 'photos')
   const tabLabels: Record<BoatDetailTab, string> = {
     photos: 'Photos',
     documents: 'Documents',
@@ -323,9 +328,7 @@ function BoatDetailPage() {
             refreshing={photosRefreshing}
           />
         ) : null}
-        {tab === 'documents' ? (
-          <BoatDocumentsTab boatId={boat.id} />
-        ) : null}
+        {tab === 'documents' ? <BoatDocumentsTab boatId={boat.id} /> : null}
         {tab === 'assets' ? (
           <BoatAssetsTab
             boatId={boat.id}
@@ -389,7 +392,9 @@ function BoatDetailPage() {
                 toast.success('Invite link created and copied')
               } catch (e) {
                 toast.error(
-                  e instanceof Error ? e.message : 'Failed to create invite link',
+                  e instanceof Error
+                    ? e.message
+                    : 'Failed to create invite link',
                 )
               }
             }}

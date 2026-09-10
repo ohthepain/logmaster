@@ -1,3 +1,5 @@
+import type { OrgMember, OrgMemberBoat } from './org'
+
 export type ContactResourceArea =
   | 'PHOTOS'
   | 'DOCUMENTS'
@@ -63,14 +65,16 @@ export type BoatContactDetail = {
 
 export type OrgContactDetail = {
   contact: OrgContact
-  member: import('./org').OrgMember | null
-  boats: import('./org').OrgMemberBoat[]
+  member: OrgMember | null
+  boats: OrgMemberBoat[]
   canEditContact: boolean
   canManageMembership: boolean
   canManageGrants: boolean
 }
 
-export function isContactResourceArea(value: string): value is ContactResourceArea {
+export function isContactResourceArea(
+  value: string,
+): value is ContactResourceArea {
   return (
     value === 'PHOTOS' ||
     value === 'DOCUMENTS' ||
