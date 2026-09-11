@@ -55,7 +55,7 @@ export function invalidateNotificationPreferences(
   if ('tree' in scope && scope.tree) {
     return
   }
-  preferencesCache.delete(scopeKey(scope as PreferencesScope))
+  preferencesCache.delete(scopeKey(scope))
 }
 
 export function invalidateNotificationPreferencePath(path: string) {

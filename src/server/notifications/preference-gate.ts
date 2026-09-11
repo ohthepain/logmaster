@@ -1,9 +1,10 @@
 import {
   computePathMuteState,
   isBlockedByMute,
-  pathsForActivityEvent,
-  type ActivityEventForPreferences,
+  pathsForActivityEvent
+  
 } from '../../domain/notification-preferences'
+import type {ActivityEventForPreferences} from '../../domain/notification-preferences';
 import { prisma } from '../db'
 
 const db = prisma as any
