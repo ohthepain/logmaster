@@ -2,7 +2,10 @@ import type {
   NotificationPreferenceNode,
   NotificationPreferenceTreeResources,
 } from '../domain/notification-preferences'
-import { fetchNotificationPreferenceNode, fetchNotificationPreferences } from './notifications-api'
+import {
+  fetchNotificationPreferenceNode,
+  fetchNotificationPreferences,
+} from './notifications-api'
 import {
   ensureNotificationPreferencesReady,
   getNotificationPreferenceFromStore,

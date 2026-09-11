@@ -129,16 +129,16 @@ export function NotificationBellToggle({
   const Icon = enabled ? BellRing : Bell
 
   return (
-    <span className={cn('inline-flex flex-col items-center gap-0.5', className)}>
+    <span
+      className={cn('inline-flex flex-col items-center gap-0.5', className)}
+    >
       <button
         type="button"
         role="switch"
         aria-checked={enabled}
         aria-label={tooltip}
         title={
-          blockedByLabel
-            ? `${tooltip}. Blocked by ${blockedByLabel}.`
-            : tooltip
+          blockedByLabel ? `${tooltip}. Blocked by ${blockedByLabel}.` : tooltip
         }
         disabled={loading || busy}
         onClick={() => void toggle()}

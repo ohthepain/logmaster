@@ -55,9 +55,7 @@ export async function emitActivityEvent(
     const eligibleUserIds = await resolveEligibleUserIds(input)
     if (eligibleUserIds.length === 0) return
 
-    let recipientIds = eligibleUserIds.filter(
-      (id) => id !== input.actorUserId,
-    )
+    let recipientIds = eligibleUserIds.filter((id) => id !== input.actorUserId)
     if (recipientIds.length === 0) return
 
     const preferenceChain = pathsForActivityEvent({

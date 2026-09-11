@@ -114,7 +114,9 @@ export function ancestorChainForPath(path: string): string[] {
   const chain: string[] = ['global']
   if (path === 'global') return chain
 
-  if (NOTIFICATION_CATEGORY_PATHS.includes(path as NotificationPreferenceCategory)) {
+  if (
+    NOTIFICATION_CATEGORY_PATHS.includes(path as NotificationPreferenceCategory)
+  ) {
     return [...chain, path]
   }
 
@@ -181,8 +183,7 @@ export function preferencePathLabel(path: string): string {
   const parts = path.split(':')
   if (parts.length === 3) {
     const section = parts[2]
-    const sectionLabel =
-      NOTIFICATION_PREFERENCE_PATH_LABELS[section] ?? section
+    const sectionLabel = NOTIFICATION_PREFERENCE_PATH_LABELS[section] ?? section
     return sectionLabel
   }
   if (parts.length === 2) {
@@ -205,13 +206,7 @@ export function preferencePathForSubscription(args: {
 }
 
 export function orgSectionPaths(orgId: string): string[] {
-  const sections = [
-    'members',
-    'documents',
-    'contacts',
-    'boats',
-    'accounting',
-  ]
+  const sections = ['members', 'documents', 'contacts', 'boats', 'accounting']
   return sections.map((section) => `org:${orgId}:${section}`)
 }
 
@@ -285,9 +280,7 @@ export const TRIP_PREFERENCE_SECTIONS = [
 ] as const
 
 export function tripSectionPaths(tripId: string): string[] {
-  return TRIP_PREFERENCE_SECTIONS.map(
-    (section) => `trip:${tripId}:${section}`,
-  )
+  return TRIP_PREFERENCE_SECTIONS.map((section) => `trip:${tripId}:${section}`)
 }
 
 export function tripInstancePaths(tripIds: string[]): string[] {
@@ -345,11 +338,9 @@ export function enrichPreferencePathLabel(
   }
   if (parts.length === 3) {
     const [kind, id, section] = parts
-    const sectionLabel =
-      NOTIFICATION_PREFERENCE_PATH_LABELS[section] ?? section
+    const sectionLabel = NOTIFICATION_PREFERENCE_PATH_LABELS[section] ?? section
     if (kind === 'boat') {
-      const name =
-        resources.boats.find((boat) => boat.id === id)?.name ?? id
+      const name = resources.boats.find((boat) => boat.id === id)?.name ?? id
       return `${name}: ${sectionLabel}`
     }
     if (kind === 'org') {

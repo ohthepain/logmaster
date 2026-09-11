@@ -23,10 +23,7 @@ describe('filterUsersNotBlockedByMutes', () => {
       topic: 'ORG_DOCUMENTS',
       orgId: 'org-1',
     })
-    const result = await filterUsersNotBlockedByMutes(
-      ['u1', 'u2', 'u3'],
-      chain,
-    )
+    const result = await filterUsersNotBlockedByMutes(['u1', 'u2', 'u3'], chain)
     expect(result).toEqual(['u1', 'u3'])
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({

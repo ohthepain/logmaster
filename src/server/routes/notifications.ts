@@ -65,7 +65,10 @@ notificationsRoutes.get('/preferences', async (c) => {
     if (c.req.query('tree') === '1') {
       const tripIdsRaw = c.req.query('tripIds')?.trim()
       const tripIds = tripIdsRaw
-        ? tripIdsRaw.split(',').map((id) => id.trim()).filter(Boolean)
+        ? tripIdsRaw
+            .split(',')
+            .map((id) => id.trim())
+            .filter(Boolean)
         : []
       const tree = await listNotificationPreferenceTree(userId, {
         tripIds,

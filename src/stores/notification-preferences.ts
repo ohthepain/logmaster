@@ -16,7 +16,10 @@ type NotificationPreferencesState = {
   loading: boolean
   error: string | null
   inFlight: Promise<NotificationPreferenceTree> | null
-  loadTree: (tripIds: string[], options?: { force?: boolean }) => Promise<NotificationPreferenceTree>
+  loadTree: (
+    tripIds: string[],
+    options?: { force?: boolean },
+  ) => Promise<NotificationPreferenceTree>
   patchNode: (node: NotificationPreferenceNode) => void
   invalidate: () => void
 }
@@ -31,8 +34,8 @@ function nodesByPath(
   return new Map(nodes.map((node) => [node.path, node]))
 }
 
-export const useNotificationPreferencesStore = create<NotificationPreferencesState>(
-  (set, get) => ({
+export const useNotificationPreferencesStore =
+  create<NotificationPreferencesState>((set, get) => ({
     tree: null,
     tripIdsKey: null,
     loading: false,
@@ -67,7 +70,9 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSta
         })
         .catch((error) => {
           const message =
-            error instanceof Error ? error.message : 'Failed to load preferences'
+            error instanceof Error
+              ? error.message
+              : 'Failed to load preferences'
           set({
             loading: false,
             error: message,
@@ -101,8 +106,7 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSta
         error: null,
       })
     },
-  }),
-)
+  }))
 
 export function getNotificationPreferenceFromStore(
   path: string,

@@ -34,10 +34,7 @@ export function TripMapEditMenu({
   }
 
   return (
-    <div
-      className="pointer-events-auto relative"
-      data-map-touch-zone
-    >
+    <div className="pointer-events-auto relative" data-map-touch-zone>
       {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
       <button
         type="button"

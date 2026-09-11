@@ -40,9 +40,7 @@ export async function filterUsersNotBlockedByMutes(
     select: { userId: true },
   })
 
-  const blocked = new Set(
-    rows.map((row: { userId: string }) => row.userId),
-  )
+  const blocked = new Set(rows.map((row: { userId: string }) => row.userId))
   return userIds.filter((id) => !blocked.has(id))
 }
 

@@ -21,10 +21,7 @@ export function NotificationPreferenceBell({
 }: NotificationPreferenceBellProps) {
   const enabled = !node.muted
   const title =
-    label ??
-    (enabled
-      ? `Mute ${node.label}`
-      : `Unmute ${node.label}`)
+    label ?? (enabled ? `Mute ${node.label}` : `Unmute ${node.label}`)
 
   const Icon = enabled ? BellRing : Bell
 

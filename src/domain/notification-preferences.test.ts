@@ -114,9 +114,32 @@ describe('preferences tree helpers', () => {
 
   it('partitions trips for settings UI', () => {
     const trips = [
-      { id: '1', status: 'IN_PROGRESS', boatName: 'A', startedAt: '', createdAt: '', updatedAt: '' },
-      { id: '2', status: 'COMPLETED', boatName: 'B', startedAt: '', completedAt: '2026-01-02', createdAt: '', updatedAt: '2026-01-02' },
-      { id: '3', status: 'COMPLETED', boatName: 'C', startedAt: '', completedAt: '2026-01-03', createdAt: '', updatedAt: '2026-01-03' },
+      {
+        id: '1',
+        status: 'IN_PROGRESS',
+        boatName: 'A',
+        startedAt: '',
+        createdAt: '',
+        updatedAt: '',
+      },
+      {
+        id: '2',
+        status: 'COMPLETED',
+        boatName: 'B',
+        startedAt: '',
+        completedAt: '2026-01-02',
+        createdAt: '',
+        updatedAt: '2026-01-02',
+      },
+      {
+        id: '3',
+        status: 'COMPLETED',
+        boatName: 'C',
+        startedAt: '',
+        completedAt: '2026-01-03',
+        createdAt: '',
+        updatedAt: '2026-01-03',
+      },
     ] as Trip[]
     const { inProgress, completed } =
       partitionTripsForNotificationSettings(trips)

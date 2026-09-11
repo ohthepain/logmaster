@@ -128,11 +128,9 @@ export async function unregisterPushDevice(input: {
   })
 }
 
-export async function fetchNotificationPreferences(args: {
-  boatId?: string
-  orgId?: string
-  includeJob?: boolean
-} = {}): Promise<NotificationPreferenceNode[]> {
+export async function fetchNotificationPreferences(
+  args: { boatId?: string; orgId?: string; includeJob?: boolean } = {},
+): Promise<NotificationPreferenceNode[]> {
   const params = new URLSearchParams()
   if (args.boatId) params.set('boatId', args.boatId)
   if (args.orgId) params.set('orgId', args.orgId)
@@ -143,10 +141,9 @@ export async function fetchNotificationPreferences(args: {
   return data.nodes
 }
 
-export async function fetchNotificationPreferencesTree(args: {
-  tripIds?: string[]
-  includeJob?: boolean
-} = {}): Promise<{
+export async function fetchNotificationPreferencesTree(
+  args: { tripIds?: string[]; includeJob?: boolean } = {},
+): Promise<{
   nodes: NotificationPreferenceNode[]
   resources: NotificationPreferenceTreeResources
 }> {

@@ -59,7 +59,9 @@ export function NotificationPreferenceToggleRow({
       )}
     >
       <div className="min-w-0 flex-1">
-        <p className="m-0 text-sm font-medium text-[var(--sea-ink)]">{rowLabel}</p>
+        <p className="m-0 text-sm font-medium text-[var(--sea-ink)]">
+          {rowLabel}
+        </p>
         {!node.effective && node.blockedByLabel ? (
           <p className="mt-1 mb-0 text-xs leading-5 text-amber-700 dark:text-amber-300">
             Blocked by &ldquo;{node.blockedByLabel}&rdquo; until that level is
@@ -128,9 +130,7 @@ function SettingsAccordion({
             busy={busyPath === categoryPath}
             onToggle={onToggle}
             label={
-              !categoryNode.muted
-                ? `Mute all ${title}`
-                : `Unmute all ${title}`
+              !categoryNode.muted ? `Mute all ${title}` : `Unmute all ${title}`
             }
           />
         ) : null}
@@ -140,7 +140,10 @@ function SettingsAccordion({
   )
 }
 
-function placeholderNode(path: string, label: string): NotificationPreferenceNode {
+function placeholderNode(
+  path: string,
+  label: string,
+): NotificationPreferenceNode {
   return {
     path,
     label,
