@@ -20,7 +20,9 @@ export function crewTripPersonKey(crewMemberId: string) {
   return `crew:${crewMemberId}`
 }
 
-export function parseTripPersonKey(key: string): { kind: TripPersonKind; id: string } | null {
+export function parseTripPersonKey(
+  key: string,
+): { kind: TripPersonKind; id: string } | null {
   const [kind, id] = key.split(':')
   if ((kind !== 'user' && kind !== 'crew') || !id) return null
   return { kind, id }
@@ -40,14 +42,16 @@ export function buildSkipperOptions(args: {
     imageUrl: profilePhotoUrl(args.userImage),
   }
 
-  const crew = args.crewMembers.map((member): TripPersonOption => ({
-    key: crewTripPersonKey(member.id),
-    kind: 'crew',
-    id: member.id,
-    name: member.name,
-    imageUrl: member.imageUrl,
-    linkedUserId: member.linkedUserId,
-  }))
+  const crew = args.crewMembers.map(
+    (member): TripPersonOption => ({
+      key: crewTripPersonKey(member.id),
+      kind: 'crew',
+      id: member.id,
+      name: member.name,
+      imageUrl: member.imageUrl,
+      linkedUserId: member.linkedUserId,
+    }),
+  )
 
   return [self, ...crew]
 }

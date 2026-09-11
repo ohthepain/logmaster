@@ -1,5 +1,12 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
-import { ArrowLeft, Copy, Mail, MessageCircle, Phone, Sailboat } from 'lucide-react'
+import {
+  ArrowLeft,
+  Copy,
+  Mail,
+  MessageCircle,
+  Phone,
+  Sailboat,
+} from 'lucide-react'
 import type { FormEvent, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -7,7 +14,11 @@ import { CrewAvatar } from '../../../../../components/CrewAvatar'
 import { MEMBER_ROLE_LABELS } from '../../../../../domain/member-invite'
 import type { ContactResourceArea } from '../../../../../domain/contact'
 import { formatContactGrants } from '../../../../../domain/contact'
-import type { OrgContactDetail, OrgMemberBoat, OrgMemberRole } from '../../../../../domain/org'
+import type {
+  OrgContactDetail,
+  OrgMemberBoat,
+  OrgMemberRole,
+} from '../../../../../domain/org'
 import {
   ContactGrantsEditor,
   ORG_CONTACT_AREAS,
@@ -53,7 +64,10 @@ function OrgContactDetailPage() {
   const loadDetail = () => {
     setLoading(true)
     setError(null)
-    return Promise.all([fetchOrg(orgId), fetchOrgContactDetail(orgId, contactId)])
+    return Promise.all([
+      fetchOrg(orgId),
+      fetchOrgContactDetail(orgId, contactId),
+    ])
       .then(([orgPayload, contactDetail]) => {
         setOrgName(orgPayload.org.name)
         setDetail(contactDetail)
@@ -88,13 +102,13 @@ function OrgContactDetailPage() {
         whatsapp: whatsappDraft.trim() || null,
         notes: notesDraft.trim() || null,
       })
-      setDetail((current) =>
-        current ? { ...current, contact } : current,
-      )
+      setDetail((current) => (current ? { ...current, contact } : current))
       setEditing(false)
       toast.success('Contact info updated')
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save contact info')
+      toast.error(
+        e instanceof Error ? e.message : 'Failed to save contact info',
+      )
     } finally {
       setSaving(false)
     }
@@ -132,10 +146,12 @@ function OrgContactDetailPage() {
   const handleRoleChange = async (role: OrgMemberRole) => {
     if (!detail?.member) return
     try {
-      const member = await updateOrgMemberRole(orgId, detail.member.userId, role)
-      setDetail((current) =>
-        current ? { ...current, member } : current,
+      const member = await updateOrgMemberRole(
+        orgId,
+        detail.member.userId,
+        role,
       )
+      setDetail((current) => (current ? { ...current, member } : current))
       setMembershipRole(role)
       toast.success('Role updated')
     } catch (e) {
@@ -168,12 +184,12 @@ function OrgContactDetailPage() {
       const contact = await updateOrgContact(orgId, contactId, {
         grants: grantsDraft,
       })
-      setDetail((current) =>
-        current ? { ...current, contact } : current,
-      )
+      setDetail((current) => (current ? { ...current, contact } : current))
       toast.success('Guest access updated')
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to update guest access')
+      toast.error(
+        e instanceof Error ? e.message : 'Failed to update guest access',
+      )
     } finally {
       setSavingGrants(false)
     }
@@ -208,8 +224,14 @@ function OrgContactDetailPage() {
     )
   }
 
-  const { contact, member, boats, canEditContact, canManageMembership, canManageGrants } =
-    detail
+  const {
+    contact,
+    member,
+    boats,
+    canEditContact,
+    canManageMembership,
+    canManageGrants,
+  } = detail
   const avatarName = member?.user.name ?? contact.displayName
   const avatarImage = member?.user.image ?? null
 
@@ -356,7 +378,9 @@ function OrgContactDetailPage() {
               icon={<MessageCircle className="size-4" />}
               label="WhatsApp"
               value={contact.whatsapp}
-              href={contact.whatsapp ? whatsAppUrl(contact.whatsapp) : undefined}
+              href={
+                contact.whatsapp ? whatsAppUrl(contact.whatsapp) : undefined
+              }
               connectLabel="WhatsApp"
               external
             />
@@ -379,8 +403,8 @@ function OrgContactDetailPage() {
           Guest access
         </h2>
         <p className="mt-2 text-sm text-[var(--sea-ink-soft)]">
-          Linked registered users can view only the selected org areas. No invite
-          is sent.
+          Linked registered users can view only the selected org areas. No
+          invite is sent.
         </p>
         <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] p-4">
           <ContactGrantsEditor
@@ -473,7 +497,9 @@ function OrgContactDetailPage() {
             ) : null}
           </div>
         ) : (
-          <p className="text-sm text-[var(--sea-ink-soft)]">Not an org member.</p>
+          <p className="text-sm text-[var(--sea-ink-soft)]">
+            Not an org member.
+          </p>
         )}
       </section>
 
@@ -576,7 +602,8 @@ function BoatRow({ boat }: { boat: OrgMemberBoat }) {
             {boat.name}
           </p>
           <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">
-            {boat.shareCount} {boat.shareCount === 1 ? 'share' : 'shares'} in org
+            {boat.shareCount} {boat.shareCount === 1 ? 'share' : 'shares'} in
+            org
             {boat.isBoatOwner ? ' · boat owner' : ''}
             {boat.boatMemberRole
               ? ` · ${MEMBER_ROLE_LABELS[boat.boatMemberRole]}`
@@ -587,7 +614,9 @@ function BoatRow({ boat }: { boat: OrgMemberBoat }) {
       </Link>
       <div className="mt-3 border-t border-[var(--line)] pt-3">
         {boat.ownedShares.length === 0 ? (
-          <p className="m-0 text-xs text-[var(--sea-ink-soft)]">No shares owned</p>
+          <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
+            No shares owned
+          </p>
         ) : (
           <>
             <p className="m-0 text-xs font-medium text-[var(--sea-ink-soft)]">

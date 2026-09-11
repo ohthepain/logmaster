@@ -37,7 +37,9 @@ function partsForDataset(dataset: OsmPointDatasetId): QueryPart[] {
         { kind: 'wreck', ql: 'nwr["historic"="wreck"]' },
       ]
     default:
-      throw new Error(`Dataset "${dataset}" has no Overpass query in osm-points`)
+      throw new Error(
+        `Dataset "${dataset}" has no Overpass query in osm-points`,
+      )
   }
 }
 

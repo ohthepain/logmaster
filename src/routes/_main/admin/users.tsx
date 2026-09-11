@@ -1,12 +1,8 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import {
-  deleteAdminUser,
-  fetchAdminUsers
-  
-} from '../../../lib/admin-api'
-import type {AdminUser} from '../../../lib/admin-api';
+import { deleteAdminUser, fetchAdminUsers } from '../../../lib/admin-api'
+import type { AdminUser } from '../../../lib/admin-api'
 import { useSession } from '../../../lib/auth-client'
 import { useIsAdmin } from '../../../lib/use-admin'
 
@@ -54,7 +50,14 @@ function AdminUsersPage() {
       return
     }
     void load()
-  }, [adminLoading, isAdmin, load, navigate, session.data?.user, session.isPending])
+  }, [
+    adminLoading,
+    isAdmin,
+    load,
+    navigate,
+    session.data?.user,
+    session.isPending,
+  ])
 
   const handleDelete = async (user: AdminUser) => {
     if (
@@ -138,14 +141,18 @@ function AdminUsersPage() {
                     </p>
                     <p className="m-0 mt-0.5 text-sm text-[var(--sea-ink-soft)]">
                       {user.email}
-                      {user.emailVerified ? ' · verified' : ' · unverified'} · joined{' '}
-                      {formatDate(user.createdAt)}
+                      {user.emailVerified ? ' · verified' : ' · unverified'} ·
+                      joined {formatDate(user.createdAt)}
                     </p>
                   </div>
                   <button
                     type="button"
                     disabled={busy || isSelf}
-                    title={isSelf ? 'You cannot delete your own account here' : undefined}
+                    title={
+                      isSelf
+                        ? 'You cannot delete your own account here'
+                        : undefined
+                    }
                     onClick={() => void handleDelete(user)}
                     className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-800 disabled:opacity-60 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200"
                   >

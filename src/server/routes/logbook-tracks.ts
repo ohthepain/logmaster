@@ -2,10 +2,7 @@ import { Hono } from 'hono'
 import { prisma } from '../db'
 import { canAccess } from '../permissions'
 import { getSessionUserId } from '../session'
-import {
-  readTrackObjectBytes,
-  uploadTrackObject,
-} from '../s3-tracks'
+import { readTrackObjectBytes, uploadTrackObject } from '../s3-tracks'
 
 const db = prisma as any
 
@@ -29,7 +26,9 @@ function toTripTrackRecord(data: Record<string, unknown>) {
     kind: String(data.kind ?? 'position'),
     encoding: String(data.encoding ?? 'delta-v1'),
     payload:
-      storage === 'inline' ? ((data.payload as object | null | undefined) ?? null) : null,
+      storage === 'inline'
+        ? ((data.payload as object | null | undefined) ?? null)
+        : null,
     storage,
     storageKey: (data.storageKey as string | null | undefined) ?? null,
     byteLength:
@@ -46,17 +45,23 @@ function toTripTrackRecord(data: Record<string, unknown>) {
   }
 }
 
-function serializeTripTrack(track: Record<string, unknown>, includePayload: boolean) {
+function serializeTripTrack(
+  track: Record<string, unknown>,
+  includePayload: boolean,
+) {
   const storage = track.storage === 's3' ? 's3' : 'inline'
   return {
     ...track,
-    payload: includePayload && storage === 'inline' ? track.payload ?? null : null,
+    payload:
+      includePayload && storage === 'inline' ? (track.payload ?? null) : null,
     startedAt:
       track.startedAt instanceof Date
         ? track.startedAt.toISOString()
         : track.startedAt,
     endedAt:
-      track.endedAt instanceof Date ? track.endedAt.toISOString() : track.endedAt,
+      track.endedAt instanceof Date
+        ? track.endedAt.toISOString()
+        : track.endedAt,
     createdAt:
       track.createdAt instanceof Date
         ? track.createdAt.toISOString()

@@ -1,8 +1,5 @@
-import type { PositionTrackSample, TripTrack  } from '../domain/trip-track'
-import {
-  decodeTripTrack,
-  positionTracksForTrip,
-} from '../domain/trip-track'
+import type { PositionTrackSample, TripTrack } from '../domain/trip-track'
+import { decodeTripTrack, positionTracksForTrip } from '../domain/trip-track'
 import { normalizeBearing360, wrapDegrees180 } from './angle'
 import type { TripPlaybackPosition } from './trip-playback'
 
@@ -72,20 +69,23 @@ export function tripPlaybackPositionFromTrackSamples(
           { latitude: before.latitude, longitude: before.longitude },
           { latitude: after.latitude, longitude: after.longitude },
         )
-      : sampleHeading(before) ?? 0
+      : (sampleHeading(before) ?? 0)
   const fromHeading = sampleHeading(before) ?? fallbackHeading
   const toHeading = sampleHeading(after) ?? fallbackHeading
 
   return {
     latitude: before.latitude + (after.latitude - before.latitude) * progress,
-    longitude: before.longitude + (after.longitude - before.longitude) * progress,
+    longitude:
+      before.longitude + (after.longitude - before.longitude) * progress,
     heading: normalizeBearing360(
       fromHeading + wrapDegrees180(toHeading - fromHeading) * progress,
     ),
   }
 }
 
-export function tripPlaybackRangeFromTrackSamples(samples: PositionTrackSample[]) {
+export function tripPlaybackRangeFromTrackSamples(
+  samples: PositionTrackSample[],
+) {
   const times = samples
     .map((sample) => validDateMs(sample.time))
     .filter((time): time is number => time != null)

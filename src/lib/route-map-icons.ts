@@ -5,12 +5,8 @@ import {
   drawWaypointSquareCross,
   ROUTE_PLANNED_LINE_COLOR,
 } from './waypoint-map-style'
-import {
-  routeMapMarkerImageId,
-  ROUTE_MAP_ICON_KINDS
-  
-} from './route-map-marker'
-import type {RouteMapIconKind} from './route-map-marker';
+import { routeMapMarkerImageId, ROUTE_MAP_ICON_KINDS } from './route-map-marker'
+import type { RouteMapIconKind } from './route-map-marker'
 
 export const ROUTE_MAP_MARKER_SIZE = 64
 export const ROUTE_MAP_MARKER_PIXEL_RATIO = 2
@@ -85,7 +81,9 @@ function markerSpecsFromGeoJson(collection: {
 
 export async function syncRouteMapMarkerImages(
   map: maplibregl.Map,
-  collection: { features: Array<{ properties?: Record<string, unknown> | null }> },
+  collection: {
+    features: Array<{ properties?: Record<string, unknown> | null }>
+  },
 ) {
   const specs = markerSpecsFromGeoJson(collection)
   await Promise.all(

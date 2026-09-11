@@ -49,8 +49,7 @@ export function extensionForBoatDocumentTarget(
   }
   if (mime === 'application/vnd.ms-excel') return 'xls'
   if (
-    mime ===
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    mime === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   ) {
     return 'xlsx'
   }
@@ -91,7 +90,9 @@ export function getBoatDocumentViewKind(
   return null
 }
 
-export function isBoatDocumentViewable(target: BoatDocumentOpenTarget): boolean {
+export function isBoatDocumentViewable(
+  target: BoatDocumentOpenTarget,
+): boolean {
   return getBoatDocumentViewKind(target) !== null
 }
 

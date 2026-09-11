@@ -11,12 +11,14 @@ import { DOCUMENT_PURPOSE_LABELS } from '../domain/boat-assets'
 import { linkBoatDocument } from '../lib/boat-assets-api'
 import {
   boatDocumentVersionOpenTarget,
-  openBoatDocument
-  
+  openBoatDocument,
 } from '../lib/boat-document-open'
-import type {BoatDocumentViewerPayload} from '../lib/boat-document-open';
+import type { BoatDocumentViewerPayload } from '../lib/boat-document-open'
 import { getBoatDocumentViewKind } from '../lib/boat-document-viewer'
-import { fetchBoatDocuments, fetchLinkDocumentTitle } from '../lib/boat-documents-api'
+import {
+  fetchBoatDocuments,
+  fetchLinkDocumentTitle,
+} from '../lib/boat-documents-api'
 import { apiUrl } from '../lib/app-origin'
 import { documentTitleFromUrl } from '../lib/document-title'
 import { cn } from '../lib/cn'
@@ -127,17 +129,20 @@ export function AssetDocumentDropTargets({
 }) {
   const receiptInputRef = useRef<HTMLInputElement>(null)
   const otherInputRef = useRef<HTMLInputElement>(null)
-  const [dragOver, setDragOver] = useState<DocumentPurpose | 'link' | null>(null)
+  const [dragOver, setDragOver] = useState<DocumentPurpose | 'link' | null>(
+    null,
+  )
   const [linkModalOpen, setLinkModalOpen] = useState(false)
 
-  const handleDrop = (purpose: DocumentPurpose) => (event: DragEvent<HTMLButtonElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-    setDragOver(null)
-    if (uploading) return
-    const file = event.dataTransfer.files?.[0]
-    if (file) void onUpload(file, purpose)
-  }
+  const handleDrop =
+    (purpose: DocumentPurpose) => (event: DragEvent<HTMLButtonElement>) => {
+      event.preventDefault()
+      event.stopPropagation()
+      setDragOver(null)
+      if (uploading) return
+      const file = event.dataTransfer.files?.[0]
+      if (file) void onUpload(file, purpose)
+    }
 
   return (
     <>
@@ -154,7 +159,8 @@ export function AssetDocumentDropTargets({
           }}
           onDragLeave={(event) => {
             event.preventDefault()
-            if (event.currentTarget.contains(event.relatedTarget as Node)) return
+            if (event.currentTarget.contains(event.relatedTarget as Node))
+              return
             setDragOver(null)
           }}
           onDragOver={(event) => event.preventDefault()}
@@ -173,7 +179,8 @@ export function AssetDocumentDropTargets({
           }}
           onDragLeave={(event) => {
             event.preventDefault()
-            if (event.currentTarget.contains(event.relatedTarget as Node)) return
+            if (event.currentTarget.contains(event.relatedTarget as Node))
+              return
             setDragOver(null)
           }}
           onDragOver={(event) => event.preventDefault()}
@@ -189,7 +196,8 @@ export function AssetDocumentDropTargets({
           }}
           onDragLeave={(event) => {
             event.preventDefault()
-            if (event.currentTarget.contains(event.relatedTarget as Node)) return
+            if (event.currentTarget.contains(event.relatedTarget as Node))
+              return
             setDragOver(null)
           }}
           onDragOver={(event) => event.preventDefault()}
@@ -309,7 +317,9 @@ function DocumentLinkDropTarget({
       <span className="text-sm font-semibold text-[var(--sea-ink)]">
         {uploading ? 'Saving…' : 'Add Link'}
       </span>
-      <span className="text-xs text-[var(--sea-ink-soft)]">Manual, video, product page</span>
+      <span className="text-xs text-[var(--sea-ink-soft)]">
+        Manual, video, product page
+      </span>
     </button>
   )
 }
@@ -410,11 +420,13 @@ function AddAssetLinkModal({
             onChange={(e) => setPurpose(e.target.value as DocumentPurpose)}
             className="rounded-xl border border-[var(--chip-line)] bg-[var(--panel)] px-3 py-2 text-sm"
           >
-            {(Object.keys(DOCUMENT_PURPOSE_LABELS) as DocumentPurpose[]).map((option) => (
-              <option key={option} value={option}>
-                {DOCUMENT_PURPOSE_LABELS[option]}
-              </option>
-            ))}
+            {(Object.keys(DOCUMENT_PURPOSE_LABELS) as DocumentPurpose[]).map(
+              (option) => (
+                <option key={option} value={option}>
+                  {DOCUMENT_PURPOSE_LABELS[option]}
+                </option>
+              ),
+            )}
           </select>
         </label>
         <div className="flex flex-wrap gap-2 pt-1">
@@ -483,7 +495,9 @@ function AssetDocumentPreviewCard({
 
   const handleOpen = () => {
     void openBoatDocument(target, { onOpenViewer }).catch((error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to open document')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to open document',
+      )
     })
   }
 
@@ -535,11 +549,12 @@ function AssetDocumentPreviewCard({
       </div>
       <div className="px-3 py-2.5">
         <p className="m-0 truncate text-sm font-semibold text-[var(--sea-ink)]">
-          {document.title}{' '}
-          <DocumentPurposeBadge purpose={document.purpose} />
+          {document.title} <DocumentPurposeBadge purpose={document.purpose} />
         </p>
         {isLink && linkUrl ? (
-          <p className="m-0 mt-0.5 truncate text-xs text-[var(--sea-ink-soft)]">{linkUrl}</p>
+          <p className="m-0 mt-0.5 truncate text-xs text-[var(--sea-ink-soft)]">
+            {linkUrl}
+          </p>
         ) : null}
       </div>
     </button>
@@ -601,13 +616,17 @@ function LinkExistingDocumentControl({
             onLinked?.()
           })
           .catch((e) => {
-            toast.error(e instanceof Error ? e.message : 'Failed to link document')
+            toast.error(
+              e instanceof Error ? e.message : 'Failed to link document',
+            )
           })
           .finally(() => setBusy(false))
       }}
     >
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-semibold text-[var(--sea-ink)]">Existing document</span>
+        <span className="font-semibold text-[var(--sea-ink)]">
+          Existing document
+        </span>
         <select
           value={selectedId}
           onChange={(e) => setSelectedId(e.target.value)}

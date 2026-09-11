@@ -15,7 +15,9 @@ const DEFAULT_CHANNELS: NotificationChannelDefaults = {
   push: true,
 }
 
-function serializeSubscription(row: Record<string, unknown>): NotificationSubscription {
+function serializeSubscription(
+  row: Record<string, unknown>,
+): NotificationSubscription {
   return {
     id: String(row.id),
     userId: String(row.userId),
@@ -38,7 +40,8 @@ export async function getUserNotificationDefaults(
     where: { id: userId },
     select: { notificationDefaults: true },
   })
-  const stored = user?.notificationDefaults as NotificationChannelDefaults | null
+  const stored =
+    user?.notificationDefaults as NotificationChannelDefaults | null
   return {
     email: stored?.email ?? DEFAULT_CHANNELS.email,
     push: stored?.push ?? DEFAULT_CHANNELS.push,
@@ -58,11 +61,18 @@ export async function setUserNotificationDefaults(
 
 async function assertScopeAccess(
   userId: string,
-  args: { boatId?: string | null; orgId?: string | null; topic: NotificationTopic },
+  args: {
+    boatId?: string | null
+    orgId?: string | null
+    topic: NotificationTopic
+  },
 ): Promise<void> {
   if (args.topic === 'ADMIN_JOBS') return
   if (args.boatId) {
-    const allowed = await canAccess(userId, 'view', { type: 'boat', id: args.boatId })
+    const allowed = await canAccess(userId, 'view', {
+      type: 'boat',
+      id: args.boatId,
+    })
     if (!allowed) throw new Error('Forbidden')
     return
   }
@@ -123,7 +133,9 @@ export async function upsertSubscription(
     },
     update: {
       enabled: input.enabled,
-      ...(input.emailEnabled != null ? { emailEnabled: input.emailEnabled } : {}),
+      ...(input.emailEnabled != null
+        ? { emailEnabled: input.emailEnabled }
+        : {}),
       ...(input.pushEnabled != null ? { pushEnabled: input.pushEnabled } : {}),
     },
   })

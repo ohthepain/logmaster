@@ -14,11 +14,12 @@ import {
   parseSignalKWaypointExport,
   parseSignalKWaypointsValue,
   SIGNALK_LOG_ENTRY_PATH,
-  SIGNALK_WAYPOINTS_PATH
-  
-  
+  SIGNALK_WAYPOINTS_PATH,
 } from './signalk-log-entries'
-import type {SignalKLogEntryExport, SignalKWaypointExport} from './signalk-log-entries';
+import type {
+  SignalKLogEntryExport,
+  SignalKWaypointExport,
+} from './signalk-log-entries'
 
 export const SIGNALK_IMPORT_SOURCE = 'signalk'
 
@@ -80,7 +81,9 @@ function parseNumber(value: unknown): number | null {
   return null
 }
 
-function parsePosition(value: unknown): { latitude: number; longitude: number } | null {
+function parsePosition(
+  value: unknown,
+): { latitude: number; longitude: number } | null {
   if (!isRecord(value)) return null
 
   const latitude = parseNumber(value.latitude)
@@ -106,7 +109,9 @@ function extractDeltas(document: unknown): SignalKDeltaLike[] {
   }
 
   if (!isRecord(document)) {
-    throw new SignalKImportError('Signal K file must be a JSON object or array of deltas.')
+    throw new SignalKImportError(
+      'Signal K file must be a JSON object or array of deltas.',
+    )
   }
 
   if (Array.isArray(document.deltas)) {
@@ -154,7 +159,9 @@ function readEnvelopeWaypoints(document: unknown): SignalKWaypointExport[] {
   })
 }
 
-function dedupePositionSamples(samples: PositionTrackSample[]): PositionTrackSample[] {
+function dedupePositionSamples(
+  samples: PositionTrackSample[],
+): PositionTrackSample[] {
   const seen = new Set<string>()
   const deduped: PositionTrackSample[] = []
 
@@ -169,7 +176,9 @@ function dedupePositionSamples(samples: PositionTrackSample[]): PositionTrackSam
   return deduped
 }
 
-function parseSignalKPositionSampleExport(value: unknown): PositionTrackSample | null {
+function parseSignalKPositionSampleExport(
+  value: unknown,
+): PositionTrackSample | null {
   if (!isRecord(value)) return null
   const time =
     typeof value.time === 'string' && Number.isFinite(Date.parse(value.time))
@@ -199,7 +208,9 @@ function readEnvelopePositionTrack(document: unknown): PositionTrackSample[] {
   })
 }
 
-function dedupeScalarSamples(samples: ScalarTrackSample[]): ScalarTrackSample[] {
+function dedupeScalarSamples(
+  samples: ScalarTrackSample[],
+): ScalarTrackSample[] {
   const seen = new Set<string>()
   return samples.filter((sample) => {
     const timeMs = Date.parse(sample.time)
@@ -251,7 +262,10 @@ export function parseSignalKImportJson(json: string): ParsedSignalKImport {
   const waterTemperatureSamples: ScalarTrackSample[] = []
   const headingSamples: AngleTrackSample[] = []
   const cogSamples: AngleTrackSample[] = []
-  const pendingWind = new Map<string, { speedKnots?: number; directionTrue?: number }>()
+  const pendingWind = new Map<
+    string,
+    { speedKnots?: number; directionTrue?: number }
+  >()
   const envelopePositionSamples = readEnvelopePositionTrack(document)
   const envelopeLogEntries = readEnvelopeLogEntries(document)
   const envelopeWaypoints = readEnvelopeWaypoints(document)
@@ -411,31 +425,33 @@ export function parseSignalKImportJson(json: string): ParsedSignalKImport {
     envelopePositionSamples.length > 0
       ? sortByTime(dedupePositionSamples(envelopePositionSamples))
       : positionSamples.length > 0
-      ? sortByTime(dedupePositionSamples(positionSamples))
-      : sortByTime(
-          dedupedWaypoints.map((waypoint, index) => {
-            const baseMs =
-              dedupedWaypoints[0]?.timestamp &&
-              Number.isFinite(Date.parse(dedupedWaypoints[0].timestamp))
-                ? Date.parse(dedupedWaypoints[0].timestamp)
-                : Date.now()
-            return {
-              time:
-                waypoint.timestamp ??
-                new Date(baseMs + index * 60_000).toISOString(),
-              latitude: waypoint.latitude,
-              longitude: waypoint.longitude,
-              heading: null,
-            }
-          }),
-        )
+        ? sortByTime(dedupePositionSamples(positionSamples))
+        : sortByTime(
+            dedupedWaypoints.map((waypoint, index) => {
+              const baseMs =
+                dedupedWaypoints[0]?.timestamp &&
+                Number.isFinite(Date.parse(dedupedWaypoints[0].timestamp))
+                  ? Date.parse(dedupedWaypoints[0].timestamp)
+                  : Date.now()
+              return {
+                time:
+                  waypoint.timestamp ??
+                  new Date(baseMs + index * 60_000).toISOString(),
+                latitude: waypoint.latitude,
+                longitude: waypoint.longitude,
+                heading: null,
+              }
+            }),
+          )
 
   return {
     name,
     positionSamples: resolvedPositionSamples,
     sogSamples: sortByTime(dedupeScalarSamples(sogSamples)),
     stwSamples: sortByTime(dedupeScalarSamples(stwSamples)),
-    waterTemperatureSamples: sortByTime(dedupeScalarSamples(waterTemperatureSamples)),
+    waterTemperatureSamples: sortByTime(
+      dedupeScalarSamples(waterTemperatureSamples),
+    ),
     headingSamples: sortByTime(dedupeAngleSamples(headingSamples)),
     cogSamples: sortByTime(dedupeAngleSamples(cogSamples)),
     windSamples: sortByTime(dedupeWindSamples(windSamples)),

@@ -56,7 +56,10 @@ describe('boat-shares', () => {
     expect(shares.map((share) => share.sequence)).toEqual([0, 1])
     expect(shares[0]?.displayName).toBe('Prime week')
     expect(shares[1]?.displayName).toBe('Share 2')
-    expect(shares[0]?.owners.map((owner) => owner.name)).toEqual(['Alex', 'Zoe'])
+    expect(shares[0]?.owners.map((owner) => owner.name)).toEqual([
+      'Alex',
+      'Zoe',
+    ])
   })
 
   it('calculates equal fractional ownership within a share', () => {

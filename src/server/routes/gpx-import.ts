@@ -99,7 +99,8 @@ gpxImportRoutes.get('/fetch', async (c) => {
   try {
     gpxXml = await readResponseTextWithLimit(upstream, GPX_IMPORT_MAX_BYTES)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Could not read GPX file.'
+    const message =
+      error instanceof Error ? error.message : 'Could not read GPX file.'
     return c.text(message, 413)
   }
 

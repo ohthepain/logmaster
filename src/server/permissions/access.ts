@@ -1,15 +1,9 @@
 import { prisma } from '../db'
-import {
-  getMemberRole,
-  getUserConsortiumIds,
-} from './consortium'
+import { getMemberRole, getUserConsortiumIds } from './consortium'
 import { getBoatMemberRole, getUserBoatMemberIds } from './boat-members'
-import {
-  getUserContactBoatIds,
-  getUserContactOrgIds,
-} from './contacts'
-import { roleHasPrivilege, strongestRole   } from './roles'
-import type {ConsortiumMemberRole, Privilege} from './roles';
+import { getUserContactBoatIds, getUserContactOrgIds } from './contacts'
+import { roleHasPrivilege, strongestRole } from './roles'
+import type { ConsortiumMemberRole, Privilege } from './roles'
 
 const db = prisma as any
 
@@ -29,7 +23,9 @@ type BoatAccessRow = {
   shares: Array<{ owners: Array<{ userId: string }> }>
 }
 
-async function loadBoatAccessRow(boatId: string): Promise<BoatAccessRow | null> {
+async function loadBoatAccessRow(
+  boatId: string,
+): Promise<BoatAccessRow | null> {
   return db.boat.findUnique({
     where: { id: boatId },
     select: {
@@ -241,8 +237,13 @@ async function accessibleBoatIds(userId: string): Promise<string[]> {
     getUserBoatMemberIds(userId),
     getUserContactBoatIds(userId),
   ])
-  const [consortiumBoats, ownedBoats, shareBoats, explicitMemberBoats, guestBoats] =
-    await Promise.all([
+  const [
+    consortiumBoats,
+    ownedBoats,
+    shareBoats,
+    explicitMemberBoats,
+    guestBoats,
+  ] = await Promise.all([
     consortiumIds.length > 0
       ? db.boat.findMany({
           where: { consortiumId: { in: consortiumIds } },
@@ -308,11 +309,11 @@ export async function routeAccessFilter(userId: string) {
 export async function boatAccessFilter(userId: string) {
   const [consortiumIds, memberBoatIds, shareBoatIds, contactBoatIds] =
     await Promise.all([
-    getUserConsortiumIds(userId),
-    getUserBoatMemberIds(userId),
-    shareOwnedBoatIds(userId),
-    getUserContactBoatIds(userId),
-  ])
+      getUserConsortiumIds(userId),
+      getUserBoatMemberIds(userId),
+      shareOwnedBoatIds(userId),
+      getUserContactBoatIds(userId),
+    ])
 
   return {
     OR: [

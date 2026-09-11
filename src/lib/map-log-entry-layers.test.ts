@@ -9,9 +9,7 @@ import {
 } from './map-log-entry-layers'
 import { buildLegEntryPointsGeoJson } from './logbook-map-geo'
 
-function entry(
-  patch: Partial<LogEntry> & Pick<LogEntry, 'type'>,
-): LogEntry {
+function entry(patch: Partial<LogEntry> & Pick<LogEntry, 'type'>): LogEntry {
   return {
     id: 'entry-1',
     tripId: 'trip-1',

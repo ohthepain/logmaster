@@ -7,7 +7,10 @@ import { DevComponentLabel } from './DevComponentLabel'
 import { DevTripReplayController } from './DevTripReplayController'
 import { DevTripRetripController } from './DevTripRetripController'
 import { FtueGate } from './FtueGate'
-import { isTripDetailImmersiveRoute, isTripStoryRoute } from '../lib/trip-map-overlay'
+import {
+  isTripDetailImmersiveRoute,
+  isTripStoryRoute,
+} from '../lib/trip-map-overlay'
 import { useLogbookStore } from '../stores/logbook'
 
 const NO_CHROME = new Set(['/sign-in', '/reset-password'])

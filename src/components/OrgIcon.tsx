@@ -20,7 +20,9 @@ const FALLBACK_ICON_CLASS: Record<OrgIconSize, string> = {
   lg: 'size-7',
 }
 
-export function orgIconPhoto(org: Pick<Org, 'photos' | 'defaultPhoto'>): OrgPhoto | null {
+export function orgIconPhoto(
+  org: Pick<Org, 'photos' | 'defaultPhoto'>,
+): OrgPhoto | null {
   return org.defaultPhoto ?? defaultOrgPhoto(org.photos)
 }
 
@@ -52,7 +54,9 @@ export function OrgIcon({ photo, size = 'md', className }: OrgIconProps) {
         className,
       )}
     >
-      <Building2 className={cn(FALLBACK_ICON_CLASS[size], 'text-[var(--sea-ink-soft)]')} />
+      <Building2
+        className={cn(FALLBACK_ICON_CLASS[size], 'text-[var(--sea-ink-soft)]')}
+      />
     </span>
   )
 }
@@ -88,7 +92,10 @@ export function OrgIconSelector({
     setUploading(true)
     try {
       const uploaded = await uploadOrgPhoto(org.id, file)
-      let photos = [...org.photos.filter((item) => item.id !== uploaded.id), uploaded]
+      let photos = [
+        ...org.photos.filter((item) => item.id !== uploaded.id),
+        uploaded,
+      ]
 
       if (!uploaded.isDefault) {
         const updated = await updateOrgPhoto(uploaded.id, { isDefault: true })
@@ -122,7 +129,9 @@ export function OrgIconSelector({
       <button
         type="button"
         disabled={disabled || uploading}
-        aria-label={photo ? 'Change organization image' : 'Add organization image'}
+        aria-label={
+          photo ? 'Change organization image' : 'Add organization image'
+        }
         onClick={() => fileInputRef.current?.click()}
         className={cn(
           'shrink-0 p-0 transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60',

@@ -43,9 +43,7 @@ function DevTimeTravelPage() {
 
   useEffect(() => {
     if (!devMode || !devTimeTravelEnabled || devLogEntryDraftTimeIso) return
-    setDevLogEntryDraftTimeIso(
-      inProgressTrip?.startedAt ?? realNowIso(),
-    )
+    setDevLogEntryDraftTimeIso(inProgressTrip?.startedAt ?? realNowIso())
   }, [
     devMode,
     devTimeTravelEnabled,
@@ -100,7 +98,9 @@ function DevTimeTravelPage() {
         {!devMode ? (
           <div className="rounded-[1.25rem] border border-[var(--panel-border)] bg-[var(--panel)] p-4">
             <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-              Turn on dev mode from the <span className="font-semibold text-[var(--sea-ink)]">DEV</span> menu in the header to use time travel.
+              Turn on dev mode from the{' '}
+              <span className="font-semibold text-[var(--sea-ink)]">DEV</span>{' '}
+              menu in the header to use time travel.
             </p>
           </div>
         ) : (

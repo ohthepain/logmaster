@@ -43,7 +43,9 @@ async function waitForNextPaint(): Promise<void> {
 }
 
 /** Reject empty or all-black JPEG captures (common without preserveDrawingBuffer). */
-export async function isBlankMapSnapshot(dataUrl: string | null): Promise<boolean> {
+export async function isBlankMapSnapshot(
+  dataUrl: string | null,
+): Promise<boolean> {
   if (!dataUrl || dataUrl === 'data:,' || dataUrl.length < 120) return true
   if (typeof document === 'undefined') return false
 
@@ -101,7 +103,9 @@ export async function waitForMaplibreIdle(
   await waitForNextPaint()
 }
 
-export async function captureMaplibreSnapshot(map: maplibregl.Map): Promise<string | null> {
+export async function captureMaplibreSnapshot(
+  map: maplibregl.Map,
+): Promise<string | null> {
   if (!map.loaded()) return null
 
   await waitForMaplibreIdle(map)

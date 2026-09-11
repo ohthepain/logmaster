@@ -21,17 +21,27 @@ const EMPTY_IMAGE_COORDINATES: [
 const CONTOURS_MIN_ZOOM = 6
 
 function isOverlayLayerId(id: string): boolean {
-  return id.startsWith('openseamap-') || id.startsWith('geo-') || id.startsWith('trip-') || id.startsWith('route-')
+  return (
+    id.startsWith('openseamap-') ||
+    id.startsWith('geo-') ||
+    id.startsWith('trip-') ||
+    id.startsWith('route-')
+  )
 }
 
 /** Insert bathymetry rasters above land/water fills but below labels and roads. */
-export function sailingMapRasterInsertBeforeId(map: maplibregl.Map): string | undefined {
+export function sailingMapRasterInsertBeforeId(
+  map: maplibregl.Map,
+): string | undefined {
   const layers = map.getStyle().layers ?? []
   for (const layer of layers) {
     if (isOverlayLayerId(layer.id)) return layer.id
     const lid = layer.id.toLowerCase()
     if (layer.type === 'symbol') return layer.id
-    if (layer.type === 'line' && /waterway|road|street|highway|ferry|boundary|label/.test(lid)) {
+    if (
+      layer.type === 'line' &&
+      /waterway|road|street|highway|ferry|boundary|label/.test(lid)
+    ) {
       return layer.id
     }
   }
@@ -69,7 +79,10 @@ export function ensureOpenSeaMapViewportImageLayers(map: maplibregl.Map) {
   ensureContoursImageLayer(map)
 }
 
-export function refreshOpenSeaMapContoursImage(map: maplibregl.Map, visible: boolean) {
+export function refreshOpenSeaMapContoursImage(
+  map: maplibregl.Map,
+  visible: boolean,
+) {
   const source = map.getSource(OPEN_SEAMAP_BATHYMETRY_CONTOURS_SOURCE_ID)
   if (!source || source.type !== 'image') return
 
@@ -87,7 +100,14 @@ export function refreshOpenSeaMapContoursImage(map: maplibregl.Map, visible: boo
   if (width < 64 || height < 64) return
 
   imageSource.updateImage({
-    url: openSeaMapBathymetryContoursViewUrl(west, south, east, north, width, height),
+    url: openSeaMapBathymetryContoursViewUrl(
+      west,
+      south,
+      east,
+      north,
+      width,
+      height,
+    ),
     coordinates: [
       [west, north],
       [east, north],

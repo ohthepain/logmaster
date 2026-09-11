@@ -2,14 +2,8 @@ import { Hono } from 'hono'
 import type { ServerEnv } from '../lib/hono-env'
 import { logServerEventFromContext } from '../lib/server-log-context'
 import { prisma } from '../db'
-import {
-  deleteTripsFromLogbook,
-  getDeletedTripIds,
-} from '../deleted-trips'
-import {
-  canAccess,
-  tripAccessFilter,
-} from '../permissions'
+import { deleteTripsFromLogbook, getDeletedTripIds } from '../deleted-trips'
+import { canAccess, tripAccessFilter } from '../permissions'
 import { getSessionUserId } from '../session'
 import {
   fireNotification,
@@ -35,10 +29,7 @@ function parseDate(value: unknown) {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-function toTrip(
-  data: Record<string, unknown>,
-  userId?: string | null,
-) {
+function toTrip(data: Record<string, unknown>, userId?: string | null) {
   const startedAt = parseDate(data.startedAt) ?? new Date()
   const createdAt = parseDate(data.createdAt) ?? startedAt
   const updatedAt = parseDate(data.updatedAt) ?? startedAt
@@ -141,7 +132,9 @@ function toTripTrack(data: Record<string, unknown>) {
     kind: String(data.kind ?? 'position'),
     encoding: String(data.encoding ?? 'delta-v1'),
     payload:
-      storage === 'inline' ? ((data.payload as object | null | undefined) ?? {}) : null,
+      storage === 'inline'
+        ? ((data.payload as object | null | undefined) ?? {})
+        : null,
     storage,
     storageKey: (data.storageKey as string | null | undefined) ?? null,
     byteLength:
@@ -162,13 +155,15 @@ function serializeTripTrackForClient(track: Record<string, unknown>) {
   const storage = track.storage === 's3' ? 's3' : 'inline'
   return {
     ...track,
-    payload: storage === 'inline' ? track.payload ?? null : null,
+    payload: storage === 'inline' ? (track.payload ?? null) : null,
     startedAt:
       track.startedAt instanceof Date
         ? track.startedAt.toISOString()
         : track.startedAt,
     endedAt:
-      track.endedAt instanceof Date ? track.endedAt.toISOString() : track.endedAt,
+      track.endedAt instanceof Date
+        ? track.endedAt.toISOString()
+        : track.endedAt,
     createdAt:
       track.createdAt instanceof Date
         ? track.createdAt.toISOString()
@@ -221,7 +216,10 @@ async function prepareTripForSync(
       return toTrip(data, userId)
     }
 
-    const allowed = await canAccess(userId, 'edit', { type: 'trip', id: tripId })
+    const allowed = await canAccess(userId, 'edit', {
+      type: 'trip',
+      id: tripId,
+    })
     if (!allowed) {
       throw new Error(`Forbidden: cannot update trip ${tripId}`)
     }
@@ -258,32 +256,32 @@ logbookRoutes.get('/bootstrap', async (c) => {
 
   const [legs, logEntries, tripTracks, media, deletedTripIds] =
     await Promise.all([
-    tripIds.length > 0
-      ? db.leg.findMany({
-          where: { tripId: { in: tripIds } },
-          orderBy: [{ tripId: 'asc' }, { sequence: 'asc' }],
-        })
-      : [],
-    tripIds.length > 0
-      ? db.logEntry.findMany({
-          where: { tripId: { in: tripIds } },
-          orderBy: [{ timestamp: 'asc' }],
-        })
-      : [],
-    tripIds.length > 0
-      ? db.tripTrack.findMany({
-          where: { tripId: { in: tripIds } },
-          orderBy: [{ startedAt: 'asc' }],
-        })
-      : [],
-    tripIds.length > 0
-      ? db.media.findMany({
-          where: { logEntry: { tripId: { in: tripIds } } },
-          orderBy: [{ createdAt: 'asc' }],
-        })
-      : [],
-    getDeletedTripIds(),
-  ])
+      tripIds.length > 0
+        ? db.leg.findMany({
+            where: { tripId: { in: tripIds } },
+            orderBy: [{ tripId: 'asc' }, { sequence: 'asc' }],
+          })
+        : [],
+      tripIds.length > 0
+        ? db.logEntry.findMany({
+            where: { tripId: { in: tripIds } },
+            orderBy: [{ timestamp: 'asc' }],
+          })
+        : [],
+      tripIds.length > 0
+        ? db.tripTrack.findMany({
+            where: { tripId: { in: tripIds } },
+            orderBy: [{ startedAt: 'asc' }],
+          })
+        : [],
+      tripIds.length > 0
+        ? db.media.findMany({
+            where: { logEntry: { tripId: { in: tripIds } } },
+            orderBy: [{ createdAt: 'asc' }],
+          })
+        : [],
+      getDeletedTripIds(),
+    ])
   return c.json({
     trips,
     legs,
@@ -337,7 +335,10 @@ logbookRoutes.post('/sync', async (c) => {
             resourceId: tripId,
             errorCode: 'forbidden',
           })
-          return c.json({ error: `Forbidden: cannot delete trip ${tripId}` }, 403)
+          return c.json(
+            { error: `Forbidden: cannot delete trip ${tripId}` },
+            403,
+          )
         }
       }
       await deleteTripsFromLogbook(deletedTripIds)
@@ -440,41 +441,41 @@ logbookRoutes.post('/sync', async (c) => {
       }
 
       await prisma.$transaction([
-      ...preparedTrips.map((trip) =>
-        db.trip.upsert({
-          where: { id: trip.id },
-          create: trip as any,
-          update: trip as any,
-        }),
-      ),
-      ...legsToUpsert.map((leg) =>
-        db.leg.upsert({
-          where: { id: String(leg.id) },
-          create: toLeg(leg) as any,
-          update: toLeg(leg) as any,
-        }),
-      ),
-      ...entriesToUpsert.map((entry) =>
-        db.logEntry.upsert({
-          where: { id: String(entry.id) },
-          create: toLogEntry(entry) as any,
-          update: toLogEntry(entry) as any,
-        }),
-      ),
-      ...tracksToUpsert.map((track) =>
-        db.tripTrack.upsert({
-          where: { id: String(track.id) },
-          create: toTripTrack(track) as any,
-          update: toTripTrack(track) as any,
-        }),
-      ),
-      ...mediaToUpsert.map((item) =>
-        db.media.upsert({
-          where: { id: String(item.id) },
-          create: toMedia(item) as any,
-          update: toMedia(item) as any,
-        }),
-      ),
+        ...preparedTrips.map((trip) =>
+          db.trip.upsert({
+            where: { id: trip.id },
+            create: trip as any,
+            update: trip as any,
+          }),
+        ),
+        ...legsToUpsert.map((leg) =>
+          db.leg.upsert({
+            where: { id: String(leg.id) },
+            create: toLeg(leg) as any,
+            update: toLeg(leg) as any,
+          }),
+        ),
+        ...entriesToUpsert.map((entry) =>
+          db.logEntry.upsert({
+            where: { id: String(entry.id) },
+            create: toLogEntry(entry) as any,
+            update: toLogEntry(entry) as any,
+          }),
+        ),
+        ...tracksToUpsert.map((track) =>
+          db.tripTrack.upsert({
+            where: { id: String(track.id) },
+            create: toTripTrack(track) as any,
+            update: toTripTrack(track) as any,
+          }),
+        ),
+        ...mediaToUpsert.map((item) =>
+          db.media.upsert({
+            where: { id: String(item.id) },
+            create: toMedia(item) as any,
+            update: toMedia(item) as any,
+          }),
+        ),
       ])
     }
 
@@ -503,8 +504,14 @@ logbookRoutes.post('/sync', async (c) => {
     }
 
     const tripWhere = await tripAccessFilter(userId)
-    const [savedTrips, savedLegs, savedEntries, savedTracks, savedMedia, savedDeletedTripIds] =
-      await Promise.all([
+    const [
+      savedTrips,
+      savedLegs,
+      savedEntries,
+      savedTracks,
+      savedMedia,
+      savedDeletedTripIds,
+    ] = await Promise.all([
       db.trip.findMany({ where: tripWhere, orderBy: [{ updatedAt: 'desc' }] }),
       db.leg.findMany({
         where: { trip: tripWhere },

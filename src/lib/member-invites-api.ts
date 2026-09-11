@@ -1,7 +1,4 @@
-import type {
-  MemberInvite,
-  MemberInvitePreview,
-} from '../domain/member-invite'
+import type { MemberInvite, MemberInvitePreview } from '../domain/member-invite'
 import { apiUrl } from './app-origin'
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {

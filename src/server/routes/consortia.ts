@@ -20,9 +20,9 @@ import {
   parseContactGrants,
   resolveUserIdFromEmail,
 } from '../permissions'
-import type {ContactResourceArea} from '../../domain/contact';
+import type { ContactResourceArea } from '../../domain/contact'
 import { ORG_CONTACT_AREAS } from '../../domain/contact'
-import type {ConsortiumMemberRole} from '../permissions';
+import type { ConsortiumMemberRole } from '../permissions'
 import {
   getContactIdsForMembers,
   linkContactToMember,
@@ -224,7 +224,7 @@ function serializeContact(contact: {
     phone: contact.phone,
     whatsapp: contact.whatsapp ?? null,
     notes: contact.notes,
-    grants: (contact.grants ?? []),
+    grants: contact.grants ?? [],
     createdAt: contact.createdAt.toISOString(),
     updatedAt: contact.updatedAt.toISOString(),
   }
@@ -252,7 +252,7 @@ function serializeBoatContactRow(contact: {
     phone: contact.phone,
     whatsapp: contact.whatsapp ?? null,
     notes: contact.notes,
-    grants: (contact.grants ?? []),
+    grants: contact.grants ?? [],
     createdAt: contact.createdAt.toISOString(),
     updatedAt: contact.updatedAt.toISOString(),
   }
@@ -510,11 +510,17 @@ consortiaRoutes.get('/:orgId/contacts', async (c) => {
     orgContacts: orgContacts.map(serializeContact),
     boatContacts: orgBoats
       .filter((boat: { contacts: unknown[] }) => boat.contacts.length > 0)
-      .map((boat: { id: string; name: string; contacts: Parameters<typeof serializeBoatContactRow>[0][] }) => ({
-        boatId: boat.id,
-        boatName: boat.name,
-        contacts: boat.contacts.map(serializeBoatContactRow),
-      })),
+      .map(
+        (boat: {
+          id: string
+          name: string
+          contacts: Parameters<typeof serializeBoatContactRow>[0][]
+        }) => ({
+          boatId: boat.id,
+          boatName: boat.name,
+          contacts: boat.contacts.map(serializeBoatContactRow),
+        }),
+      ),
   })
 })
 
@@ -645,7 +651,8 @@ consortiaRoutes.post('/:orgId/contacts/:contactId/membership', async (c) => {
     role?: string
     sendEmail?: boolean
   }
-  const role = body.role && isConsortiumMemberRole(body.role) ? body.role : 'MEMBER'
+  const role =
+    body.role && isConsortiumMemberRole(body.role) ? body.role : 'MEMBER'
 
   if (contact.userId) {
     const existing = await db.consortiumMember.findUnique({
@@ -758,7 +765,9 @@ consortiaRoutes.patch('/:orgId/contacts/:contactId', async (c) => {
       ...(body.displayName !== undefined
         ? { displayName: body.displayName.trim() || existing.displayName }
         : {}),
-      ...(body.email !== undefined ? { email: nextEmail, userId: linkedUserId } : {}),
+      ...(body.email !== undefined
+        ? { email: nextEmail, userId: linkedUserId }
+        : {}),
       ...(body.phone !== undefined
         ? { phone: normalizeOptionalString(body.phone) }
         : {}),
@@ -833,7 +842,9 @@ consortiaRoutes.get('/:orgId/members', async (c) => {
 
   const contactIds = await getContactIdsForMembers(
     consortiumId,
-    members.map((member: Parameters<typeof serializeMember>[0]) => member.userId),
+    members.map(
+      (member: Parameters<typeof serializeMember>[0]) => member.userId,
+    ),
   )
 
   const pendingInvites = await db.memberInvite.findMany({
@@ -872,7 +883,8 @@ consortiaRoutes.post('/:orgId/members', async (c) => {
     sendEmail?: boolean
   }
 
-  const role = body.role && isConsortiumMemberRole(body.role) ? body.role : 'MEMBER'
+  const role =
+    body.role && isConsortiumMemberRole(body.role) ? body.role : 'MEMBER'
 
   let targetUserId = body.userId?.trim()
   if (!targetUserId && body.email?.trim()) {
@@ -944,7 +956,8 @@ consortiaRoutes.post('/:orgId/invite-link', async (c) => {
   if (!allowed) return c.json({ error: 'Org not found' }, 403)
 
   const body = (await c.req.json().catch(() => ({}))) as { role?: string }
-  const role = body.role && isConsortiumMemberRole(body.role) ? body.role : 'MEMBER'
+  const role =
+    body.role && isConsortiumMemberRole(body.role) ? body.role : 'MEMBER'
 
   try {
     const invite = await createOrgMemberInvite({
@@ -986,7 +999,10 @@ consortiaRoutes.post('/:orgId/invites/:inviteId/resend', async (c) => {
     const message =
       error instanceof Error ? error.message : 'Failed to resend invite'
     const status = message === 'Invite not found' ? 404 : 400
-    if (message !== 'Invite not found' && message !== 'This invite has no email address') {
+    if (
+      message !== 'Invite not found' &&
+      message !== 'This invite has no email address'
+    ) {
       console.error('[consortia] resend invite failed', error)
     }
     return c.json({ error: message }, status)

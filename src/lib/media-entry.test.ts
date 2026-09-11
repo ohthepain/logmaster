@@ -9,9 +9,7 @@ import {
   resolvePhotoVideoSave,
 } from './media-entry'
 
-function entry(
-  partial: Partial<LogEntry> & Pick<LogEntry, 'id'>,
-): LogEntry {
+function entry(partial: Partial<LogEntry> & Pick<LogEntry, 'id'>): LogEntry {
   return {
     tripId: 'trip-1',
     type: 'NOTE',
@@ -146,19 +144,28 @@ describe('resolvePhotoVideoSave', () => {
 
 describe('isPromotableMedia', () => {
   it('promotes photos and videos but not voice notes', () => {
-    const photo: Pick<Media, 'type' | 'localPath' | 'remoteUrl' | 'thumbnailUrl'> = {
+    const photo: Pick<
+      Media,
+      'type' | 'localPath' | 'remoteUrl' | 'thumbnailUrl'
+    > = {
       type: 'photo',
       localPath: 'photo.jpg',
       remoteUrl: null,
       thumbnailUrl: null,
     }
-    const video: Pick<Media, 'type' | 'localPath' | 'remoteUrl' | 'thumbnailUrl'> = {
+    const video: Pick<
+      Media,
+      'type' | 'localPath' | 'remoteUrl' | 'thumbnailUrl'
+    > = {
       type: 'photo',
       localPath: 'clip.mov',
       remoteUrl: null,
       thumbnailUrl: null,
     }
-    const voice: Pick<Media, 'type' | 'localPath' | 'remoteUrl' | 'thumbnailUrl'> = {
+    const voice: Pick<
+      Media,
+      'type' | 'localPath' | 'remoteUrl' | 'thumbnailUrl'
+    > = {
       type: 'voice',
       localPath: 'voice.webm',
       remoteUrl: 'blob:voice',

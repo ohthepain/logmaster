@@ -1,12 +1,16 @@
 import {
   encodePositionTrackSamples,
-  encodingForTrackKind
-  
-  
-  
+  encodingForTrackKind,
 } from '../domain/trip-track'
-import type {PositionTrackSample, TripTrack, TripTrackSource} from '../domain/trip-track';
-import { TRIP_TRACK_CHUNK_MAX_MS, TRIP_TRACK_CHUNK_MAX_SAMPLES } from './trip-track-payload'
+import type {
+  PositionTrackSample,
+  TripTrack,
+  TripTrackSource,
+} from '../domain/trip-track'
+import {
+  TRIP_TRACK_CHUNK_MAX_MS,
+  TRIP_TRACK_CHUNK_MAX_SAMPLES,
+} from './trip-track-payload'
 
 export type SealedTripTrack = TripTrack
 

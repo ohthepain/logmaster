@@ -7,7 +7,6 @@ import {
   gpxImportBoatName,
   nearestTrackPointTime,
   parseGpx,
-  
   isLikelyGpxExportFolder,
   mergeGpxRawDocuments,
   parseAndMergeGpx,
@@ -16,9 +15,9 @@ import {
   partitionGpxImportFiles,
   classifyGpxDocument,
   readGpxImportFilesFromFileList,
-  GpxFolderImportNeededError
+  GpxFolderImportNeededError,
 } from './gpx-import'
-import type {GpxTrackPoint} from './gpx-import';
+import type { GpxTrackPoint } from './gpx-import'
 
 const SAMPLE_GPX = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="logmaster-test">
@@ -58,16 +57,28 @@ describe('gpx-import', () => {
   it('derives a boat name from the track or file name', () => {
     const parsed = parseGpx(SAMPLE_GPX)
     expect(gpxImportBoatName(parsed, 'archive.gpx')).toBe('Day sail')
-    expect(gpxImportBoatName({ name: null, points: parsed.points, segments: parsed.segments, waypoints: [], routeOnly: false, hasTrkData: true }, 'sunset.gpx')).toBe(
-      'sunset',
-    )
+    expect(
+      gpxImportBoatName(
+        {
+          name: null,
+          points: parsed.points,
+          segments: parsed.segments,
+          waypoints: [],
+          routeOnly: false,
+          hasTrkData: true,
+        },
+        'sunset.gpx',
+      ),
+    ).toBe('sunset')
   })
 
   it('downsamples long tracks while keeping endpoints', () => {
     const points: GpxTrackPoint[] = Array.from({ length: 10 }, (_, index) => ({
       latitude: 59 + index * 0.01,
       longitude: 10 + index * 0.01,
-      time: new Date(Date.parse('2026-06-01T09:00:00Z') + index * 60_000).toISOString(),
+      time: new Date(
+        Date.parse('2026-06-01T09:00:00Z') + index * 60_000,
+      ).toISOString(),
       elevationM: null,
       heading: null,
       extensions: {},
@@ -85,7 +96,9 @@ describe('gpx-import', () => {
         points: Array.from({ length: 100 }, (_, index) => ({
           latitude: 59,
           longitude: 10 + index * 0.001,
-          time: new Date(Date.parse('2026-06-01T09:00:00Z') + index * 60_000).toISOString(),
+          time: new Date(
+            Date.parse('2026-06-01T09:00:00Z') + index * 60_000,
+          ).toISOString(),
           elevationM: null,
           heading: null,
           extensions: {},
@@ -96,7 +109,9 @@ describe('gpx-import', () => {
         points: Array.from({ length: 20 }, (_, index) => ({
           latitude: 60,
           longitude: 11 + index * 0.001,
-          time: new Date(Date.parse('2026-06-02T09:00:00Z') + index * 60_000).toISOString(),
+          time: new Date(
+            Date.parse('2026-06-02T09:00:00Z') + index * 60_000,
+          ).toISOString(),
           elevationM: null,
           heading: null,
           extensions: {},
@@ -105,7 +120,10 @@ describe('gpx-import', () => {
     ]
 
     const sampled = downsampleGpxSegments(segments, 40)
-    const total = sampled.reduce((sum, segment) => sum + segment.points.length, 0)
+    const total = sampled.reduce(
+      (sum, segment) => sum + segment.points.length,
+      0,
+    )
     expect(total).toBeLessThanOrEqual(40)
     expect(sampled[0]?.points[0]).toEqual(segments[0]?.points[0])
     expect(sampled[1]?.points.at(-1)).toEqual(segments[1]?.points.at(-1))
@@ -113,7 +131,9 @@ describe('gpx-import', () => {
 
   it('rejects files without points', () => {
     expect(() =>
-      parseGpx('<gpx version="1.1"><metadata><name>Empty</name></metadata></gpx>'),
+      parseGpx(
+        '<gpx version="1.1"><metadata><name>Empty</name></metadata></gpx>',
+      ),
     ).toThrow(/No track points/)
   })
 
@@ -138,7 +158,9 @@ describe('gpx-import', () => {
 
     const parsed = parseGpx(gpx)
     expect(parsed.points).toHaveLength(3)
-    expect(parsed.points.map((point) => point.latitude)).toEqual([40.0, 40.1, 40.2])
+    expect(parsed.points.map((point) => point.latitude)).toEqual([
+      40.0, 40.1, 40.2,
+    ])
     expect(parsed.points[0]?.time).toBe('2024-06-15T14:46:21.000Z')
     expect(parsed.points[1]?.time).toBe('2024-06-15T14:46:21.000Z')
     expect(parsed.points[2]?.time).toBe('2024-06-15T14:47:21.000Z')
@@ -170,7 +192,9 @@ describe('gpx-import', () => {
       '2024-06-15T14:46:21.000Z',
       '2024-06-15T14:47:21.000Z',
     ])
-    expect(parsed.points.map((point) => point.latitude)).toEqual([40.1, 40.0, 40.2])
+    expect(parsed.points.map((point) => point.latitude)).toEqual([
+      40.1, 40.0, 40.2,
+    ])
   })
 
   it('parses elevation, speed, and Garmin extension fields', () => {
@@ -265,8 +289,12 @@ describe('gpx-import', () => {
       },
     ]
 
-    expect(nearestTrackPointTime(points, 59.915, 10.755)).toBe('2026-06-01T09:00:00.000Z')
-    expect(nearestTrackPointTime(points, 59.939, 10.779)).toBe('2026-06-01T12:00:00.000Z')
+    expect(nearestTrackPointTime(points, 59.915, 10.755)).toBe(
+      '2026-06-01T09:00:00.000Z',
+    )
+    expect(nearestTrackPointTime(points, 59.939, 10.779)).toBe(
+      '2026-06-01T12:00:00.000Z',
+    )
   })
 
   it('flattens multiple tracks into one ordered trip', () => {
@@ -375,9 +403,9 @@ describe('gpx-import', () => {
 
   it('requests a folder picker when a .gpx folder is selected as a file', async () => {
     const folderEntry = new File([], 'Harbour sail.gpx', { type: '' })
-    await expect(readGpxImportFilesFromFileList([folderEntry])).rejects.toBeInstanceOf(
-      GpxFolderImportNeededError,
-    )
+    await expect(
+      readGpxImportFilesFromFileList([folderEntry]),
+    ).rejects.toBeInstanceOf(GpxFolderImportNeededError)
   })
 
   it('decodes XML entities in waypoint names and descriptions', () => {

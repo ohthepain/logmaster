@@ -57,7 +57,10 @@ export function Modal({
           <div className="flex items-start justify-between gap-3">
             <div>
               {showKicker ? <p className="island-kicker">logmaster</p> : null}
-              <h3 id={titleId} className="m-0 text-xl font-bold text-[var(--sea-ink)]">
+              <h3
+                id={titleId}
+                className="m-0 text-xl font-bold text-[var(--sea-ink)]"
+              >
                 {title}
               </h3>
             </div>

@@ -47,10 +47,7 @@ export function parseMarinaJobProgress(log: string): MarinaJobProgress {
 
     const upload = line.match(/upload (\d[\d,]*)\/(\d[\d,]*)/)
     if (upload) {
-      progress.tilesDone = Math.max(
-        progress.tilesDone,
-        parseCount(upload[1]),
-      )
+      progress.tilesDone = Math.max(progress.tilesDone, parseCount(upload[1]))
       progress.tilesTotal = parseCount(upload[2])
     } else if (/\buploaded s3:\/\//.test(line)) {
       progress.tilesDone += 1

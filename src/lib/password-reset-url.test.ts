@@ -26,8 +26,8 @@ describe('passwordResetEmailUrl', () => {
 
 describe('emailVerificationCallbackUrl', () => {
   it('redirects to sign-in after verification', () => {
-    expect(
-      emailVerificationCallbackUrl('https://staging.logmaster.live'),
-    ).toBe('https://staging.logmaster.live/sign-in')
+    expect(emailVerificationCallbackUrl('https://staging.logmaster.live')).toBe(
+      'https://staging.logmaster.live/sign-in',
+    )
   })
 })

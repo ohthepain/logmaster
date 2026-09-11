@@ -1,12 +1,10 @@
 import type { Job } from 'pg-boss'
 import type { OsmPointDatasetId } from '../../lib/map-data-layers'
-import {
-  bboxForRegion,
-  buildOsmPoints
-  
-  
+import { bboxForRegion, buildOsmPoints } from '../osm-points/build'
+import type {
+  BuildOsmPointsOptions,
+  BuildOsmPointsResult,
 } from '../osm-points/build'
-import type {BuildOsmPointsOptions, BuildOsmPointsResult} from '../osm-points/build';
 import type { MarinaBbox } from '../marinas/bboxes'
 import { createJobLogger } from './job-log'
 

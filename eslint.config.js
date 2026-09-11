@@ -18,14 +18,15 @@ export default [
   {
     ignores: [
       'eslint.config.js',
+      'capacitor.config.ts',
       'generated/**',
       'dist/**',
       'dist-ssr/**',
       'android/**',
       'ios/**',
       'node_modules/**',
-      'plugins/**/ios/**',
-      'plugins/**/android/**',
+      'plugins/**',
+      'public/**',
       '**/*.min.js',
     ],
   },

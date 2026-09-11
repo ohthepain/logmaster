@@ -23,7 +23,9 @@ export function marinaFeatureCollection(
   }
 }
 
-export function mergeMarinaFeatures(features: MarinaFeature[]): MarinaFeature[] {
+export function mergeMarinaFeatures(
+  features: MarinaFeature[],
+): MarinaFeature[] {
   const merged = new Map<string, MarinaFeature>()
   for (const feature of features) {
     merged.set(feature.properties.id, feature)

@@ -78,11 +78,12 @@ export function isoToExifDateTime(iso: string): string | null {
   if (Number.isNaN(date.getTime())) return null
 
   const pad = (value: number) => String(value).padStart(2, '0')
-  return [
-    date.getFullYear(),
-    pad(date.getMonth() + 1),
-    pad(date.getDate()),
-  ].join(':') + ` ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  return (
+    [date.getFullYear(), pad(date.getMonth() + 1), pad(date.getDate())].join(
+      ':',
+    ) +
+    ` ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  )
 }
 
 function hasGpsCoordinates(
@@ -156,9 +157,7 @@ export function buildExiftoolCommand(
       latitude: number
       longitude: number
     }
-    parts.push(
-      `-GPSPosition=${shellQuote(`${latitude}, ${longitude}`)}`,
-    )
+    parts.push(`-GPSPosition=${shellQuote(`${latitude}, ${longitude}`)}`)
   }
   parts.push(shellQuote(filePath))
   return parts.join(' ')
@@ -185,7 +184,10 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   })
 }
 
-function canvasToJpegDataUrl(canvas: HTMLCanvasElement, quality = 0.92): string {
+function canvasToJpegDataUrl(
+  canvas: HTMLCanvasElement,
+  quality = 0.92,
+): string {
   const dataUrl = canvas.toDataURL('image/jpeg', quality)
   if (!dataUrl.startsWith('data:image/jpeg')) {
     throw new Error('Could not encode photo as JPEG')
@@ -323,13 +325,18 @@ export async function stampPhotoSrc(
     return stampJpegDataUrl(src, fileName, input)
   }
 
-  const stampedFile = await stampPhotoExif(await srcToPhotoFile(src, fileName), input)
+  const stampedFile = await stampPhotoExif(
+    await srcToPhotoFile(src, fileName),
+    input,
+  )
   if (stampedFile.size <= 0) {
     throw new Error('Stamped photo is empty')
   }
   const dataUrl = await readStampedFile(stampedFile)
   const bytes = jpegDataUrlToBytes(dataUrl)
-  const file = new File([toBlobPart(bytes)], stampedFile.name, { type: stampedFile.type })
+  const file = new File([toBlobPart(bytes)], stampedFile.name, {
+    type: stampedFile.type,
+  })
   return { file, dataUrl }
 }
 

@@ -1,15 +1,9 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import {
-  deleteAdminTrip,
-  fetchAdminTrips,
-} from '../../../lib/admin-api'
+import { deleteAdminTrip, fetchAdminTrips } from '../../../lib/admin-api'
 import { useSession } from '../../../lib/auth-client'
-import {
-  formatTripDateRange,
-  tripDisplayName,
-} from '../../../lib/trip-display'
+import { formatTripDateRange, tripDisplayName } from '../../../lib/trip-display'
 import { useIsAdmin } from '../../../lib/use-admin'
 import type { Trip } from '../../../domain/logbook'
 
@@ -46,7 +40,14 @@ function AdminTripsPage() {
       return
     }
     void load()
-  }, [adminLoading, isAdmin, load, navigate, session.data?.user, session.isPending])
+  }, [
+    adminLoading,
+    isAdmin,
+    load,
+    navigate,
+    session.data?.user,
+    session.isPending,
+  ])
 
   const handleDelete = async (trip: Trip) => {
     const name = tripDisplayName(trip)

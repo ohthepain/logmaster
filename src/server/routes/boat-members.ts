@@ -6,7 +6,7 @@ import {
   canAccess,
   ensureOrgMemberForBoatMember,
 } from '../permissions'
-import type {ConsortiumMemberRole} from '../permissions';
+import type { ConsortiumMemberRole } from '../permissions'
 import {
   createBoatMemberInvite,
   normalizeInviteEmail,
@@ -143,7 +143,7 @@ boatMembersRoutes.get('/:boatId/members', async (c) => {
     }),
     ...members
       .filter((m: { userId: string }) => m.userId !== boat.userId)
-      .map((m: typeof members[number]) => serializeMember(m)),
+      .map((m: (typeof members)[number]) => serializeMember(m)),
   ]
 
   const canManageMembers = await canManageBoatMembers(userId, boatId)
@@ -364,7 +364,10 @@ boatMembersRoutes.post('/:boatId/invites/:inviteId/resend', async (c) => {
     const message =
       error instanceof Error ? error.message : 'Failed to resend invite'
     const status = message === 'Invite not found' ? 404 : 400
-    if (message !== 'Invite not found' && message !== 'This invite has no email address') {
+    if (
+      message !== 'Invite not found' &&
+      message !== 'This invite has no email address'
+    ) {
       console.error('[boat-members] resend invite failed', error)
     }
     return c.json({ error: message }, status)

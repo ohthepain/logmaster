@@ -5,13 +5,12 @@ import type { LogEntry } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { cn } from '../lib/cn'
 import type { TripPlaybackPosition } from '../lib/trip-playback'
-import { tripPlaybackInfoAt, tripPlaybackAvailableTrackLabels } from '../lib/trip-playback-info'
 import {
-  PLAYBACK_SPEEDS,
-  PlaybackSpeedControl
-  
-} from './PlaybackSpeedControl'
-import type {PlaybackSpeed} from './PlaybackSpeedControl';
+  tripPlaybackInfoAt,
+  tripPlaybackAvailableTrackLabels,
+} from '../lib/trip-playback-info'
+import { PLAYBACK_SPEEDS, PlaybackSpeedControl } from './PlaybackSpeedControl'
+import type { PlaybackSpeed } from './PlaybackSpeedControl'
 import { TripMapChromeButton } from './TripMapChromeButton'
 
 type TripPlaybackInfoPanelRetrip = {
@@ -158,14 +157,23 @@ export function TripPlaybackInfoPanel({
             {snapshot.lines.length > 0 ? (
               <dl className="m-0 space-y-1.5">
                 {snapshot.lines.map((line) => (
-                  <div key={line.label} className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
-                    <dt className="m-0 font-medium text-white/70">{line.label}</dt>
-                    <dd className="m-0 font-semibold tabular-nums">{line.value}</dd>
+                  <div
+                    key={line.label}
+                    className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm"
+                  >
+                    <dt className="m-0 font-medium text-white/70">
+                      {line.label}
+                    </dt>
+                    <dd className="m-0 font-semibold tabular-nums">
+                      {line.value}
+                    </dd>
                   </div>
                 ))}
               </dl>
             ) : (
-              <p className="m-0 text-sm text-white/75">No data at this point.</p>
+              <p className="m-0 text-sm text-white/75">
+                No data at this point.
+              </p>
             )}
           </div>
         </div>

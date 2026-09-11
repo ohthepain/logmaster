@@ -50,7 +50,8 @@ export function VoiceNotePlayback({
     setPlaying(false)
   }
 
-  const progress = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0
+  const progress =
+    duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0
 
   return (
     <div
@@ -65,11 +66,17 @@ export function VoiceNotePlayback({
         aria-label={playing ? 'Pause voice note' : 'Play voice note'}
         className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--panel)] text-[var(--sea-ink)] outline-none transition hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20"
       >
-        {playing ? <Pause className="size-4" /> : <Play className="ml-0.5 size-4" />}
+        {playing ? (
+          <Pause className="size-4" />
+        ) : (
+          <Play className="ml-0.5 size-4" />
+        )}
       </button>
 
       <div className="min-w-0 flex-1">
-        <p className="m-0 truncate text-xs font-semibold text-[var(--sea-ink)]">{label}</p>
+        <p className="m-0 truncate text-xs font-semibold text-[var(--sea-ink)]">
+          {label}
+        </p>
         <div className="mt-1.5 flex items-center gap-2">
           <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--line)]">
             <div

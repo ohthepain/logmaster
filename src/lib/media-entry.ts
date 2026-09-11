@@ -120,7 +120,10 @@ export function hasCapturePosition(
 }
 
 export function findEntryNearPosition<
-  T extends Pick<LogEntry, 'id' | 'deleted' | 'latitude' | 'longitude' | 'type'>,
+  T extends Pick<
+    LogEntry,
+    'id' | 'deleted' | 'latitude' | 'longitude' | 'type'
+  >,
 >(
   entries: T[],
   position: MapCapturePosition,
@@ -198,7 +201,10 @@ export function resolvePhotoVideoSave(args: {
   }
 }
 
-export function appendNote(existing: string | null | undefined, note: string): string {
+export function appendNote(
+  existing: string | null | undefined,
+  note: string,
+): string {
   const trimmed = note.trim()
   if (!trimmed) return existing?.trim() ?? ''
   const current = existing?.trim() ?? ''

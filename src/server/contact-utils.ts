@@ -1,9 +1,6 @@
 import type { ContactResourceArea } from '../domain/contact'
 import { canAccess } from './permissions/access'
-import {
-  canAccessBoatArea,
-  canAccessOrgArea,
-} from './permissions/contacts'
+import { canAccessBoatArea, canAccessOrgArea } from './permissions/contacts'
 import type { Privilege } from './permissions/roles'
 
 export async function canAccessBoatResource(
@@ -13,9 +10,7 @@ export async function canAccessBoatResource(
   privilege: Privilege,
   opts?: { shareToken?: string },
 ): Promise<boolean> {
-  if (
-    await canAccess(userId, privilege, { type: 'boat', id: boatId }, opts)
-  ) {
+  if (await canAccess(userId, privilege, { type: 'boat', id: boatId }, opts)) {
     return true
   }
   return canAccessBoatArea(userId, boatId, area, privilege)

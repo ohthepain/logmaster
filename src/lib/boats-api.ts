@@ -165,5 +165,7 @@ export async function resendBoatInvite(
   boatId: string,
   inviteId: string,
 ): Promise<void> {
-  await api(`/api/boats/${boatId}/invites/${inviteId}/resend`, { method: 'POST' })
+  await api(`/api/boats/${boatId}/invites/${inviteId}/resend`, {
+    method: 'POST',
+  })
 }

@@ -45,7 +45,9 @@ export function tripPlaybackRange(
     )
     const endMs = Math.max(
       trackRange.endMs,
-      ...[completedAt, startedAt].filter((time): time is number => time != null),
+      ...[completedAt, startedAt].filter(
+        (time): time is number => time != null,
+      ),
     )
     const safeEnd = Math.max(startMs + 1, endMs)
     return { startMs, endMs: safeEnd, durationMs: safeEnd - startMs }
@@ -57,9 +59,15 @@ export function tripPlaybackRange(
     .filter((time): time is number => time != null)
   const startedAt = validDateMs(trip.startedAt)
   const completedAt = validDateMs(trip.completedAt)
-  const startMs = Math.min(...[startedAt, ...entryTimes].filter((time): time is number => time != null))
+  const startMs = Math.min(
+    ...[startedAt, ...entryTimes].filter(
+      (time): time is number => time != null,
+    ),
+  )
   const endMs = Math.max(
-    ...[completedAt, startedAt, ...entryTimes].filter((time): time is number => time != null),
+    ...[completedAt, startedAt, ...entryTimes].filter(
+      (time): time is number => time != null,
+    ),
   )
 
   if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
@@ -102,7 +110,8 @@ export function tripPlaybackPositionAt(
     return tripPlaybackPositionFromTrackSamples(trackSamples, timeMs)
   }
 
-  const positioned = sortLogEntriesChronologically(entries).filter(entryHasMapPosition)
+  const positioned =
+    sortLogEntriesChronologically(entries).filter(entryHasMapPosition)
   if (positioned.length === 0) return null
 
   let before = positioned[0]
@@ -129,13 +138,15 @@ export function tripPlaybackPositionAt(
           { latitude: before.latitude!, longitude: before.longitude! },
           { latitude: after.latitude!, longitude: after.longitude! },
         )
-      : entryHeading(before) ?? 0
+      : (entryHeading(before) ?? 0)
   const fromHeading = entryHeading(before) ?? fallbackHeading
   const toHeading = entryHeading(after) ?? fallbackHeading
 
   return {
-    latitude: before.latitude! + (after.latitude! - before.latitude!) * progress,
-    longitude: before.longitude! + (after.longitude! - before.longitude!) * progress,
+    latitude:
+      before.latitude! + (after.latitude! - before.latitude!) * progress,
+    longitude:
+      before.longitude! + (after.longitude! - before.longitude!) * progress,
     heading: normalizeBearing360(
       fromHeading + wrapDegrees180(toHeading - fromHeading) * progress,
     ),
@@ -156,4 +167,3 @@ export function tripPlaybackWindow(
   )
   return { startMs, endMs: startMs + durationMs, durationMs }
 }
-

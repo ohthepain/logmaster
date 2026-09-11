@@ -55,19 +55,22 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
     [],
   )
 
-  const load = useCallback(async (opts?: { background?: boolean }) => {
-    if (opts?.background) setRefreshing(true)
-    else setLoading(true)
-    setError(null)
-    try {
-      applyPayload(await fetchBoatShares(boatId))
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load shares')
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }, [applyPayload, boatId])
+  const load = useCallback(
+    async (opts?: { background?: boolean }) => {
+      if (opts?.background) setRefreshing(true)
+      else setLoading(true)
+      setError(null)
+      try {
+        applyPayload(await fetchBoatShares(boatId))
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load shares')
+      } finally {
+        setLoading(false)
+        setRefreshing(false)
+      }
+    },
+    [applyPayload, boatId],
+  )
 
   useEffect(() => {
     void load()
@@ -81,7 +84,9 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
       applyPayload(await updateBoatShares(boatId, { shareCount: next }))
       toast.success('Share count updated')
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to update share count')
+      toast.error(
+        e instanceof Error ? e.message : 'Failed to update share count',
+      )
     } finally {
       setSavingCount(false)
     }
@@ -115,10 +120,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
     }
   }
 
-  const handleAddOwner = async (
-    event: FormEvent,
-    shareId: string,
-  ) => {
+  const handleAddOwner = async (event: FormEvent, shareId: string) => {
     event.preventDefault()
     const email = ownerEmailDraft.trim()
     if (!email) {

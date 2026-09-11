@@ -1,6 +1,6 @@
 import type maplibregl from 'maplibre-gl'
-import { useEffect  } from 'react'
-import type {RefObject} from 'react';
+import { useEffect } from 'react'
+import type { RefObject } from 'react'
 
 const centerZoomOptions = { around: 'center' as const }
 

@@ -124,7 +124,9 @@ export async function getUserContactBoatIds(userId: string): Promise<string[]> {
     },
     select: { boatId: true },
   })
-  return [...new Set(contacts.map((row: { boatId: string }) => row.boatId))] as string[]
+  return [
+    ...new Set(contacts.map((row: { boatId: string }) => row.boatId)),
+  ] as string[]
 }
 
 export async function getUserContactOrgIds(userId: string): Promise<string[]> {

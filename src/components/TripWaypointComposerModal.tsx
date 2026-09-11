@@ -69,7 +69,9 @@ export function TripWaypointComposerModal({
       toast.success('Waypoint added')
       onClose()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not save waypoint')
+      toast.error(
+        error instanceof Error ? error.message : 'Could not save waypoint',
+      )
     } finally {
       setSaving(false)
     }
@@ -84,7 +86,10 @@ export function TripWaypointComposerModal({
       devComponentName="TripWaypointComposerModal"
     >
       <div className="space-y-4">
-        <WaypointPositionEditor position={position} onPositionChange={setPosition} />
+        <WaypointPositionEditor
+          position={position}
+          onPositionChange={setPosition}
+        />
 
         <label className="block space-y-1.5">
           <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sea-ink-soft)]">

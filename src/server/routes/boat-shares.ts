@@ -80,7 +80,8 @@ boatSharesRoutes.patch('/:boatId/shares', async (c) => {
     }
     return c.json({ shareCount: boat?.shareCount ?? shares.length, shares })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to update shares'
+    const message =
+      error instanceof Error ? error.message : 'Failed to update shares'
     return c.json({ error: message }, 400)
   }
 })
@@ -94,7 +95,9 @@ boatSharesRoutes.patch('/:boatId/shares/:shareId', async (c) => {
   const allowed = await canAccess(userId, 'admin', { type: 'boat', id: boatId })
   if (!allowed) return c.json({ error: 'Boat not found' }, 403)
 
-  const body = (await c.req.json().catch(() => ({}))) as { label?: string | null }
+  const body = (await c.req.json().catch(() => ({}))) as {
+    label?: string | null
+  }
   if (body.label === undefined) {
     return c.json({ error: 'label is required' }, 400)
   }
@@ -166,28 +169,34 @@ boatSharesRoutes.post('/:boatId/shares/:shareId/owners', async (c) => {
   })
 })
 
-boatSharesRoutes.delete('/:boatId/shares/:shareId/owners/:ownerUserId', async (c) => {
-  const userId = await requireUserId(c)
-  if (!userId) return unauthorized()
+boatSharesRoutes.delete(
+  '/:boatId/shares/:shareId/owners/:ownerUserId',
+  async (c) => {
+    const userId = await requireUserId(c)
+    if (!userId) return unauthorized()
 
-  const boatId = c.req.param('boatId')
-  const shareId = c.req.param('shareId')
-  const ownerUserId = c.req.param('ownerUserId')
-  const allowed = await canAccess(userId, 'admin', { type: 'boat', id: boatId })
-  if (!allowed) return c.json({ error: 'Boat not found' }, 403)
+    const boatId = c.req.param('boatId')
+    const shareId = c.req.param('shareId')
+    const ownerUserId = c.req.param('ownerUserId')
+    const allowed = await canAccess(userId, 'admin', {
+      type: 'boat',
+      id: boatId,
+    })
+    if (!allowed) return c.json({ error: 'Boat not found' }, 403)
 
-  const result = await removeBoatShareOwner(boatId, shareId, ownerUserId)
-  if (!result.ok) return c.json({ error: result.error }, 404)
+    const result = await removeBoatShareOwner(boatId, shareId, ownerUserId)
+    if (!result.ok) return c.json({ error: result.error }, 404)
 
-  const boat = await db.boat.findUnique({
-    where: { id: boatId },
-    select: { shareCount: true, name: true },
-  })
-  if (boat) {
-    fireBoatSharesNotification(userId, boat, 'removed a share owner.')
-  }
-  return c.json({
-    shareCount: boat?.shareCount ?? result.shares.length,
-    shares: result.shares,
-  })
-})
+    const boat = await db.boat.findUnique({
+      where: { id: boatId },
+      select: { shareCount: true, name: true },
+    })
+    if (boat) {
+      fireBoatSharesNotification(userId, boat, 'removed a share owner.')
+    }
+    return c.json({
+      shareCount: boat?.shareCount ?? result.shares.length,
+      shares: result.shares,
+    })
+  },
+)

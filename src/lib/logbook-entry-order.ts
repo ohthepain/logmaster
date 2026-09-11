@@ -18,7 +18,9 @@ export function compareLogEntriesChronologically(
   return entryCreatedAtMs(a) - entryCreatedAtMs(b)
 }
 
-export function sortLogEntriesChronologically<T extends LogEntry>(entries: T[]): T[] {
+export function sortLogEntriesChronologically<T extends LogEntry>(
+  entries: T[],
+): T[] {
   return [...entries].sort(compareLogEntriesChronologically)
 }
 

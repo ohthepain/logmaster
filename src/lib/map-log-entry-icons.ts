@@ -1,6 +1,9 @@
 import type { FeatureCollection } from 'geojson'
 import type maplibregl from 'maplibre-gl'
-import { SailingMapColors, sailingMapLegEntryIconLayout } from './maplibre-sailing-theme'
+import {
+  SailingMapColors,
+  sailingMapLegEntryIconLayout,
+} from './maplibre-sailing-theme'
 import type {
   LogEntryMapIconKind,
   LogEntryMapOutline,
@@ -25,7 +28,9 @@ function isMediaMarkerKind(kind: LogEntryMapIconKind): boolean {
   return kind === 'media-photo' || kind === 'media-video'
 }
 
-function isWaypointMarkerKind(kind: LogEntryMapIconKind): kind is WaypointMapKind {
+function isWaypointMarkerKind(
+  kind: LogEntryMapIconKind,
+): kind is WaypointMapKind {
   return isWaypointMapKind(kind)
 }
 
@@ -277,7 +282,10 @@ function drawFallbackGlyph(
   })
 }
 
-function drawAnchorGlyph(ctx: CanvasRenderingContext2D, direction: 'up' | 'down') {
+function drawAnchorGlyph(
+  ctx: CanvasRenderingContext2D,
+  direction: 'up' | 'down',
+) {
   ctx.beginPath()
   ctx.arc(12, 4.2, 1.6, 0, Math.PI * 2)
   ctx.stroke()
@@ -572,7 +580,9 @@ function drawGlyphFromAsset(
   ctx.drawImage(tinted, inset, inset, size, size)
 }
 
-export function logEntryMapMarkerDisplaySize(kind: LogEntryMapIconKind): number {
+export function logEntryMapMarkerDisplaySize(
+  kind: LogEntryMapIconKind,
+): number {
   const canvasSize = isMediaMarkerKind(kind)
     ? LOG_ENTRY_MAP_MEDIA_MARKER_SIZE
     : LOG_ENTRY_MAP_MARKER_SIZE
@@ -688,12 +698,14 @@ export function syncLogEntryMapIconSelection(
   selectedEntryId: string | null,
 ) {
   if (!map.getLayer(layerId)) return
-  map.setLayoutProperty(layerId, 'icon-size', logEntryMapIconSizeExpression(selectedEntryId))
+  map.setLayoutProperty(
+    layerId,
+    'icon-size',
+    logEntryMapIconSizeExpression(selectedEntryId),
+  )
 }
 
-function markerSpecsFromGeoJson(
-  collection: FeatureCollection,
-): MarkerSpec[] {
+function markerSpecsFromGeoJson(collection: FeatureCollection): MarkerSpec[] {
   const seen = new Set<string>()
   const specs: MarkerSpec[] = []
 
@@ -720,7 +732,11 @@ export async function syncLogEntryMapMarkerImages(
   const specs = markerSpecsFromGeoJson(collection)
   await Promise.all(
     specs.map(async (spec) => {
-      const imageId = logEntryMapMarkerImageId(spec.kind, spec.color, spec.outline)
+      const imageId = logEntryMapMarkerImageId(
+        spec.kind,
+        spec.color,
+        spec.outline,
+      )
       const image = await renderLogEntryMapMarkerImage(
         spec.kind,
         spec.color,

@@ -6,16 +6,18 @@ describe('osm-points queries', () => {
     expect(kindForTags('seamarks', { 'seamark:type': 'buoy' }, 'other')).toBe(
       'buoy',
     )
-    expect(kindForTags('seamarks', { 'seamark:type': 'light_major' }, 'other')).toBe(
-      'light',
-    )
+    expect(
+      kindForTags('seamarks', { 'seamark:type': 'light_major' }, 'other'),
+    ).toBe('light')
     expect(kindForTags('seamarks', { 'seamark:type': 'depth' }, 'other')).toBe(
       'depth',
     )
-    expect(kindForTags('seamarks', { 'seamark:sounding:value': '12' }, 'other')).toBe(
-      'depth',
+    expect(
+      kindForTags('seamarks', { 'seamark:sounding:value': '12' }, 'other'),
+    ).toBe('depth')
+    expect(kindForTags('seamarks', { historic: 'wreck' }, 'other')).toBe(
+      'wreck',
     )
-    expect(kindForTags('seamarks', { historic: 'wreck' }, 'other')).toBe('wreck')
   })
 
   it('maps place tags to coastal place kinds', () => {

@@ -54,10 +54,16 @@ export function SailingMapControlStack({
           </MapControlButton>
         ) : null}
         {layers ? (
-          <div className={cn('relative', MAP_CHROME_DIVIDER_CLASS)}>{layers}</div>
+          <div className={cn('relative', MAP_CHROME_DIVIDER_CLASS)}>
+            {layers}
+          </div>
         ) : null}
         {onExpand ? (
-          <MapControlButton label="Open full-screen map" onClick={onExpand} bordered>
+          <MapControlButton
+            label="Open full-screen map"
+            onClick={onExpand}
+            bordered
+          >
             <Maximize2 className="size-4" strokeWidth={2.25} />
           </MapControlButton>
         ) : null}

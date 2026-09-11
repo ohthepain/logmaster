@@ -18,7 +18,9 @@ export const ROUTE_FINISH_WAYPOINT_COLOR = 'checkered'
 export type WaypointMapKind = 'waypoint' | 'waypoint-active'
 
 export function waypointMapColor(kind: WaypointMapKind): string {
-  return kind === 'waypoint-active' ? WAYPOINT_ACTIVE_MAP_COLOR : WAYPOINT_MAP_COLOR
+  return kind === 'waypoint-active'
+    ? WAYPOINT_ACTIVE_MAP_COLOR
+    : WAYPOINT_MAP_COLOR
 }
 
 export function isWaypointMapKind(kind: string): kind is WaypointMapKind {
@@ -96,7 +98,10 @@ export function drawRouteStartFlag(
 }
 
 /** Finish waypoint — square frame with a checkered band inside. */
-export function drawRouteFinishLine(ctx: CanvasRenderingContext2D, size: number) {
+export function drawRouteFinishLine(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+) {
   const frameColor = '#37474f'
   const { squareSize, center } = drawWaypointSquareFrame(ctx, size, frameColor)
 
@@ -113,7 +118,12 @@ export function drawRouteFinishLine(ctx: CanvasRenderingContext2D, size: number)
     for (let col = 0; col < cols; col += 1) {
       const isDark = (row + col) % 2 === 0
       ctx.fillStyle = isDark ? '#212121' : '#fafafa'
-      ctx.fillRect(left + col * cellW, top + row * cellH, cellW + 0.5, cellH + 0.5)
+      ctx.fillRect(
+        left + col * cellW,
+        top + row * cellH,
+        cellW + 0.5,
+        cellH + 0.5,
+      )
     }
   }
 

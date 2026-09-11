@@ -1,58 +1,58 @@
-import { useEffect, useState } from "react";
-import { cn } from "../lib/cn";
-import { DevComponentLabel } from "./DevComponentLabel";
+import { useEffect, useState } from 'react'
+import { cn } from '../lib/cn'
+import { DevComponentLabel } from './DevComponentLabel'
 
 type Highlight = {
-  x: number;
-  y: number;
-  size?: number;
-};
+  x: number
+  y: number
+  size?: number
+}
 
 type IosInstallStep = {
-  image: string;
-  instruction: string;
-  highlight: Highlight;
-};
+  image: string
+  instruction: string
+  highlight: Highlight
+}
 
 const IOS_INSTALL_STEPS: IosInstallStep[] = [
   {
-    image: "/ios_tut_1.PNG",
-    instruction: "Tap the (...) button",
+    image: '/ios_tut_1.PNG',
+    instruction: 'Tap the (...) button',
     highlight: { x: 88, y: 48, size: 14 },
   },
   {
-    image: "/ios_tut_2.PNG",
-    instruction: "Tap Share",
+    image: '/ios_tut_2.PNG',
+    instruction: 'Tap Share',
     highlight: { x: 18, y: 50, size: 16 },
   },
   {
-    image: "/ios_tut_3.PNG",
-    instruction: "Tap View More",
+    image: '/ios_tut_3.PNG',
+    instruction: 'Tap View More',
     highlight: { x: 82, y: 42, size: 14 },
   },
   {
-    image: "/ios_tut_4.PNG",
-    instruction: "Tap Add to Home Screen",
+    image: '/ios_tut_4.PNG',
+    instruction: 'Tap Add to Home Screen',
     highlight: { x: 22, y: 50, size: 14 },
   },
-];
+]
 
-const STEP_MS = 3200;
+const STEP_MS = 3200
 
 export function FtueIosInstallGuide() {
-  const [activeStep, setActiveStep] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [activeStep, setActiveStep] = useState(0)
+  const [paused, setPaused] = useState(false)
 
   useEffect(() => {
-    if (paused) return;
+    if (paused) return
     const timer = window.setInterval(() => {
-      setActiveStep((value) => (value + 1) % IOS_INSTALL_STEPS.length);
-    }, STEP_MS);
-    return () => window.clearInterval(timer);
-  }, [paused]);
+      setActiveStep((value) => (value + 1) % IOS_INSTALL_STEPS.length)
+    }, STEP_MS)
+    return () => window.clearInterval(timer)
+  }, [paused])
 
-  const step = IOS_INSTALL_STEPS[activeStep];
-  const highlightSize = step.highlight.size ?? 14;
+  const step = IOS_INSTALL_STEPS[activeStep]
+  const highlightSize = step.highlight.size ?? 14
 
   return (
     <div
@@ -96,7 +96,7 @@ export function FtueIosInstallGuide() {
               left: `${step.highlight.x}%`,
               top: `${step.highlight.y}%`,
               width: `${highlightSize}%`,
-              aspectRatio: "1",
+              aspectRatio: '1',
             }}
             aria-hidden
           />
@@ -109,15 +109,17 @@ export function FtueIosInstallGuide() {
             key={item.image}
             type="button"
             aria-label={`Show step ${index + 1}: ${item.instruction}`}
-            aria-current={index === activeStep ? "step" : undefined}
+            aria-current={index === activeStep ? 'step' : undefined}
             onClick={() => setActiveStep(index)}
             className={cn(
-              "h-2 rounded-full transition-all",
-              index === activeStep ? "w-6 bg-[var(--brand)]" : "w-2 bg-black/15 hover:bg-black/25",
+              'h-2 rounded-full transition-all',
+              index === activeStep
+                ? 'w-6 bg-[var(--brand)]'
+                : 'w-2 bg-black/15 hover:bg-black/25',
             )}
           />
         ))}
       </div>
     </div>
-  );
+  )
 }

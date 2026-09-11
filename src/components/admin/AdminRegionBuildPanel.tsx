@@ -7,11 +7,9 @@ import {
   getMapRegion,
   MAP_LAYERS,
   MAP_REGIONS,
-  osmPointsDatasetForBuildLayer
-  
-  
+  osmPointsDatasetForBuildLayer,
 } from '../../lib/map-regions'
-import type {MapLayerId, MapRegionId} from '../../lib/map-regions';
+import type { MapLayerId, MapRegionId } from '../../lib/map-regions'
 
 type QueuedJob = {
   layerId: MapLayerId
@@ -22,7 +20,9 @@ type AdminRegionBuildPanelProps = {
   onQueued?: () => void
 }
 
-export function AdminRegionBuildPanel({ onQueued }: AdminRegionBuildPanelProps) {
+export function AdminRegionBuildPanel({
+  onQueued,
+}: AdminRegionBuildPanelProps) {
   const [regionId, setRegionId] = useState<MapRegionId>(DEFAULT_MAP_REGION_ID)
   const [selectedLayers, setSelectedLayers] = useState<MapLayerId[]>([])
   const [limitCells, setLimitCells] = useState('')
@@ -65,7 +65,9 @@ export function AdminRegionBuildPanel({ onQueued }: AdminRegionBuildPanelProps) 
 
       const parsedLimit = Number(limitCells)
       const limit =
-        Number.isInteger(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined
+        Number.isInteger(parsedLimit) && parsedLimit > 0
+          ? parsedLimit
+          : undefined
 
       const results: QueuedJob[] = []
       const errors: string[] = []
@@ -148,9 +150,7 @@ export function AdminRegionBuildPanel({ onQueued }: AdminRegionBuildPanelProps) 
           Region
           <select
             value={regionId}
-            onChange={(event) =>
-              setRegionId(event.target.value as MapRegionId)
-            }
+            onChange={(event) => setRegionId(event.target.value as MapRegionId)}
             className="rounded-lg border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2"
           >
             {MAP_REGIONS.map((entry) => (
@@ -180,7 +180,9 @@ export function AdminRegionBuildPanel({ onQueued }: AdminRegionBuildPanelProps) 
             </div>
             {region.layers['osm-marinas']?.available ? (
               <div>
-                <dt className="text-[var(--sea-ink-soft)]">Overpass cells (3°)</dt>
+                <dt className="text-[var(--sea-ink-soft)]">
+                  Overpass cells (3°)
+                </dt>
                 <dd className="m-0 font-mono text-[var(--sea-ink)]">
                   ~{region.overpassCellCount.toLocaleString()}
                 </dd>

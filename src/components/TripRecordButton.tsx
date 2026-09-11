@@ -18,7 +18,9 @@ export function TripRecordButton({
   logEntryDisabled = false,
 }: TripRecordButtonProps) {
   const recordingTripId = useAppOptionsStore((state) => state.recordingTripId)
-  const setRecordingTripId = useAppOptionsStore((state) => state.setRecordingTripId)
+  const setRecordingTripId = useAppOptionsStore(
+    (state) => state.setRecordingTripId,
+  )
   const recording = recordingTripId === tripId
   const label = recording ? 'Pause recording' : 'Start recording'
 

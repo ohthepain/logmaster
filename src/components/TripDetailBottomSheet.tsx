@@ -1,11 +1,5 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState
-  
-} from 'react'
-import type {ReactNode} from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import {
   APP_HEADER_INNER_HEIGHT_PX,
   bottomSheetDragChromeHeight,
@@ -26,10 +20,15 @@ const SNAP_RATIOS = {
 
 type SnapName = 'peek' | 'half' | 'full'
 
-function nearestSnap(heightPx: number, snaps: Record<SnapName, number>): number {
+function nearestSnap(
+  heightPx: number,
+  snaps: Record<SnapName, number>,
+): number {
   const values = Object.values(snaps)
   return values.reduce((best, candidate) =>
-    Math.abs(candidate - heightPx) < Math.abs(best - heightPx) ? candidate : best,
+    Math.abs(candidate - heightPx) < Math.abs(best - heightPx)
+      ? candidate
+      : best,
   )
 }
 
@@ -105,7 +104,8 @@ export function TripDetailBottomSheet({
       setContainerHeight(nextHeight)
       setSheetHeight((previous) => {
         if (previous <= 0) return peek
-        if (lastContainerHeight <= 0) return Math.min(max, Math.max(peek, previous))
+        if (lastContainerHeight <= 0)
+          return Math.min(max, Math.max(peek, previous))
         const ratio = previous / lastContainerHeight
         const scaled = Math.round(ratio * nextHeight)
         return Math.min(max, Math.max(peek, scaled))
@@ -213,7 +213,9 @@ export function TripDetailBottomSheet({
           </div>
           <div
             className="shrink-0"
-            style={{ height: `${Math.max(safeAreaBottom, BOTTOM_SHEET_MIN_INSET_PX)}px` }}
+            style={{
+              height: `${Math.max(safeAreaBottom, BOTTOM_SHEET_MIN_INSET_PX)}px`,
+            }}
             aria-hidden
           />
         </div>

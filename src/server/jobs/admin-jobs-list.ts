@@ -3,10 +3,9 @@ import {
   extractJobLog,
   formatJobRunInput,
   formatJobRunResult,
-  shortJobOutputMessage
-  
+  shortJobOutputMessage,
 } from '../../lib/admin-jobs'
-import type {AdminJobCatalogId} from '../../lib/admin-jobs';
+import type { AdminJobCatalogId } from '../../lib/admin-jobs'
 import { getBoss } from './boss'
 import { BUILD_GEO_FEATURES_QUEUE } from './geo-features'
 import type { BuildGeoFeaturesPayload } from './geo-features'
@@ -25,7 +24,10 @@ export const SUPPORTED_JOB_QUEUES = [
 
 export type SupportedJobQueue = (typeof SUPPORTED_JOB_QUEUES)[number]
 
-type AdminJobPayload = BuildGeoFeaturesPayload | BuildMarinasPayload | BuildOsmPointsPayload
+type AdminJobPayload =
+  | BuildGeoFeaturesPayload
+  | BuildMarinasPayload
+  | BuildOsmPointsPayload
 
 const QUEUE_TO_CATALOG_ID: Record<SupportedJobQueue, AdminJobCatalogId> = {
   [BUILD_GEO_FEATURES_QUEUE]: 'geo-features',
@@ -228,9 +230,7 @@ export async function rerunUnifiedAdminJob(jobId: string): Promise<{
         : queue === BUILD_OSM_POINTS_QUEUE
           ? {
               retryLimit: 1,
-              expireInSeconds: marinaJobExpireSeconds(
-                data,
-              ),
+              expireInSeconds: marinaJobExpireSeconds(data),
             }
           : { retryLimit: 1 }
     const newId = await boss.send(queue, data, sendOptions)
@@ -242,7 +242,9 @@ export async function rerunUnifiedAdminJob(jobId: string): Promise<{
   throw new Error('Job not found')
 }
 
-export async function getAdminJobLogText(jobId: string): Promise<string | null> {
+export async function getAdminJobLogText(
+  jobId: string,
+): Promise<string | null> {
   const job = await getUnifiedAdminJob(jobId)
   if (!job) return null
 

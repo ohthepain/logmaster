@@ -22,7 +22,10 @@ export const SIGNALK_PATHS_BY_TRACK_KIND: Record<
     'navigation.headingMagnetic',
     'navigation.attitude.yaw',
   ],
-  cog: ['navigation.courseOverGroundTrue', 'navigation.courseOverGroundMagnetic'],
+  cog: [
+    'navigation.courseOverGroundTrue',
+    'navigation.courseOverGroundMagnetic',
+  ],
   wind: [
     'environment.wind.speedTrue',
     'environment.wind.directionTrue',

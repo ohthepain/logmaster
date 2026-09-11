@@ -83,7 +83,10 @@ function MemberInvitePage() {
     preview?.kind === 'ORG' && preview.targetId
       ? { to: '/orgs/$orgId' as const, params: { orgId: preview.targetId } }
       : preview?.kind === 'BOAT' && preview.targetId
-        ? { to: '/boats/$boatId' as const, params: { boatId: preview.targetId } }
+        ? {
+            to: '/boats/$boatId' as const,
+            params: { boatId: preview.targetId },
+          }
         : null
 
   const showSuccess =

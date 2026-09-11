@@ -213,7 +213,9 @@ function CoverOption({
         <Icon className="size-5" />
       </span>
       <span className="min-w-0">
-        <span className="block text-sm font-semibold text-[var(--sea-ink)]">{title}</span>
+        <span className="block text-sm font-semibold text-[var(--sea-ink)]">
+          {title}
+        </span>
         <span className="mt-0.5 block text-xs leading-5 text-[var(--sea-ink-soft)]">
           {description}
         </span>

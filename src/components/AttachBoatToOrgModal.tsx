@@ -59,13 +59,17 @@ export function AttachBoatToOrgModal({
   }
 
   return (
-    <Modal title="Add boat" onClose={onClose} devComponentName="AttachBoatToOrgModal">
+    <Modal
+      title="Add boat"
+      onClose={onClose}
+      devComponentName="AttachBoatToOrgModal"
+    >
       {loading ? (
         <p className="text-sm text-[var(--sea-ink-soft)]">Loading boats…</p>
       ) : boats.length === 0 ? (
         <p className="text-sm text-[var(--sea-ink-soft)]">
-          No eligible boats. You need owner or admin access on a boat that is not
-          already in this organization.
+          No eligible boats. You need owner or admin access on a boat that is
+          not already in this organization.
         </p>
       ) : (
         <ul className="m-0 list-none space-y-2 p-0">

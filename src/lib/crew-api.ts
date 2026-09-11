@@ -1,8 +1,4 @@
-import type {
-  CrewInvitePreview,
-  CrewMember,
-  CrewPayload,
-} from '../domain/crew'
+import type { CrewInvitePreview, CrewMember, CrewPayload } from '../domain/crew'
 import { apiUrl } from './app-origin'
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -87,9 +83,7 @@ export async function acceptCrewInvite(token: string): Promise<void> {
 export async function fetchCrewInvitePreview(
   token: string,
 ): Promise<CrewInvitePreview> {
-  return api<CrewInvitePreview>(
-    `/invites/preview/${encodeURIComponent(token)}`,
-  )
+  return api<CrewInvitePreview>(`/invites/preview/${encodeURIComponent(token)}`)
 }
 
 export async function acceptFriendRequest(requestId: string): Promise<void> {
@@ -104,7 +98,10 @@ export async function declineFriendRequest(requestId: string): Promise<void> {
   })
 }
 
-export function crewMemberPhotoUrl(memberId: string, cacheBust?: number): string {
+export function crewMemberPhotoUrl(
+  memberId: string,
+  cacheBust?: number,
+): string {
   const url = `/api/crew/members/${memberId}/photo`
   return cacheBust ? `${url}?v=${cacheBust}` : url
 }
@@ -117,8 +114,6 @@ export function crewUserPhotoUrl(
   if (!image) return null
   if (image.startsWith('http://') || image.startsWith('https://')) return image
   const url =
-    image === '/api/profile/photo'
-      ? `/api/crew/users/${userId}/photo`
-      : image
+    image === '/api/profile/photo' ? `/api/crew/users/${userId}/photo` : image
   return cacheBust ? `${url}?v=${cacheBust}` : url
 }

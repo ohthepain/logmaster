@@ -79,9 +79,14 @@ logbookStoryMediaRoutes.get(
     if (!media) return c.json({ error: 'Media not found' }, 404)
 
     const userId = await getSessionUserId(c.req.raw.headers)
-    const allowed = await canAccess(userId, 'view', { type: 'trip', id: tripId }, {
-      shareToken,
-    })
+    const allowed = await canAccess(
+      userId,
+      'view',
+      { type: 'trip', id: tripId },
+      {
+        shareToken,
+      },
+    )
     if (!allowed) return c.json({ error: 'Media not found' }, 404)
 
     try {

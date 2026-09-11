@@ -1,7 +1,4 @@
-import {
-  formatMapBbox,
-  mapRegionLabel,
-} from './map-regions'
+import { formatMapBbox, mapRegionLabel } from './map-regions'
 
 export const BUILD_GEO_FEATURES_QUEUE = 'build_geo_features'
 export const BUILD_MARINAS_QUEUE = 'build_marinas'
@@ -68,8 +65,13 @@ export type AdminJobsPayload = {
 
 function unwrapJobOutput(output: Record<string, unknown> | undefined) {
   if (!output) return null
-  if (Array.isArray(output)) return (output[0] as Record<string, unknown>) ?? null
-  if (output.value && typeof output.value === 'object' && !Array.isArray(output.value)) {
+  if (Array.isArray(output))
+    return (output[0] as Record<string, unknown>) ?? null
+  if (
+    output.value &&
+    typeof output.value === 'object' &&
+    !Array.isArray(output.value)
+  ) {
     return output.value as Record<string, unknown>
   }
   return output
@@ -90,7 +92,9 @@ export function extractJobLog(
   return null
 }
 
-export function formatGeoFeaturesRunInput(data: Record<string, unknown>): string {
+export function formatGeoFeaturesRunInput(
+  data: Record<string, unknown>,
+): string {
   const bbox = data.bbox as
     | { west: number; south: number; east: number; north: number }
     | undefined
@@ -109,7 +113,9 @@ export function formatGeoFeaturesRunInput(data: Record<string, unknown>): string
 
 export function formatMarinasRunInput(data: Record<string, unknown>): string {
   const regionId = data.regionId ?? data.region
-  const parts = [`Marinas ${mapRegionLabel(String(regionId ?? 'north-america'))}`]
+  const parts = [
+    `Marinas ${mapRegionLabel(String(regionId ?? 'north-america'))}`,
+  ]
   parts.push(`${String(data.gridStep ?? 3)}° grid`)
   if (data.limitCells) parts.push(`${String(data.limitCells)} cells`)
   if (data.dryRun) parts.push('dry run')
@@ -119,7 +125,9 @@ export function formatMarinasRunInput(data: Record<string, unknown>): string {
 export function formatOsmPointsRunInput(data: Record<string, unknown>): string {
   const dataset = data.dataset ?? 'points'
   const regionId = data.regionId ?? data.region
-  const parts = [`${String(dataset)} · ${mapRegionLabel(String(regionId ?? 'uk'))}`]
+  const parts = [
+    `${String(dataset)} · ${mapRegionLabel(String(regionId ?? 'uk'))}`,
+  ]
   parts.push(`${String(data.gridStep ?? 3)}° grid`)
   if (data.limitCells) parts.push(`${String(data.limitCells)} cells`)
   if (data.dryRun) parts.push('dry run')
@@ -314,7 +322,9 @@ export function formatJobDuration(durationMs: number | null): string {
   return `${min}m ${sec}s`
 }
 
-export function formatJobOutputJson(output: Record<string, unknown> | undefined): string {
+export function formatJobOutputJson(
+  output: Record<string, unknown> | undefined,
+): string {
   if (!output) return 'No output recorded.'
   try {
     return JSON.stringify(output, null, 2)

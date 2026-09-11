@@ -117,7 +117,9 @@ export function TripCrewSection({
   selectedIds,
   onAddClick,
 }: TripCrewSectionProps) {
-  const selected = crewMembers.filter((member) => selectedIds.includes(member.id))
+  const selected = crewMembers.filter((member) =>
+    selectedIds.includes(member.id),
+  )
 
   return (
     <div>

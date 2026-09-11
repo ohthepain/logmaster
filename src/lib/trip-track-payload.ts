@@ -34,7 +34,12 @@ export async function gunzipBytes(data: Uint8Array): Promise<Uint8Array> {
 
 export async function serializeTrackPayload(
   payload: TripTrackPayload,
-): Promise<{ bytes: Uint8Array; byteLength: number; sha256: string; compressed: boolean }> {
+): Promise<{
+  bytes: Uint8Array
+  byteLength: number
+  sha256: string
+  compressed: boolean
+}> {
   const json = JSON.stringify(payload)
   const raw = new TextEncoder().encode(json)
   const bytes = await gzipBytes(raw)
@@ -48,7 +53,9 @@ export async function serializeTrackPayload(
   }
 }
 
-export async function deserializeTrackPayload(bytes: Uint8Array): Promise<TripTrackPayload> {
+export async function deserializeTrackPayload(
+  bytes: Uint8Array,
+): Promise<TripTrackPayload> {
   let decoded = bytes
   if (bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b) {
     decoded = await gunzipBytes(bytes)
@@ -68,6 +75,10 @@ export function trackNeedsS3Offload(byteLength: number): boolean {
   return byteLength > TRIP_TRACK_S3_THRESHOLD_BYTES
 }
 
-export function trackS3Key(userId: string, tripId: string, trackId: string): string {
+export function trackS3Key(
+  userId: string,
+  tripId: string,
+  trackId: string,
+): string {
   return `tracks/${userId}/${tripId}/${trackId}.v1.bin`
 }

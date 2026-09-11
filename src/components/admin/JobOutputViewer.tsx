@@ -27,7 +27,9 @@ export function JobOutputViewer({
     if (!jobId) return
     try {
       const res = await fetch(`/api/admin/jobs/${encodeURIComponent(jobId)}`)
-      const body = (await res.json().catch(() => ({}))) as UnifiedAdminJobRow & {
+      const body = (await res
+        .json()
+        .catch(() => ({}))) as UnifiedAdminJobRow & {
         error?: string
       }
       if (!res.ok) {
@@ -36,7 +38,9 @@ export function JobOutputViewer({
       setJob(body)
       setLoadError(null)
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : 'Failed to load job')
+      setLoadError(
+        error instanceof Error ? error.message : 'Failed to load job',
+      )
     }
   }, [jobId])
 
@@ -110,7 +114,9 @@ export function JobOutputViewer({
 
         <div className="flex min-h-0 flex-1 flex-col gap-3 p-4">
           {loadError ? (
-            <p className="text-sm text-red-700 dark:text-red-300">{loadError}</p>
+            <p className="text-sm text-red-700 dark:text-red-300">
+              {loadError}
+            </p>
           ) : null}
 
           {job?.errorMessage ? (
@@ -132,9 +138,9 @@ export function JobOutputViewer({
 
           <div className="min-h-0 flex-1 overflow-auto">
             <JobConsoleLog
-            jobId={jobId}
-            state={job?.state ?? 'created'}
-            output={job?.output}
+              jobId={jobId}
+              state={job?.state ?? 'created'}
+              output={job?.output}
             />
           </div>
 
@@ -150,11 +156,15 @@ export function JobOutputViewer({
           {job ? (
             <p className="m-0 shrink-0 px-1 text-[10px] text-[var(--sea-ink-soft)]">
               Created {formatJobRelativeTime(job.createdOn)}
-              {job.startedOn ? ` · started ${formatJobRelativeTime(job.startedOn)}` : ''}
+              {job.startedOn
+                ? ` · started ${formatJobRelativeTime(job.startedOn)}`
+                : ''}
               {job.completedOn
                 ? ` · completed ${formatJobRelativeTime(job.completedOn)}`
                 : ''}
-              {job.state === 'active' || job.state === 'created' || job.state === 'retry'
+              {job.state === 'active' ||
+              job.state === 'created' ||
+              job.state === 'retry'
                 ? ' · refreshes every 2s while running'
                 : ''}
             </p>

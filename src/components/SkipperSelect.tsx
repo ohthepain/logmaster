@@ -11,7 +11,11 @@ type SkipperSelectProps = {
   onChange: (key: string) => void
 }
 
-export function SkipperSelect({ value, options, onChange }: SkipperSelectProps) {
+export function SkipperSelect({
+  value,
+  options,
+  onChange,
+}: SkipperSelectProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const listId = useId()
@@ -42,7 +46,10 @@ export function SkipperSelect({ value, options, onChange }: SkipperSelectProps) 
 
   return (
     <div ref={rootRef} className={cn('relative', open && 'z-30')}>
-      <DevComponentLabel name="SkipperSelect" className="absolute -top-5 left-0" />
+      <DevComponentLabel
+        name="SkipperSelect"
+        className="absolute -top-5 left-0"
+      />
       <button
         type="button"
         aria-haspopup="listbox"
@@ -56,7 +63,11 @@ export function SkipperSelect({ value, options, onChange }: SkipperSelectProps) 
             <CrewAvatar
               name={selected.name}
               imageUrl={selected.imageUrl}
-              userId={selected.kind === 'user' ? selected.id : selected.linkedUserId ?? undefined}
+              userId={
+                selected.kind === 'user'
+                  ? selected.id
+                  : (selected.linkedUserId ?? undefined)
+              }
               className="size-10"
             />
             <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--sea-ink)]">
@@ -64,10 +75,15 @@ export function SkipperSelect({ value, options, onChange }: SkipperSelectProps) 
             </span>
           </>
         ) : (
-          <span className="text-sm text-[var(--sea-ink-soft)]">Select skipper…</span>
+          <span className="text-sm text-[var(--sea-ink-soft)]">
+            Select skipper…
+          </span>
         )}
         <ChevronDown
-          className={cn('size-4 shrink-0 text-[var(--sea-ink-soft)] transition', open && 'rotate-180')}
+          className={cn(
+            'size-4 shrink-0 text-[var(--sea-ink-soft)] transition',
+            open && 'rotate-180',
+          )}
         />
       </button>
 
@@ -95,13 +111,22 @@ export function SkipperSelect({ value, options, onChange }: SkipperSelectProps) 
                   <CrewAvatar
                     name={option.name}
                     imageUrl={option.imageUrl}
-                    userId={option.kind === 'user' ? option.id : option.linkedUserId ?? undefined}
+                    userId={
+                      option.kind === 'user'
+                        ? option.id
+                        : (option.linkedUserId ?? undefined)
+                    }
                     className="size-10"
                   />
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--sea-ink)]">
                     {option.name}
                   </span>
-                  {active && <Check className="size-4 shrink-0 text-[var(--brand)]" strokeWidth={2.5} />}
+                  {active && (
+                    <Check
+                      className="size-4 shrink-0 text-[var(--brand)]"
+                      strokeWidth={2.5}
+                    />
+                  )}
                 </button>
               </li>
             )

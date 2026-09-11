@@ -82,10 +82,14 @@ describe('overpass marina parsing', () => {
         errorCode: '504',
         pass: 1,
       }),
-    ).toBe('[marinas] cell 23/300 retry-1 [42,-141,45,-138] FAIL 504 · 0 features')
+    ).toBe(
+      '[marinas] cell 23/300 retry-1 [42,-141,45,-138] FAIL 504 · 0 features',
+    )
     expect(formatOverpassErrorCode('Overpass 504: gateway timeout')).toBe('504')
     expect(formatOverpassErrorCode('Cell query timed out')).toBe('CELL_TIMEOUT')
-    expect(formatOverpassErrorCode('Overpass timeout: too busy')).toBe('TIMEOUT')
+    expect(formatOverpassErrorCode('Overpass timeout: too busy')).toBe(
+      'TIMEOUT',
+    )
     expect(
       formatOverpassErrorCode('The operation was aborted due to timeout'),
     ).toBe('TIMEOUT')

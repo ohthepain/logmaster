@@ -40,7 +40,10 @@ describe('trip-list-stats', () => {
 
   it('builds location kickers from trip status and country', () => {
     expect(
-      tripListLocationKicker({ status: 'IN_PROGRESS', startCountry: 'Croatia' }),
+      tripListLocationKicker({
+        status: 'IN_PROGRESS',
+        startCountry: 'Croatia',
+      }),
     ).toBe('In progress · Croatia')
     expect(
       tripListLocationKicker({ status: 'PLANNED', startCountry: null }),

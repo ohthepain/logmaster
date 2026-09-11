@@ -4,7 +4,10 @@ import { JobOutputViewer } from '../../../components/admin/JobOutputViewer'
 import { AdminPageShell } from '../../../components/admin/AdminPageShell'
 import { NotificationBellToggle } from '../../../components/NotificationBellToggle'
 import { cancelAdminJob, rerunAdminJob } from '../../../lib/admin-api'
-import type { UnifiedAdminJobRow, UnifiedAdminJobsPayload } from '../../../lib/admin-jobs'
+import type {
+  UnifiedAdminJobRow,
+  UnifiedAdminJobsPayload,
+} from '../../../lib/admin-jobs'
 import {
   adminJobRerunLabel,
   canCancelAdminJob,
@@ -31,7 +34,9 @@ function StatDot({
     <div className="flex items-center gap-2 text-sm">
       <span className={`size-2 rounded-full ${color}`} />
       <span className="text-[var(--sea-ink-soft)]">
-        <span className="font-mono font-medium text-[var(--sea-ink)]">{value}</span>{' '}
+        <span className="font-mono font-medium text-[var(--sea-ink)]">
+          {value}
+        </span>{' '}
         {label}
       </span>
     </div>
@@ -73,7 +78,9 @@ function AdminJobManagementPage() {
 
   const hasRunning = data?.jobs.some(
     (job) =>
-      job.state === 'active' || job.state === 'created' || job.state === 'retry',
+      job.state === 'active' ||
+      job.state === 'created' ||
+      job.state === 'retry',
   )
 
   useEffect(() => {
@@ -155,14 +162,28 @@ function AdminJobManagementPage() {
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-6">
-        <StatDot color="bg-[var(--sea-ink-soft)]" label="shown" value={stats.total} />
-        <StatDot color="bg-[var(--sea-accent)]" label="running" value={stats.running} />
-        <StatDot color="bg-emerald-500" label="completed" value={stats.completed} />
+        <StatDot
+          color="bg-[var(--sea-ink-soft)]"
+          label="shown"
+          value={stats.total}
+        />
+        <StatDot
+          color="bg-[var(--sea-accent)]"
+          label="running"
+          value={stats.running}
+        />
+        <StatDot
+          color="bg-emerald-500"
+          label="completed"
+          value={stats.completed}
+        />
         <StatDot color="bg-red-500" label="failed" value={stats.failed} />
       </div>
 
       {actionError ? (
-        <p className="mb-4 text-sm text-red-700 dark:text-red-300">{actionError}</p>
+        <p className="mb-4 text-sm text-red-700 dark:text-red-300">
+          {actionError}
+        </p>
       ) : null}
       {loading && !data ? (
         <p className="text-[var(--sea-ink-soft)]">Loading jobs…</p>

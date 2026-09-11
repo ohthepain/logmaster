@@ -1,7 +1,13 @@
 import type { Feature, FeatureCollection, Point } from 'geojson'
 import type { AisBoundingBox, AisVessel } from '../../domain/ais-vessel'
-import { getAisVesselsInBbox, getAisVesselCacheSize } from '../ais/ais-vessel-cache'
-import { ensureAisStreamSubscription, isAisStreamConfigured } from '../ais/aisstream-client'
+import {
+  getAisVesselsInBbox,
+  getAisVesselCacheSize,
+} from '../ais/ais-vessel-cache'
+import {
+  ensureAisStreamSubscription,
+  isAisStreamConfigured,
+} from '../ais/aisstream-client'
 import { waitForAisVesselAccumulation } from '../ais/aisstream-utils'
 
 function parseCoordinate(
@@ -15,12 +21,15 @@ function parseCoordinate(
   return parsed
 }
 
-function parseBoundingBox(query: Record<string, string | undefined>): AisBoundingBox | null {
+function parseBoundingBox(
+  query: Record<string, string | undefined>,
+): AisBoundingBox | null {
   const north = parseCoordinate(query.north, -90, 90)
   const south = parseCoordinate(query.south, -90, 90)
   const east = parseCoordinate(query.east, -180, 180)
   const west = parseCoordinate(query.west, -180, 180)
-  if (north == null || south == null || east == null || west == null) return null
+  if (north == null || south == null || east == null || west == null)
+    return null
   if (north <= south) return null
   return { north, south, east, west }
 }
@@ -53,7 +62,9 @@ function vesselToFeature(vessel: AisVessel): Feature<Point> {
   }
 }
 
-export function buildAisFeatureCollection(vessels: AisVessel[]): FeatureCollection<Point> {
+export function buildAisFeatureCollection(
+  vessels: AisVessel[],
+): FeatureCollection<Point> {
   return {
     type: 'FeatureCollection',
     features: vessels.map(vesselToFeature),
@@ -69,7 +80,8 @@ export async function fetchAisVesselsForBoundingBox(bbox: AisBoundingBox) {
   }
 
   await ensureAisStreamSubscription(bbox)
-  const readCount = (nextBbox: AisBoundingBox) => getAisVesselsInBbox(nextBbox).length
+  const readCount = (nextBbox: AisBoundingBox) =>
+    getAisVesselsInBbox(nextBbox).length
   if (readCount(bbox) === 0) {
     await waitForAisVesselAccumulation(bbox, readCount, {
       timeoutMs: 7000,

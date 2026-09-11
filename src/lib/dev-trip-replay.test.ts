@@ -44,15 +44,18 @@ describe('dev trip replay', () => {
   it('keeps only machine-detectable events in chronological order', () => {
     const entries = [
       entry({ id: 'note', type: 'NOTE', timestamp: '2026-08-01T10:10:00Z' }),
-      entry({ id: 'sails', type: 'SAILS_UP', timestamp: '2026-08-01T10:30:00Z' }),
+      entry({
+        id: 'sails',
+        type: 'SAILS_UP',
+        timestamp: '2026-08-01T10:30:00Z',
+      }),
       entry({ id: 'hourly', timestamp: '2026-08-01T11:00:00Z' }),
       entry({ id: 'photo', type: 'PHOTO', timestamp: '2026-08-01T10:20:00Z' }),
     ]
 
-    expect(replaySourceEntries(entries, trip.id).map((item) => item.id)).toEqual([
-      'sails',
-      'hourly',
-    ])
+    expect(
+      replaySourceEntries(entries, trip.id).map((item) => item.id),
+    ).toEqual(['sails', 'hourly'])
   })
 
   it('maps source elapsed time onto the new trip clock', () => {

@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { Sailboat } from 'lucide-react'
-import { defaultBoatPhoto  } from '../domain/boat'
-import type {Boat} from '../domain/boat';
+import { defaultBoatPhoto } from '../domain/boat'
+import type { Boat } from '../domain/boat'
 import { cn } from '../lib/cn'
 import { DevComponentLabel } from './DevComponentLabel'
 

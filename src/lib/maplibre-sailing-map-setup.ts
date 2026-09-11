@@ -43,10 +43,10 @@ export async function loadSailingMapStyle(
 /** Block terrain re-enable after style loads; terrain draping clips raster tiles (MapLibre #1559). */
 export function guardSailingMapAgainstTerrain(map: maplibregl.Map) {
   const nativeSetTerrain = map.setTerrain.bind(map)
-  map.setTerrain = ((options: maplibregl.TerrainSpecification | null) => {
+  map.setTerrain = (options: maplibregl.TerrainSpecification | null) => {
     if (options != null) return map
     return nativeSetTerrain(null)
-  })
+  }
 
   const flatten = () => prepareFlatSailingBasemap(map)
   const onStyleData = (event: maplibregl.MapDataEvent) => {

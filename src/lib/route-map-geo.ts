@@ -1,10 +1,9 @@
 import type { RouteWaypoint } from '../domain/route'
 import {
   routeMapMarkerImageId,
-  routeWaypointIconKind
-  
+  routeWaypointIconKind,
 } from './route-map-marker'
-import type {RouteMapIconKind} from './route-map-marker';
+import type { RouteMapIconKind } from './route-map-marker'
 import {
   ROUTE_FINISH_WAYPOINT_COLOR,
   ROUTE_START_WAYPOINT_COLOR,
@@ -13,7 +12,9 @@ import {
 
 export type MapLngLat = { longitude: number; latitude: number }
 
-export function sortRouteWaypoints(waypoints: RouteWaypoint[]): RouteWaypoint[] {
+export function sortRouteWaypoints(
+  waypoints: RouteWaypoint[],
+): RouteWaypoint[] {
   return [...waypoints].sort((a, b) => a.sequence - b.sequence)
 }
 
@@ -42,7 +43,8 @@ export function buildRouteLineGeoJson(waypoints: RouteWaypoint[]) {
         geometry: {
           type: 'LineString' as const,
           coordinates: ordered.map(
-            (waypoint) => [waypoint.longitude, waypoint.latitude] as [number, number],
+            (waypoint) =>
+              [waypoint.longitude, waypoint.latitude] as [number, number],
           ),
         },
         properties: {
@@ -65,7 +67,10 @@ export function buildRouteWaypointPointsGeoJson(waypoints: RouteWaypoint[]) {
         type: 'Feature' as const,
         geometry: {
           type: 'Point' as const,
-          coordinates: [waypoint.longitude, waypoint.latitude] as [number, number],
+          coordinates: [waypoint.longitude, waypoint.latitude] as [
+            number,
+            number,
+          ],
         },
         properties: {
           waypointId: waypoint.id,

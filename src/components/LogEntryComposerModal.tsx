@@ -1,8 +1,8 @@
 import { Camera, LocateFixed, Mic, PenLine, Trash2 } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { LogEntryContentStack  } from './LogEntryContentStack'
-import type {EntryContentBlock} from './LogEntryContentStack';
+import { LogEntryContentStack } from './LogEntryContentStack'
+import type { EntryContentBlock } from './LogEntryContentStack'
 import { LogEntryPositionMap } from './LogEntryPositionMap'
 import { Modal } from './Modal'
 import { entryTitle } from '../domain/logbook'
@@ -51,7 +51,7 @@ export function LogEntryComposerModal({
   const showPhotoMetadataAction = devMode && isDevModeAvailable()
   const trip = store.trips.find((item) => item.id === tripId) ?? null
   const entry = entryId
-    ? store.entries.find((item) => item.id === entryId) ?? null
+    ? (store.entries.find((item) => item.id === entryId) ?? null)
     : null
   const tripEntries = store.entries.filter(
     (item) => item.tripId === tripId && !item.deleted,
@@ -137,7 +137,14 @@ export function LogEntryComposerModal({
 
     setSeedPlace(null)
     setDraftPosition(null)
-  }, [open, entry?.id, entry?.latitude, entry?.longitude, entry?.notes, entry?.data])
+  }, [
+    open,
+    entry?.id,
+    entry?.latitude,
+    entry?.longitude,
+    entry?.notes,
+    entry?.data,
+  ])
 
   const contentOrderInput = useMemo(
     () => ({
@@ -226,10 +233,11 @@ export function LogEntryComposerModal({
     }
 
     const trimmedNote = draftNote.trim()
-    data = withVoiceOrder(
-      data,
-      includeVoiceNote ? (voiceOrder ?? allocateContentOrder()) : null,
-    ) ?? {}
+    data =
+      withVoiceOrder(
+        data,
+        includeVoiceNote ? (voiceOrder ?? allocateContentOrder()) : null,
+      ) ?? {}
     data =
       withNoteOrder(
         data,
@@ -432,9 +440,14 @@ export function LogEntryComposerModal({
       onDelete: () => void handleRemoveMedia(item.id),
       onSetMetadata: showPhotoMetadataAction
         ? () =>
-            void handleSetPhotoMetadata(item.id, item.thumbnailUrl!, item.localPath ?? 'photo.jpg', {
-              mediaId: item.id,
-            })
+            void handleSetPhotoMetadata(
+              item.id,
+              item.thumbnailUrl!,
+              item.localPath ?? 'photo.jpg',
+              {
+                mediaId: item.id,
+              },
+            )
         : undefined,
       metadataBusy: metadataBusyKey === item.id,
     })
@@ -562,7 +575,9 @@ export function LogEntryComposerModal({
               initialViewport="entry-focus"
             />
             <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] px-3 py-2">
-              <p className="m-0 text-xs text-[var(--sea-ink-soft)]">{positionLabel}</p>
+              <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
+                {positionLabel}
+              </p>
               <button
                 type="button"
                 onClick={() => void handleUseGps()}

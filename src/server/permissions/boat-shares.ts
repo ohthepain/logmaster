@@ -66,7 +66,9 @@ export async function resizeBoatShares(boatId: string, shareCount: number) {
   if (!boat) return null
 
   if (count < boat.shares.length) {
-    const toRemove = boat.shares.filter((share: { sequence: number }) => share.sequence >= count)
+    const toRemove = boat.shares.filter(
+      (share: { sequence: number }) => share.sequence >= count,
+    )
     for (const share of toRemove) {
       if (share.owners.length > 0) {
         throw new Error(
@@ -116,7 +118,8 @@ export async function addBoatShareOwner(
   const existing = await db.boatShareOwner.findUnique({
     where: { shareId_userId: { shareId, userId } },
   })
-  if (existing) return { ok: false as const, error: 'User already owns this share' }
+  if (existing)
+    return { ok: false as const, error: 'User already owns this share' }
 
   await db.boatShareOwner.create({ data: { shareId, userId } })
   if (consortiumId) {

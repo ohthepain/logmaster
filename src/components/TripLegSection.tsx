@@ -39,7 +39,9 @@ export function TripLegSection({
   const legs = useLogbookStore((state) => state.legs)
   const entries = useLogbookStore((state) => state.entries)
   const updateLeg = useLogbookStore((state) => state.updateLeg)
-  const mergeLegWithPrevious = useLogbookStore((state) => state.mergeLegWithPrevious)
+  const mergeLegWithPrevious = useLogbookStore(
+    (state) => state.mergeLegWithPrevious,
+  )
 
   const tripLegs = useMemo(() => legsForTrip(tripId, legs), [tripId, legs])
   const tripLegsNewestFirst = useMemo(() => [...tripLegs].reverse(), [tripLegs])
@@ -244,7 +246,9 @@ export function TripLegSection({
         >
           <div className="space-y-4">
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">Leg name</span>
+              <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
+                Leg name
+              </span>
               <input
                 value={editTitle}
                 onChange={(event) => setEditTitle(event.target.value)}

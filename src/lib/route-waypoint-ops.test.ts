@@ -33,7 +33,11 @@ function waypoint(
 
 describe('resequenceWaypoints', () => {
   it('normalizes sequences to 0..n-1 preserving order', () => {
-    const result = resequenceWaypoints([waypoint('c', 5), waypoint('a', 1), waypoint('b', 3)])
+    const result = resequenceWaypoints([
+      waypoint('c', 5),
+      waypoint('a', 1),
+      waypoint('b', 3),
+    ])
     expect(result.map((item) => [item.id, item.sequence])).toEqual([
       ['c', 0],
       ['a', 1],
@@ -44,7 +48,11 @@ describe('resequenceWaypoints', () => {
 
 describe('normalizeWaypointSequences', () => {
   it('sorts by sequence then renumbers', () => {
-    const result = normalizeWaypointSequences([waypoint('c', 5), waypoint('a', 1), waypoint('b', 3)])
+    const result = normalizeWaypointSequences([
+      waypoint('c', 5),
+      waypoint('a', 1),
+      waypoint('b', 3),
+    ])
     expect(result.map((item) => item.sequence)).toEqual([0, 1, 2])
     expect(result.map((item) => item.id)).toEqual(['a', 'b', 'c'])
   })
@@ -95,29 +103,33 @@ describe('routeWaypointsToTripEntries', () => {
   })
 
   it('dedupes by coordinates against existing entries', () => {
-    const entries = routeWaypointsToTripEntries([waypoint('a', 0, 59, 18)], 'trip-1', {
-      existingEntries: [
-        {
-          id: 'existing',
-          tripId: 'trip-1',
-          type: 'NOTE',
-          timestamp: '2026-01-01T00:00:00.000Z',
-          latitude: 59,
-          longitude: 18,
-          accuracy: null,
-          heading: null,
-          createdBy: null,
-          notes: null,
-          data: null,
-          weather: null,
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
-          synced: false,
-          deleted: false,
-          legId: null,
-        },
-      ],
-    })
+    const entries = routeWaypointsToTripEntries(
+      [waypoint('a', 0, 59, 18)],
+      'trip-1',
+      {
+        existingEntries: [
+          {
+            id: 'existing',
+            tripId: 'trip-1',
+            type: 'NOTE',
+            timestamp: '2026-01-01T00:00:00.000Z',
+            latitude: 59,
+            longitude: 18,
+            accuracy: null,
+            heading: null,
+            createdBy: null,
+            notes: null,
+            data: null,
+            weather: null,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+            synced: false,
+            deleted: false,
+            legId: null,
+          },
+        ],
+      },
+    )
     expect(entries).toHaveLength(0)
   })
 })

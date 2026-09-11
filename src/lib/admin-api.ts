@@ -79,7 +79,9 @@ export async function deleteAdminOrg(orgId: string): Promise<void> {
   await api(`/api/admin/orgs/${orgId}`, { method: 'DELETE' })
 }
 
-export async function cancelAdminJob(jobId: string): Promise<{ jobId: string }> {
+export async function cancelAdminJob(
+  jobId: string,
+): Promise<{ jobId: string }> {
   const data = await api<{ jobId: string }>(
     `/api/admin/jobs/${encodeURIComponent(jobId)}/cancel`,
     { method: 'POST' },

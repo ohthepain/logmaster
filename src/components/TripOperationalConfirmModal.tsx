@@ -3,10 +3,7 @@ import { useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { getCurrentPosition } from '../lib/logbook-context'
 import { formatPosition } from '../lib/logbook-format'
-import {
-  formatLogEntryPlace,
-  lookupLogEntryPlace,
-} from '../lib/logbook-place'
+import { formatLogEntryPlace, lookupLogEntryPlace } from '../lib/logbook-place'
 import { DevComponentLabel } from './DevComponentLabel'
 
 type TripOperationalConfirmModalProps = {

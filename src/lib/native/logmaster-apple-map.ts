@@ -8,7 +8,8 @@ import type {
   MapOverlays,
 } from 'logmaster-apple-map'
 
-export const LogmasterAppleMap = registerPlugin<LogmasterAppleMapPlugin>('LogmasterAppleMap')
+export const LogmasterAppleMap =
+  registerPlugin<LogmasterAppleMapPlugin>('LogmasterAppleMap')
 
 export type {
   FitCoordinatesOptions,

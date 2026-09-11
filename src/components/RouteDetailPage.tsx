@@ -36,11 +36,8 @@ import { RouteCoverEditModal } from './RouteCoverEditModal'
 import { RouteMap } from './RouteMap'
 import { RouteWaypointComposerModal } from './RouteWaypointComposerModal'
 import { TripMapChromeButton } from './TripMapChromeButton'
-import {
-  TripImportButton
-  
-} from './TripImportButton'
-import type {TripImportButtonHandle} from './TripImportButton';
+import { TripImportButton } from './TripImportButton'
+import type { TripImportButtonHandle } from './TripImportButton'
 import {
   routeAnnotationsForRoute,
   routeWaypointsForRoute,
@@ -58,15 +55,21 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const autoMapCoverAttemptedRef = useRef<string | null>(null)
   const [commentDraft, setCommentDraft] = useState('')
-  const [commentWaypointId, setCommentWaypointId] = useState<string | null>(null)
+  const [commentWaypointId, setCommentWaypointId] = useState<string | null>(
+    null,
+  )
   const [submitting, setSubmitting] = useState(false)
   const [coverEditOpen, setCoverEditOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [waypointComposerOpen, setWaypointComposerOpen] = useState(false)
   const [waypointPickActive, setWaypointPickActive] = useState(false)
   const [waypointPickBusy, setWaypointPickBusy] = useState(false)
-  const [editingWaypoint, setEditingWaypoint] = useState<RouteWaypoint | null>(null)
-  const [draftMapPosition, setDraftMapPosition] = useState<MapLngLat | null>(null)
+  const [editingWaypoint, setEditingWaypoint] = useState<RouteWaypoint | null>(
+    null,
+  )
+  const [draftMapPosition, setDraftMapPosition] = useState<MapLngLat | null>(
+    null,
+  )
 
   useEffect(() => {
     void useRoutesStore.getState().load()
@@ -107,7 +110,9 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
 
   const tryAutoMapCover = useCallback(
     async (options?: { force?: boolean }) => {
-      const currentRoute = useRoutesStore.getState().routes.find((item) => item.id === routeId)
+      const currentRoute = useRoutesStore
+        .getState()
+        .routes.find((item) => item.id === routeId)
       if (currentRoute?.coverPhotoDataUrl && !options?.force) {
         useRoutesStore.getState().clearAutoMapCoverRequest(routeId)
         return true
@@ -129,7 +134,9 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
   )
 
   const handleInitialMapViewportSettled = useCallback(() => {
-    const wantsCover = useRoutesStore.getState().autoMapCoverRouteIds.includes(routeId)
+    const wantsCover = useRoutesStore
+      .getState()
+      .autoMapCoverRouteIds.includes(routeId)
     void tryAutoMapCover({ force: wantsCover })
   }, [routeId, tryAutoMapCover])
 
@@ -188,7 +195,11 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
                 toast.success('Waypoint added')
                 setWaypointPickActive(false)
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : 'Could not save waypoint')
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : 'Could not save waypoint',
+                )
               } finally {
                 setWaypointPickBusy(false)
               }
@@ -206,7 +217,10 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
     )
   }
 
-  const handleSaveRouteDetails = async (input: { title: string; description: string }) => {
+  const handleSaveRouteDetails = async (input: {
+    title: string
+    description: string
+  }) => {
     setBusy(true)
     try {
       await store.updateRoute(routeId, {
@@ -215,7 +229,11 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
       })
       toast.success('Route details updated')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update route details')
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to update route details',
+      )
     } finally {
       setBusy(false)
     }
@@ -225,11 +243,15 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
     setCoverEditOpen(false)
     setBusy(true)
     try {
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      )
       await saveMapAsCover()
       toast.success('Route cover updated from map')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to capture map cover')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to capture map cover',
+      )
     } finally {
       setBusy(false)
     }
@@ -240,11 +262,16 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
     setBusy(true)
     try {
       const coverPhotoDataUrl = await readImageFile(file)
-      await store.updateRoute(routeId, { coverKind: 'photo', coverPhotoDataUrl })
+      await store.updateRoute(routeId, {
+        coverKind: 'photo',
+        coverPhotoDataUrl,
+      })
       toast.success('Route photo updated')
       setCoverEditOpen(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to upload photo')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to upload photo',
+      )
     } finally {
       setBusy(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -258,7 +285,9 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
       toast.success('Route cover set to map')
       setCoverEditOpen(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update cover')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update cover',
+      )
     } finally {
       setBusy(false)
     }
@@ -267,11 +296,16 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
   const handleRemoveCover = async () => {
     setBusy(true)
     try {
-      await store.updateRoute(routeId, { coverKind: null, coverPhotoDataUrl: null })
+      await store.updateRoute(routeId, {
+        coverKind: null,
+        coverPhotoDataUrl: null,
+      })
       toast.success('Route cover removed')
       setCoverEditOpen(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to remove cover')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to remove cover',
+      )
     } finally {
       setBusy(false)
     }
@@ -290,7 +324,9 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
       setCommentWaypointId(null)
       toast.success('Comment added')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not add comment')
+      toast.error(
+        error instanceof Error ? error.message : 'Could not add comment',
+      )
     } finally {
       setSubmitting(false)
     }
@@ -317,7 +353,9 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
       await store.deleteRouteWaypointById(waypointId)
       toast.success('Waypoint deleted')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not delete waypoint')
+      toast.error(
+        error instanceof Error ? error.message : 'Could not delete waypoint',
+      )
     }
   }
 
@@ -336,7 +374,9 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
     try {
       await store.reorderRouteWaypoints(routeId, orderedIds)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not reorder waypoints')
+      toast.error(
+        error instanceof Error ? error.message : 'Could not reorder waypoints',
+      )
     }
   }
 
@@ -384,21 +424,21 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/35 to-transparent" />
 
           {!waypointPickActive ? (
-          <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col gap-2">
-            <TripMapChromeButton
-              label="Edit route cover"
-              onClick={() => setCoverEditOpen(true)}
-              disabled={busy}
-            >
-              <Pencil className="size-4" />
-            </TripMapChromeButton>
-            <TripMapChromeButton
-              label="Add waypoint on map"
-              onClick={() => startWaypointPick()}
-            >
-              <MapPinPlus className="size-4" />
-            </TripMapChromeButton>
-          </div>
+            <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col gap-2">
+              <TripMapChromeButton
+                label="Edit route cover"
+                onClick={() => setCoverEditOpen(true)}
+                disabled={busy}
+              >
+                <Pencil className="size-4" />
+              </TripMapChromeButton>
+              <TripMapChromeButton
+                label="Add waypoint on map"
+                onClick={() => startWaypointPick()}
+              >
+                <MapPinPlus className="size-4" />
+              </TripMapChromeButton>
+            </div>
           ) : null}
         </div>
       </div>
@@ -426,7 +466,8 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
           </div>
           {waypoints.length === 0 ? (
             <p className="mt-3 mb-0 text-sm text-[var(--sea-ink-soft)]">
-              No waypoints yet. Add one manually or tap the map pin control above.
+              No waypoints yet. Add one manually or tap the map pin control
+              above.
             </p>
           ) : (
             <ol className="mt-3 space-y-3">
@@ -468,7 +509,8 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
                           </p>
                         ) : null}
                         <p className="mt-1 mb-0 text-xs text-[var(--sea-ink-soft)]">
-                          {waypoint.latitude.toFixed(5)}, {waypoint.longitude.toFixed(5)}
+                          {waypoint.latitude.toFixed(5)},{' '}
+                          {waypoint.longitude.toFixed(5)}
                         </p>
                       </div>
                     </div>
@@ -513,15 +555,17 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
         <div className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] p-4 sm:p-5">
           <h2 className="brand-title m-0 text-lg">Route comments</h2>
           <WaypointComments
-            annotations={annotations.filter((annotation) => !annotation.waypointId)}
+            annotations={annotations.filter(
+              (annotation) => !annotation.waypointId,
+            )}
           />
 
           <div className="mt-4 space-y-2">
             {commentWaypointId ? (
               <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
                 Commenting on{' '}
-                {waypoints.find((waypoint) => waypoint.id === commentWaypointId)?.name ??
-                  'waypoint'}
+                {waypoints.find((waypoint) => waypoint.id === commentWaypointId)
+                  ?.name ?? 'waypoint'}
                 {' · '}
                 <button
                   type="button"
@@ -581,7 +625,11 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
 
 function WaypointComments({ annotations }: { annotations: RouteAnnotation[] }) {
   if (annotations.length === 0) {
-    return <p className="mt-2 mb-0 text-xs text-[var(--sea-ink-soft)]">No comments yet.</p>
+    return (
+      <p className="mt-2 mb-0 text-xs text-[var(--sea-ink-soft)]">
+        No comments yet.
+      </p>
+    )
   }
 
   return (
@@ -627,7 +675,11 @@ function RouteCard({
           : 'border-[var(--panel-border)] bg-[var(--panel)]',
       )}
     >
-      <button type="button" onClick={onSelect} className="block w-full text-left">
+      <button
+        type="button"
+        onClick={onSelect}
+        className="block w-full text-left"
+      >
         <div className="relative aspect-[16/10] overflow-hidden bg-[var(--chip-bg)]">
           {coverPhoto ? (
             <img
@@ -710,7 +762,9 @@ export function RoutesListPage() {
       openRoute(route.id)
       toast.success('Route created')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not create route')
+      toast.error(
+        error instanceof Error ? error.message : 'Could not create route',
+      )
     }
   }
 
@@ -755,15 +809,20 @@ export function RoutesListPage() {
       </p>
 
       {!store.booted ? (
-        <p className="mt-6 text-sm text-[var(--sea-ink-soft)]">Loading routes…</p>
+        <p className="mt-6 text-sm text-[var(--sea-ink-soft)]">
+          Loading routes…
+        </p>
       ) : store.routes.length === 0 ? (
         <div className="mt-6 rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] p-5 text-center">
           <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl border border-[var(--panel-border)] bg-[var(--surface)] text-[var(--sea-ink)]">
             <MapPin className="size-5" />
           </div>
-          <h3 className="m-0 text-lg font-bold text-[var(--sea-ink)]">No routes yet</h3>
+          <h3 className="m-0 text-lg font-bold text-[var(--sea-ink)]">
+            No routes yet
+          </h3>
           <p className="mx-auto mt-2 max-w-lg text-sm leading-7 text-[var(--sea-ink-soft)]">
-            Create a route and add waypoints on the map, or import a GPX file with a planned path.
+            Create a route and add waypoints on the map, or import a GPX file
+            with a planned path.
           </p>
           <button
             type="button"

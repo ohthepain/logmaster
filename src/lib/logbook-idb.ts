@@ -1,7 +1,12 @@
 import { openDB } from 'idb'
 import type { DBSchema } from 'idb'
 import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
-import type { Route, RouteAnnotation, RouteMedia, RouteWaypoint } from '../domain/route'
+import type {
+  Route,
+  RouteAnnotation,
+  RouteMedia,
+  RouteWaypoint,
+} from '../domain/route'
 import type { TripTrack } from '../domain/trip-track'
 
 interface LogbookDB extends DBSchema {
@@ -170,7 +175,9 @@ export async function getLogbookDb() {
 
       if (oldVersion < 3) {
         if (!db.objectStoreNames.contains('tripTracks')) {
-          const tripTracks = db.createObjectStore('tripTracks', { keyPath: 'id' })
+          const tripTracks = db.createObjectStore('tripTracks', {
+            keyPath: 'id',
+          })
           tripTracks.createIndex('tripId', 'tripId')
           tripTracks.createIndex('synced', 'synced')
           tripTracks.createIndex('updatedAt', 'updatedAt')
@@ -184,7 +191,9 @@ export async function getLogbookDb() {
           routes.createIndex('synced', 'synced')
         }
         if (!db.objectStoreNames.contains('routeWaypoints')) {
-          const routeWaypoints = db.createObjectStore('routeWaypoints', { keyPath: 'id' })
+          const routeWaypoints = db.createObjectStore('routeWaypoints', {
+            keyPath: 'id',
+          })
           routeWaypoints.createIndex('routeId', 'routeId')
           routeWaypoints.createIndex('synced', 'synced')
           routeWaypoints.createIndex('updatedAt', 'updatedAt')
@@ -198,7 +207,9 @@ export async function getLogbookDb() {
           routeAnnotations.createIndex('updatedAt', 'updatedAt')
         }
         if (!db.objectStoreNames.contains('routeMedia')) {
-          const routeMedia = db.createObjectStore('routeMedia', { keyPath: 'id' })
+          const routeMedia = db.createObjectStore('routeMedia', {
+            keyPath: 'id',
+          })
           routeMedia.createIndex('annotationId', 'annotationId')
           routeMedia.createIndex('synced', 'synced')
           routeMedia.createIndex('updatedAt', 'updatedAt')

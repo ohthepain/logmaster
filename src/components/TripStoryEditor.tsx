@@ -1,5 +1,5 @@
-import { useEffect, useState  } from 'react'
-import type {ComponentType} from 'react';
+import { useEffect, useState } from 'react'
+import type { ComponentType } from 'react'
 import { TripStoryPageShell } from './TripStoryPageShell'
 
 export type TripStoryEditorProps = {

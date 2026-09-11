@@ -49,8 +49,7 @@ type GooglePlacesError = {
 }
 
 const PLACES_API = 'https://places.googleapis.com/v1'
-const SEARCH_FIELD_MASK =
-  'places.id,places.displayName,places.location'
+const SEARCH_FIELD_MASK = 'places.id,places.displayName,places.location'
 const DETAILS_FIELD_MASK =
   'id,displayName,location,photos.name,photos.widthPx,photos.heightPx,photos.authorAttributions'
 const PHOTO_NAME_PATTERN = /^places\/[^/]+\/photos\/[^/]+$/
@@ -292,11 +291,7 @@ export async function fetchPlacePhotos(
   if (nearbySearch.error) searchErrors.push(nearbySearch.error)
   candidates.push(...nearbySearch.places)
 
-  const rankedCandidates = rankPlacesByDistance(
-    candidates,
-    latitude,
-    longitude,
-  )
+  const rankedCandidates = rankPlacesByDistance(candidates, latitude, longitude)
 
   if (rankedCandidates.length === 0) {
     return {

@@ -47,11 +47,13 @@ describe('trip playback', () => {
       entry('one', '2026-08-28T08:00:00.000Z', 10, 20, 350),
       entry('two', '2026-08-28T10:00:00.000Z', 12, 24, 10),
     ]
-    expect(tripPlaybackPositionAt(
-      trip.id,
-      entries,
-      Date.parse('2026-08-28T09:00:00.000Z'),
-    )).toEqual({
+    expect(
+      tripPlaybackPositionAt(
+        trip.id,
+        entries,
+        Date.parse('2026-08-28T09:00:00.000Z'),
+      ),
+    ).toEqual({
       latitude: 11,
       longitude: 22,
       heading: 0,

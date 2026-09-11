@@ -13,7 +13,9 @@ describe('computePlaybackTimelineTicks', () => {
       durationMs: 2.5 * DAY,
     }
     const ticks = computePlaybackTimelineTicks(window, tripStart)
-    const dayLabels = ticks.filter((tick) => tick.label?.startsWith('Day ')).map((tick) => tick.label)
+    const dayLabels = ticks
+      .filter((tick) => tick.label?.startsWith('Day '))
+      .map((tick) => tick.label)
     expect(dayLabels).toContain('Day 1')
     expect(dayLabels).toContain('Day 2')
     expect(dayLabels).toContain('Day 3')
@@ -27,7 +29,9 @@ describe('computePlaybackTimelineTicks', () => {
       durationMs: 8 * HOUR,
     }
     const ticks = computePlaybackTimelineTicks(window, tripStart)
-    const hourLabels = ticks.filter((tick) => tick.label?.endsWith('h')).map((tick) => tick.label)
+    const hourLabels = ticks
+      .filter((tick) => tick.label?.endsWith('h'))
+      .map((tick) => tick.label)
     expect(hourLabels).toContain('1h')
     expect(hourLabels).toContain('2h')
     expect(hourLabels).not.toContain('0h')

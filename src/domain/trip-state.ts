@@ -24,10 +24,7 @@ export const DEFAULT_IN_PROGRESS_OPERATIONAL_FIELDS: TripOperationalFields = {
 }
 
 function initialOperationalState(
-  trip: Pick<
-    Trip,
-    'status' | 'sailsUp' | 'engineOn' | 'moored' | 'anchorDown'
-  >,
+  trip: Pick<Trip, 'status' | 'sailsUp' | 'engineOn' | 'moored' | 'anchorDown'>,
 ): TripOperationalState {
   if (trip.status === 'IN_PROGRESS') {
     return {
@@ -90,10 +87,7 @@ const STATE_ENTRY_TYPES = new Set<LogEntryType>([
 ])
 
 export function deriveTripOperationalState(
-  trip: Pick<
-    Trip,
-    'status' | 'sailsUp' | 'engineOn' | 'moored' | 'anchorDown'
-  >,
+  trip: Pick<Trip, 'status' | 'sailsUp' | 'engineOn' | 'moored' | 'anchorDown'>,
   entries: Pick<LogEntry, 'type' | 'timestamp' | 'deleted'>[],
 ): TripOperationalState {
   const state = initialOperationalState(trip)
@@ -155,10 +149,7 @@ export function operationalFieldsFromState(
 }
 
 export function resolveTripOperationalState(
-  trip: Pick<
-    Trip,
-    'status' | 'sailsUp' | 'engineOn' | 'moored' | 'anchorDown'
-  >,
+  trip: Pick<Trip, 'status' | 'sailsUp' | 'engineOn' | 'moored' | 'anchorDown'>,
   entries?: Pick<LogEntry, 'type' | 'timestamp' | 'deleted'>[],
 ): TripOperationalState {
   if (entries && entries.some((entry) => !entry.deleted)) {
@@ -199,7 +190,10 @@ export function resolveTripOperationalState(
 }
 
 export function syncTripOperationalFields<
-  T extends Pick<Trip, 'status' | 'sailsUp' | 'engineOn' | 'moored' | 'anchorDown'>,
+  T extends Pick<
+    Trip,
+    'status' | 'sailsUp' | 'engineOn' | 'moored' | 'anchorDown'
+  >,
 >(trip: T, entries: Pick<LogEntry, 'type' | 'timestamp' | 'deleted'>[]): T {
   const state = deriveTripOperationalState(trip, entries)
   return {

@@ -40,22 +40,25 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
   const [txnOpen, setTxnOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
-  const load = useCallback(async (opts?: { background?: boolean }) => {
-    if (opts?.background) setRefreshing(true)
-    else setLoading(true)
-    setError(null)
-    try {
-      const data = await fetchOrgAccounting(orgId)
-      setBankAccounts(data.bankAccounts)
-      setTransactions(data.transactions)
-      setExpenseClaims(data.expenseClaims)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load accounting')
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }, [orgId])
+  const load = useCallback(
+    async (opts?: { background?: boolean }) => {
+      if (opts?.background) setRefreshing(true)
+      else setLoading(true)
+      setError(null)
+      try {
+        const data = await fetchOrgAccounting(orgId)
+        setBankAccounts(data.bankAccounts)
+        setTransactions(data.transactions)
+        setExpenseClaims(data.expenseClaims)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load accounting')
+      } finally {
+        setLoading(false)
+        setRefreshing(false)
+      }
+    },
+    [orgId],
+  )
 
   useEffect(() => {
     void load()
@@ -100,7 +103,9 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
         setExpenseClaims((current) =>
           current.map((item) => (item.id === updated.id ? updated : item)),
         )
-        toast.success(status === 'approved' ? 'Claim approved' : 'Claim rejected')
+        toast.success(
+          status === 'approved' ? 'Claim approved' : 'Claim rejected',
+        )
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Action failed')
@@ -110,7 +115,9 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
   }
 
   if (loading) {
-    return <p className="text-sm text-[var(--sea-ink-soft)]">Loading accounting…</p>
+    return (
+      <p className="text-sm text-[var(--sea-ink-soft)]">Loading accounting…</p>
+    )
   }
 
   if (error) {
@@ -148,7 +155,9 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
           ) : null}
         </div>
         {bankAccounts.length === 0 ? (
-          <p className="text-sm text-[var(--sea-ink-soft)]">No bank accounts yet.</p>
+          <p className="text-sm text-[var(--sea-ink-soft)]">
+            No bank accounts yet.
+          </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {bankAccounts.map((account) => (
@@ -156,12 +165,15 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
                 key={account.id}
                 className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4"
               >
-                <p className="m-0 text-sm text-[var(--sea-ink-soft)]">{account.name}</p>
+                <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
+                  {account.name}
+                </p>
                 <p className="m-0 mt-1 text-2xl font-bold">
                   {formatMoney(account.currentBalance, account.currency)}
                 </p>
                 <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">
-                  Opening {formatMoney(account.openingBalance, account.currency)}
+                  Opening{' '}
+                  {formatMoney(account.openingBalance, account.currency)}
                 </p>
                 {canManage ? (
                   <button
@@ -202,7 +214,9 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
           <h2 className="brand-title m-0 text-xl">Expense claims</h2>
         </div>
         {expenseClaims.length === 0 ? (
-          <p className="text-sm text-[var(--sea-ink-soft)]">No expense claims.</p>
+          <p className="text-sm text-[var(--sea-ink-soft)]">
+            No expense claims.
+          </p>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-3 p-0">
             {expenseClaims.map((claim) => (
@@ -279,7 +293,9 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
           ) : null}
         </div>
         {transactions.length === 0 ? (
-          <p className="text-sm text-[var(--sea-ink-soft)]">No transactions yet.</p>
+          <p className="text-sm text-[var(--sea-ink-soft)]">
+            No transactions yet.
+          </p>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-2 p-0 text-sm">
             {transactions.map((txn) => (
@@ -321,7 +337,9 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
               toast.success('Bank account added')
               setBankOpen(false)
             } catch (e) {
-              toast.error(e instanceof Error ? e.message : 'Failed to add account')
+              toast.error(
+                e instanceof Error ? e.message : 'Failed to add account',
+              )
             } finally {
               setBusy(false)
             }
@@ -355,7 +373,9 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
               toast.success('Transaction added')
               setTxnOpen(false)
             } catch (e) {
-              toast.error(e instanceof Error ? e.message : 'Failed to add transaction')
+              toast.error(
+                e instanceof Error ? e.message : 'Failed to add transaction',
+              )
             } finally {
               setBusy(false)
             }

@@ -37,9 +37,7 @@ describe('parseMarinaJobProgress', () => {
   })
 
   it('computes percent for cells and uploads', () => {
-    expect(marinaJobProgressPercent(parseMarinaJobProgress(sampleLog))).toBe(
-      38,
-    )
+    expect(marinaJobProgressPercent(parseMarinaJobProgress(sampleLog))).toBe(38)
     expect(
       marinaJobProgressPercent(
         parseMarinaJobProgress(

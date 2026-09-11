@@ -26,8 +26,9 @@ export function normalizeGpxImportUrl(url: string): string {
   const host = parsed.hostname.toLowerCase()
 
   if (host === 'github.com') {
-    const match =
-      /^\/([^/]+)\/([^/]+)\/(?:blob|raw)\/([^/]+)\/(.+)$/.exec(parsed.pathname)
+    const match = /^\/([^/]+)\/([^/]+)\/(?:blob|raw)\/([^/]+)\/(.+)$/.exec(
+      parsed.pathname,
+    )
     if (match) {
       const [, owner, repo, ref, path] = match
       return `https://raw.githubusercontent.com/${owner}/${repo}/${ref}/${path}`
@@ -57,7 +58,12 @@ export function isBlockedGpxImportHost(hostname: string): boolean {
   if (host === 'metadata.google.internal') return true
 
   if (host.includes(':')) {
-    if (host === '::1' || host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd')) {
+    if (
+      host === '::1' ||
+      host.startsWith('fe80:') ||
+      host.startsWith('fc') ||
+      host.startsWith('fd')
+    ) {
       return true
     }
     return false
@@ -119,7 +125,9 @@ export async function fetchGpxFromUrl(url: string): Promise<string> {
       apiUrl(`/api/gpx-import/fetch?url=${encodeURIComponent(downloadUrl)}`),
     )
   } catch {
-    throw new Error('Could not download the GPX file. Check your connection and try again.')
+    throw new Error(
+      'Could not download the GPX file. Check your connection and try again.',
+    )
   }
 
   if (!response.ok) {

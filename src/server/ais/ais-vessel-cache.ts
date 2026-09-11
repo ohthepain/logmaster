@@ -36,7 +36,7 @@ function mergeAisVessel(
     shipTypeLabel:
       update.shipType != null
         ? aisShipTypeLabel(update.shipType)
-        : update.shipTypeLabel ?? base.shipTypeLabel,
+        : (update.shipTypeLabel ?? base.shipTypeLabel),
     category,
     callSign: update.callSign ?? base.callSign,
     imo: update.imo ?? base.imo,
@@ -45,7 +45,7 @@ function mergeAisVessel(
     navigationalStatusLabel:
       update.navigationalStatus != null
         ? aisNavigationalStatusLabel(update.navigationalStatus)
-        : update.navigationalStatusLabel ?? base.navigationalStatusLabel,
+        : (update.navigationalStatusLabel ?? base.navigationalStatusLabel),
     lengthMeters: update.lengthMeters ?? base.lengthMeters,
     widthMeters: update.widthMeters ?? base.widthMeters,
   }

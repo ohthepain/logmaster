@@ -98,7 +98,9 @@ export async function syncPendingTripTracks(
   }))
 }
 
-export async function fetchTripTrackManifests(tripId: string): Promise<TripTrack[]> {
+export async function fetchTripTrackManifests(
+  tripId: string,
+): Promise<TripTrack[]> {
   const response = await fetch(apiUrl(`/api/logbook/trips/${tripId}/tracks`), {
     credentials: 'include',
   })
@@ -109,10 +111,15 @@ export async function fetchTripTrackManifests(tripId: string): Promise<TripTrack
   return (body.tripTracks ?? []).map(normalizeTripTrack)
 }
 
-export async function fetchTripTrackPayload(track: TripTrack): Promise<TripTrackPayload> {
-  const response = await fetch(apiUrl(`/api/logbook/tracks/${track.id}/content`), {
-    credentials: 'include',
-  })
+export async function fetchTripTrackPayload(
+  track: TripTrack,
+): Promise<TripTrackPayload> {
+  const response = await fetch(
+    apiUrl(`/api/logbook/tracks/${track.id}/content`),
+    {
+      credentials: 'include',
+    },
+  )
   if (!response.ok) {
     throw new Error(await response.text())
   }
@@ -120,7 +127,9 @@ export async function fetchTripTrackPayload(track: TripTrack): Promise<TripTrack
   return deserializeTrackPayload(bytes)
 }
 
-export async function hydrateTripTrackPayload(track: TripTrack): Promise<TripTrack> {
+export async function hydrateTripTrackPayload(
+  track: TripTrack,
+): Promise<TripTrack> {
   if (track.payload) return track
   if (track.storage !== 's3') return track
   const payload = await fetchTripTrackPayload(track)

@@ -1,18 +1,24 @@
 import type { LogEntry } from '../domain/logbook'
 import type { RouteWaypoint } from '../domain/route'
 
-export function sortWaypointsBySequence(waypoints: RouteWaypoint[]): RouteWaypoint[] {
+export function sortWaypointsBySequence(
+  waypoints: RouteWaypoint[],
+): RouteWaypoint[] {
   return [...waypoints].sort((a, b) => a.sequence - b.sequence)
 }
 
-export function resequenceWaypoints(waypoints: RouteWaypoint[]): RouteWaypoint[] {
+export function resequenceWaypoints(
+  waypoints: RouteWaypoint[],
+): RouteWaypoint[] {
   return waypoints.map((waypoint, index) => ({
     ...waypoint,
     sequence: index,
   }))
 }
 
-export function normalizeWaypointSequences(waypoints: RouteWaypoint[]): RouteWaypoint[] {
+export function normalizeWaypointSequences(
+  waypoints: RouteWaypoint[],
+): RouteWaypoint[] {
   return resequenceWaypoints(sortWaypointsBySequence(waypoints))
 }
 
@@ -114,9 +120,7 @@ export function routeWaypointsToTripEntries(
   const seen = new Set(
     existing
       .filter((entry) => entry.latitude != null && entry.longitude != null)
-      .map((entry) =>
-        waypointCoordinateKey(entry.latitude!, entry.longitude!),
-      ),
+      .map((entry) => waypointCoordinateKey(entry.latitude!, entry.longitude!)),
   )
 
   const baseTime = options?.timestamp ?? new Date().toISOString()

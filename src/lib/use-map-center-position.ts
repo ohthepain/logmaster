@@ -1,6 +1,6 @@
 import type maplibregl from 'maplibre-gl'
-import { useEffect, useState  } from 'react'
-import type {RefObject} from 'react';
+import { useEffect, useState } from 'react'
+import type { RefObject } from 'react'
 import type { MapLngLat } from './logbook-map-geo'
 import { readMapCenter } from './map-center-position'
 

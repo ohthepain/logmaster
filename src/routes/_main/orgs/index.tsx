@@ -97,7 +97,9 @@ function OrgsPage() {
         </div>
       ) : loading ? (
         <div className="page-wrap px-3 sm:px-4">
-          <p className="text-sm text-[var(--sea-ink-soft)]">Loading organizations…</p>
+          <p className="text-sm text-[var(--sea-ink-soft)]">
+            Loading organizations…
+          </p>
         </div>
       ) : error ? (
         <div className="page-wrap px-3 sm:px-4">

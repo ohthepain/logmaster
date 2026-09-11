@@ -28,9 +28,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 export async function fetchOrgDocuments(
   orgId: string,
 ): Promise<OrgDocumentsPayload> {
-  return api<OrgDocumentsPayload>(
-    `/api/orgs/${orgId}/documents`,
-  )
+  return api<OrgDocumentsPayload>(`/api/orgs/${orgId}/documents`)
 }
 
 export async function createOrgDocumentCategory(

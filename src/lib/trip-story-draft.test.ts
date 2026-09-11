@@ -56,7 +56,9 @@ describe('buildTripStoryDraft', () => {
     expect(html).toContain('Croatia')
     expect(html).toContain('class="story-note"')
     expect(html).toContain('Calm morning sail')
-    expect(html.indexOf('cover.jpg')).toBeLessThan(html.indexOf('Calm morning sail'))
+    expect(html.indexOf('cover.jpg')).toBeLessThan(
+      html.indexOf('Calm morning sail'),
+    )
   })
 
   it('embeds photo media in the timeline grid', () => {

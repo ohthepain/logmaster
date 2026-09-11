@@ -1,13 +1,14 @@
 import { Bell, BellRing, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 import type { NotificationTopic } from '../domain/notifications'
 import { NOTIFICATION_TOPIC_LABELS } from '../domain/notifications'
+import { upsertNotificationSubscription } from '../lib/notifications-api'
 import {
-  fetchNotificationSubscriptions,
-  upsertNotificationSubscription,
-} from '../lib/notifications-api'
+  getNotificationSubscriptionsCached,
+  invalidateNotificationSubscriptions,
+} from '../lib/notification-subscriptions-cache'
 import { cn } from '../lib/cn'
 
 type NotificationBellToggleProps = {
@@ -29,22 +30,29 @@ export function NotificationBellToggle({
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
 
+  const scope = useMemo(
+    () => ({
+      boatId,
+      orgId,
+      global: topic === 'ADMIN_JOBS' ? true : undefined,
+    }),
+    [boatId, orgId, topic],
+  )
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const subscriptions = await fetchNotificationSubscriptions({
-        boatId,
-        orgId,
-        global: topic === 'ADMIN_JOBS' ? true : undefined,
-      })
-      const match = subscriptions.find((subscription) => subscription.topic === topic)
+      const subscriptions = await getNotificationSubscriptionsCached(scope)
+      const match = subscriptions.find(
+        (subscription) => subscription.topic === topic,
+      )
       setEnabled(Boolean(match?.enabled))
     } catch {
       setEnabled(false)
     } finally {
       setLoading(false)
     }
-  }, [boatId, orgId, topic])
+  }, [scope, topic])
 
   useEffect(() => {
     void load()
@@ -66,10 +74,15 @@ export function NotificationBellToggle({
         orgId: orgId ?? null,
         enabled: next,
       })
+      invalidateNotificationSubscriptions(scope)
       setEnabled(next)
       toast.success(next ? 'Notifications enabled' : 'Notifications disabled')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update notifications')
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to update notifications',
+      )
     } finally {
       setBusy(false)
     }
@@ -148,15 +161,22 @@ export function ResourceSectionHeader({
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2">
-        <h2 className="m-0 text-lg font-semibold text-[var(--sea-ink)]">{title}</h2>
+        <h2 className="m-0 text-lg font-semibold text-[var(--sea-ink)]">
+          {title}
+        </h2>
         {topic ? (
           <NotificationBellToggle topic={topic} boatId={boatId} orgId={orgId} />
         ) : null}
         {onRefresh ? (
-          <ResourceRefreshButton onRefresh={onRefresh} refreshing={refreshing} />
+          <ResourceRefreshButton
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+          />
         ) : null}
       </div>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="flex items-center gap-2">{actions}</div>
+      ) : null}
     </div>
   )
 }

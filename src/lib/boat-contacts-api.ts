@@ -22,7 +22,9 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export async function fetchBoatContacts(boatId: string): Promise<BoatContact[]> {
+export async function fetchBoatContacts(
+  boatId: string,
+): Promise<BoatContact[]> {
   const data = await api<{ contacts: BoatContact[] }>(
     `/api/boats/${boatId}/contacts`,
   )
@@ -40,10 +42,13 @@ export async function createBoatContact(
     grants?: ContactResourceArea[]
   },
 ): Promise<BoatContact> {
-  const data = await api<{ contact: BoatContact }>(`/api/boats/${boatId}/contacts`, {
-    method: 'POST',
-    body: JSON.stringify(input),
-  })
+  const data = await api<{ contact: BoatContact }>(
+    `/api/boats/${boatId}/contacts`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  )
   return data.contact
 }
 

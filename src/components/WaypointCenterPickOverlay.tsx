@@ -34,10 +34,10 @@ export function WaypointCenterPickOverlay({
         <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]" />
         <div className="absolute bottom-0 top-0 left-1/2 w-px -translate-x-1/2 bg-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]" />
         {hideCenterMarker ? null : (
-        <div
-          className="absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white shadow-md"
-          style={{ backgroundColor: mapBrandColor() }}
-        />
+          <div
+            className="absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white shadow-md"
+            style={{ backgroundColor: mapBrandColor() }}
+          />
         )}
       </div>
 

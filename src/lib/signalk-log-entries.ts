@@ -39,7 +39,9 @@ function parseLogEntryType(value: unknown): LogEntryType | null {
   return LOG_ENTRY_TYPE_SET.has(value) ? (value as LogEntryType) : null
 }
 
-export function serializeLogEntryForSignalK(entry: LogEntry): SignalKLogEntryExport | null {
+export function serializeLogEntryForSignalK(
+  entry: LogEntry,
+): SignalKLogEntryExport | null {
   if (entry.deleted) return null
   return {
     type: entry.type,
@@ -53,16 +55,22 @@ export function serializeLogEntryForSignalK(entry: LogEntry): SignalKLogEntryExp
   }
 }
 
-export function exportableLogEntries(entries: LogEntry[]): SignalKLogEntryExport[] {
+export function exportableLogEntries(
+  entries: LogEntry[],
+): SignalKLogEntryExport[] {
   return entries
     .flatMap((entry) => {
       const serialized = serializeLogEntryForSignalK(entry)
       return serialized ? [serialized] : []
     })
-    .sort((left, right) => Date.parse(left.timestamp) - Date.parse(right.timestamp))
+    .sort(
+      (left, right) => Date.parse(left.timestamp) - Date.parse(right.timestamp),
+    )
 }
 
-export function waypointFromLogEntry(entry: LogEntry): SignalKWaypointExport | null {
+export function waypointFromLogEntry(
+  entry: LogEntry,
+): SignalKWaypointExport | null {
   if (entry.deleted) return null
   if (entry.latitude == null || entry.longitude == null) return null
 
@@ -86,7 +94,9 @@ export function waypointFromLogEntry(entry: LogEntry): SignalKWaypointExport | n
   }
 }
 
-export function collectWaypointsFromEntries(entries: LogEntry[]): SignalKWaypointExport[] {
+export function collectWaypointsFromEntries(
+  entries: LogEntry[],
+): SignalKWaypointExport[] {
   const seen = new Set<string>()
   const waypoints: SignalKWaypointExport[] = []
 
@@ -105,7 +115,9 @@ export function collectWaypointsFromEntries(entries: LogEntry[]): SignalKWaypoin
   )
 }
 
-export function logEntryExportToDelta(entry: SignalKLogEntryExport): SignalKDelta {
+export function logEntryExportToDelta(
+  entry: SignalKLogEntryExport,
+): SignalKDelta {
   return {
     context: 'vessels.self',
     updates: [
@@ -157,11 +169,14 @@ export function waypointsDelta(
   }
 }
 
-export function parseSignalKLogEntryExport(value: unknown): SignalKLogEntryExport | null {
+export function parseSignalKLogEntryExport(
+  value: unknown,
+): SignalKLogEntryExport | null {
   if (!isRecord(value)) return null
   const type = parseLogEntryType(value.type)
   const timestamp =
-    typeof value.timestamp === 'string' && Number.isFinite(Date.parse(value.timestamp))
+    typeof value.timestamp === 'string' &&
+    Number.isFinite(Date.parse(value.timestamp))
       ? new Date(value.timestamp).toISOString()
       : null
   if (!type || !timestamp) return null
@@ -174,11 +189,13 @@ export function parseSignalKLogEntryExport(value: unknown): SignalKLogEntryExpor
     heading: typeof value.heading === 'number' ? value.heading : null,
     notes: typeof value.notes === 'string' ? value.notes : null,
     data: isRecord(value.data) ? value.data : null,
-    weather: isRecord(value.weather) ? (value.weather) : null,
+    weather: isRecord(value.weather) ? value.weather : null,
   }
 }
 
-export function parseSignalKWaypointExport(value: unknown): SignalKWaypointExport | null {
+export function parseSignalKWaypointExport(
+  value: unknown,
+): SignalKWaypointExport | null {
   if (!isRecord(value)) return null
 
   let latitude: number | null =
@@ -188,8 +205,10 @@ export function parseSignalKWaypointExport(value: unknown): SignalKWaypointExpor
 
   const position = value.position
   if (isRecord(position)) {
-    latitude = typeof position.latitude === 'number' ? position.latitude : latitude
-    longitude = typeof position.longitude === 'number' ? position.longitude : longitude
+    latitude =
+      typeof position.latitude === 'number' ? position.latitude : latitude
+    longitude =
+      typeof position.longitude === 'number' ? position.longitude : longitude
   }
 
   if (latitude == null || longitude == null) return null
@@ -200,14 +219,17 @@ export function parseSignalKWaypointExport(value: unknown): SignalKWaypointExpor
     'Waypoint'
 
   const timestamp =
-    typeof value.timestamp === 'string' && Number.isFinite(Date.parse(value.timestamp))
+    typeof value.timestamp === 'string' &&
+    Number.isFinite(Date.parse(value.timestamp))
       ? new Date(value.timestamp).toISOString()
       : null
 
   return {
     name,
     description:
-      typeof value.description === 'string' ? value.description.trim() || null : null,
+      typeof value.description === 'string'
+        ? value.description.trim() || null
+        : null,
     latitude,
     longitude,
     timestamp,
@@ -215,7 +237,9 @@ export function parseSignalKWaypointExport(value: unknown): SignalKWaypointExpor
   }
 }
 
-export function parseSignalKWaypointsValue(value: unknown): SignalKWaypointExport[] {
+export function parseSignalKWaypointsValue(
+  value: unknown,
+): SignalKWaypointExport[] {
   if (!Array.isArray(value)) return []
   return value.flatMap((item) => {
     const waypoint = parseSignalKWaypointExport(item)

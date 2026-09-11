@@ -34,7 +34,9 @@ export function resolveBoatMapHeading(
   return 0
 }
 
-export function boatMapMarkerRotation(heading: number | null | undefined): number {
+export function boatMapMarkerRotation(
+  heading: number | null | undefined,
+): number {
   if (heading == null || !Number.isFinite(heading)) return 0
   return heading
 }
@@ -59,7 +61,8 @@ export function createBoatMapMarkerElement(options: {
   image.src = options.iconSrc
   image.alt = ''
   image.draggable = false
-  image.style.cssText = 'max-width:32px;max-height:40px;width:auto;height:auto;object-fit:contain;'
+  image.style.cssText =
+    'max-width:32px;max-height:40px;width:auto;height:auto;object-fit:contain;'
 
   headingWrap.append(image)
   root.append(headingWrap)

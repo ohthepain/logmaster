@@ -88,7 +88,8 @@ export function gpxFieldMeta(fieldKey: string): GpxFieldMeta {
     shortLabel: label.slice(0, 6),
     unit: '',
     scaleGroup: `gpx-field:${fieldKey}`,
-    formatValue: (value) => (Number.isInteger(value) ? String(value) : value.toFixed(1)),
+    formatValue: (value) =>
+      Number.isInteger(value) ? String(value) : value.toFixed(1),
   }
 }
 

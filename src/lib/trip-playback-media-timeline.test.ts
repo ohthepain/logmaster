@@ -7,33 +7,44 @@ import {
   tripHasPlaybackMedia,
 } from './trip-playback-media-timeline'
 
-const entry = (partial: Partial<LogEntry> & Pick<LogEntry, 'id' | 'type'>): LogEntry =>
-  ({
-    tripId: 'trip-1',
-    timestamp: '2026-06-01T10:00:00.000Z',
-    deleted: false,
-    createdAt: '2026-06-01T10:00:00.000Z',
-    updatedAt: '2026-06-01T10:00:00.000Z',
-    synced: false,
-    ...partial,
-  })
+const entry = (
+  partial: Partial<LogEntry> & Pick<LogEntry, 'id' | 'type'>,
+): LogEntry => ({
+  tripId: 'trip-1',
+  timestamp: '2026-06-01T10:00:00.000Z',
+  deleted: false,
+  createdAt: '2026-06-01T10:00:00.000Z',
+  updatedAt: '2026-06-01T10:00:00.000Z',
+  synced: false,
+  ...partial,
+})
 
-const media = (partial: Partial<Media> & Pick<Media, 'id' | 'logEntryId'>): Media =>
-  ({
-    type: 'photo',
-    order: 0,
-    createdAt: '2026-06-01T10:00:00.000Z',
-    updatedAt: '2026-06-01T10:00:00.000Z',
-    synced: false,
-    ...partial,
-  })
+const media = (
+  partial: Partial<Media> & Pick<Media, 'id' | 'logEntryId'>,
+): Media => ({
+  type: 'photo',
+  order: 0,
+  createdAt: '2026-06-01T10:00:00.000Z',
+  updatedAt: '2026-06-01T10:00:00.000Z',
+  synced: false,
+  ...partial,
+})
 
 describe('trip-playback-media-timeline', () => {
   it('detects media on MEDIA entries and attached media', () => {
     const note = entry({ id: 'note', type: 'NOTE' })
     const mediaEntry = entry({ id: 'media', type: 'MEDIA' })
     const map = new Map<string, Media[]>([
-      ['note', [media({ id: 'm1', logEntryId: 'note', thumbnailUrl: 'data:image/jpeg;base64,x' })]],
+      [
+        'note',
+        [
+          media({
+            id: 'm1',
+            logEntryId: 'note',
+            thumbnailUrl: 'data:image/jpeg;base64,x',
+          }),
+        ],
+      ],
     ])
 
     expect(entryHasPlaybackMedia(note, map.get('note') ?? [])).toBe(true)
@@ -52,12 +63,23 @@ describe('trip-playback-media-timeline', () => {
     const map = new Map<string, Media[]>([
       [
         'media',
-        [media({ id: 'm-media', logEntryId: 'media', thumbnailUrl: 'thumb-media' })],
+        [
+          media({
+            id: 'm-media',
+            logEntryId: 'media',
+            thumbnailUrl: 'thumb-media',
+          }),
+        ],
       ],
       [
         'note',
         [
-          media({ id: 'm-photo', logEntryId: 'note', order: 0, thumbnailUrl: 'thumb-photo' }),
+          media({
+            id: 'm-photo',
+            logEntryId: 'note',
+            order: 0,
+            thumbnailUrl: 'thumb-photo',
+          }),
           media({ id: 'm-voice', logEntryId: 'note', order: 1, type: 'voice' }),
         ],
       ],

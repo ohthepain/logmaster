@@ -10,7 +10,9 @@ import { boatMapMarkerRotation } from './map-boat-marker'
 describe('boat-icons', () => {
   it('resolves icon src from id', () => {
     expect(boatIconSrc('dinghy')).toBe('/boats/boat_dinghy.png')
-    expect(boatIconSrc('invalid')).toBe(`/boats/boat_${DEFAULT_BOAT_ICON_ID}.png`)
+    expect(boatIconSrc('invalid')).toBe(
+      `/boats/boat_${DEFAULT_BOAT_ICON_ID}.png`,
+    )
   })
 
   it('validates known icon ids', () => {

@@ -123,7 +123,9 @@ export async function sendMemberInviteEmail(args: {
 }) {
   const name = appName()
   const inviter = args.inviterName.trim() || 'Someone'
-  const target = args.targetName.trim() || (args.targetKind === 'org' ? 'an organization' : 'a boat')
+  const target =
+    args.targetName.trim() ||
+    (args.targetKind === 'org' ? 'an organization' : 'a boat')
   const subject = `${inviter} invited you to ${target} on ${name}`
   const text = `${inviter} invited you to join ${target} on ${name}. Create an account or sign in, then open this link to accept:\n\n${args.url}\n\nIf you were not expecting this, you can ignore this email.`
   const html = emailWrap(

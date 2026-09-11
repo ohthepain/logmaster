@@ -9,12 +9,11 @@ type LiveActivityPlugin = {
   }>
 }
 
-const NativeLiveActivity =
-  registerPlugin<LiveActivityPlugin>('LogmasterLiveActivity')
+const NativeLiveActivity = registerPlugin<LiveActivityPlugin>(
+  'LogmasterLiveActivity',
+)
 
-export async function syncLiveActivity(
-  state: LiveActivitySnapshot | null,
-) {
+export async function syncLiveActivity(state: LiveActivitySnapshot | null) {
   if (getNativePlatform() !== 'ios') {
     return { active: false, supported: false }
   }

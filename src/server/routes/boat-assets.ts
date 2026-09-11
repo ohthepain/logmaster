@@ -7,8 +7,8 @@ import type {
 import { computeBankBalance } from '../../domain/org-accounting'
 import { prisma } from '../db'
 import { canAccessBoatResource } from '../contact-utils'
-import type {ContactResourceArea} from '../../domain/contact';
-import type {Privilege} from '../permissions';
+import type { ContactResourceArea } from '../../domain/contact'
+import type { Privilege } from '../permissions'
 import { getSessionUserId } from '../session'
 import {
   serializeExpenseClaim,
@@ -36,11 +36,13 @@ function decimalToString(value: unknown): string | null {
   return String(value)
 }
 
-function serializeUserRef(user: {
-  id: string
-  name: string
-  email: string
-} | null) {
+function serializeUserRef(
+  user: {
+    id: string
+    name: string
+    email: string
+  } | null,
+) {
   if (!user) return null
   return { id: user.id, name: user.name, email: user.email }
 }
@@ -125,7 +127,9 @@ function serializeAsset(asset: {
   boat?: { name: string; consortium: { name: string } | null }
   ownedByUser?: { id: string; name: string; email: string } | null
   onLoanFromUser?: { id: string; name: string; email: string } | null
-  documentLinks?: Array<{ document: { id: string; title: string; purpose: string | null } }>
+  documentLinks?: Array<{
+    document: { id: string; title: string; purpose: string | null }
+  }>
   purchaseLines?: Array<{ id: string }>
   workRecords?: Array<{ id: string }>
 }) {
@@ -165,11 +169,7 @@ function assetOwnerLabel(asset: {
     case 'ORG':
       return asset.boat?.consortium?.name ?? 'Org'
     case 'USER':
-      return (
-        asset.ownedByUser?.name ??
-        asset.onLoanFromUser?.name ??
-        'Unknown'
-      )
+      return asset.ownedByUser?.name ?? asset.onLoanFromUser?.name ?? 'Unknown'
     case 'EXTERNAL':
       return 'External'
     default:
@@ -217,7 +217,9 @@ export function serializePurchase(purchase: {
   createdAt: Date
   updatedAt: Date
   lines?: Array<Parameters<typeof serializePurchaseLine>[0]>
-  documentLinks?: Array<{ document: { id: string; title: string; purpose: string | null } }>
+  documentLinks?: Array<{
+    document: { id: string; title: string; purpose: string | null }
+  }>
 }) {
   return {
     id: purchase.id,
@@ -249,7 +251,9 @@ function serializeWork(work: {
   createdAt: Date
   updatedAt: Date
   asset: { id: string; name: string }
-  documentLinks?: Array<{ document: { id: string; title: string; purpose: string | null } }>
+  documentLinks?: Array<{
+    document: { id: string; title: string; purpose: string | null }
+  }>
 }) {
   return {
     id: work.id,
@@ -391,7 +395,9 @@ boatAssetsRoutes.get('/:boatId/assets/:assetId', async (c) => {
     include: {
       asset: { select: { id: true, name: true } },
       documentLinks: {
-        include: { document: { select: { id: true, title: true, purpose: true } } },
+        include: {
+          document: { select: { id: true, title: true, purpose: true } },
+        },
       },
     },
   })
@@ -401,8 +407,9 @@ boatAssetsRoutes.get('/:boatId/assets/:assetId', async (c) => {
     asset: {
       ...serialized,
       documents: (asset.documentLinks ?? []).map(
-        (link: { document: Parameters<typeof serializeLinkedDocumentDetail>[0] }) =>
-          serializeLinkedDocumentDetail(link.document),
+        (link: {
+          document: Parameters<typeof serializeLinkedDocumentDetail>[0]
+        }) => serializeLinkedDocumentDetail(link.document),
       ),
       workRecords: workRecords.map(serializeWork),
     },
@@ -434,10 +441,12 @@ boatAssetsRoutes.post('/:boatId/assets', async (c) => {
   }
 
   const maxSort =
-    (await db.boatAsset.aggregate({
-      where: { boatId },
-      _max: { sortOrder: true },
-    }))._max.sortOrder ?? -1
+    (
+      await db.boatAsset.aggregate({
+        where: { boatId },
+        _max: { sortOrder: true },
+      })
+    )._max.sortOrder ?? -1
 
   const ownership = body.ownership
   const userFields = userOwnershipFields(ownership, body.ownedByUserId)
@@ -469,7 +478,9 @@ boatAssetsRoutes.patch('/:boatId/assets/:assetId', async (c) => {
   const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
-  const existing = await db.boatAsset.findFirst({ where: { id: assetId, boatId } })
+  const existing = await db.boatAsset.findFirst({
+    where: { id: assetId, boatId },
+  })
   if (!existing) return c.json({ error: 'Asset not found' }, 404)
 
   const body = (await c.req.json().catch(() => ({}))) as {
@@ -503,7 +514,7 @@ boatAssetsRoutes.patch('/:boatId/assets/:assetId', async (c) => {
     const nextOwnedByUserId =
       body.ownedByUserId !== undefined
         ? body.ownedByUserId
-        : existing.ownedByUserId ?? existing.onLoanFromUserId
+        : (existing.ownedByUserId ?? existing.onLoanFromUserId)
     Object.assign(data, userOwnershipFields(nextOwnership, nextOwnedByUserId))
   }
 
@@ -531,7 +542,9 @@ boatAssetsRoutes.delete('/:boatId/assets/:assetId', async (c) => {
   const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
-  const existing = await db.boatAsset.findFirst({ where: { id: assetId, boatId } })
+  const existing = await db.boatAsset.findFirst({
+    where: { id: assetId, boatId },
+  })
   if (!existing) return c.json({ error: 'Asset not found' }, 404)
 
   await db.boatAsset.delete({ where: { id: assetId } })
@@ -826,7 +839,10 @@ boatAssetsRoutes.post('/:boatId/documents/:documentId/links', async (c) => {
 
   const targets = [body.assetId, body.purchaseId, body.workId].filter(Boolean)
   if (targets.length !== 1) {
-    return c.json({ error: 'Provide exactly one of assetId, purchaseId, or workId' }, 400)
+    return c.json(
+      { error: 'Provide exactly one of assetId, purchaseId, or workId' },
+      400,
+    )
   }
 
   if (body.assetId) {

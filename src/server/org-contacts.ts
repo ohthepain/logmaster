@@ -98,10 +98,7 @@ export async function getContactIdsForMembers(
   return map
 }
 
-export async function linkContactByEmail(
-  consortiumId: string,
-  email: string,
-) {
+export async function linkContactByEmail(consortiumId: string, email: string) {
   const normalized = normalizeEmail(email)
   if (!normalized) return null
 

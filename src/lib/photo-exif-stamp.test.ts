@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { buildExifBytes, buildExiftoolCommand, isoToExifDateTime, jpegDataUrlToBytes, photoMetadataFromLogEntry } from './photo-exif-stamp'
+import {
+  buildExifBytes,
+  buildExiftoolCommand,
+  isoToExifDateTime,
+  jpegDataUrlToBytes,
+  photoMetadataFromLogEntry,
+} from './photo-exif-stamp'
 
 describe('isoToExifDateTime', () => {
   it('formats a UTC instant in local wall time', () => {

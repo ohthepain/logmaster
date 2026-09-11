@@ -99,9 +99,7 @@ async function serializeMember(
 ) {
   const pendingInvite = member.invites?.find((i) => i.status === 'PENDING')
   const linked = member.linkedUser
-  const isFriend = linked
-    ? await areFriends(ownerUserId, linked.id)
-    : false
+  const isFriend = linked ? await areFriends(ownerUserId, linked.id) : false
 
   return {
     id: member.id,
@@ -150,7 +148,10 @@ async function readStoredProfilePhoto(userId: string) {
   return null
 }
 
-function linkedUserImageUrl(userId: string, image: string | null): string | null {
+function linkedUserImageUrl(
+  userId: string,
+  image: string | null,
+): string | null {
   if (!image) return null
   if (image.startsWith('http://') || image.startsWith('https://')) return image
   if (image === '/api/profile/photo') return `/api/crew/users/${userId}/photo`
@@ -213,9 +214,7 @@ async function validateInviteEmail(
       inviteeEmail: email,
       status: 'PENDING',
       expiresAt: { gt: new Date() },
-      ...(excludeMemberId
-        ? { NOT: { crewMemberId: excludeMemberId } }
-        : {}),
+      ...(excludeMemberId ? { NOT: { crewMemberId: excludeMemberId } } : {}),
     },
   })
   if (pendingForEmail) return 'An invite is already pending for that email'
@@ -264,47 +263,61 @@ crewRoutes.get('/', async (c) => {
 
   const email = normalizeEmail(user.email)
 
-  const [members, acceptedFriends, incomingCrewInvites, incomingFriendRequests] =
-    await Promise.all([
-      db.crewMember.findMany({
-        where: { ownerUserId: user.id },
-        orderBy: [{ updatedAt: 'desc' }],
-        include: {
-          linkedUser: true,
-          invites: {
-            where: { status: 'PENDING' },
-            orderBy: { createdAt: 'desc' },
-          },
+  const [
+    members,
+    acceptedFriends,
+    incomingCrewInvites,
+    incomingFriendRequests,
+  ] = await Promise.all([
+    db.crewMember.findMany({
+      where: { ownerUserId: user.id },
+      orderBy: [{ updatedAt: 'desc' }],
+      include: {
+        linkedUser: true,
+        invites: {
+          where: { status: 'PENDING' },
+          orderBy: { createdAt: 'desc' },
         },
-      }),
-      db.friendRequest.findMany({
-        where: {
-          status: 'ACCEPTED',
-          OR: [{ requesterUserId: user.id }, { addresseeUserId: user.id }],
-        },
-        include: { requester: true, addressee: true },
-      }),
-      db.crewInvite.findMany({
-        where: {
-          inviteeEmail: email,
-          status: 'PENDING',
-          expiresAt: { gt: new Date() },
-        },
-        orderBy: { createdAt: 'desc' },
-        include: { inviter: true, crewMember: true },
-      }),
-      db.friendRequest.findMany({
-        where: { addresseeUserId: user.id, status: 'PENDING' },
-        orderBy: { createdAt: 'desc' },
-        include: { requester: true, addressee: true },
-      }),
-    ])
+      },
+    }),
+    db.friendRequest.findMany({
+      where: {
+        status: 'ACCEPTED',
+        OR: [{ requesterUserId: user.id }, { addresseeUserId: user.id }],
+      },
+      include: { requester: true, addressee: true },
+    }),
+    db.crewInvite.findMany({
+      where: {
+        inviteeEmail: email,
+        status: 'PENDING',
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { inviter: true, crewMember: true },
+    }),
+    db.friendRequest.findMany({
+      where: { addresseeUserId: user.id, status: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+      include: { requester: true, addressee: true },
+    }),
+  ])
 
   const friends = acceptedFriends.map(
     (row: {
       requesterUserId: string
-      requester: { id: string; name: string; email: string; image: string | null }
-      addressee: { id: string; name: string; email: string; image: string | null }
+      requester: {
+        id: string
+        name: string
+        email: string
+        image: string | null
+      }
+      addressee: {
+        id: string
+        name: string
+        email: string
+        image: string | null
+      }
     }) => {
       const other =
         row.requesterUserId === user.id ? row.addressee : row.requester
@@ -332,7 +345,12 @@ crewRoutes.get('/', async (c) => {
         expiresAt: Date
         createdAt: Date
         updatedAt: Date
-        inviter: { id: string; name: string; email: string; image: string | null }
+        inviter: {
+          id: string
+          name: string
+          email: string
+          image: string | null
+        }
         crewMember: { displayName: string | null }
       }) => ({
         id: invite.id,
@@ -356,8 +374,18 @@ crewRoutes.get('/', async (c) => {
         status: string
         createdAt: Date
         updatedAt: Date
-        requester: { id: string; name: string; email: string; image: string | null }
-        addressee: { id: string; name: string; email: string; image: string | null }
+        requester: {
+          id: string
+          name: string
+          email: string
+          image: string | null
+        }
+        addressee: {
+          id: string
+          name: string
+          email: string
+          image: string | null
+        }
       }) => ({
         id: row.id,
         status: row.status,
@@ -432,10 +460,7 @@ crewRoutes.post('/members', async (c) => {
     })
   }
 
-  return c.json(
-    { member: await serializeMember(member, user.id) },
-    201,
-  )
+  return c.json({ member: await serializeMember(member, user.id) }, 201)
 })
 
 crewRoutes.get('/members/:memberId', async (c) => {
@@ -456,7 +481,10 @@ crewRoutes.patch('/members/:memberId', async (c) => {
   if (!member) return c.json({ error: 'Crew member not found' }, 404)
 
   if (member.linkedUserId) {
-    return c.json({ error: 'Linked crew members use their account profile' }, 400)
+    return c.json(
+      { error: 'Linked crew members use their account profile' },
+      400,
+    )
   }
 
   const body = (await c.req.json().catch(() => ({}))) as {
@@ -488,11 +516,7 @@ crewRoutes.patch('/members/:memberId', async (c) => {
         return c.json({ error: 'You cannot invite yourself' }, 400)
       }
 
-      const inviteError = await validateInviteEmail(
-        user.id,
-        email,
-        member.id,
-      )
+      const inviteError = await validateInviteEmail(user.id, email, member.id)
       if (inviteError) return c.json({ error: inviteError }, 409)
 
       if (pendingInvite) {
@@ -718,7 +742,11 @@ crewRoutes.post('/invites/accept', async (c) => {
     try {
       await deletePhotoObject(member.photoS3Key)
     } catch (error) {
-      console.warn('[crew] failed to delete stub photo', member.photoS3Key, error)
+      console.warn(
+        '[crew] failed to delete stub photo',
+        member.photoS3Key,
+        error,
+      )
     }
   }
 

@@ -1,13 +1,17 @@
 import type { AisBoundingBox } from '../../domain/ais-vessel'
 
 /** Decode AISStream WebSocket frames (UTF-8 JSON in binary or text frames). */
-export async function decodeAisStreamWebSocketMessage(data: unknown): Promise<string> {
+export async function decodeAisStreamWebSocketMessage(
+  data: unknown,
+): Promise<string> {
   if (typeof data === 'string') return data
   if (data instanceof Blob) return await data.text()
   if (data instanceof ArrayBuffer) return Buffer.from(data).toString('utf8')
   if (Buffer.isBuffer(data)) return data.toString('utf8')
   if (ArrayBuffer.isView(data)) {
-    return Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString('utf8')
+    return Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString(
+      'utf8',
+    )
   }
   throw new Error('Unsupported AIS WebSocket message payload')
 }
@@ -19,7 +23,9 @@ export function sleep(ms: number) {
 }
 
 /** Widen small map viewports so the AIS feed has time to report more targets. */
-export function expandAisSubscriptionBbox(bbox: AisBoundingBox): AisBoundingBox {
+export function expandAisSubscriptionBbox(
+  bbox: AisBoundingBox,
+): AisBoundingBox {
   const latSpan = bbox.north - bbox.south
   const lonSpan = bbox.east - bbox.west
   const minSpan = 0.18
@@ -38,17 +44,28 @@ const SUBSCRIPTION_TILE_SPAN_DEGREES = 2.5
 const MAX_SUBSCRIPTION_TILES = 12
 
 /** Split a large viewport into AISStream bounding boxes (one subscription, many tiles). */
-export function splitAisSubscriptionBoxes(bbox: AisBoundingBox): AisBoundingBox[] {
+export function splitAisSubscriptionBoxes(
+  bbox: AisBoundingBox,
+): AisBoundingBox[] {
   const expanded = expandAisSubscriptionBbox(bbox)
   const latSpan = expanded.north - expanded.south
   const lonSpan = expanded.east - expanded.west
 
-  if (latSpan <= SUBSCRIPTION_TILE_SPAN_DEGREES && lonSpan <= SUBSCRIPTION_TILE_SPAN_DEGREES) {
+  if (
+    latSpan <= SUBSCRIPTION_TILE_SPAN_DEGREES &&
+    lonSpan <= SUBSCRIPTION_TILE_SPAN_DEGREES
+  ) {
     return [expanded]
   }
 
-  const latSteps = Math.max(1, Math.ceil(latSpan / SUBSCRIPTION_TILE_SPAN_DEGREES))
-  const lonSteps = Math.max(1, Math.ceil(lonSpan / SUBSCRIPTION_TILE_SPAN_DEGREES))
+  const latSteps = Math.max(
+    1,
+    Math.ceil(latSpan / SUBSCRIPTION_TILE_SPAN_DEGREES),
+  )
+  const lonSteps = Math.max(
+    1,
+    Math.ceil(lonSpan / SUBSCRIPTION_TILE_SPAN_DEGREES),
+  )
   const latStep = latSpan / latSteps
   const lonStep = lonSpan / lonSteps
   const boxes: AisBoundingBox[] = []

@@ -1,6 +1,8 @@
 import type { Trip, TripCoverKind } from '../domain/logbook'
 
-export function tripDisplayName(trip: Pick<Trip, 'title' | 'boatName'>): string {
+export function tripDisplayName(
+  trip: Pick<Trip, 'title' | 'boatName'>,
+): string {
   const title = trip.title?.trim()
   return title || trip.boatName
 }
@@ -196,10 +198,7 @@ export function resolveDefaultBoatIdForNewTrip(
   lastTripBoatId?: string | null,
 ): string | null {
   if (boats.length === 0) return null
-  if (
-    lastTripBoatId &&
-    boats.some((boat) => boat.id === lastTripBoatId)
-  ) {
+  if (lastTripBoatId && boats.some((boat) => boat.id === lastTripBoatId)) {
     return lastTripBoatId
   }
   return defaultBoatIdForNewTrip(trips, boats)

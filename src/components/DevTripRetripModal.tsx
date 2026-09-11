@@ -57,10 +57,14 @@ export function DevTripRetripModal({
         }}
       >
         <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">
-          Load <span className="font-semibold text-[var(--sea-ink)]">{tripDisplayName(sourceTrip)}</span>{' '}
-          position and instrument tracks at the trip start. Review the info panel, then press play to
-          begin playback. No log entries are created — start recording on an in-progress trip
-          manually to persist spoofed GPS.
+          Load{' '}
+          <span className="font-semibold text-[var(--sea-ink)]">
+            {tripDisplayName(sourceTrip)}
+          </span>{' '}
+          position and instrument tracks at the trip start. Review the info
+          panel, then press play to begin playback. No log entries are created —
+          start recording on an in-progress trip manually to persist spoofed
+          GPS.
         </p>
 
         <label className="block">

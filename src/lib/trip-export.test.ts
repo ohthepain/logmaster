@@ -3,7 +3,9 @@ import { sanitizeExportFileName } from './export-file'
 
 describe('trip export filenames', () => {
   it('uses a single json extension for signalk exports', () => {
-    expect(sanitizeExportFileName('My Trip signalk', 'json')).toBe('My-Trip-signalk.json')
+    expect(sanitizeExportFileName('My Trip signalk', 'json')).toBe(
+      'My-Trip-signalk.json',
+    )
   })
 
   it('encodes signalk json with content', () => {

@@ -14,8 +14,16 @@ import { BUILD_MARINAS_QUEUE } from '../jobs/marinas'
 import type { BuildMarinasPayload } from '../jobs/marinas'
 import { BUILD_OSM_POINTS_QUEUE } from '../jobs/osm-points'
 import type { BuildOsmPointsPayload } from '../jobs/osm-points'
-import { enqueueEuropeGeoFeatures, enqueueGeoFeaturesBuild, parseGeoFeaturesRegionId } from '../jobs/queue'
-import { enqueueMarinasBuild, enqueueNorthAmericaMarinas, parseMarinasRegionId } from '../jobs/marina-queue'
+import {
+  enqueueEuropeGeoFeatures,
+  enqueueGeoFeaturesBuild,
+  parseGeoFeaturesRegionId,
+} from '../jobs/queue'
+import {
+  enqueueMarinasBuild,
+  enqueueNorthAmericaMarinas,
+  parseMarinasRegionId,
+} from '../jobs/marina-queue'
 import { enqueueOsmPointsBuild } from '../jobs/osm-points-queue'
 import type { OsmPointDatasetId } from '../../lib/map-data-layers'
 import { isMapRegionId } from '../../lib/map-regions'
@@ -405,7 +413,8 @@ adminRoutes.post('/jobs/marinas/runs', async (c) => {
     typeof limitCellsRaw === 'number' && Number.isInteger(limitCellsRaw)
       ? limitCellsRaw
       : null
-  const regionRaw = (body as Record<string, unknown>).regionId ??
+  const regionRaw =
+    (body as Record<string, unknown>).regionId ??
     (body as Record<string, unknown>).region
   const regionId =
     parseMarinasRegionId(regionRaw) ??
@@ -443,16 +452,33 @@ adminRoutes.post('/jobs/osm-points/runs', async (c) => {
     typeof limitCellsRaw === 'number' && Number.isInteger(limitCellsRaw)
       ? limitCellsRaw
       : null
-  const dataset = parseOsmPointDataset((body as Record<string, unknown>).dataset)
+  const dataset = parseOsmPointDataset(
+    (body as Record<string, unknown>).dataset,
+  )
   if (!dataset) {
-    return c.text('Invalid or missing dataset (harbours, anchorages, places, seamarks)', 400)
+    return c.text(
+      'Invalid or missing dataset (harbours, anchorages, places, seamarks)',
+      400,
+    )
   }
   const regionRaw = (body as Record<string, unknown>).regionId
   const regionId =
     typeof regionRaw === 'string' && isMapRegionId(regionRaw) ? regionRaw : 'uk'
-  const id = await enqueueOsmPointsBuild(dataset, { dryRun, limitCells, regionId })
+  const id = await enqueueOsmPointsBuild(dataset, {
+    dryRun,
+    limitCells,
+    regionId,
+  })
   return c.json(
-    { ok: true, jobId: id, queued: true, dryRun, limitCells, regionId, dataset },
+    {
+      ok: true,
+      jobId: id,
+      queued: true,
+      dryRun,
+      limitCells,
+      regionId,
+      dataset,
+    },
     202,
   )
 })
@@ -486,5 +512,8 @@ adminRoutes.post('/pgboss/marinas/north-america', async (c) => {
       ? regionRaw
       : 'north-america'
   const id = await enqueueNorthAmericaMarinas({ dryRun, limitCells, region })
-  return c.json({ ok: true, jobId: id, queued: true, dryRun, limitCells, region }, 202)
+  return c.json(
+    { ok: true, jobId: id, queued: true, dryRun, limitCells, region },
+    202,
+  )
 })

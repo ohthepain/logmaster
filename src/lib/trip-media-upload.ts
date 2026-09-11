@@ -91,15 +91,16 @@ export async function uploadTripMediaFiles(
   return { saved, attached, skipped }
 }
 
-export function tripMediaUploadToastMessage(result: TripMediaUploadResult): string {
+export function tripMediaUploadToastMessage(
+  result: TripMediaUploadResult,
+): string {
   if (result.saved === 0) {
     return result.skipped > 0
       ? 'No supported photos or videos were selected'
       : 'Nothing to upload'
   }
 
-  const noun =
-    result.saved === 1 ? '1 item' : `${result.saved} items`
+  const noun = result.saved === 1 ? '1 item' : `${result.saved} items`
   if (result.attached > 0 && result.attached < result.saved) {
     return `${noun} added (${result.attached} attached to nearby log entries)`
   }
@@ -108,5 +109,7 @@ export function tripMediaUploadToastMessage(result: TripMediaUploadResult): stri
       ? 'Photo attached to nearby log entry'
       : `${result.saved} items attached to nearby log entries`
   }
-  return result.saved === 1 ? 'Photo or video added' : `${result.saved} photos and videos added`
+  return result.saved === 1
+    ? 'Photo or video added'
+    : `${result.saved} photos and videos added`
 }

@@ -32,7 +32,10 @@ function buildSeriesLayouts(
   const sharedScale = scaleGroups.size === 1
 
   const layouts = series.map((item) => {
-    const windowPoints = filterPlaybackGraphPointsForWindow(item.points, windowRange)
+    const windowPoints = filterPlaybackGraphPointsForWindow(
+      item.points,
+      windowRange,
+    )
     const values = windowPoints.map((point) => point.value)
     const minValue = values.length > 0 ? Math.min(...values) : 0
     const maxValue = values.length > 0 ? Math.max(...values, minValue + 0.5) : 1
@@ -47,7 +50,10 @@ function buildSeriesLayouts(
   }
 
   const globalMin = Math.min(...layouts.map((layout) => layout.minValue), 0)
-  const globalMax = Math.max(...layouts.map((layout) => layout.maxValue), globalMin + 0.5)
+  const globalMax = Math.max(
+    ...layouts.map((layout) => layout.maxValue),
+    globalMin + 0.5,
+  )
   return layouts.map((layout) => ({
     ...layout,
     minValue: globalMin,
@@ -85,7 +91,9 @@ export function TripPlaybackMultiGraph({
         100,
       )
     const yForValue = (value: number) =>
-      height - bottom - ((value - layout.minValue) / span) * (height - top - bottom)
+      height -
+      bottom -
+      ((value - layout.minValue) / span) * (height - top - bottom)
 
     const path = layout.windowPoints
       .map((point, index) => {
@@ -101,9 +109,15 @@ export function TripPlaybackMultiGraph({
     <div className="flex min-h-0 flex-col justify-end">
       <div className="mb-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] font-semibold">
         {series.map((item) => {
-          const currentValue = interpolatePlaybackGraphValue(item.points, currentTimeMs)
+          const currentValue = interpolatePlaybackGraphValue(
+            item.points,
+            currentTimeMs,
+          )
           return (
-            <span key={item.id} className="inline-flex items-center gap-1 tabular-nums text-white">
+            <span
+              key={item.id}
+              className="inline-flex items-center gap-1 tabular-nums text-white"
+            >
               <span
                 className="inline-block size-2 rounded-full"
                 style={{ backgroundColor: item.color }}
@@ -123,7 +137,14 @@ export function TripPlaybackMultiGraph({
         className="h-8 w-full overflow-visible"
         aria-hidden
       >
-        <line x1="0" y1="36" x2="100" y2="36" stroke="rgba(255,255,255,0.18)" strokeWidth="0.6" />
+        <line
+          x1="0"
+          y1="36"
+          x2="100"
+          y2="36"
+          stroke="rgba(255,255,255,0.18)"
+          strokeWidth="0.6"
+        />
         {paths.map(({ layout, path }) =>
           path ? (
             <path

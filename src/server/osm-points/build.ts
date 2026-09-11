@@ -3,25 +3,20 @@ import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import {
   CANADA_MARINA_BBOX,
   NORTH_AMERICA_MARINA_BBOX,
-  UK_MARINA_BBOX
-  
+  UK_MARINA_BBOX,
 } from '../marinas/bboxes'
-import type {MarinaBbox} from '../marinas/bboxes';
+import type { MarinaBbox } from '../marinas/bboxes'
 import { gridCellsForBbox } from '../marinas/grid'
-import { degreeTilesForFeature, parseDegreeTilePrefix } from '../geo-features/tile'
+import {
+  degreeTilesForFeature,
+  parseDegreeTilePrefix,
+} from '../geo-features/tile'
 import type { DegreeTile } from '../geo-features/tile'
 import type { OsmPointDatasetId } from '../../lib/map-data-layers'
 import { OSM_POINT_DATASETS } from '../../lib/map-data-layers'
-import {
-  fetchOsmPointsForCells,
-  formatOsmPointCellLogLine,
-} from './fetch'
-import {
-  mergeOsmPointFeatures,
-  osmPointFeatureCollection
-  
-} from './schema'
-import type {OsmPointFeature} from './schema';
+import { fetchOsmPointsForCells, formatOsmPointCellLogLine } from './fetch'
+import { mergeOsmPointFeatures, osmPointFeatureCollection } from './schema'
+import type { OsmPointFeature } from './schema'
 
 type TileAccumulator = {
   tile: DegreeTile

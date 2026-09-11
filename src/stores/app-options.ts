@@ -3,10 +3,9 @@ import { persist } from 'zustand/middleware'
 import {
   pauseDevTripRetripState,
   resumeDevTripRetripState,
-  retripWithTimescale
-  
+  retripWithTimescale,
 } from '../lib/dev-trip-retrip'
-import type {DevTripRetrip} from '../lib/dev-trip-retrip';
+import type { DevTripRetrip } from '../lib/dev-trip-retrip'
 import {
   clearDevPositionOverride,
   setLocationAccessEnabled,
@@ -16,9 +15,8 @@ import type { MapBasemapLayerToggles } from '../lib/maplibre-basemap-layer-toggl
 import {
   defaultMapDataLayerToggles,
   mergeMapDataLayerToggles,
-  
 } from '../lib/map-data-layers'
-import type {MapDataLayerToggles} from '../lib/map-data-layers';
+import type { MapDataLayerToggles } from '../lib/map-data-layers'
 import {
   defaultMapLogEntryLayerToggles,
   mergeMapLogEntryLayerToggles,
@@ -116,7 +114,8 @@ export const useAppOptionsStore = create<AppOptions>()(
           devLogEntryDraftTimeIso: iso,
           devTimeTravelAnchorRealIso: iso ? new Date().toISOString() : null,
         }),
-      setDevTimeTravelEnabled: (enabled) => set({ devTimeTravelEnabled: enabled }),
+      setDevTimeTravelEnabled: (enabled) =>
+        set({ devTimeTravelEnabled: enabled }),
       setDevTripReplay: (devTripReplay) => set({ devTripReplay }),
       setDevTripRetrip: (devTripRetrip) => set({ devTripRetrip }),
       pauseDevTripRetrip: () => {
@@ -132,7 +131,9 @@ export const useAppOptionsStore = create<AppOptions>()(
       setDevTripRetripTimescale: (timescale) => {
         const retrip = get().devTripRetrip
         if (!retrip) return
-        set({ devTripRetrip: retripWithTimescale(retrip, timescale, Date.now()) })
+        set({
+          devTripRetrip: retripWithTimescale(retrip, timescale, Date.now()),
+        })
       },
       stopDevTripRetrip: () => {
         clearDevPositionOverride()

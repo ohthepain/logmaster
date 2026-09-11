@@ -7,10 +7,9 @@ import {
   retripDurationMs,
   retripSourceElapsedMs,
   retripSourceTimeMs,
-  retripWithTimescale
-  
+  retripWithTimescale,
 } from './dev-trip-retrip'
-import type {DevTripRetrip} from './dev-trip-retrip';
+import type { DevTripRetrip } from './dev-trip-retrip'
 
 const trip: Trip = {
   id: 'source',
@@ -32,15 +31,20 @@ describe('dev trip retrip', () => {
 
     expect(state.paused).toBe(true)
     expect(state.pausedSourceElapsedMs).toBe(0)
-    expect(retripSourceElapsedMs(state, Date.parse('2026-08-27T08:30:00.000Z'))).toBe(0)
-    expect(retripSourceTimeMs(trip, retripSourceElapsedMs(state, startedMs))).toBe(
-      Date.parse('2026-08-01T10:00:00.000Z'),
-    )
+    expect(
+      retripSourceElapsedMs(state, Date.parse('2026-08-27T08:30:00.000Z')),
+    ).toBe(0)
+    expect(
+      retripSourceTimeMs(trip, retripSourceElapsedMs(state, startedMs)),
+    ).toBe(Date.parse('2026-08-01T10:00:00.000Z'))
   })
 
   it('maps wall clock to source elapsed at 1x after resume', () => {
     const startedMs = Date.parse('2026-08-27T08:00:00.000Z')
-    const state = resumeDevTripRetripState(createDevTripRetrip('source', 1, startedMs), startedMs)
+    const state = resumeDevTripRetripState(
+      createDevTripRetrip('source', 1, startedMs),
+      startedMs,
+    )
     const nowMs = Date.parse('2026-08-27T08:30:00.000Z')
 
     expect(retripSourceElapsedMs(state, nowMs)).toBe(30 * 60 * 1000)
@@ -51,7 +55,10 @@ describe('dev trip retrip', () => {
 
   it('applies timescale to source elapsed after resume', () => {
     const startedMs = Date.parse('2026-08-27T08:00:00.000Z')
-    const state = resumeDevTripRetripState(createDevTripRetrip('source', 10, startedMs), startedMs)
+    const state = resumeDevTripRetripState(
+      createDevTripRetrip('source', 10, startedMs),
+      startedMs,
+    )
     const nowMs = Date.parse('2026-08-27T08:01:00.000Z')
 
     expect(retripSourceElapsedMs(state, nowMs)).toBe(10 * 60 * 1000)
@@ -67,9 +74,9 @@ describe('dev trip retrip', () => {
     state = pauseDevTripRetripState(state, pauseMs)
 
     expect(retripSourceElapsedMs(state, pauseMs)).toBe(10 * 60 * 1000)
-    expect(retripSourceElapsedMs(state, Date.parse('2026-08-27T08:20:00.000Z'))).toBe(
-      10 * 60 * 1000,
-    )
+    expect(
+      retripSourceElapsedMs(state, Date.parse('2026-08-27T08:20:00.000Z')),
+    ).toBe(10 * 60 * 1000)
   })
 
   it('continues from the paused point after resume', () => {
@@ -78,12 +85,18 @@ describe('dev trip retrip', () => {
       createDevTripRetrip('source', 1, startedMs),
       startedMs,
     )
-    state = pauseDevTripRetripState(state, Date.parse('2026-08-27T08:10:00.000Z'))
-    state = resumeDevTripRetripState(state, Date.parse('2026-08-27T08:25:00.000Z'))
-
-    expect(retripSourceElapsedMs(state, Date.parse('2026-08-27T08:35:00.000Z'))).toBe(
-      20 * 60 * 1000,
+    state = pauseDevTripRetripState(
+      state,
+      Date.parse('2026-08-27T08:10:00.000Z'),
     )
+    state = resumeDevTripRetripState(
+      state,
+      Date.parse('2026-08-27T08:25:00.000Z'),
+    )
+
+    expect(
+      retripSourceElapsedMs(state, Date.parse('2026-08-27T08:35:00.000Z')),
+    ).toBe(20 * 60 * 1000)
   })
 
   it('derives duration from trip playback range', () => {
@@ -93,7 +106,10 @@ describe('dev trip retrip', () => {
   it('preserves source elapsed when changing timescale', () => {
     const startedMs = Date.parse('2026-08-27T08:00:00.000Z')
     const nowMs = Date.parse('2026-08-27T08:10:00.000Z')
-    const state = resumeDevTripRetripState(createDevTripRetrip('source', 1, startedMs), startedMs)
+    const state = resumeDevTripRetripState(
+      createDevTripRetrip('source', 1, startedMs),
+      startedMs,
+    )
     const faster = retripWithTimescale(state, 10, nowMs)
 
     expect(retripSourceElapsedMs(state, nowMs)).toBe(10 * 60 * 1000)

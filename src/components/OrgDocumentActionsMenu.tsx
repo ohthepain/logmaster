@@ -1,4 +1,10 @@
-import { ExternalLink, FileText, FileUp, Link2, MoreHorizontal } from 'lucide-react'
+import {
+  ExternalLink,
+  FileText,
+  FileUp,
+  Link2,
+  MoreHorizontal,
+} from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { toast } from 'sonner'
@@ -18,10 +24,9 @@ import { documentTitleFromFileName } from '../lib/document-title'
 import {
   orgDocumentOpenTarget,
   orgDocumentVersionOpenTarget,
-  openOrgDocument
-  
+  openOrgDocument,
 } from '../lib/org-document-open'
-import type {OrgDocumentViewerPayload} from '../lib/org-document-open';
+import type { OrgDocumentViewerPayload } from '../lib/org-document-open'
 import { cn } from '../lib/cn'
 import { OrgDocumentCategoryField } from './OrgDocumentCategoryField'
 import { Modal } from './Modal'
@@ -56,7 +61,9 @@ export function OrgDocumentActionsMenu({
   const [historyLoading, setHistoryLoading] = useState(false)
   const [titleDraft, setTitleDraft] = useState(orgDocument.title)
   const [categoryDraft, setCategoryDraft] = useState(orgDocument.categoryId)
-  const [linkDraft, setLinkDraft] = useState(orgDocument.currentVersion.url ?? '')
+  const [linkDraft, setLinkDraft] = useState(
+    orgDocument.currentVersion.url ?? '',
+  )
   const [dragOver, setDragOver] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -143,7 +150,9 @@ export function OrgDocumentActionsMenu({
       setEditTitleOpen(false)
       toast.success('Title updated')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update title')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update title',
+      )
     } finally {
       setBusy(false)
     }
@@ -154,7 +163,10 @@ export function OrgDocumentActionsMenu({
     try {
       let updated = orgDocument
       updated = await applyMetadataUpdates(updated)
-      if (isLink && linkDraft.trim() !== (orgDocument.currentVersion.url ?? '')) {
+      if (
+        isLink &&
+        linkDraft.trim() !== (orgDocument.currentVersion.url ?? '')
+      ) {
         updated = await updateOrgDocumentLink(orgDocument.id, linkDraft.trim())
       }
       onUpdated(updated)
@@ -173,7 +185,9 @@ export function OrgDocumentActionsMenu({
       let updated = await updateOrgDocumentUpload(orgDocument.id, file)
       const newTitle = documentTitleFromFileName(file.name)
       if (newTitle !== updated.title) {
-        updated = await updateOrgDocumentMetadata(updated.id, { title: newTitle })
+        updated = await updateOrgDocumentMetadata(updated.id, {
+          title: newTitle,
+        })
       }
       if (categoryDraft !== updated.categoryId) {
         updated = await updateOrgDocumentMetadata(updated.id, {
@@ -208,7 +222,9 @@ export function OrgDocumentActionsMenu({
         onOpenViewer,
       })
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open document')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to open document',
+      )
     }
   }
 
@@ -219,7 +235,9 @@ export function OrgDocumentActionsMenu({
         { onOpenViewer },
       )
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open document')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to open document',
+      )
     }
   }
 
@@ -341,7 +359,9 @@ export function OrgDocumentActionsMenu({
                 : (event) => {
                     event.preventDefault()
                     event.stopPropagation()
-                    if (event.currentTarget.contains(event.relatedTarget as Node)) {
+                    if (
+                      event.currentTarget.contains(event.relatedTarget as Node)
+                    ) {
                       return
                     }
                     setDragOver(false)
@@ -407,7 +427,8 @@ export function OrgDocumentActionsMenu({
                         : 'Choose a file or drag it here'}
                   </span>
                   <span className="text-xs text-[var(--sea-ink-soft)]">
-                    Current: {orgDocument.currentVersion.fileName ?? categoryName}
+                    Current:{' '}
+                    {orgDocument.currentVersion.fileName ?? categoryName}
                     {' · '}
                     Title comes from the file name
                   </span>
@@ -443,9 +464,7 @@ export function OrgDocumentActionsMenu({
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  disabled={
-                    busy || categoryDraft === orgDocument.categoryId
-                  }
+                  disabled={busy || categoryDraft === orgDocument.categoryId}
                   onClick={() => void handleSaveUpdate()}
                   className="rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
                 >

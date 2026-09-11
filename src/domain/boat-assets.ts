@@ -29,7 +29,10 @@ export type LinkedBoatDocumentDetail = LinkedBoatDocumentRef & {
   currentVersion: BoatDocumentVersion
 }
 
-export type BoatAssetDetail = Omit<BoatAsset, 'documents' | 'workRecordCount'> & {
+export type BoatAssetDetail = Omit<
+  BoatAsset,
+  'documents' | 'workRecordCount'
+> & {
   documents: LinkedBoatDocumentDetail[]
   workRecords: AssetWork[]
 }

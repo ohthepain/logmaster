@@ -3,10 +3,9 @@ import { toast } from 'sonner'
 import {
   isBackgroundTrackerRunning,
   startBackgroundTracker,
-  stopBackgroundTracker
-  
+  stopBackgroundTracker,
 } from '../lib/native/background-tracker'
-import type {BackgroundPosition} from '../lib/native/background-tracker';
+import type { BackgroundPosition } from '../lib/native/background-tracker'
 import { setLocationAccessEnabled } from '../lib/device-position'
 import { supportsBackgroundGps } from '../lib/platform'
 import { getTripTrackRecorder } from '../lib/trip-track-recorder'
@@ -72,7 +71,11 @@ export function BackgroundTripRecorder() {
         return
       }
 
-      if (isBackgroundTrackerRunning() || startingRef.current || !activeTripId) {
+      if (
+        isBackgroundTrackerRunning() ||
+        startingRef.current ||
+        !activeTripId
+      ) {
         return
       }
 

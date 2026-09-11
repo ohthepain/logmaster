@@ -7,7 +7,11 @@ import { generateLegColor, resolveLegColor } from './leg-colors'
 export const LEG_START_TYPES: LogEntryType[] = ['CAST_OFF', 'ANCHOR_WEIGHED']
 
 /** End the current leg (stopped). */
-export const LEG_END_TYPES: LogEntryType[] = ['ANCHOR_DROPPED', 'MOORED', 'END_TRIP']
+export const LEG_END_TYPES: LogEntryType[] = [
+  'ANCHOR_DROPPED',
+  'MOORED',
+  'END_TRIP',
+]
 
 export function isLegStartType(type: LogEntryType): boolean {
   return LEG_START_TYPES.includes(type)
@@ -42,7 +46,10 @@ export function entryPlaceLabel(entry: LogEntry): string | null {
   return null
 }
 
-export function legEntriesForDisplay(leg: Leg, entries: LogEntry[]): LogEntry[] {
+export function legEntriesForDisplay(
+  leg: Leg,
+  entries: LogEntry[],
+): LogEntry[] {
   return entriesForLeg(leg.id, entries).sort(
     (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   )
@@ -229,7 +236,9 @@ export function rebuildAllLegs(
   entries: LogEntry[],
   legs: Leg[],
 ): { legs: Leg[]; entries: LogEntry[] } {
-  const tripIds = [...new Set(entries.filter((e) => !e.deleted).map((e) => e.tripId))]
+  const tripIds = [
+    ...new Set(entries.filter((e) => !e.deleted).map((e) => e.tripId)),
+  ]
   let nextLegs = legs
   let nextEntries = entries
   for (const tripId of tripIds) {
@@ -274,7 +283,12 @@ export function mergeLegs(
     remainingLegs
       .filter((leg) => leg.tripId === tripId)
       .concat([mergedLeg])
-      .map((leg, index) => ({ ...leg, sequence: index, updatedAt: now, synced: false })),
+      .map((leg, index) => ({
+        ...leg,
+        sequence: index,
+        updatedAt: now,
+        synced: false,
+      })),
   )
 
   const otherTripLegs = legs.filter((leg) => leg.tripId !== tripId)

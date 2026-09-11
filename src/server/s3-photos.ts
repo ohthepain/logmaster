@@ -141,7 +141,10 @@ export function consortiumDocumentS3Key(
   return `users/${userId}/consortia/${consortiumId}/documents/${documentId}/${versionId}.${ext}`
 }
 
-export function extensionForDocumentMime(mimeType: string, fileName?: string): string {
+export function extensionForDocumentMime(
+  mimeType: string,
+  fileName?: string,
+): string {
   if (mimeType === 'application/pdf') return 'pdf'
   if (mimeType === 'text/plain') return 'txt'
   if (mimeType === 'text/csv') return 'csv'

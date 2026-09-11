@@ -272,7 +272,10 @@ function CrewPage() {
                 ))}
               </div>
             ) : (
-              <EmptyState icon={UserCheck} message="No friends yet. Accept a friend request after someone joins your crew." />
+              <EmptyState
+                icon={UserCheck}
+                message="No friends yet. Accept a friend request after someone joins your crew."
+              />
             )}
           </Section>
 
@@ -386,7 +389,10 @@ function EmptyState({
 }) {
   return (
     <div className="rounded-2xl bg-[var(--panel)] px-6 py-10 text-center">
-      <Icon className="mx-auto size-8 text-[var(--sea-ink-soft)]" strokeWidth={1.75} />
+      <Icon
+        className="mx-auto size-8 text-[var(--sea-ink-soft)]"
+        strokeWidth={1.75}
+      />
       <p className="m-0 mt-3 text-sm text-[var(--sea-ink-soft)]">{message}</p>
       {action}
     </div>

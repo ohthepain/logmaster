@@ -17,7 +17,12 @@ function DevStatRow({
       <p className="m-0 text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--sea-ink-soft)]">
         {label}
       </p>
-      <p className={cn('m-0 mt-0.5 text-sm font-semibold text-[var(--sea-ink)]', muted && 'text-[var(--sea-ink-soft)]')}>
+      <p
+        className={cn(
+          'm-0 mt-0.5 text-sm font-semibold text-[var(--sea-ink)]',
+          muted && 'text-[var(--sea-ink-soft)]',
+        )}
+      >
         {value}
       </p>
     </div>
@@ -32,7 +37,9 @@ export function DevHomeStats() {
 
   const tripCount = store.trips.length
   const entryCount = store.entries.filter((entry) => !entry.deleted).length
-  const unsyncedCount = store.entries.filter((entry) => !entry.synced && !entry.deleted).length
+  const unsyncedCount = store.entries.filter(
+    (entry) => !entry.synced && !entry.deleted,
+  ).length
   const syncValue = store.syncMessage ?? (store.online ? 'Ready' : 'Offline')
 
   return (
@@ -43,7 +50,11 @@ export function DevHomeStats() {
       <div className="grid grid-cols-2 gap-1.5">
         <DevStatRow label="Trips" value={tripCount} />
         <DevStatRow label="Entries" value={entryCount} />
-        <DevStatRow label="Unsynced" value={unsyncedCount} muted={!unsyncedCount} />
+        <DevStatRow
+          label="Unsynced"
+          value={unsyncedCount}
+          muted={!unsyncedCount}
+        />
         <DevStatRow label="Sync" value={syncValue} />
       </div>
     </div>

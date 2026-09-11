@@ -35,7 +35,9 @@ export function DevTimeTravelPanel({
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Clock className="size-4 text-[var(--brand)]" strokeWidth={2.25} />
-          <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">Time travel</p>
+          <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
+            Time travel
+          </p>
         </div>
         <button
           type="button"
@@ -63,41 +65,47 @@ export function DevTimeTravelPanel({
         disabled={!enabled}
         className={cn('mt-3 border-0 p-0', !enabled && 'opacity-55')}
       >
-      <label className="mt-3 block">
-        <span className="mb-1.5 block text-xs font-medium text-[var(--sea-ink-soft)]">
-          Entry time
-        </span>
-        <input
-          type="datetime-local"
-          value={localValue}
-          onChange={(event) => {
-            const iso = datetimeLocalValueToIso(event.target.value)
-            if (iso) onChange(iso)
-          }}
-          className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2.5 text-sm text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
-        />
-      </label>
-      <p className="m-0 mt-2 text-xs text-[var(--sea-ink-soft)]">
-        {formatDateTime(valueIso)}
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <TimeTravelButton label="Now" onClick={() => onChange(realNowIso())} />
-        <TimeTravelButton
-          label="+1 h"
-          onClick={() => onChange(advanceIso(valueIso, HOUR_MS))}
-        />
-        <TimeTravelButton
-          label="+6 h"
-          onClick={() => onChange(advanceIso(valueIso, 6 * HOUR_MS))}
-        />
-        <TimeTravelButton
-          label="+1 d"
-          onClick={() => onChange(advanceIso(valueIso, DAY_MS))}
-        />
-        {tripStartedAt ? (
-          <TimeTravelButton label="Trip start" onClick={() => onChange(tripStartedAt)} />
-        ) : null}
-      </div>
+        <label className="mt-3 block">
+          <span className="mb-1.5 block text-xs font-medium text-[var(--sea-ink-soft)]">
+            Entry time
+          </span>
+          <input
+            type="datetime-local"
+            value={localValue}
+            onChange={(event) => {
+              const iso = datetimeLocalValueToIso(event.target.value)
+              if (iso) onChange(iso)
+            }}
+            className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2.5 text-sm text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
+          />
+        </label>
+        <p className="m-0 mt-2 text-xs text-[var(--sea-ink-soft)]">
+          {formatDateTime(valueIso)}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <TimeTravelButton
+            label="Now"
+            onClick={() => onChange(realNowIso())}
+          />
+          <TimeTravelButton
+            label="+1 h"
+            onClick={() => onChange(advanceIso(valueIso, HOUR_MS))}
+          />
+          <TimeTravelButton
+            label="+6 h"
+            onClick={() => onChange(advanceIso(valueIso, 6 * HOUR_MS))}
+          />
+          <TimeTravelButton
+            label="+1 d"
+            onClick={() => onChange(advanceIso(valueIso, DAY_MS))}
+          />
+          {tripStartedAt ? (
+            <TimeTravelButton
+              label="Trip start"
+              onClick={() => onChange(tripStartedAt)}
+            />
+          ) : null}
+        </div>
       </fieldset>
     </div>
   )

@@ -60,7 +60,8 @@ export function CrewMemberModal({
   const [removing, setRemoving] = useState(false)
 
   const editable = member ? !member.isLinked : false
-  const busy = saving || uploadingPhoto || removingPhoto || resending || removing
+  const busy =
+    saving || uploadingPhoto || removingPhoto || resending || removing
 
   useEffect(() => {
     if (!open || !member) return
@@ -94,7 +95,8 @@ export function CrewMemberModal({
     }
 
     const trimmedEmail = email.trim()
-    const currentEmail = member.pendingInvite?.inviteeEmail ?? member.email ?? ''
+    const currentEmail =
+      member.pendingInvite?.inviteeEmail ?? member.email ?? ''
     const nameChanged = trimmedName !== member.name
     const emailChanged = trimmedEmail !== currentEmail
 
@@ -113,7 +115,9 @@ export function CrewMemberModal({
       toast.success('Crew member updated')
       onClose()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to update crew member')
+      toast.error(
+        e instanceof Error ? e.message : 'Failed to update crew member',
+      )
     } finally {
       setSaving(false)
     }
@@ -173,14 +177,20 @@ export function CrewMemberModal({
       toast.success('Crew member removed')
       onClose()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to remove crew member')
+      toast.error(
+        e instanceof Error ? e.message : 'Failed to remove crew member',
+      )
     } finally {
       setRemoving(false)
     }
   }
 
   return (
-    <Modal title="Crew member" onClose={handleClose} devComponentName="CrewMemberModal">
+    <Modal
+      title="Crew member"
+      onClose={handleClose}
+      devComponentName="CrewMemberModal"
+    >
       <form onSubmit={(e) => void handleSave(e)} className="space-y-5">
         <div className="flex items-center gap-4">
           <div className="relative shrink-0">

@@ -26,7 +26,9 @@ function ensureWebPushConfigured(): boolean {
   if (webPushConfigured) return true
   const publicKey = process.env.WEB_PUSH_PUBLIC_KEY?.trim()
   const privateKey = process.env.WEB_PUSH_PRIVATE_KEY?.trim()
-  const subject = process.env.WEB_PUSH_SUBJECT?.trim() || `mailto:${process.env.AWS_SES_FROM_EMAIL || 'support@logmaster.live'}`
+  const subject =
+    process.env.WEB_PUSH_SUBJECT?.trim() ||
+    `mailto:${process.env.AWS_SES_FROM_EMAIL || 'support@logmaster.live'}`
   if (!publicKey || !privateKey) return false
   webpush.setVapidDetails(subject, publicKey, privateKey)
   webPushConfigured = true

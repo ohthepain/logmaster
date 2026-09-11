@@ -12,7 +12,9 @@ export async function inviteeHasAccount(email: string): Promise<boolean> {
   return user != null
 }
 
-export async function hasPendingInviteForEmail(email: string): Promise<boolean> {
+export async function hasPendingInviteForEmail(
+  email: string,
+): Promise<boolean> {
   const normalized = normalizeInviteEmail(email)
   const now = new Date()
   const [memberCount, crewCount] = await Promise.all([

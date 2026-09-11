@@ -46,9 +46,7 @@ export const TRIP_TRACK_KINDS = [
   ...INSTRUMENT_TRACK_KINDS,
 ] as const
 
-export type TripTrackKind =
-  | (typeof TRIP_TRACK_KINDS)[number]
-  | `gpx:${string}`
+export type TripTrackKind = (typeof TRIP_TRACK_KINDS)[number] | `gpx:${string}`
 
 export type TripTrackEncoding =
   | 'delta-v1'
@@ -173,16 +171,19 @@ export type InstrumentTrackUnits = {
   label: string
 }
 
-const INSTRUMENT_TRACK_META: Record<InstrumentTrackKind, InstrumentTrackUnits> = {
-  sog: { unit: 'kn', label: 'Speed over ground' },
-  stw: { unit: 'kn', label: 'Speed through water' },
-  'water-temperature': { unit: '°C', label: 'Water temperature' },
-  heading: { unit: '°', label: 'Heading' },
-  cog: { unit: '°', label: 'Course over ground' },
-  wind: { unit: 'kn', label: 'Wind' },
-}
+const INSTRUMENT_TRACK_META: Record<InstrumentTrackKind, InstrumentTrackUnits> =
+  {
+    sog: { unit: 'kn', label: 'Speed over ground' },
+    stw: { unit: 'kn', label: 'Speed through water' },
+    'water-temperature': { unit: '°C', label: 'Water temperature' },
+    heading: { unit: '°', label: 'Heading' },
+    cog: { unit: '°', label: 'Course over ground' },
+    wind: { unit: 'kn', label: 'Wind' },
+  }
 
-export function instrumentTrackMeta(kind: InstrumentTrackKind): InstrumentTrackUnits {
+export function instrumentTrackMeta(
+  kind: InstrumentTrackKind,
+): InstrumentTrackUnits {
   return INSTRUMENT_TRACK_META[kind]
 }
 
@@ -267,7 +268,8 @@ export function encodePositionTrackSamples(
   const heading: number[] = []
   const elevationCm: number[] = []
   let hasHeading = first.heading != null && Number.isFinite(first.heading)
-  let hasElevation = first.elevationM != null && Number.isFinite(first.elevationM)
+  let hasElevation =
+    first.elevationM != null && Number.isFinite(first.elevationM)
 
   for (let index = 1; index < samples.length; index += 1) {
     const sample = samples[index]
@@ -362,8 +364,7 @@ export function decodePositionTrackSamples(
       time: new Date(timeMs).toISOString(),
       latitude: fromLatE7(latE7),
       longitude: fromLonE7(lonE7),
-      heading:
-        headingValue != null && headingValue >= 0 ? headingValue : null,
+      heading: headingValue != null && headingValue >= 0 ? headingValue : null,
       elevationM:
         elevationValue != null && elevationValue >= 0
           ? elevationValue / 100
@@ -472,7 +473,7 @@ export function decodeAngleTrackSamples(
     const degrees = payload.degrees[index + 1] ?? -1
     samples.push({
       time: new Date(timeMs).toISOString(),
-      degrees: degrees >= 0 ? degrees : samples.at(-1)?.degrees ?? 0,
+      degrees: degrees >= 0 ? degrees : (samples.at(-1)?.degrees ?? 0),
     })
   }
 
@@ -537,11 +538,11 @@ export function decodeWindTrackSamples(
     samples.push({
       time: new Date(timeMs).toISOString(),
       speedKnots:
-        speedRaw >= 0 ? fromCentiKnots(speedRaw) : samples.at(-1)?.speedKnots ?? 0,
+        speedRaw >= 0
+          ? fromCentiKnots(speedRaw)
+          : (samples.at(-1)?.speedKnots ?? 0),
       directionTrue:
-        directionRaw >= 0
-          ? directionRaw
-          : samples.at(-1)?.directionTrue ?? 0,
+        directionRaw >= 0 ? directionRaw : (samples.at(-1)?.directionTrue ?? 0),
     })
   }
 
@@ -550,7 +551,9 @@ export function decodeWindTrackSamples(
 
 export function decodeTripTrack(track: TripTrack): PositionTrackSample[] {
   if (!isPositionTrack(track)) {
-    throw new Error(`decodeTripTrack only supports position tracks (got ${track.kind})`)
+    throw new Error(
+      `decodeTripTrack only supports position tracks (got ${track.kind})`,
+    )
   }
   if (!track.payload) {
     return []
@@ -583,7 +586,10 @@ export function decodeInstrumentTrack(
   }
 }
 
-export function tripTracksForTrip(tripId: string, tracks: TripTrack[]): TripTrack[] {
+export function tripTracksForTrip(
+  tripId: string,
+  tracks: TripTrack[],
+): TripTrack[] {
   return tracks
     .filter((track) => track.tripId === tripId)
     .sort(
@@ -592,7 +598,10 @@ export function tripTracksForTrip(tripId: string, tracks: TripTrack[]): TripTrac
     )
 }
 
-export function positionTracksForTrip(tripId: string, tracks: TripTrack[]): TripTrack[] {
+export function positionTracksForTrip(
+  tripId: string,
+  tracks: TripTrack[],
+): TripTrack[] {
   return tripTracksForTrip(tripId, tracks).filter(isPositionTrack)
 }
 
@@ -608,5 +617,7 @@ export function instrumentTracksOfKind(
   tracks: TripTrack[],
   kind: InstrumentTrackKind,
 ): TripTrack[] {
-  return instrumentTracksForTrip(tripId, tracks).filter((track) => track.kind === kind)
+  return instrumentTracksForTrip(tripId, tracks).filter(
+    (track) => track.kind === kind,
+  )
 }

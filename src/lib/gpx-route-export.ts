@@ -22,7 +22,10 @@ function formatRouteWaypointBlock(
   return lines.join('\n')
 }
 
-export function buildRouteGpx(route: Route, waypoints: RouteWaypoint[]): string {
+export function buildRouteGpx(
+  route: Route,
+  waypoints: RouteWaypoint[],
+): string {
   const ordered = sortRouteWaypoints(waypoints)
   if (ordered.length === 0) {
     throw new Error('This route has no waypoints to export.')
@@ -31,7 +34,9 @@ export function buildRouteGpx(route: Route, waypoints: RouteWaypoint[]): string 
   const name = route.title.trim() || 'Route'
   const exportedAt = route.updatedAt || new Date().toISOString()
   const rtePoints = ordered
-    .map((waypoint, index) => formatRouteWaypointBlock(waypoint, index, 'rtept'))
+    .map((waypoint, index) =>
+      formatRouteWaypointBlock(waypoint, index, 'rtept'),
+    )
     .join('\n')
   const wptPoints = ordered
     .map((waypoint, index) => formatRouteWaypointBlock(waypoint, index, 'wpt'))
@@ -54,5 +59,4 @@ ${descriptionLine}${rtePoints}
 ${wptPoints}
 </gpx>
 `
-
 }

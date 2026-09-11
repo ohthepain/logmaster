@@ -36,7 +36,8 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
   const [removingPhoto, setRemovingPhoto] = useState(false)
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [pushNotifications, setPushNotifications] = useState(true)
-  const [savingNotificationDefaults, setSavingNotificationDefaults] = useState(false)
+  const [savingNotificationDefaults, setSavingNotificationDefaults] =
+    useState(false)
   const [enablingPush, setEnablingPush] = useState(false)
 
   useEffect(() => {
@@ -56,7 +57,12 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
 
   const photoSrc = profilePhotoUrl(user.image, photoVersion)
   const hasCustomPhoto = isCustomProfilePhoto(user.image)
-  const busy = savingName || uploadingPhoto || removingPhoto || savingNotificationDefaults || enablingPush
+  const busy =
+    savingName ||
+    uploadingPhoto ||
+    removingPhoto ||
+    savingNotificationDefaults ||
+    enablingPush
 
   const refreshSession = async () => {
     await session.refetch()
@@ -126,7 +132,11 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
   }
 
   return (
-    <Modal title="Profile" onClose={handleClose} devComponentName="ProfileModal">
+    <Modal
+      title="Profile"
+      onClose={handleClose}
+      devComponentName="ProfileModal"
+    >
       <form onSubmit={(e) => void handleSaveName(e)} className="space-y-5">
         <div className="flex items-center gap-4">
           <div className="relative shrink-0">
@@ -141,7 +151,10 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
                   decoding="async"
                 />
               ) : (
-                <User className="size-8 text-[var(--sea-ink-soft)]" strokeWidth={1.75} />
+                <User
+                  className="size-8 text-[var(--sea-ink-soft)]"
+                  strokeWidth={1.75}
+                />
               )}
             </div>
             <button
@@ -171,7 +184,8 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
               Profile photo
             </p>
             <p className="m-0 mt-1 text-xs leading-5 text-[var(--sea-ink-soft)]">
-              Upload a photo for your account. Stored in the same bucket as boat photos.
+              Upload a photo for your account. Stored in the same bucket as boat
+              photos.
             </p>
             {hasCustomPhoto && (
               <button
@@ -242,7 +256,9 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
                   .then(() => toast.success('Notification defaults saved'))
                   .catch((e) =>
                     toast.error(
-                      e instanceof Error ? e.message : 'Failed to save defaults',
+                      e instanceof Error
+                        ? e.message
+                        : 'Failed to save defaults',
                     ),
                   )
                   .finally(() => setSavingNotificationDefaults(false))

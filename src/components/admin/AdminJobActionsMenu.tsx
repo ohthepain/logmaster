@@ -82,7 +82,9 @@ export function AdminJobActionsMenu({
   const handleRerun = () => {
     const label = adminJobRerunLabel(state)
     const detail = inputSummary ? `\n\n${inputSummary}` : ''
-    if (!globalThis.confirm(`${label} this job with the same settings?${detail}`)) {
+    if (
+      !globalThis.confirm(`${label} this job with the same settings?${detail}`)
+    ) {
       return
     }
     void runAction(async () => {

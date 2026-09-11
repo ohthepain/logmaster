@@ -32,10 +32,7 @@ type PendingOperationalConfirm = {
 
 type TripOperationalStatusProps = {
   tripId: string
-  trip: Pick<
-    Trip,
-    'status' | 'sailsUp' | 'engineOn' | 'moored' | 'anchorDown'
-  >
+  trip: Pick<Trip, 'status' | 'sailsUp' | 'engineOn' | 'moored' | 'anchorDown'>
   entries?: Pick<LogEntry, 'type' | 'timestamp' | 'deleted'>[]
   onLogEntryClick?: () => void
   logEntryDisabled?: boolean
@@ -72,7 +69,9 @@ export function TripOperationalStatus({
       await updateTrip(tripId, operationalToggleFieldPatch(toggle, targetOn))
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Failed to update trip settings',
+        error instanceof Error
+          ? error.message
+          : 'Failed to update trip settings',
       )
     } finally {
       setBusyToggle(null)

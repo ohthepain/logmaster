@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   decodePositionTrackSamples,
-  decodeScalarTrackSamples
-  
-  
+  decodeScalarTrackSamples,
 } from '../domain/trip-track'
-import type {ScalarTrackDeltaV1, TripTrackDeltaV1} from '../domain/trip-track';
+import type { ScalarTrackDeltaV1, TripTrackDeltaV1 } from '../domain/trip-track'
 import { GPX_MS_TO_KNOTS } from './gpx-field-meta'
 import { buildTripFromGpx, buildTripFromGpxFiles } from './gpx-trip-import'
 
@@ -42,18 +40,29 @@ describe('buildTripFromGpx', () => {
     expect(entries.map((entry) => entry.type)).toEqual([])
     expect(legs).toHaveLength(1)
     expect(tracks.filter((track) => track.kind === 'position')).toHaveLength(1)
-    expect(tracks.map((track) => track.kind).sort()).toEqual(['gpx:hr', 'position', 'sog'])
+    expect(tracks.map((track) => track.kind).sort()).toEqual([
+      'gpx:hr',
+      'position',
+      'sog',
+    ])
 
     const positionTrack = tracks.find((track) => track.kind === 'position')!
     expect(positionTrack.legId).toBe(legs[0]?.id)
-    expect(decodePositionTrackSamples(positionTrack.payload as TripTrackDeltaV1).length).toBe(2)
+    expect(
+      decodePositionTrackSamples(positionTrack.payload as TripTrackDeltaV1)
+        .length,
+    ).toBe(2)
 
     const sogTrack = tracks.find((track) => track.kind === 'sog')!
-    const sogSamples = decodeScalarTrackSamples(sogTrack.payload as ScalarTrackDeltaV1)
+    const sogSamples = decodeScalarTrackSamples(
+      sogTrack.payload as ScalarTrackDeltaV1,
+    )
     expect(sogSamples[0]?.value).toBeCloseTo(2.57222 * GPX_MS_TO_KNOTS, 4)
 
     const hrTrack = tracks.find((track) => track.kind === 'gpx:hr')!
-    const hrSamples = decodeScalarTrackSamples(hrTrack.payload as ScalarTrackDeltaV1)
+    const hrSamples = decodeScalarTrackSamples(
+      hrTrack.payload as ScalarTrackDeltaV1,
+    )
     expect(hrSamples.map((sample) => sample.value)).toEqual([120, 130])
   })
 
@@ -111,7 +120,10 @@ describe('buildTripFromGpx', () => {
     const { entries, legs, tracks } = buildTripFromGpx(gpx)
 
     expect(entries.map((entry) => entry.type)).toEqual([])
-    expect(legs.map((leg) => leg.title)).toEqual(['Morning sail', 'Afternoon sail'])
+    expect(legs.map((leg) => leg.title)).toEqual([
+      'Morning sail',
+      'Afternoon sail',
+    ])
     expect(tracks.filter((track) => track.kind === 'position')).toHaveLength(2)
   })
 
@@ -134,6 +146,8 @@ describe('buildTripFromGpx', () => {
     ])
 
     expect(tracks.filter((track) => track.kind === 'position')).toHaveLength(1)
-    expect(entries.some((entry) => entry.type === 'NOTE' && entry.data?.place)).toBe(true)
+    expect(
+      entries.some((entry) => entry.type === 'NOTE' && entry.data?.place),
+    ).toBe(true)
   })
 })

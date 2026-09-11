@@ -3,10 +3,7 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import type {
-  MemberInvite,
-  ResourceMember,
-} from '../domain/member-invite'
+import type { MemberInvite, ResourceMember } from '../domain/member-invite'
 import { MEMBER_ROLE_LABELS } from '../domain/member-invite'
 import type { OrgMemberRole } from '../domain/org'
 import { CrewAvatar } from './CrewAvatar'
@@ -68,7 +65,11 @@ export function InviteMemberModal({
   }
 
   return (
-    <Modal title={title} onClose={handleClose} devComponentName="InviteMemberModal">
+    <Modal
+      title={title}
+      onClose={handleClose}
+      devComponentName="InviteMemberModal"
+    >
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
@@ -100,8 +101,8 @@ export function InviteMemberModal({
           </select>
         </label>
         <p className="m-0 text-xs leading-5 text-[var(--sea-ink-soft)]">
-          If they don&apos;t have an account yet, we&apos;ll email them a link to
-          sign up and join automatically.
+          If they don&apos;t have an account yet, we&apos;ll email them a link
+          to sign up and join automatically.
         </p>
         <div className="flex justify-end gap-2">
           <button
@@ -170,7 +171,9 @@ export function ResourceMembersTab({
   refreshing = false,
 }: ResourceMembersTabProps) {
   const navigate = useNavigate()
-  const [resendingInviteId, setResendingInviteId] = useState<string | null>(null)
+  const [resendingInviteId, setResendingInviteId] = useState<string | null>(
+    null,
+  )
 
   return (
     <div>
@@ -190,7 +193,10 @@ export function ResourceMembersTab({
             />
           ) : null}
           {onRefresh ? (
-            <ResourceRefreshButton onRefresh={onRefresh} refreshing={refreshing} />
+            <ResourceRefreshButton
+              onRefresh={onRefresh}
+              refreshing={refreshing}
+            />
           ) : null}
         </div>
         {canManageMembers ? (
@@ -250,28 +256,13 @@ export function ResourceMembersTab({
             )
 
             return (
-            <li
-              key={member.id}
-              role={memberDetailOrgId ? 'button' : undefined}
-              tabIndex={memberDetailOrgId ? 0 : undefined}
-              onClick={
-                memberDetailOrgId && member.contactId
-                  ? () => {
-                      void navigate({
-                        to: '/orgs/$orgId/contacts/$contactId',
-                        params: {
-                          orgId: memberDetailOrgId,
-                          contactId: member.contactId!,
-                        },
-                      })
-                    }
-                  : undefined
-              }
-              onKeyDown={
-                memberDetailOrgId && member.contactId
-                  ? (event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
+              <li
+                key={member.id}
+                role={memberDetailOrgId ? 'button' : undefined}
+                tabIndex={memberDetailOrgId ? 0 : undefined}
+                onClick={
+                  memberDetailOrgId && member.contactId
+                    ? () => {
                         void navigate({
                           to: '/orgs/$orgId/contacts/$contactId',
                           params: {
@@ -280,53 +271,70 @@ export function ResourceMembersTab({
                           },
                         })
                       }
-                    }
-                  : undefined
-              }
-              className={cn(
-                'flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3',
-                memberDetailOrgId &&
-                  member.contactId &&
-                  'cursor-pointer transition hover:bg-[var(--link-bg-hover)]',
-              )}
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                {profile}
-              </div>
-              {member.isOwner || !canManageMembers ? (
-                <span className="rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
-                  {MEMBER_ROLE_LABELS[member.role]}
-                </span>
-              ) : (
-                <>
-                  <select
-                    value={member.role}
-                    onClick={(event) => event.stopPropagation()}
-                    onChange={(e) =>
-                      onRoleChange(member, e.target.value as OrgMemberRole)
-                    }
-                    className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--sea-ink)]"
-                  >
-                    {Object.entries(MEMBER_ROLE_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      void onRemove(member)
-                    }}
-                    className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-red-700 dark:text-red-300"
-                  >
-                    <Trash2 className="size-3.5" />
-                    Remove
-                  </button>
-                </>
-              )}
-            </li>
+                    : undefined
+                }
+                onKeyDown={
+                  memberDetailOrgId && member.contactId
+                    ? (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          void navigate({
+                            to: '/orgs/$orgId/contacts/$contactId',
+                            params: {
+                              orgId: memberDetailOrgId,
+                              contactId: member.contactId!,
+                            },
+                          })
+                        }
+                      }
+                    : undefined
+                }
+                className={cn(
+                  'flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3',
+                  memberDetailOrgId &&
+                    member.contactId &&
+                    'cursor-pointer transition hover:bg-[var(--link-bg-hover)]',
+                )}
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  {profile}
+                </div>
+                {member.isOwner || !canManageMembers ? (
+                  <span className="rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
+                    {MEMBER_ROLE_LABELS[member.role]}
+                  </span>
+                ) : (
+                  <>
+                    <select
+                      value={member.role}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(e) =>
+                        onRoleChange(member, e.target.value as OrgMemberRole)
+                      }
+                      className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--sea-ink)]"
+                    >
+                      {Object.entries(MEMBER_ROLE_LABELS).map(
+                        ([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        void onRemove(member)
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-red-700 dark:text-red-300"
+                    >
+                      <Trash2 className="size-3.5" />
+                      Remove
+                    </button>
+                  </>
+                )}
+              </li>
             )
           })}
           {pendingInvites.map((invite) => (
@@ -373,7 +381,9 @@ export function ResourceMembersTab({
                       className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)] disabled:opacity-60"
                     >
                       <Mail className="size-3.5" />
-                      {resendingInviteId === invite.id ? 'Sending…' : 'Resend invite'}
+                      {resendingInviteId === invite.id
+                        ? 'Sending…'
+                        : 'Resend invite'}
                     </button>
                   ) : null}
                   <button

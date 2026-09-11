@@ -34,28 +34,29 @@ export type LogEntryMapIconKind = (typeof LOG_ENTRY_MAP_ICON_KINDS)[number]
 export type LogEntryMapOutline = 'solid' | 'dotted'
 
 /** Lower number wins when several entries share a map position. */
-export const LOG_ENTRY_MAP_ICON_PRIORITY: Record<LogEntryMapIconKind, number> = {
-  'waypoint-active': -1,
-  waypoint: 0,
-  'anchor-dropped': 1,
-  'anchor-weighed': 1,
-  moored: 2,
-  unmoored: 2,
-  'sails-up': 3,
-  'sails-down': 3,
-  'engine-on': 4,
-  'engine-off': 4,
-  video: 5,
-  photo: 6,
-  'media-photo': 6,
-  'media-video': 5,
-  voice: 7,
-  note: 8,
-  'hourly-log': 9,
-  'direction-change': 10,
-  'start-trip': 11,
-  'end-trip': 11,
-}
+export const LOG_ENTRY_MAP_ICON_PRIORITY: Record<LogEntryMapIconKind, number> =
+  {
+    'waypoint-active': -1,
+    waypoint: 0,
+    'anchor-dropped': 1,
+    'anchor-weighed': 1,
+    moored: 2,
+    unmoored: 2,
+    'sails-up': 3,
+    'sails-down': 3,
+    'engine-on': 4,
+    'engine-off': 4,
+    video: 5,
+    photo: 6,
+    'media-photo': 6,
+    'media-video': 5,
+    voice: 7,
+    note: 8,
+    'hourly-log': 9,
+    'direction-change': 10,
+    'start-trip': 11,
+    'end-trip': 11,
+  }
 
 const TYPE_TO_ICON_KIND: Record<LogEntryType, LogEntryMapIconKind> = {
   ANCHOR_DROPPED: 'anchor-dropped',
@@ -100,7 +101,9 @@ export function isDirectionChangeEntry(
   )
 }
 
-export function isVideoLogEntry(entry: Pick<LogEntry, 'type' | 'data'>): boolean {
+export function isVideoLogEntry(
+  entry: Pick<LogEntry, 'type' | 'data'>,
+): boolean {
   if ((entry.type as string) === 'VIDEO') return true
   if (entry.data?.video === true) return true
   const mediaType = dataString(entry.data, 'mediaType')?.toLowerCase()
@@ -164,7 +167,9 @@ export function pickDominantLogEntry<T extends LogEntry>(entries: T[]): T {
 }
 
 /** Keep one marker per identical lat/lng, preferring the higher-priority type. */
-export function collapseColocatedLogEntries<T extends LogEntry>(entries: T[]): T[] {
+export function collapseColocatedLogEntries<T extends LogEntry>(
+  entries: T[],
+): T[] {
   const groups: T[][] = []
 
   for (const entry of entries) {

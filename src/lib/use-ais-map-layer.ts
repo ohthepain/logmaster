@@ -1,7 +1,12 @@
 import maplibregl from 'maplibre-gl'
 import { useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
-import { fetchAisVessels, fetchAisVesselDetails, mapBoundsToAisBbox, aisVesselDetailsToPopupDetails } from './ais-vessels-api'
+import {
+  fetchAisVessels,
+  fetchAisVesselDetails,
+  mapBoundsToAisBbox,
+  aisVesselDetailsToPopupDetails,
+} from './ais-vessels-api'
 import {
   bindAisMapLayerPopups,
   clearAisMapLayerData,

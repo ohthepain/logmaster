@@ -20,10 +20,20 @@ import {
   loadSailingMapStyle,
   scheduleSeamarkTileRefresh,
 } from '../lib/maplibre-sailing-map-setup'
-import { applySailingLogMapTheme, sailingMapLegTrackPaint, SailingMapColors } from '../lib/maplibre-sailing-theme'
-import { addLogEntrySymbolLayer, syncLogEntryMapMarkerImages } from '../lib/map-log-entry-icons'
+import {
+  applySailingLogMapTheme,
+  sailingMapLegTrackPaint,
+  SailingMapColors,
+} from '../lib/maplibre-sailing-theme'
+import {
+  addLogEntrySymbolLayer,
+  syncLogEntryMapMarkerImages,
+} from '../lib/map-log-entry-icons'
 import { defaultRasterMapId } from '../lib/map-styles'
-import { installMapDataLayers, queryTappableMapDataFeatures } from '../lib/maplibre-data-layers'
+import {
+  installMapDataLayers,
+  queryTappableMapDataFeatures,
+} from '../lib/maplibre-data-layers'
 import { useMapDataLayerSync } from '../lib/use-map-data-layer-sync'
 import {
   centerMapOnCurrentLocation,
@@ -76,10 +86,18 @@ export function LogEntryPositionMap({
   const initialFitDoneRef = useRef(false)
   const [mapReady, setMapReady] = useState(false)
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
-  const mapDataLayerToggles = useAppOptionsStore((state) => state.mapDataLayerToggles)
-  const setMapDataLayerToggles = useAppOptionsStore((state) => state.setMapDataLayerToggles)
-  const mapLogEntryLayerToggles = useAppOptionsStore((state) => state.mapLogEntryLayerToggles)
-  const setMapLogEntryLayerToggles = useAppOptionsStore((state) => state.setMapLogEntryLayerToggles)
+  const mapDataLayerToggles = useAppOptionsStore(
+    (state) => state.mapDataLayerToggles,
+  )
+  const setMapDataLayerToggles = useAppOptionsStore(
+    (state) => state.setMapDataLayerToggles,
+  )
+  const mapLogEntryLayerToggles = useAppOptionsStore(
+    (state) => state.mapLogEntryLayerToggles,
+  )
+  const setMapLogEntryLayerToggles = useAppOptionsStore(
+    (state) => state.setMapLogEntryLayerToggles,
+  )
 
   useMapDataLayerSync(mapRef, mapReady, mapDataLayerToggles, {
     enablePopups: true,
@@ -121,7 +139,10 @@ export function LogEntryPositionMap({
         map = new maplibregl.Map({
           container,
           style,
-          center: [DEV_FALLBACK_POSITION.longitude, DEV_FALLBACK_POSITION.latitude],
+          center: [
+            DEV_FALLBACK_POSITION.longitude,
+            DEV_FALLBACK_POSITION.latitude,
+          ],
           zoom: 10,
           pitch: 0,
           maxPitch: 0,
@@ -293,7 +314,10 @@ export function LogEntryPositionMap({
       className="relative h-full min-h-0 w-full overflow-hidden"
       style={{ backgroundColor: SailingMapColors.background }}
     >
-      <DevComponentLabel name="LogEntryPositionMap" className="absolute left-2 top-2 z-10" />
+      <DevComponentLabel
+        name="LogEntryPositionMap"
+        className="absolute left-2 top-2 z-10"
+      />
       <div ref={containerRef} className={cn('sailing-map', mapClassName)} />
       {mapReady ? (
         <>
@@ -309,7 +333,9 @@ export function LogEntryPositionMap({
                 onLogEntryChange={setMapLogEntryLayerToggles}
               />
             }
-            onExpand={allowFullscreen ? () => setFullscreenOpen(true) : undefined}
+            onExpand={
+              allowFullscreen ? () => setFullscreenOpen(true) : undefined
+            }
           />
         </>
       ) : null}

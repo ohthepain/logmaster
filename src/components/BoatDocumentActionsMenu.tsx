@@ -1,4 +1,10 @@
-import { ExternalLink, FileText, FileUp, Link2, MoreHorizontal } from 'lucide-react'
+import {
+  ExternalLink,
+  FileText,
+  FileUp,
+  Link2,
+  MoreHorizontal,
+} from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { toast } from 'sonner'
@@ -18,10 +24,9 @@ import { documentTitleFromFileName } from '../lib/document-title'
 import {
   boatDocumentOpenTarget,
   boatDocumentVersionOpenTarget,
-  openBoatDocument
-  
+  openBoatDocument,
 } from '../lib/boat-document-open'
-import type {BoatDocumentViewerPayload} from '../lib/boat-document-open';
+import type { BoatDocumentViewerPayload } from '../lib/boat-document-open'
 import { cn } from '../lib/cn'
 import { BoatDocumentCategoryField } from './BoatDocumentCategoryField'
 import { Modal } from './Modal'
@@ -56,7 +61,9 @@ export function BoatDocumentActionsMenu({
   const [historyLoading, setHistoryLoading] = useState(false)
   const [titleDraft, setTitleDraft] = useState(boatDocument.title)
   const [categoryDraft, setCategoryDraft] = useState(boatDocument.categoryId)
-  const [linkDraft, setLinkDraft] = useState(boatDocument.currentVersion.url ?? '')
+  const [linkDraft, setLinkDraft] = useState(
+    boatDocument.currentVersion.url ?? '',
+  )
   const [dragOver, setDragOver] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -138,12 +145,16 @@ export function BoatDocumentActionsMenu({
     if (!title) return
     setBusy(true)
     try {
-      const updated = await updateBoatDocumentMetadata(boatDocument.id, { title })
+      const updated = await updateBoatDocumentMetadata(boatDocument.id, {
+        title,
+      })
       onUpdated(updated)
       setEditTitleOpen(false)
       toast.success('Title updated')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update title')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update title',
+      )
     } finally {
       setBusy(false)
     }
@@ -154,8 +165,14 @@ export function BoatDocumentActionsMenu({
     try {
       let updated = boatDocument
       updated = await applyMetadataUpdates(updated)
-      if (isLink && linkDraft.trim() !== (boatDocument.currentVersion.url ?? '')) {
-        updated = await updateBoatDocumentLink(boatDocument.id, linkDraft.trim())
+      if (
+        isLink &&
+        linkDraft.trim() !== (boatDocument.currentVersion.url ?? '')
+      ) {
+        updated = await updateBoatDocumentLink(
+          boatDocument.id,
+          linkDraft.trim(),
+        )
       }
       onUpdated(updated)
       setUpdateOpen(false)
@@ -173,7 +190,9 @@ export function BoatDocumentActionsMenu({
       let updated = await updateBoatDocumentUpload(boatDocument.id, file)
       const newTitle = documentTitleFromFileName(file.name)
       if (newTitle !== updated.title) {
-        updated = await updateBoatDocumentMetadata(updated.id, { title: newTitle })
+        updated = await updateBoatDocumentMetadata(updated.id, {
+          title: newTitle,
+        })
       }
       if (categoryDraft !== updated.categoryId) {
         updated = await updateBoatDocumentMetadata(updated.id, {
@@ -208,7 +227,9 @@ export function BoatDocumentActionsMenu({
         onOpenViewer,
       })
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open document')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to open document',
+      )
     }
   }
 
@@ -219,7 +240,9 @@ export function BoatDocumentActionsMenu({
         { onOpenViewer },
       )
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open document')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to open document',
+      )
     }
   }
 
@@ -341,7 +364,9 @@ export function BoatDocumentActionsMenu({
                 : (event) => {
                     event.preventDefault()
                     event.stopPropagation()
-                    if (event.currentTarget.contains(event.relatedTarget as Node)) {
+                    if (
+                      event.currentTarget.contains(event.relatedTarget as Node)
+                    ) {
                       return
                     }
                     setDragOver(false)
@@ -407,7 +432,8 @@ export function BoatDocumentActionsMenu({
                         : 'Choose a file or drag it here'}
                   </span>
                   <span className="text-xs text-[var(--sea-ink-soft)]">
-                    Current: {boatDocument.currentVersion.fileName ?? categoryName}
+                    Current:{' '}
+                    {boatDocument.currentVersion.fileName ?? categoryName}
                     {' · '}
                     Title comes from the file name
                   </span>
@@ -443,9 +469,7 @@ export function BoatDocumentActionsMenu({
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  disabled={
-                    busy || categoryDraft === boatDocument.categoryId
-                  }
+                  disabled={busy || categoryDraft === boatDocument.categoryId}
                   onClick={() => void handleSaveUpdate()}
                   className="rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
                 >

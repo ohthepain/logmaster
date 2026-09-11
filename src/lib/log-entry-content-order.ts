@@ -79,9 +79,9 @@ export function nextContentOrder(input: {
   return maxContentOrder(input) + 1
 }
 
-export function sortContentBlocksByOrderDesc<T extends OrderedEntryContentBlock>(
-  blocks: T[],
-): T[] {
+export function sortContentBlocksByOrderDesc<
+  T extends OrderedEntryContentBlock,
+>(blocks: T[]): T[] {
   return [...blocks].sort((a, b) => {
     if (b.order !== a.order) return b.order - a.order
     return a.key.localeCompare(b.key)

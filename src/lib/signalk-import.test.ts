@@ -4,10 +4,9 @@ import {
   encodeAngleTrackSamples,
   encodePositionTrackSamples,
   encodeScalarTrackSamples,
-  encodeWindTrackSamples
-  
+  encodeWindTrackSamples,
 } from '../domain/trip-track'
-import type {TripTrack} from '../domain/trip-track';
+import type { TripTrack } from '../domain/trip-track'
 import { buildTripSignalKExport } from './signalk-export'
 import { parseSignalKImportJson } from './signalk-import'
 import { buildTripFromSignalK } from './signalk-trip-import'
@@ -109,10 +108,14 @@ describe('signalk-import', () => {
     expect(parsed.sogSamples[0]?.value).toBeCloseTo(6, 3)
     expect(parsed.windSamples[0]?.speedKnots).toBeCloseTo(12, 3)
 
-    const imported = buildTripFromSignalK(exported, { fileName: 'harbour-signalk.json' })
+    const imported = buildTripFromSignalK(exported, {
+      fileName: 'harbour-signalk.json',
+    })
     expect(imported.trip.boatName).toBe('Harbour sail')
     expect(imported.trip.status).toBe('COMPLETED')
-    expect(imported.tracks.some((track) => track.kind === 'position')).toBe(true)
+    expect(imported.tracks.some((track) => track.kind === 'position')).toBe(
+      true,
+    )
     expect(imported.tracks.some((track) => track.kind === 'sog')).toBe(true)
     expect(imported.tracks.some((track) => track.kind === 'wind')).toBe(true)
   })
@@ -304,7 +307,11 @@ describe('signalk-import', () => {
         waypoints: unknown[]
         positionTrack: unknown[]
       }
-      const stableSize = stableExportSize(currentTrip, currentTracks, currentEntries)
+      const stableSize = stableExportSize(
+        currentTrip,
+        currentTracks,
+        currentEntries,
+      )
 
       if (cycle === 0) {
         baselineSize = stableSize
@@ -320,7 +327,9 @@ describe('signalk-import', () => {
       }
 
       const parsed = parseSignalKImportJson(exported)
-      expect(parsed.logEntries).toHaveLength(baselineEntryCount || document.logEntries.length)
+      expect(parsed.logEntries).toHaveLength(
+        baselineEntryCount || document.logEntries.length,
+      )
       expect(parsed.positionSamples).toHaveLength(
         baselinePositionCount || document.positionTrack.length,
       )
@@ -330,7 +339,9 @@ describe('signalk-import', () => {
         baselineTrackCount = imported.tracks.length
       } else {
         expect(imported.tracks.length).toBe(baselineTrackCount)
-        expect(imported.entries.length).toBeGreaterThanOrEqual(baselineEntryCount)
+        expect(imported.entries.length).toBeGreaterThanOrEqual(
+          baselineEntryCount,
+        )
       }
 
       currentTrip = imported.trip
@@ -344,7 +355,9 @@ describe('signalk-import', () => {
     const positionSamples = Array.from({ length: sampleCount }, (_, index) => {
       const minutes = index
       return {
-        time: new Date(Date.parse('2026-06-01T09:00:00.000Z') + minutes * 60_000).toISOString(),
+        time: new Date(
+          Date.parse('2026-06-01T09:00:00.000Z') + minutes * 60_000,
+        ).toISOString(),
         latitude: 59.9139 + index * 0.0001,
         longitude: 10.7522 + index * 0.00015,
         heading: (120 + index) % 360,
@@ -378,7 +391,11 @@ describe('signalk-import', () => {
     let baselinePositionCount = 0
 
     for (let cycle = 0; cycle < 5; cycle += 1) {
-      const exported = buildTripSignalKExport(currentTrip, currentTracks, currentEntries)
+      const exported = buildTripSignalKExport(
+        currentTrip,
+        currentTracks,
+        currentEntries,
+      )
       const document = JSON.parse(exported) as { positionTrack: unknown[] }
 
       if (cycle === 0) {
@@ -392,7 +409,9 @@ describe('signalk-import', () => {
       expect(parsed.positionSamples).toHaveLength(baselinePositionCount)
 
       const imported = buildTripFromSignalK(exported)
-      const importedPositionTrack = imported.tracks.find((track) => track.kind === 'position')
+      const importedPositionTrack = imported.tracks.find(
+        (track) => track.kind === 'position',
+      )
       expect(importedPositionTrack?.sampleCount).toBe(baselinePositionCount)
 
       currentTrip = imported.trip
@@ -403,7 +422,9 @@ describe('signalk-import', () => {
 
   it('prefers the v2 positionTrack envelope over sparse deltas', () => {
     const dense = Array.from({ length: 20 }, (_, index) => ({
-      time: new Date(Date.parse('2026-06-01T09:00:00.000Z') + index * 60_000).toISOString(),
+      time: new Date(
+        Date.parse('2026-06-01T09:00:00.000Z') + index * 60_000,
+      ).toISOString(),
       latitude: 59.91 + index * 0.001,
       longitude: 10.75 + index * 0.001,
     }))
@@ -423,7 +444,10 @@ describe('signalk-import', () => {
             values: [
               {
                 path: 'navigation.position',
-                value: { latitude: sample.latitude, longitude: sample.longitude },
+                value: {
+                  latitude: sample.latitude,
+                  longitude: sample.longitude,
+                },
               },
             ],
           },

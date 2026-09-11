@@ -4,11 +4,12 @@ import type { MapDataLayerId } from '../../../lib/map-data-layers'
 import { getMapDataLayer } from '../../../lib/map-data-layers'
 import {
   fetchPlacePhotos,
-  placePhotoMediaUrl
-  
-  
+  placePhotoMediaUrl,
 } from '../../../lib/places-photos-api'
-import type {PlacePhoto, PlacePhotoAttribution} from '../../../lib/places-photos-api';
+import type {
+  PlacePhoto,
+  PlacePhotoAttribution,
+} from '../../../lib/places-photos-api'
 
 type PlacePhotosSearch = {
   lat: number
@@ -17,7 +18,9 @@ type PlacePhotosSearch = {
   layer?: MapDataLayerId
 }
 
-function parseSearch(search: Record<string, unknown>): PlacePhotosSearch | null {
+function parseSearch(
+  search: Record<string, unknown>,
+): PlacePhotosSearch | null {
   const lat = Number(search.lat)
   const lon = Number(search.lon)
   if (!Number.isFinite(lat) || lat < -90 || lat > 90) return null
@@ -29,7 +32,9 @@ function parseSearch(search: Record<string, unknown>): PlacePhotosSearch | null 
       : undefined
 
   const layer =
-    typeof search.layer === 'string' ? (search.layer as MapDataLayerId) : undefined
+    typeof search.layer === 'string'
+      ? (search.layer as MapDataLayerId)
+      : undefined
 
   return { lat, lon, name, layer }
 }
@@ -128,7 +133,9 @@ function PlacePhotosPage() {
       ) : null}
 
       {loading ? (
-        <p className="mt-6 text-sm text-[var(--sea-ink-soft)]">Loading photos…</p>
+        <p className="mt-6 text-sm text-[var(--sea-ink-soft)]">
+          Loading photos…
+        </p>
       ) : null}
 
       {!loading && error ? (
@@ -161,22 +168,23 @@ function PlacePhotosPage() {
               />
               {photo.authorAttributions.length > 0 ? (
                 <figcaption className="mt-2 text-xs leading-5 text-[var(--sea-ink-soft)]">
-                  {photo.authorAttributions.map((attribution: PlacePhotoAttribution) =>
-                    attribution.uri ? (
-                      <a
-                        key={`${photo.name}-${attribution.displayName}`}
-                        href={attribution.uri}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[var(--lagoon-deep)] underline decoration-[var(--lagoon-deep)]/40 underline-offset-2"
-                      >
-                        {attribution.displayName}
-                      </a>
-                    ) : (
-                      <span key={`${photo.name}-${attribution.displayName}`}>
-                        {attribution.displayName}
-                      </span>
-                    ),
+                  {photo.authorAttributions.map(
+                    (attribution: PlacePhotoAttribution) =>
+                      attribution.uri ? (
+                        <a
+                          key={`${photo.name}-${attribution.displayName}`}
+                          href={attribution.uri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[var(--lagoon-deep)] underline decoration-[var(--lagoon-deep)]/40 underline-offset-2"
+                        >
+                          {attribution.displayName}
+                        </a>
+                      ) : (
+                        <span key={`${photo.name}-${attribution.displayName}`}>
+                          {attribution.displayName}
+                        </span>
+                      ),
                   )}
                 </figcaption>
               ) : null}

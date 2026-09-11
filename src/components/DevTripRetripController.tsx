@@ -6,9 +6,7 @@ import {
   retripPositionAt,
   retripSourceElapsedMs,
 } from '../lib/dev-trip-retrip'
-import {
-  clearDevPositionOverride,
-} from '../lib/device-position'
+import { clearDevPositionOverride } from '../lib/device-position'
 import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore } from '../stores/logbook'
 
@@ -77,9 +75,7 @@ export function DevTripRetripController() {
       lastRecordedRef.current = null
       return
     }
-    void useLogbookStore
-      .getState()
-      .ensureTripTrackPayloads(retripSourceTripId)
+    void useLogbookStore.getState().ensureTripTrackPayloads(retripSourceTripId)
   }, [retripSourceTripId])
 
   useEffect(() => {
@@ -120,10 +116,7 @@ export function DevTripRetripController() {
         const nowMs = Date.now()
         const sourceElapsedMs = retripSourceElapsedMs(currentRetrip, nowMs)
 
-        if (
-          !currentRetrip.paused &&
-          sourceElapsedMs >= durationMs
-        ) {
+        if (!currentRetrip.paused && sourceElapsedMs >= durationMs) {
           stopDevTripRetrip()
           toast.success('Re-trip completed')
           return
@@ -137,10 +130,9 @@ export function DevTripRetripController() {
           nowMs,
         )
 
-        const activeRecordingTripId =
-          !currentRetrip.paused
-            ? useAppOptionsStore.getState().recordingTripId
-            : null
+        const activeRecordingTripId = !currentRetrip.paused
+          ? useAppOptionsStore.getState().recordingTripId
+          : null
         if (activeRecordingTripId) {
           const recordingTrip = trips.find(
             (trip) => trip.id === activeRecordingTripId,
@@ -178,7 +170,9 @@ export function DevTripRetripController() {
               )
             }
           } else {
-            const reason = recordingTrip ? `trip-status-${recordingTrip.status}` : 'trip-not-found'
+            const reason = recordingTrip
+              ? `trip-status-${recordingTrip.status}`
+              : 'trip-not-found'
             if (lastBlockReasonRef.current !== reason) {
               lastBlockReasonRef.current = reason
             }

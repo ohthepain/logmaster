@@ -4,10 +4,7 @@ import { toast } from 'sonner'
 import type { Route, RouteWaypoint } from '../domain/route'
 import { cn } from '../lib/cn'
 import { exportRouteAsGpx, exportRouteAsSignalK } from '../lib/route-export'
-import {
-  routeWaypointsForRoute,
-  useRoutesStore,
-} from '../stores/routes'
+import { routeWaypointsForRoute, useRoutesStore } from '../stores/routes'
 import { useLogbookStore } from '../stores/logbook'
 import { tripDisplayName } from '../lib/trip-display'
 import { AppIconButtonTooltip } from './AppIconButtonTooltip'
@@ -102,7 +99,9 @@ export function RouteActionsMenu({
       setOpen(false)
       onDeleted?.()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete route')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to delete route',
+      )
     } finally {
       setBusy(false)
     }
@@ -110,8 +109,12 @@ export function RouteActionsMenu({
 
   const handleCopyToTrip = (tripId: string) => {
     void runAction(async () => {
-      const count = await useLogbookStore.getState().importRouteWaypointsToTrip(route.id, tripId)
-      const trip = useLogbookStore.getState().trips.find((item) => item.id === tripId)
+      const count = await useLogbookStore
+        .getState()
+        .importRouteWaypointsToTrip(route.id, tripId)
+      const trip = useLogbookStore
+        .getState()
+        .trips.find((item) => item.id === tripId)
       if (count === 0) {
         toast.message('All waypoints already exist on that trip')
       } else {
@@ -241,7 +244,9 @@ export function RouteActionsMenu({
           <div className="space-y-4">
             <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">
               Delete{' '}
-              <span className="font-semibold text-[var(--sea-ink)]">{displayName}</span>
+              <span className="font-semibold text-[var(--sea-ink)]">
+                {displayName}
+              </span>
               {waypoints.length > 0
                 ? ` and its ${waypoints.length} waypoint${waypoints.length === 1 ? '' : 's'}`
                 : ''}

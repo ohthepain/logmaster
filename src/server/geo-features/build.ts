@@ -203,9 +203,7 @@ async function uploadObject(
   const byteLength =
     typeof body === 'string' ? Buffer.byteLength(body) : body.byteLength
   if (dryRun) {
-    log(
-      `[geo-features] dry-run ${key} (${byteLength.toLocaleString()} bytes)`,
-    )
+    log(`[geo-features] dry-run ${key} (${byteLength.toLocaleString()} bytes)`)
     return
   }
 

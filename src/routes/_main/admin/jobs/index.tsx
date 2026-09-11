@@ -12,10 +12,9 @@ import {
   formatMarinasRunInput,
   formatMarinasRunResult,
   formatOsmPointsRunInput,
-  formatOsmPointsRunResult
-  
+  formatOsmPointsRunResult,
 } from '../../../../lib/admin-jobs'
-import type {AdminJobCatalogId} from '../../../../lib/admin-jobs';
+import type { AdminJobCatalogId } from '../../../../lib/admin-jobs'
 
 type JobsSearch = {
   tab?: AdminJobCatalogId
@@ -24,11 +23,7 @@ type JobsSearch = {
 export const Route = createFileRoute('/_main/admin/jobs/')({
   validateSearch: (search: Record<string, unknown>): JobsSearch => {
     const tab = search.tab
-    if (
-      tab === 'geo-features' ||
-      tab === 'marinas' ||
-      tab === 'osm-points'
-    ) {
+    if (tab === 'geo-features' || tab === 'marinas' || tab === 'osm-points') {
       return { tab }
     }
     return {}

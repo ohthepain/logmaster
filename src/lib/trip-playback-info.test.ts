@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   encodePositionTrackSamples,
   encodeScalarTrackSamples,
-  encodeWindTrackSamples
-  
+  encodeWindTrackSamples,
 } from '../domain/trip-track'
-import type {TripTrack} from '../domain/trip-track';
+import type { TripTrack } from '../domain/trip-track'
 import { tripPlaybackInfoAt } from './trip-playback-info'
 
 const tripId = 'trip-1'
@@ -103,7 +102,15 @@ describe('tripPlaybackInfoAt', () => {
   })
 
   it('returns only time when no other data exists', () => {
-    const snapshot = tripPlaybackInfoAt(tripId, [], [], Date.parse('2026-06-01T09:00:00.000Z'), null)
-    expect(snapshot.lines).toEqual([{ label: 'Time', value: expect.any(String) }])
+    const snapshot = tripPlaybackInfoAt(
+      tripId,
+      [],
+      [],
+      Date.parse('2026-06-01T09:00:00.000Z'),
+      null,
+    )
+    expect(snapshot.lines).toEqual([
+      { label: 'Time', value: expect.any(String) },
+    ])
   })
 })

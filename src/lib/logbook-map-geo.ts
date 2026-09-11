@@ -16,10 +16,9 @@ import {
 } from './log-entry-map-marker'
 import {
   defaultMapLogEntryLayerToggles,
-  filterEntriesForMapLogLayers
-  
+  filterEntriesForMapLogLayers,
 } from './map-log-entry-layers'
-import type {MapLogEntryLayerToggles} from './map-log-entry-layers';
+import type { MapLogEntryLayerToggles } from './map-log-entry-layers'
 import { buildTripTracksGeoJson, trackSampleMapPoints } from './trip-track-geo'
 import { isWaypointMapKind, waypointMapColor } from './waypoint-map-style'
 
@@ -47,7 +46,11 @@ export function logEntryLegColor(
   legs: Leg[],
   fallbackSequence = 0,
 ): string {
-  return colorForLegId(entry.legId ?? null, legColorLookup(legs), fallbackSequence)
+  return colorForLegId(
+    entry.legId ?? null,
+    legColorLookup(legs),
+    fallbackSequence,
+  )
 }
 
 function positionedEntries(entries: LogEntry[]): LogEntry[] {
@@ -93,7 +96,10 @@ type PositionedEntryRun = {
   segmentIndex: number
 }
 
-function pushPositionedEntryRun(runs: PositionedEntryRun[], run: PositionedEntryRun | null) {
+function pushPositionedEntryRun(
+  runs: PositionedEntryRun[],
+  run: PositionedEntryRun | null,
+) {
   if (run && run.coordinates.length >= 2) {
     runs.push(run)
   }
@@ -333,8 +339,9 @@ export function buildLegEntryPointsGeoJson(
       const kind = logEntryMapIconKind(entry, {
         activeWaypoint: entry.id === options?.activeWaypointEntryId,
       })
-      const color =
-        isWaypointMapKind(kind) ? waypointMapColor(kind) : colorForLegId(legId, legColors, 0)
+      const color = isWaypointMapKind(kind)
+        ? waypointMapColor(kind)
+        : colorForLegId(legId, legColors, 0)
       const outline = logEntryMapOutline(entry)
       return {
         type: 'Feature' as const,
@@ -470,7 +477,8 @@ export function ensureMinimumMapBoundsSpan(
 export function mapBrandColor() {
   if (typeof document === 'undefined') return '#eb4539'
   return (
-    getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() ||
-    '#eb4539'
+    getComputedStyle(document.documentElement)
+      .getPropertyValue('--brand')
+      .trim() || '#eb4539'
   )
 }

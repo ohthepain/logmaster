@@ -2,21 +2,21 @@ import type { Feature, Geometry } from 'geojson'
 import { S3Client } from '@aws-sdk/client-s3'
 import {
   degreeTileForLonLat,
-  degreeTileFromFloors
-  
+  degreeTileFromFloors,
 } from '../../lib/geo-feature-tiles'
-import type {DegreeTile} from '../../lib/geo-feature-tiles';
+import type { DegreeTile } from '../../lib/geo-feature-tiles'
 import type { MapDataLayerId } from '../../lib/map-data-layers'
 import { OSM_POINT_DATASETS } from '../../lib/map-data-layers'
 import {
   displayNameForOsmLight,
   geonamesPlaceLookupPriority,
   osmPlaceLookupPriority,
-  pickNearestPlace
-  
-  
+  pickNearestPlace,
 } from '../../lib/place-reverse-lookup'
-import type {PlaceLookupCandidate, PlaceLookupResult} from '../../lib/place-reverse-lookup';
+import type {
+  PlaceLookupCandidate,
+  PlaceLookupResult,
+} from '../../lib/place-reverse-lookup'
 import type { GeoFeatureCollection } from '../geo-features/schema'
 import type { OsmPointFeatureCollection } from '../osm-points/schema'
 import { readS3GzipJson } from './s3-gzip-json'
@@ -47,20 +47,26 @@ function neighborTiles(latitude: number, longitude: number): DegreeTile[] {
 function isGeoFeatureCollection(value: unknown): value is GeoFeatureCollection {
   if (!value || typeof value !== 'object') return false
   const candidate = value as { type?: unknown; features?: unknown }
-  return candidate.type === 'FeatureCollection' && Array.isArray(candidate.features)
+  return (
+    candidate.type === 'FeatureCollection' && Array.isArray(candidate.features)
+  )
 }
 
-function isOsmPointCollection(value: unknown): value is OsmPointFeatureCollection {
+function isOsmPointCollection(
+  value: unknown,
+): value is OsmPointFeatureCollection {
   if (!value || typeof value !== 'object') return false
   const candidate = value as { type?: unknown; features?: unknown }
-  return candidate.type === 'FeatureCollection' && Array.isArray(candidate.features)
+  return (
+    candidate.type === 'FeatureCollection' && Array.isArray(candidate.features)
+  )
 }
 
 function pointCoordinates(
   feature: Feature<Geometry>,
 ): { latitude: number; longitude: number } | null {
   if (feature.geometry.type !== 'Point') return null
-  const [longitude, latitude] = (feature.geometry).coordinates
+  const [longitude, latitude] = feature.geometry.coordinates
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
   return { latitude, longitude }
 }
@@ -134,7 +140,9 @@ function candidatesFromOsmCollection(
   return candidates
 }
 
-function candidatesFromGeoNames(collection: GeoFeatureCollection): PlaceLookupCandidate[] {
+function candidatesFromGeoNames(
+  collection: GeoFeatureCollection,
+): PlaceLookupCandidate[] {
   const candidates: PlaceLookupCandidate[] = []
 
   for (const feature of collection.features) {

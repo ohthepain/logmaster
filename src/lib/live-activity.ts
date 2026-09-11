@@ -48,7 +48,10 @@ const ENTRY_SYMBOLS: Record<LogEntryType, string> = {
   VOICE_NOTE: 'waveform',
 }
 
-function byTimestampAscending(a: Pick<LogEntry, 'timestamp'>, b: Pick<LogEntry, 'timestamp'>) {
+function byTimestampAscending(
+  a: Pick<LogEntry, 'timestamp'>,
+  b: Pick<LogEntry, 'timestamp'>,
+) {
   return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
 }
 
@@ -62,7 +65,10 @@ function mostRecentEntryOfType(entries: LogEntry[], type: LogEntryType) {
 function firstExpectedLogWindow(trip: Trip, entries: LogEntry[]) {
   const previous =
     mostRecentEntryOfType(entries, 'HOURLY_LOG') ??
-    entries.filter((entry) => !entry.deleted).sort(byTimestampAscending).at(-1)
+    entries
+      .filter((entry) => !entry.deleted)
+      .sort(byTimestampAscending)
+      .at(-1)
   const previousLogAt = previous?.timestamp ?? trip.startedAt ?? trip.createdAt
   const previousTime = new Date(previousLogAt).getTime()
   return {
@@ -139,10 +145,7 @@ export function buildLiveActivitySnapshot(args: {
       .map((leg) => [leg.id, leg]),
   )
   const latestEntry = chronological.at(-1) ?? null
-  const { previousLogAt, nextLogAt } = firstExpectedLogWindow(
-    trip,
-    entries,
-  )
+  const { previousLogAt, nextLogAt } = firstExpectedLogWindow(trip, entries)
 
   return {
     tripId: trip.id,

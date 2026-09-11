@@ -1,7 +1,5 @@
 import { prisma } from '../db'
-import {
-  linkContactToMember,
-} from '../org-contacts'
+import { linkContactToMember } from '../org-contacts'
 import type { ConsortiumMemberRole } from './roles'
 
 const db = prisma as any
@@ -73,8 +71,7 @@ export async function assertCanChangeMemberRole(
   }
 
   const ownerCount = await countOwners(consortiumId)
-  const isLastOwner =
-    current.role === 'OWNER' && ownerCount <= 1
+  const isLastOwner = current.role === 'OWNER' && ownerCount <= 1
 
   if (isLastOwner && newRole !== 'OWNER') {
     return {

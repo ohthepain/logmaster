@@ -2,8 +2,16 @@ import { Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { toast } from 'sonner'
-import type { BoatAccountingSummary, BoatAsset, BoatPurchase } from '../domain/boat-assets'
-import { EXPENSE_CLAIM_STATUS_LABELS, formatMoney, TRANSACTION_TYPE_LABELS } from '../domain/org-accounting'
+import type {
+  BoatAccountingSummary,
+  BoatAsset,
+  BoatPurchase,
+} from '../domain/boat-assets'
+import {
+  EXPENSE_CLAIM_STATUS_LABELS,
+  formatMoney,
+  TRANSACTION_TYPE_LABELS,
+} from '../domain/org-accounting'
 import {
   createBoatPurchase,
   fetchBoatAccounting,
@@ -20,34 +28,41 @@ type BoatAccountingTabProps = {
 }
 
 export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
-  const [accounting, setAccounting] = useState<BoatAccountingSummary | null>(null)
+  const [accounting, setAccounting] = useState<BoatAccountingSummary | null>(
+    null,
+  )
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [purchaseOpen, setPurchaseOpen] = useState(false)
   const [claimOpen, setClaimOpen] = useState<BoatPurchase | null>(null)
 
-  const load = useCallback(async (opts?: { background?: boolean }) => {
-    if (opts?.background) setRefreshing(true)
-    else setLoading(true)
-    setError(null)
-    try {
-      const data = await fetchBoatAccounting(boatId)
-      setAccounting(data)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load accounting')
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }, [boatId])
+  const load = useCallback(
+    async (opts?: { background?: boolean }) => {
+      if (opts?.background) setRefreshing(true)
+      else setLoading(true)
+      setError(null)
+      try {
+        const data = await fetchBoatAccounting(boatId)
+        setAccounting(data)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load accounting')
+      } finally {
+        setLoading(false)
+        setRefreshing(false)
+      }
+    },
+    [boatId],
+  )
 
   useEffect(() => {
     void load()
   }, [load])
 
   if (loading) {
-    return <p className="text-sm text-[var(--sea-ink-soft)]">Loading accounting…</p>
+    return (
+      <p className="text-sm text-[var(--sea-ink-soft)]">Loading accounting…</p>
+    )
   }
 
   if (error || !accounting) {
@@ -80,7 +95,9 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
                   key={account.id}
                   className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4"
                 >
-                  <p className="m-0 text-sm text-[var(--sea-ink-soft)]">{account.name}</p>
+                  <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
+                    {account.name}
+                  </p>
                   <p className="m-0 mt-1 text-2xl font-bold text-[var(--sea-ink)]">
                     {formatMoney(account.currentBalance, account.currency)}
                   </p>
@@ -112,7 +129,9 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
           </button>
         </div>
         {accounting.purchases.length === 0 ? (
-          <p className="text-sm text-[var(--sea-ink-soft)]">No purchases recorded.</p>
+          <p className="text-sm text-[var(--sea-ink-soft)]">
+            No purchases recorded.
+          </p>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-3 p-0">
             {accounting.purchases.map((purchase) => (
@@ -140,7 +159,10 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
                 {purchase.lines.length > 0 ? (
                   <ul className="mt-3 list-none border-t border-[var(--line)] p-0 pt-3 text-sm">
                     {purchase.lines.map((line) => (
-                      <li key={line.id} className="flex justify-between gap-2 py-1">
+                      <li
+                        key={line.id}
+                        className="flex justify-between gap-2 py-1"
+                      >
                         <span>
                           {line.description}
                           {line.asset ? (
@@ -149,7 +171,9 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
                             </span>
                           ) : null}
                         </span>
-                        <span>{formatMoney(line.amount, purchase.currency)}</span>
+                        <span>
+                          {formatMoney(line.amount, purchase.currency)}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -174,7 +198,9 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
           <section>
             <h2 className="brand-title m-0 mb-3 text-xl">Expense claims</h2>
             {accounting.expenseClaims.length === 0 ? (
-              <p className="text-sm text-[var(--sea-ink-soft)]">No expense claims.</p>
+              <p className="text-sm text-[var(--sea-ink-soft)]">
+                No expense claims.
+              </p>
             ) : (
               <ul className="m-0 flex list-none flex-col gap-2 p-0 text-sm">
                 {accounting.expenseClaims.map((claim) => (
@@ -218,7 +244,9 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
                     <span
                       className={cn(
                         'font-semibold',
-                        Number(txn.amount) < 0 ? 'text-red-600' : 'text-green-700',
+                        Number(txn.amount) < 0
+                          ? 'text-red-600'
+                          : 'text-green-700',
                       )}
                     >
                       {formatMoney(txn.amount, txn.currency)}
@@ -302,7 +330,9 @@ function AddPurchaseModal({
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    void fetchBoatAssets(boatId).then(setAssets).catch(() => {})
+    void fetchBoatAssets(boatId)
+      .then(setAssets)
+      .catch(() => {})
   }, [boatId])
 
   return (
@@ -320,7 +350,9 @@ function AddPurchaseModal({
             try {
               await createBoatPurchase(boatId, {
                 supplierName: supplierName.trim() || null,
-                purchasedAt: purchasedAt ? `${purchasedAt}T12:00:00.000Z` : null,
+                purchasedAt: purchasedAt
+                  ? `${purchasedAt}T12:00:00.000Z`
+                  : null,
                 notes: notes.trim() || null,
                 currency,
                 lines: [
@@ -334,7 +366,9 @@ function AddPurchaseModal({
               toast.success('Purchase added')
               onCreated()
             } catch (e) {
-              toast.error(e instanceof Error ? e.message : 'Failed to add purchase')
+              toast.error(
+                e instanceof Error ? e.message : 'Failed to add purchase',
+              )
             } finally {
               setBusy(false)
             }

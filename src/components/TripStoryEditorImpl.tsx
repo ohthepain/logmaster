@@ -53,7 +53,9 @@ export function TripStoryEditorImpl({
       await onSave(html)
       toast.success('Story saved')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save story')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to save story',
+      )
     } finally {
       setSaving(false)
     }
@@ -180,10 +182,7 @@ export function TripStoryEditorImpl({
             aria-labelledby="reset-story-title"
             onClick={(event) => event.stopPropagation()}
           >
-            <p
-              id="reset-story-title"
-              className="text-sm text-[var(--sea-ink)]"
-            >
+            <p id="reset-story-title" className="text-sm text-[var(--sea-ink)]">
               Replace the current story with a fresh draft from this trip&apos;s
               log entries and media?
             </p>

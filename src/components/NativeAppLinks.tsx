@@ -20,7 +20,10 @@ function navigateToAppLink(rawUrl: string) {
   if (!ALLOWED_HOSTS.has(target.hostname)) return
 
   const next = `${target.pathname}${target.search}${target.hash}`
-  if (`${window.location.pathname}${window.location.search}${window.location.hash}` === next) {
+  if (
+    `${window.location.pathname}${window.location.search}${window.location.hash}` ===
+    next
+  ) {
     return
   }
   window.location.href = next.startsWith('/') ? next : target.toString()

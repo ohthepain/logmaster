@@ -47,7 +47,8 @@ function cullLabels(ticks: TimelineTick[]): TimelineTick[] {
     .map((tick, index) => ({ tick, index }))
     .filter(({ tick }) => tick.label)
     .sort((a, b) => {
-      if (a.tick.percent !== b.tick.percent) return a.tick.percent - b.tick.percent
+      if (a.tick.percent !== b.tick.percent)
+        return a.tick.percent - b.tick.percent
       return a.tick.kind === 'day' ? -1 : 1
     })
 
@@ -62,7 +63,9 @@ function cullLabels(ticks: TimelineTick[]): TimelineTick[] {
   }
 
   return ticks.map((tick, index) =>
-    dropLabel.has(index) ? { ...tick, label: null, kind: tick.kind === 'day' ? 'day' : 'minor' } : tick,
+    dropLabel.has(index)
+      ? { ...tick, label: null, kind: tick.kind === 'day' ? 'day' : 'minor' }
+      : tick,
   )
 }
 
@@ -73,7 +76,11 @@ export function computePlaybackTimelineTicks(
   const ticks: TimelineTick[] = []
   const seen = new Set<number>()
 
-  const addTick = (timeMs: number, kind: TimelineTickKind, label: string | null) => {
+  const addTick = (
+    timeMs: number,
+    kind: TimelineTickKind,
+    label: string | null,
+  ) => {
     if (timeMs < window.startMs || timeMs > window.endMs) return
     const key = Math.round(timeMs)
     if (seen.has(key)) return
@@ -95,7 +102,8 @@ export function computePlaybackTimelineTicks(
 
   const hourStep = chooseHourStep(window.durationMs)
   if (hourStep != null) {
-    const firstHour = Math.ceil((window.startMs - tripStartMs) / HOUR_MS / hourStep) * hourStep
+    const firstHour =
+      Math.ceil((window.startMs - tripStartMs) / HOUR_MS / hourStep) * hourStep
     for (
       let hour = firstHour;
       hour * HOUR_MS + tripStartMs <= window.endMs;
@@ -107,7 +115,11 @@ export function computePlaybackTimelineTicks(
     }
 
     if (hourStep > 1) {
-      for (let hour = firstHour; hour * HOUR_MS + tripStartMs <= window.endMs; hour += 1) {
+      for (
+        let hour = firstHour;
+        hour * HOUR_MS + tripStartMs <= window.endMs;
+        hour += 1
+      ) {
         const timeMs = tripStartMs + hour * HOUR_MS
         if (hour <= 0 || isDayBoundary(timeMs, tripStartMs)) continue
         if (hour % hourStep === 0) continue

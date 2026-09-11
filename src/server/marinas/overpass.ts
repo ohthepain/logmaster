@@ -63,19 +63,22 @@ function marinaName(tags: Record<string, string>): string | null {
 export function overpassElementToMarina(
   element: OverpassElement,
 ): MarinaFeature | null {
-  if (element.type !== 'node' && element.type !== 'way' && element.type !== 'relation') {
+  if (
+    element.type !== 'node' &&
+    element.type !== 'way' &&
+    element.type !== 'relation'
+  ) {
     return null
   }
 
-  const lat =
-    element.lat ??
-    element.center?.lat ??
-    null
-  const lon =
-    element.lon ??
-    element.center?.lon ??
-    null
-  if (lat == null || lon == null || !Number.isFinite(lat) || !Number.isFinite(lon)) {
+  const lat = element.lat ?? element.center?.lat ?? null
+  const lon = element.lon ?? element.center?.lon ?? null
+  if (
+    lat == null ||
+    lon == null ||
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lon)
+  ) {
     return null
   }
 
@@ -197,7 +200,10 @@ function isConnectionError(error: unknown): boolean {
         return true
       }
     }
-    if ('errors' in cause && Array.isArray((cause as { errors?: unknown[] }).errors)) {
+    if (
+      'errors' in cause &&
+      Array.isArray((cause as { errors?: unknown[] }).errors)
+    ) {
       return (cause as { errors: unknown[] }).errors.some(isConnectionError)
     }
   }
@@ -243,7 +249,8 @@ async function fetchOverpassOnce(
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       Accept: 'application/json',
-      'User-Agent': 'logmaster/1.0 (map tile builder; contact: admin@logmaster.live)',
+      'User-Agent':
+        'logmaster/1.0 (map tile builder; contact: admin@logmaster.live)',
     },
     body: new URLSearchParams({ data: query }),
     signal,
@@ -254,7 +261,9 @@ async function fetchOverpassOnce(
     if (isRetryableOverpassStatus(response.status)) {
       throw new Error(`Overpass ${response.status}: ${text.slice(0, 240)}`)
     }
-    throw new Error(`Overpass failed (${response.status}): ${text.slice(0, 240)}`)
+    throw new Error(
+      `Overpass failed (${response.status}): ${text.slice(0, 240)}`,
+    )
   }
 
   let payload: OverpassResponse
@@ -375,7 +384,12 @@ async function fetchElementsForCellRecursive(
     const elements: OverpassElement[] = []
     for (const part of parts) {
       elements.push(
-        ...(await fetchElementsForCellRecursive(part, queryForCell, cellSlot, depth + 1)),
+        ...(await fetchElementsForCellRecursive(
+          part,
+          queryForCell,
+          cellSlot,
+          depth + 1,
+        )),
       )
       await sleep(500)
     }
@@ -607,7 +621,9 @@ export async function fetchOverpassElementsForCells(
       .filter((outcome) => outcome.error)
       .map((outcome) => outcome.item)
 
-    if (!shouldScheduleAnotherRetryPass(pass, pending.length, passSuccessCount)) {
+    if (
+      !shouldScheduleAnotherRetryPass(pass, pending.length, passSuccessCount)
+    ) {
       break
     }
     pass += 1
@@ -716,7 +732,9 @@ export async function fetchMarinasForCells(
       .filter((outcome) => outcome.error)
       .map((outcome) => outcome.item)
 
-    if (!shouldScheduleAnotherRetryPass(pass, pending.length, passSuccessCount)) {
+    if (
+      !shouldScheduleAnotherRetryPass(pass, pending.length, passSuccessCount)
+    ) {
       break
     }
     pass += 1

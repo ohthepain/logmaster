@@ -50,7 +50,9 @@ export function DevTripReplayController() {
         options.setRecordingTripId(null)
       }
       clearDevPositionOverride()
-      toast.error('Trip replay stopped because one of its trips is unavailable.')
+      toast.error(
+        'Trip replay stopped because one of its trips is unavailable.',
+      )
       return
     }
 
@@ -103,7 +105,10 @@ export function DevTripReplayController() {
             .map((entry) => entry.data?.replaySourceEntryId)
             .filter((id): id is string => typeof id === 'string'),
         )
-        const dueEntries = replaySourceEntries(sourceEntries, sourceTrip.id).filter(
+        const dueEntries = replaySourceEntries(
+          sourceEntries,
+          sourceTrip.id,
+        ).filter(
           (entry) =>
             entry.type !== 'START_TRIP' &&
             replayEntryElapsedMs(entry, sourceTrip.startedAt) <= elapsedMs &&

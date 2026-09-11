@@ -34,9 +34,13 @@ describe('logEntryMapIconKind', () => {
     expect(logEntryMapIconKind(entry({ type: 'MOORED' }))).toBe('moored')
     expect(logEntryMapIconKind(entry({ type: 'CAST_OFF' }))).toBe('unmoored')
     expect(logEntryMapIconKind(entry({ type: 'SAILS_UP' }))).toBe('sails-up')
-    expect(logEntryMapIconKind(entry({ type: 'SAILS_DOWN' }))).toBe('sails-down')
+    expect(logEntryMapIconKind(entry({ type: 'SAILS_DOWN' }))).toBe(
+      'sails-down',
+    )
     expect(logEntryMapIconKind(entry({ type: 'ENGINE_ON' }))).toBe('engine-on')
-    expect(logEntryMapIconKind(entry({ type: 'ENGINE_OFF' }))).toBe('engine-off')
+    expect(logEntryMapIconKind(entry({ type: 'ENGINE_OFF' }))).toBe(
+      'engine-off',
+    )
     expect(logEntryMapIconKind(entry({ type: 'PHOTO' }))).toBe('photo')
     expect(logEntryMapIconKind(entry({ type: 'MEDIA' }))).toBe('media-photo')
     expect(
@@ -46,7 +50,9 @@ describe('logEntryMapIconKind', () => {
     ).toBe('media-video')
     expect(logEntryMapIconKind(entry({ type: 'VOICE_NOTE' }))).toBe('voice')
     expect(logEntryMapIconKind(entry({ type: 'NOTE' }))).toBe('note')
-    expect(logEntryMapIconKind(entry({ type: 'HOURLY_LOG' }))).toBe('hourly-log')
+    expect(logEntryMapIconKind(entry({ type: 'HOURLY_LOG' }))).toBe(
+      'hourly-log',
+    )
   })
 
   it('uses a compass icon for direction-change auto entries', () => {

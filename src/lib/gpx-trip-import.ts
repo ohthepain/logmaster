@@ -9,10 +9,7 @@ import {
   encodeScalarTrackSamples,
   encodingForTrackKind,
 } from '../domain/trip-track'
-import {
-  GPX_MS_TO_KNOTS,
-  gpxTrackKindForField,
-} from './gpx-field-meta'
+import { GPX_MS_TO_KNOTS, gpxTrackKindForField } from './gpx-field-meta'
 import {
   GPX_IMPORT_SOURCE,
   discoverGpxScalarFieldKeys,
@@ -22,13 +19,14 @@ import {
   gpxScalarSamplesForField,
   nearestTrackPointTime,
   parseAndMergeGpx,
-  parseGpxRaw
-  
-  
-  
-  
+  parseGpxRaw,
 } from './gpx-import'
-import type {GpxImportFile, GpxTrackPoint, GpxTrackSegment, GpxWaypoint} from './gpx-import';
+import type {
+  GpxImportFile,
+  GpxTrackPoint,
+  GpxTrackSegment,
+  GpxWaypoint,
+} from './gpx-import'
 import { generateLegColor } from './leg-colors'
 
 function makeId() {
@@ -202,7 +200,10 @@ function buildScalarTripTrack(
   }
 }
 
-function buildGpxImportScalarTracks(tripId: string, points: GpxTrackPoint[]): TripTrack[] {
+function buildGpxImportScalarTracks(
+  tripId: string,
+  points: GpxTrackPoint[],
+): TripTrack[] {
   const tracks: TripTrack[] = []
 
   const sogSamples = gpxScalarSamplesForField(
@@ -217,7 +218,9 @@ function buildGpxImportScalarTracks(tripId: string, points: GpxTrackPoint[]): Tr
   for (const fieldKey of discoverGpxScalarFieldKeys(points)) {
     const samples = gpxScalarSamplesForField(points, fieldKey)
     if (samples.length < 2) continue
-    tracks.push(buildScalarTripTrack(tripId, gpxTrackKindForField(fieldKey), samples))
+    tracks.push(
+      buildScalarTripTrack(tripId, gpxTrackKindForField(fieldKey), samples),
+    )
   }
 
   return tracks
@@ -277,7 +280,11 @@ export function buildTripFromGpxFiles(
 
   const parsed = parseAndMergeGpx(files)
   const { startedAt, completedAt } = gpxImportSummary(parsed)
-  const boatName = gpxImportBoatName(parsed, primaryGpxFileName(files), options?.boatName)
+  const boatName = gpxImportBoatName(
+    parsed,
+    primaryGpxFileName(files),
+    options?.boatName,
+  )
   const tripId = makeId()
   const now = nowIso()
   const firstPoint = parsed.points[0]

@@ -3,10 +3,7 @@ import {
   BUILD_GEO_FEATURES_QUEUE,
   handleBuildGeoFeaturesBatches,
 } from './geo-features'
-import {
-  BUILD_MARINAS_QUEUE,
-  handleBuildMarinasBatches,
-} from './marinas'
+import { BUILD_MARINAS_QUEUE, handleBuildMarinasBatches } from './marinas'
 import {
   BUILD_OSM_POINTS_QUEUE,
   handleBuildOsmPointsBatches,

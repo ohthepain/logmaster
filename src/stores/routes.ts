@@ -5,14 +5,10 @@ import type {
   RouteMedia,
   RouteWaypoint,
 } from '../domain/route'
-import { buildRouteFromGpxFiles  } from '../lib/gpx-route-import'
-import type {GpxImportedRoute} from '../lib/gpx-route-import';
-import {
-  GpxImportError,
-  partitionGpxImportFiles
-  
-} from '../lib/gpx-import'
-import type {GpxImportFile} from '../lib/gpx-import';
+import { buildRouteFromGpxFiles } from '../lib/gpx-route-import'
+import type { GpxImportedRoute } from '../lib/gpx-route-import'
+import { GpxImportError, partitionGpxImportFiles } from '../lib/gpx-import'
+import type { GpxImportFile } from '../lib/gpx-import'
 import {
   addPendingRouteId,
   addPendingDeletedRouteId,
@@ -55,7 +51,10 @@ export type AddRouteWaypointInput = {
 }
 
 export type UpdateRouteWaypointInput = Partial<
-  Pick<RouteWaypoint, 'latitude' | 'longitude' | 'name' | 'description' | 'symbol'>
+  Pick<
+    RouteWaypoint,
+    'latitude' | 'longitude' | 'name' | 'description' | 'symbol'
+  >
 >
 
 type RoutesState = {
@@ -109,7 +108,11 @@ function sortWaypoints(waypoints: RouteWaypoint[]) {
 async function touchRouteUpdatedAt(
   routeId: string,
   get: () => RoutesState,
-  set: (partial: Partial<RoutesState> | ((state: RoutesState) => Partial<RoutesState>)) => void,
+  set: (
+    partial:
+      | Partial<RoutesState>
+      | ((state: RoutesState) => Partial<RoutesState>),
+  ) => void,
 ) {
   const now = nowIso()
   const route = get().routes.find((item) => item.id === routeId)
@@ -129,7 +132,11 @@ async function persistRouteWaypoints(
   routeId: string,
   nextWaypoints: RouteWaypoint[],
   get: () => RoutesState,
-  set: (partial: Partial<RoutesState> | ((state: RoutesState) => Partial<RoutesState>)) => void,
+  set: (
+    partial:
+      | Partial<RoutesState>
+      | ((state: RoutesState) => Partial<RoutesState>),
+  ) => void,
 ) {
   await Promise.all(nextWaypoints.map((waypoint) => putRouteWaypoint(waypoint)))
   await touchRouteUpdatedAt(routeId, get, set)
@@ -155,10 +162,13 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
     set({
       booted: true,
       routes: snapshot.routes.sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       ),
       waypoints: sortWaypoints(snapshot.waypoints),
-      annotations: snapshot.annotations.filter((annotation) => !annotation.deleted),
+      annotations: snapshot.annotations.filter(
+        (annotation) => !annotation.deleted,
+      ),
       routeMedia: snapshot.routeMedia,
     })
   },
@@ -186,7 +196,8 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
     addPendingRouteId(route.id)
     set((state) => ({
       routes: [route, ...state.routes].sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       ),
     }))
 
@@ -201,11 +212,13 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
       ...current,
       ...patch,
       title:
-        patch.title !== undefined ? patch.title.trim() || 'Route' : current.title,
+        patch.title !== undefined
+          ? patch.title.trim() || 'Route'
+          : current.title,
       description:
         patch.description !== undefined
           ? patch.description?.trim() || null
-          : current.description ?? null,
+          : (current.description ?? null),
       updatedAt: nowIso(),
       synced: false,
     }
@@ -213,7 +226,9 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
     await putRoute(next)
     addPendingRouteId(routeId)
     set((state) => ({
-      routes: state.routes.map((route) => (route.id === routeId ? next : route)),
+      routes: state.routes.map((route) =>
+        route.id === routeId ? next : route,
+      ),
     }))
   },
 
@@ -242,7 +257,8 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
           (route) => !imported.some((item) => item.route.id === route.id),
         ),
       ].sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       ),
       waypoints: sortWaypoints([
         ...imported.flatMap((item) => item.waypoints),
@@ -266,7 +282,9 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
     const route = get().routes.find((item) => item.id === routeId)
     if (!route) throw new Error('Route not found')
 
-    const ordered = sortWaypointsBySequence(routeWaypointsForRoute(routeId, get().waypoints))
+    const ordered = sortWaypointsBySequence(
+      routeWaypointsForRoute(routeId, get().waypoints),
+    )
     let insertIndex = ordered.length
     if (input.insertAfterSequence != null) {
       const afterIndex = ordered.findIndex(
@@ -299,7 +317,9 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
   },
 
   updateRouteWaypoint: async (waypointId, patch) => {
-    const current = get().waypoints.find((waypoint) => waypoint.id === waypointId)
+    const current = get().waypoints.find(
+      (waypoint) => waypoint.id === waypointId,
+    )
     if (!current) return null
 
     const now = nowIso()
@@ -307,12 +327,16 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
       ...current,
       latitude: patch.latitude ?? current.latitude,
       longitude: patch.longitude ?? current.longitude,
-      name: patch.name !== undefined ? patch.name?.trim() || null : current.name,
+      name:
+        patch.name !== undefined ? patch.name?.trim() || null : current.name,
       description:
         patch.description !== undefined
           ? patch.description?.trim() || null
           : current.description,
-      symbol: patch.symbol !== undefined ? patch.symbol?.trim() || null : current.symbol,
+      symbol:
+        patch.symbol !== undefined
+          ? patch.symbol?.trim() || null
+          : current.symbol,
       updatedAt: now,
       synced: false,
     }
@@ -321,7 +345,9 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
     await touchRouteUpdatedAt(current.routeId, get, set)
     set((state) => ({
       waypoints: sortWaypoints(
-        state.waypoints.map((waypoint) => (waypoint.id === waypointId ? next : waypoint)),
+        state.waypoints.map((waypoint) =>
+          waypoint.id === waypointId ? next : waypoint,
+        ),
       ),
     }))
 
@@ -329,22 +355,26 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
   },
 
   deleteRouteWaypointById: async (waypointId) => {
-    const current = get().waypoints.find((waypoint) => waypoint.id === waypointId)
+    const current = get().waypoints.find(
+      (waypoint) => waypoint.id === waypointId,
+    )
     if (!current) return
 
     await deleteRouteWaypoint(waypointId)
-    const siblings = routeWaypointsForRoute(current.routeId, get().waypoints).filter(
-      (waypoint) => waypoint.id !== waypointId,
-    )
+    const siblings = routeWaypointsForRoute(
+      current.routeId,
+      get().waypoints,
+    ).filter((waypoint) => waypoint.id !== waypointId)
     const nextWaypoints = normalizeWaypointSequences(siblings)
     await persistRouteWaypoints(current.routeId, nextWaypoints, get, set)
   },
 
   reorderRouteWaypoints: async (routeId, orderedWaypointIds) => {
     const siblings = routeWaypointsForRoute(routeId, get().waypoints)
-    const nextWaypoints = reorderWaypointsByIds(siblings, orderedWaypointIds).map(
-      (waypoint) => ({ ...waypoint, updatedAt: nowIso(), synced: false }),
-    )
+    const nextWaypoints = reorderWaypointsByIds(
+      siblings,
+      orderedWaypointIds,
+    ).map((waypoint) => ({ ...waypoint, updatedAt: nowIso(), synced: false }))
     await persistRouteWaypoints(routeId, nextWaypoints, get, set)
     return nextWaypoints
   },
@@ -355,7 +385,10 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
     }
 
     const targetRoute = get().routes.find((item) => item.id === targetRouteId)
-    const sourceWaypoints = routeWaypointsForRoute(sourceRouteId, get().waypoints)
+    const sourceWaypoints = routeWaypointsForRoute(
+      sourceRouteId,
+      get().waypoints,
+    )
     if (!targetRoute) throw new Error('Route not found')
     if (sourceWaypoints.length === 0) {
       throw new Error('Source route has no waypoints.')
@@ -366,7 +399,11 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
       existing.length === 0
         ? 0
         : Math.max(...existing.map((waypoint) => waypoint.sequence)) + 1
-    const copied = copyWaypointsToRoute(sourceWaypoints, targetRouteId, startSequence)
+    const copied = copyWaypointsToRoute(
+      sourceWaypoints,
+      targetRouteId,
+      startSequence,
+    )
     const nextWaypoints = sortWaypoints([...existing, ...copied])
     await persistRouteWaypoints(targetRouteId, nextWaypoints, get, set)
     return copied
@@ -402,7 +439,8 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
 
     set((state) => ({
       annotations: [...state.annotations, annotation].sort(
-        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        (a, b) =>
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       ),
       routes: state.routes.map((item) =>
         item.id === routeId ? { ...item, updatedAt: now, synced: false } : item,
@@ -413,11 +451,15 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
   },
 
   deleteRoute: async (routeId) => {
-    const waypoints = get().waypoints.filter((waypoint) => waypoint.routeId === routeId)
+    const waypoints = get().waypoints.filter(
+      (waypoint) => waypoint.routeId === routeId,
+    )
     const annotations = get().annotations.filter(
       (annotation) => annotation.routeId === routeId,
     )
-    const annotationIds = new Set(annotations.map((annotation) => annotation.id))
+    const annotationIds = new Set(
+      annotations.map((annotation) => annotation.id),
+    )
     const media = get().routeMedia.filter((item) =>
       annotationIds.has(item.annotationId),
     )
@@ -433,7 +475,9 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
 
     set((state) => ({
       routes: state.routes.filter((route) => route.id !== routeId),
-      waypoints: state.waypoints.filter((waypoint) => waypoint.routeId !== routeId),
+      waypoints: state.waypoints.filter(
+        (waypoint) => waypoint.routeId !== routeId,
+      ),
       annotations: state.annotations.filter(
         (annotation) => annotation.routeId !== routeId,
       ),
@@ -442,7 +486,9 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
       ),
       selectedRouteId:
         state.selectedRouteId === routeId ? null : state.selectedRouteId,
-      autoMapCoverRouteIds: state.autoMapCoverRouteIds.filter((id) => id !== routeId),
+      autoMapCoverRouteIds: state.autoMapCoverRouteIds.filter(
+        (id) => id !== routeId,
+      ),
     }))
   },
 
@@ -456,7 +502,9 @@ export const useRoutesStore = create<RoutesState>((set, get) => ({
 
   clearAutoMapCoverRequest: (routeId) => {
     set((state) => ({
-      autoMapCoverRouteIds: state.autoMapCoverRouteIds.filter((id) => id !== routeId),
+      autoMapCoverRouteIds: state.autoMapCoverRouteIds.filter(
+        (id) => id !== routeId,
+      ),
     }))
   },
 }))
@@ -465,7 +513,9 @@ export function routeWaypointsForRoute(
   routeId: string,
   waypoints: RouteWaypoint[],
 ): RouteWaypoint[] {
-  return sortWaypoints(waypoints.filter((waypoint) => waypoint.routeId === routeId))
+  return sortWaypoints(
+    waypoints.filter((waypoint) => waypoint.routeId === routeId),
+  )
 }
 
 export function routeAnnotationsForRoute(

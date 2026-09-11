@@ -108,9 +108,7 @@ export async function processNotificationPushJob(
   })
 }
 
-export async function registerNotificationWorkers(
-  boss: PgBoss,
-): Promise<void> {
+export async function registerNotificationWorkers(boss: PgBoss): Promise<void> {
   await boss.createQueue(SEND_NOTIFICATION_EMAIL_QUEUE)
   await boss.createQueue(SEND_NOTIFICATION_PUSH_QUEUE)
 
@@ -119,7 +117,9 @@ export async function registerNotificationWorkers(
     { localConcurrency: 2, batchSize: 1 },
     async (jobs) => {
       for (const job of jobs) {
-        await processNotificationEmailJob(job.data as NotificationEmailJobPayload)
+        await processNotificationEmailJob(
+          job.data as NotificationEmailJobPayload,
+        )
       }
     },
   )

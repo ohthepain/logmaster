@@ -72,7 +72,9 @@ export function JobConsoleLog({
         setLoadError(null)
         return
       }
-      setLoadError(error instanceof Error ? error.message : 'Failed to load log')
+      setLoadError(
+        error instanceof Error ? error.message : 'Failed to load log',
+      )
     }
   }, [jobId, output])
 
@@ -88,8 +90,7 @@ export function JobConsoleLog({
 
   const progress = parseMarinaJobProgress(log ?? '')
   const logComplete = progress.complete
-  const isRunning =
-    !logComplete && RUNNING_STATES.has(jobState)
+  const isRunning = !logComplete && RUNNING_STATES.has(jobState)
   const progressLabel = queue?.includes('marina')
     ? formatMarinaJobProgress(progress)
     : null
@@ -113,7 +114,8 @@ export function JobConsoleLog({
   const handleScroll = () => {
     const node = scrollRef.current
     if (!node) return
-    const distanceFromBottom = node.scrollHeight - node.scrollTop - node.clientHeight
+    const distanceFromBottom =
+      node.scrollHeight - node.scrollTop - node.clientHeight
     stickToBottomRef.current = distanceFromBottom < 48
   }
 
@@ -157,7 +159,9 @@ export function JobConsoleLog({
         ) : null}
       </div>
       {loadError ? (
-        <p className="m-0 shrink-0 px-3 py-2 text-xs text-[#ff7b72]">{loadError}</p>
+        <p className="m-0 shrink-0 px-3 py-2 text-xs text-[#ff7b72]">
+          {loadError}
+        </p>
       ) : null}
       <div
         ref={scrollRef}
@@ -168,7 +172,9 @@ export function JobConsoleLog({
           <p className="m-0 text-[#8b949e]">Loading log…</p>
         ) : lines.length === 0 || (lines.length === 1 && !lines[0]?.trim()) ? (
           <p className="m-0 text-[#8b949e]">
-            {isRunning ? 'Waiting for output…' : 'No console output recorded for this run.'}
+            {isRunning
+              ? 'Waiting for output…'
+              : 'No console output recorded for this run.'}
           </p>
         ) : (
           lines.map((line, index) => (

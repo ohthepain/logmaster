@@ -1,6 +1,6 @@
 import maplibregl from 'maplibre-gl'
-import { useEffect, useMemo, useRef  } from 'react'
-import type {RefObject} from 'react';
+import { useEffect, useMemo, useRef } from 'react'
+import type { RefObject } from 'react'
 import { resolveMapDataLayerToggles } from './map-data-layers'
 import type { MapDataLayerToggles } from './map-data-layers'
 import { formatMapFeaturePopupHtml } from './osm-feature-display'
@@ -10,7 +10,10 @@ import {
   bindMapDataLayerRefreshOnViewChange,
   refreshMapDataLayersForViewport,
 } from './maplibre-data-layers'
-import { bindOpenSeaMapContoursImageRefresh, refreshOpenSeaMapContoursImage } from './maplibre-openseamap-viewport-layers'
+import {
+  bindOpenSeaMapContoursImageRefresh,
+  refreshOpenSeaMapContoursImage,
+} from './maplibre-openseamap-viewport-layers'
 import { reloadSeamarkTiles } from './maplibre-sailing-map-setup'
 import { syncAisMapLayerForViewport } from './use-ais-map-layer'
 
@@ -35,10 +38,7 @@ export async function syncMapDataLayersForViewport(
   if (toggles['openseamap-raster']) {
     reloadSeamarkTiles(map)
   }
-  refreshOpenSeaMapContoursImage(
-    map,
-    toggles['openseamap-bathymetry-contours'],
-  )
+  refreshOpenSeaMapContoursImage(map, toggles['openseamap-bathymetry-contours'])
   await refreshMapDataLayersForViewport(map, toggles)
 }
 

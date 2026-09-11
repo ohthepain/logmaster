@@ -24,7 +24,8 @@ export function RouteTripCopyModal({
   const sortedTrips = useMemo(
     () =>
       [...trips].sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       ),
     [trips],
   )
@@ -39,11 +40,16 @@ export function RouteTripCopyModal({
       devComponentName="RouteTripCopyModal"
     >
       <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-        Copy waypoints from <span className="font-semibold text-[var(--sea-ink)]">{routeTitle}</span>{' '}
+        Copy waypoints from{' '}
+        <span className="font-semibold text-[var(--sea-ink)]">
+          {routeTitle}
+        </span>{' '}
         into a trip log.
       </p>
       {sortedTrips.length === 0 ? (
-        <p className="mt-4 mb-0 text-sm text-[var(--sea-ink-soft)]">No trips available.</p>
+        <p className="mt-4 mb-0 text-sm text-[var(--sea-ink-soft)]">
+          No trips available.
+        </p>
       ) : (
         <ul className="mt-4 max-h-72 space-y-2 overflow-y-auto">
           {sortedTrips.map((trip) => (
@@ -93,7 +99,8 @@ export function RouteSourceCopyModal({
       routes
         .filter((route) => route.id !== currentRouteId)
         .sort(
-          (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+          (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
         ),
     [routes, currentRouteId],
   )
@@ -109,7 +116,10 @@ export function RouteSourceCopyModal({
     >
       <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
         Append waypoints from another route onto{' '}
-        <span className="font-semibold text-[var(--sea-ink)]">{targetRouteTitle}</span>.
+        <span className="font-semibold text-[var(--sea-ink)]">
+          {targetRouteTitle}
+        </span>
+        .
       </p>
       {sources.length === 0 ? (
         <p className="mt-4 mb-0 text-sm text-[var(--sea-ink-soft)]">
@@ -125,7 +135,9 @@ export function RouteSourceCopyModal({
                 onClick={() => onSelect(route.id)}
                 className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] px-3 py-2.5 text-left transition hover:bg-[var(--chip-bg)] disabled:opacity-60"
               >
-                <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">{route.title}</p>
+                <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
+                  {route.title}
+                </p>
               </button>
             </li>
           ))}
@@ -155,7 +167,8 @@ export function PlannedRoutePickerModal({
   const sortedRoutes = useMemo(
     () =>
       [...routes].sort(
-        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       ),
     [routes],
   )
@@ -180,7 +193,9 @@ export function PlannedRoutePickerModal({
             onClick={() => onSelect(null)}
             className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] px-3 py-2.5 text-left transition hover:bg-[var(--chip-bg)] disabled:opacity-60"
           >
-            <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">Hide overlay</p>
+            <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
+              Hide overlay
+            </p>
           </button>
         </li>
         {sortedRoutes.map((route) => (
@@ -196,7 +211,9 @@ export function PlannedRoutePickerModal({
                   : 'border-[var(--line)] bg-[var(--surface-strong)]',
               ].join(' ')}
             >
-              <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">{route.title}</p>
+              <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
+                {route.title}
+              </p>
             </button>
           </li>
         ))}

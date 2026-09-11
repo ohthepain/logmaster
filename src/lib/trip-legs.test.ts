@@ -37,7 +37,11 @@ function entry(
 describe('rebuildLegsForTrip', () => {
   it('creates a single leg for a simple trip', () => {
     const entries = [
-      entry({ id: 'e1', type: 'START_TRIP', timestamp: '2026-01-01T10:00:00Z' }),
+      entry({
+        id: 'e1',
+        type: 'START_TRIP',
+        timestamp: '2026-01-01T10:00:00Z',
+      }),
       entry({ id: 'e2', type: 'NOTE', timestamp: '2026-01-01T11:00:00Z' }),
     ]
     const { legs, entries: out } = rebuildLegsForTrip('trip-1', entries, [])
@@ -47,8 +51,16 @@ describe('rebuildLegsForTrip', () => {
 
   it('starts a new leg on cast off', () => {
     const entries = [
-      entry({ id: 'e1', type: 'START_TRIP', timestamp: '2026-01-01T10:00:00Z' }),
-      entry({ id: 'e2', type: 'ANCHOR_DROPPED', timestamp: '2026-01-01T12:00:00Z' }),
+      entry({
+        id: 'e1',
+        type: 'START_TRIP',
+        timestamp: '2026-01-01T10:00:00Z',
+      }),
+      entry({
+        id: 'e2',
+        type: 'ANCHOR_DROPPED',
+        timestamp: '2026-01-01T12:00:00Z',
+      }),
       entry({ id: 'e3', type: 'CAST_OFF', timestamp: '2026-01-02T08:00:00Z' }),
       entry({ id: 'e4', type: 'NOTE', timestamp: '2026-01-02T09:00:00Z' }),
     ]
@@ -63,9 +75,21 @@ describe('rebuildLegsForTrip', () => {
 
   it('starts a new leg on anchor weighed after stopping', () => {
     const entries = [
-      entry({ id: 'e1', type: 'START_TRIP', timestamp: '2026-01-01T10:00:00Z' }),
-      entry({ id: 'e2', type: 'ANCHOR_DROPPED', timestamp: '2026-01-01T18:00:00Z' }),
-      entry({ id: 'e3', type: 'ANCHOR_WEIGHED', timestamp: '2026-01-02T08:00:00Z' }),
+      entry({
+        id: 'e1',
+        type: 'START_TRIP',
+        timestamp: '2026-01-01T10:00:00Z',
+      }),
+      entry({
+        id: 'e2',
+        type: 'ANCHOR_DROPPED',
+        timestamp: '2026-01-01T18:00:00Z',
+      }),
+      entry({
+        id: 'e3',
+        type: 'ANCHOR_WEIGHED',
+        timestamp: '2026-01-02T08:00:00Z',
+      }),
     ]
     const { legs } = rebuildLegsForTrip('trip-1', entries, [])
     expect(legs).toHaveLength(2)
@@ -76,12 +100,28 @@ describe('rebuildLegsForTrip', () => {
 
   it('does not start a leg for hourly logs while stopped overnight', () => {
     const entries = [
-      entry({ id: 'e1', type: 'START_TRIP', timestamp: '2026-01-01T10:00:00Z' }),
+      entry({
+        id: 'e1',
+        type: 'START_TRIP',
+        timestamp: '2026-01-01T10:00:00Z',
+      }),
       entry({ id: 'e2', type: 'MOORED', timestamp: '2026-01-01T18:00:00Z' }),
-      entry({ id: 'e3', type: 'HOURLY_LOG', timestamp: '2026-01-01T19:00:00Z' }),
-      entry({ id: 'e4', type: 'HOURLY_LOG', timestamp: '2026-01-02T00:00:00Z' }),
+      entry({
+        id: 'e3',
+        type: 'HOURLY_LOG',
+        timestamp: '2026-01-01T19:00:00Z',
+      }),
+      entry({
+        id: 'e4',
+        type: 'HOURLY_LOG',
+        timestamp: '2026-01-02T00:00:00Z',
+      }),
       entry({ id: 'e5', type: 'CAST_OFF', timestamp: '2026-01-02T08:00:00Z' }),
-      entry({ id: 'e6', type: 'HOURLY_LOG', timestamp: '2026-01-02T09:00:00Z' }),
+      entry({
+        id: 'e6',
+        type: 'HOURLY_LOG',
+        timestamp: '2026-01-02T09:00:00Z',
+      }),
     ]
     const { legs, entries: out } = rebuildLegsForTrip('trip-1', entries, [])
 
@@ -126,8 +166,18 @@ describe('mergeLegs', () => {
       },
     ]
     const entries = [
-      entry({ id: 'e1', type: 'START_TRIP', timestamp: '2026-01-01T10:00:00Z', legId: 'leg-1' }),
-      entry({ id: 'e3', type: 'CAST_OFF', timestamp: '2026-01-02T08:00:00Z', legId: 'leg-2' }),
+      entry({
+        id: 'e1',
+        type: 'START_TRIP',
+        timestamp: '2026-01-01T10:00:00Z',
+        legId: 'leg-1',
+      }),
+      entry({
+        id: 'e3',
+        type: 'CAST_OFF',
+        timestamp: '2026-01-02T08:00:00Z',
+        legId: 'leg-2',
+      }),
     ]
     const result = mergeLegs('leg-1', 'leg-2', legs, entries)
     expect(result).not.toBeNull()
@@ -187,7 +237,15 @@ describe('legEndpointPlaceLabels', () => {
         type: 'CAST_OFF',
         timestamp: '2026-01-01T10:00:00Z',
         legId: 'leg-1',
-        data: { place: { name: 'Cowes', detail: null, kind: 'town', source: 'geonames', distanceM: 10 } },
+        data: {
+          place: {
+            name: 'Cowes',
+            detail: null,
+            kind: 'town',
+            source: 'geonames',
+            distanceM: 10,
+          },
+        },
       }),
       entry({
         id: 'e2',
@@ -200,7 +258,15 @@ describe('legEndpointPlaceLabels', () => {
         type: 'MOORED',
         timestamp: '2026-01-01T18:00:00Z',
         legId: 'leg-1',
-        data: { place: { name: 'Portsmouth', detail: null, kind: 'town', source: 'geonames', distanceM: 12 } },
+        data: {
+          place: {
+            name: 'Portsmouth',
+            detail: null,
+            kind: 'town',
+            source: 'geonames',
+            distanceM: 12,
+          },
+        },
       }),
     ]
 
@@ -208,7 +274,9 @@ describe('legEndpointPlaceLabels', () => {
       from: 'Cowes',
       to: 'Portsmouth',
     })
-    expect(formatLegRouteLabel('Cowes', 'Portsmouth')).toBe('Cowes → Portsmouth')
+    expect(formatLegRouteLabel('Cowes', 'Portsmouth')).toBe(
+      'Cowes → Portsmouth',
+    )
     expect(entryPlaceLabel(entries[1])).toBeNull()
   })
 })

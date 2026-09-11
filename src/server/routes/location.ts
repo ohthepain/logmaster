@@ -109,7 +109,11 @@ locationRoutes.get('/place', async (c) => {
     return c.json({ error: 'latitude and longitude are required' }, 400)
   }
 
-  const maxDistanceM = parseCoordinate(c.req.query('maxDistanceM'), 100, 200_000)
+  const maxDistanceM = parseCoordinate(
+    c.req.query('maxDistanceM'),
+    100,
+    200_000,
+  )
   const place = await reverseLookupPlaceFromTiles(latitude, longitude, {
     maxDistanceM: maxDistanceM ?? undefined,
   })

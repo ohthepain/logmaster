@@ -36,10 +36,7 @@ export function defaultShareLabel(sequence: number): string {
   return `Share ${sequence + 1}`
 }
 
-export function compareShareOwners(
-  a: ShareOwnerRow,
-  b: ShareOwnerRow,
-): number {
+export function compareShareOwners(a: ShareOwnerRow, b: ShareOwnerRow): number {
   const name = a.user.name.localeCompare(b.user.name, undefined, {
     sensitivity: 'base',
   })

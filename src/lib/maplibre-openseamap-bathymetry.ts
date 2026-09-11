@@ -1,9 +1,13 @@
 import { getAppOrigin } from './app-origin'
 
-export const OPEN_SEAMAP_BATHYMETRY_RELIEF_SOURCE_ID = 'openseamap-bathymetry-relief'
-export const OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID = 'openseamap-bathymetry-relief'
-export const OPEN_SEAMAP_BATHYMETRY_CONTOURS_SOURCE_ID = 'openseamap-bathymetry-contours'
-export const OPEN_SEAMAP_BATHYMETRY_CONTOURS_LAYER_ID = 'openseamap-bathymetry-contours'
+export const OPEN_SEAMAP_BATHYMETRY_RELIEF_SOURCE_ID =
+  'openseamap-bathymetry-relief'
+export const OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID =
+  'openseamap-bathymetry-relief'
+export const OPEN_SEAMAP_BATHYMETRY_CONTOURS_SOURCE_ID =
+  'openseamap-bathymetry-contours'
+export const OPEN_SEAMAP_BATHYMETRY_CONTOURS_LAYER_ID =
+  'openseamap-bathymetry-contours'
 
 export const OPEN_SEAMAP_BATHYMETRY_RASTER_LAYER_IDS = [
   OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID,
@@ -54,5 +58,13 @@ export function openSeaMapBathymetryContoursViewUrl(
   width: number,
   height: number,
 ): string {
-  return openSeaMapViewportViewUrl('contours', west, south, east, north, width, height)
+  return openSeaMapViewportViewUrl(
+    'contours',
+    west,
+    south,
+    east,
+    north,
+    width,
+    height,
+  )
 }

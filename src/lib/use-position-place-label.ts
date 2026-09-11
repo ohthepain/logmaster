@@ -3,10 +3,9 @@ import type { MapLngLat } from './logbook-map-geo'
 import {
   entryPlaceFromData,
   lookupPositionLabel,
-  lookupPositionLabelFromPlace
-  
+  lookupPositionLabelFromPlace,
 } from './logbook-place'
-import type {LogEntryPlace} from './logbook-place';
+import type { LogEntryPlace } from './logbook-place'
 import { formatPosition } from './logbook-format'
 
 export function usePositionPlaceLabel(
@@ -43,9 +42,11 @@ export function usePositionPlaceLabel(
     let cancelled = false
     setLabel(formatPosition(position.latitude, position.longitude))
 
-    void lookupPositionLabel(position.latitude, position.longitude).then((text) => {
-      if (!cancelled) setLabel(text)
-    })
+    void lookupPositionLabel(position.latitude, position.longitude).then(
+      (text) => {
+        if (!cancelled) setLabel(text)
+      },
+    )
 
     return () => {
       cancelled = true

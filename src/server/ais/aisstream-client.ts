@@ -24,7 +24,11 @@ export function isAisStreamConfigured(): boolean {
 }
 
 function scheduleReconnect() {
-  if (reconnectTimer || activeSubscriptionBoxes.length === 0 || !isAisStreamConfigured()) {
+  if (
+    reconnectTimer ||
+    activeSubscriptionBoxes.length === 0 ||
+    !isAisStreamConfigured()
+  ) {
     return
   }
   const delay = Math.min(RECONNECT_BASE_MS * 2 ** reconnectAttempts, 30_000)
@@ -39,7 +43,8 @@ function scheduleReconnect() {
 }
 
 function sendSubscription(boxes: AisBoundingBox[]) {
-  if (!socket || socket.readyState !== WebSocket.OPEN || boxes.length === 0) return
+  if (!socket || socket.readyState !== WebSocket.OPEN || boxes.length === 0)
+    return
   const apiKey = process.env.AISSTREAM_API_KEY?.trim()
   if (!apiKey) return
 
@@ -98,9 +103,13 @@ async function openSocket(): Promise<void> {
     socket = ws
 
     ws.addEventListener('open', () => resolve(), { once: true })
-    ws.addEventListener('error', () => reject(new Error('AIS stream connection failed')), {
-      once: true,
-    })
+    ws.addEventListener(
+      'error',
+      () => reject(new Error('AIS stream connection failed')),
+      {
+        once: true,
+      },
+    )
 
     attachSocketHandlers(ws)
   })
@@ -116,7 +125,9 @@ async function openSocket(): Promise<void> {
 }
 
 /** Ensure the server is subscribed to AIS for the requested viewport. */
-export async function ensureAisStreamSubscription(viewportBbox: AisBoundingBox) {
+export async function ensureAisStreamSubscription(
+  viewportBbox: AisBoundingBox,
+) {
   if (!isAisStreamConfigured()) return
   activeViewportBbox = viewportBbox
   activeSubscriptionBoxes = splitAisSubscriptionBoxes(viewportBbox)

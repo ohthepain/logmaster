@@ -25,7 +25,9 @@ function isAdminTopic(topic: NotificationTopic): boolean {
   return topic === 'ADMIN_JOBS'
 }
 
-async function resolveEligibleUserIds(input: ActivityEventInput): Promise<string[]> {
+async function resolveEligibleUserIds(
+  input: ActivityEventInput,
+): Promise<string[]> {
   if (isAdminTopic(input.topic)) {
     return listAdminUserIds()
   }
@@ -38,7 +40,9 @@ async function resolveEligibleUserIds(input: ActivityEventInput): Promise<string
   return []
 }
 
-export async function emitActivityEvent(input: ActivityEventInput): Promise<void> {
+export async function emitActivityEvent(
+  input: ActivityEventInput,
+): Promise<void> {
   try {
     const scopeKey = subscriptionScopeKey({
       boatId: input.boatId,

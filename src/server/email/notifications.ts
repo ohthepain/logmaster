@@ -25,14 +25,10 @@ export async function sendNotificationEmail(args: {
   const appName = process.env.EMAIL_APP_NAME || 'logmaster'
   const subject = args.title
   const url = absoluteLinkUrl(args.linkUrl)
-  const text = url
-    ? `${args.body}\n\nOpen in ${appName}: ${url}`
-    : args.body
+  const text = url ? `${args.body}\n\nOpen in ${appName}: ${url}` : args.body
   const html = emailWrap(
     `${args.body}${
-      url
-        ? `<br><br><a href="${url}">Open in ${appName}</a>`
-        : ''
+      url ? `<br><br><a href="${url}">Open in ${appName}</a>` : ''
     }`,
   )
   await sendTransactionalEmail({ to: args.to, subject, text, html })

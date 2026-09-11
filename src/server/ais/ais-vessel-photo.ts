@@ -34,13 +34,16 @@ export async function resolveAisVesselPhotoUrl(
 
   let photoUrl: string | null = null
   try {
-    const response = await fetch(`https://www.vesselfinder.com/vessels/details/${mmsi}`, {
-      headers: {
-        'User-Agent': 'logmaster/1.0 (+https://logmaster.live)',
-        Accept: 'text/html',
+    const response = await fetch(
+      `https://www.vesselfinder.com/vessels/details/${mmsi}`,
+      {
+        headers: {
+          'User-Agent': 'logmaster/1.0 (+https://logmaster.live)',
+          Accept: 'text/html',
+        },
+        signal: AbortSignal.timeout(8000),
       },
-      signal: AbortSignal.timeout(8000),
-    })
+    )
     if (response.ok) {
       const html = await response.text()
       photoUrl = readOgImage(html)
@@ -58,7 +61,9 @@ export async function resolveAisVesselPhotoUrl(
       )
       if (response.ok) {
         const payload = (await response.json()) as {
-          query?: { pages?: Record<string, { thumbnail?: { source?: string } }> }
+          query?: {
+            pages?: Record<string, { thumbnail?: { source?: string } }>
+          }
         }
         const pages = payload.query?.pages ?? {}
         photoUrl = Object.values(pages)[0]?.thumbnail?.source ?? null

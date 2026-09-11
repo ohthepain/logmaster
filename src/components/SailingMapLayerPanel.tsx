@@ -5,7 +5,10 @@ import {
   MAP_DATA_LAYERS,
   resolveMapDataLayerToggle,
 } from '../lib/map-data-layers'
-import type { MapDataLayerGroup, MapDataLayerToggles } from '../lib/map-data-layers'
+import type {
+  MapDataLayerGroup,
+  MapDataLayerToggles,
+} from '../lib/map-data-layers'
 import { MAP_LOG_ENTRY_LAYER_TOGGLES } from '../lib/map-log-entry-layers'
 import type { MapLogEntryLayerToggles } from '../lib/map-log-entry-layers'
 import { MapControlButton } from './SailingMapControlStack'
@@ -44,7 +47,10 @@ type PanelPosition = {
 }
 
 function computePanelPosition(anchor: DOMRect): PanelPosition {
-  const width = Math.min(PANEL_WIDTH_PX, window.innerWidth - VIEWPORT_MARGIN_PX * 2)
+  const width = Math.min(
+    PANEL_WIDTH_PX,
+    window.innerWidth - VIEWPORT_MARGIN_PX * 2,
+  )
   const viewportHeight = window.innerHeight - VIEWPORT_MARGIN_PX * 2
   const maxHeight = Math.min(320, viewportHeight)
 
@@ -90,7 +96,9 @@ export function SailingMapLayerPanel({
 
     const updatePosition = () => {
       if (!rootRef.current) return
-      setPanelPosition(computePanelPosition(rootRef.current.getBoundingClientRect()))
+      setPanelPosition(
+        computePanelPosition(rootRef.current.getBoundingClientRect()),
+      )
     }
 
     updatePosition()
@@ -106,7 +114,10 @@ export function SailingMapLayerPanel({
     if (!open) return
     const close = (event: MouseEvent) => {
       const target = event.target as Node
-      if (rootRef.current?.contains(target) || panelRef.current?.contains(target)) {
+      if (
+        rootRef.current?.contains(target) ||
+        panelRef.current?.contains(target)
+      ) {
         return
       }
       setOpen(false)
@@ -142,27 +153,86 @@ export function SailingMapLayerPanel({
       </p>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="flex flex-col gap-3 pb-0.5">
-        {dataGroups.map(([group, layers]) => (
-          <div key={group}>
-            <p className="m-0 mb-1.5 text-[10px] font-medium uppercase tracking-wider text-white/50">
-              {DATA_GROUP_LABELS[group]}
-            </p>
-            <ul className="m-0 flex list-none flex-col gap-1 p-0">
-              {layers.map((layer) => {
-                const aisLayer = layer.id === 'ais-live'
-                const aisDisabled =
-                  (layer.onlineOnly === true && !online) ||
-                  (aisLayer && aisPlaybackBlocked)
-                return (
+          {dataGroups.map(([group, layers]) => (
+            <div key={group}>
+              <p className="m-0 mb-1.5 text-[10px] font-medium uppercase tracking-wider text-white/50">
+                {DATA_GROUP_LABELS[group]}
+              </p>
+              <ul className="m-0 flex list-none flex-col gap-1 p-0">
+                {layers.map((layer) => {
+                  const aisLayer = layer.id === 'ais-live'
+                  const aisDisabled =
+                    (layer.onlineOnly === true && !online) ||
+                    (aisLayer && aisPlaybackBlocked)
+                  return (
+                    <li key={layer.id}>
+                      <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 hover:bg-white/5">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={resolveMapDataLayerToggle(toggles, layer.id)}
+                          disabled={aisDisabled}
+                          onChange={(event) =>
+                            onChange({
+                              [layer.id]: event.target.checked,
+                            })
+                          }
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-sm text-white/95">
+                            {layer.title}
+                            {layer.onlineOnly ? (
+                              <span className="ml-1 text-[10px] font-normal uppercase tracking-wide text-white/45">
+                                {aisPlaybackBlocked
+                                  ? 'Replay'
+                                  : online
+                                    ? 'Live'
+                                    : 'Offline'}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="block text-[11px] leading-snug text-white/55">
+                            {layer.description}
+                            {aisLayer && aisSavedTripHint ? (
+                              <span className="mt-0.5 block text-white/45">
+                                Shows traffic now along your saved route.
+                              </span>
+                            ) : null}
+                            {aisLayer && aisPlannedRouteHint ? (
+                              <span className="mt-0.5 block text-white/45">
+                                Shows live traffic near your planned route.
+                              </span>
+                            ) : null}
+                            {aisLayer && aisPlaybackBlocked ? (
+                              <span className="mt-0.5 block text-white/45">
+                                Unavailable during trip replay.
+                              </span>
+                            ) : null}
+                          </span>
+                        </span>
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ))}
+
+          {showLogEntryLayers ? (
+            <div>
+              <p className="m-0 mb-1.5 text-[10px] font-medium uppercase tracking-wider text-white/50">
+                Log entries
+              </p>
+              <ul className="m-0 flex list-none flex-col gap-1 p-0">
+                {MAP_LOG_ENTRY_LAYER_TOGGLES.map((layer) => (
                   <li key={layer.id}>
                     <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 hover:bg-white/5">
                       <input
                         type="checkbox"
                         className="mt-0.5"
-                            checked={resolveMapDataLayerToggle(toggles, layer.id)}
-                        disabled={aisDisabled}
+                        checked={logEntryToggles[layer.id]}
                         onChange={(event) =>
-                          onChange({
+                          onLogEntryChange({
                             [layer.id]: event.target.checked,
                           })
                         }
@@ -170,76 +240,17 @@ export function SailingMapLayerPanel({
                       <span className="min-w-0">
                         <span className="block text-sm text-white/95">
                           {layer.title}
-                          {layer.onlineOnly ? (
-                            <span className="ml-1 text-[10px] font-normal uppercase tracking-wide text-white/45">
-                              {aisPlaybackBlocked
-                                ? 'Replay'
-                                : online
-                                  ? 'Live'
-                                  : 'Offline'}
-                            </span>
-                          ) : null}
                         </span>
                         <span className="block text-[11px] leading-snug text-white/55">
                           {layer.description}
-                          {aisLayer && aisSavedTripHint ? (
-                            <span className="mt-0.5 block text-white/45">
-                              Shows traffic now along your saved route.
-                            </span>
-                          ) : null}
-                          {aisLayer && aisPlannedRouteHint ? (
-                            <span className="mt-0.5 block text-white/45">
-                              Shows live traffic near your planned route.
-                            </span>
-                          ) : null}
-                          {aisLayer && aisPlaybackBlocked ? (
-                            <span className="mt-0.5 block text-white/45">
-                              Unavailable during trip replay.
-                            </span>
-                          ) : null}
                         </span>
                       </span>
                     </label>
                   </li>
-                )
-              })}
-            </ul>
-          </div>
-        ))}
-
-        {showLogEntryLayers ? (
-          <div>
-            <p className="m-0 mb-1.5 text-[10px] font-medium uppercase tracking-wider text-white/50">
-              Log entries
-            </p>
-            <ul className="m-0 flex list-none flex-col gap-1 p-0">
-              {MAP_LOG_ENTRY_LAYER_TOGGLES.map((layer) => (
-                <li key={layer.id}>
-                  <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 hover:bg-white/5">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5"
-                      checked={logEntryToggles[layer.id]}
-                      onChange={(event) =>
-                        onLogEntryChange({
-                          [layer.id]: event.target.checked,
-                        })
-                      }
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-sm text-white/95">
-                        {layer.title}
-                      </span>
-                      <span className="block text-[11px] leading-snug text-white/55">
-                        {layer.description}
-                      </span>
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

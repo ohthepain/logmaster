@@ -3,7 +3,9 @@ import { isAdminEmail } from '../admin-auth'
 
 const db = prisma as any
 
-export async function listUsersWithBoatAccess(boatId: string): Promise<string[]> {
+export async function listUsersWithBoatAccess(
+  boatId: string,
+): Promise<string[]> {
   const boat = await db.boat.findUnique({
     where: { id: boatId },
     select: {

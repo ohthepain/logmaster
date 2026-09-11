@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { LogEntry, Trip, Leg  } from '../domain/logbook'
+import type { LogEntry, Trip, Leg } from '../domain/logbook'
 import { encodePositionTrackSamples } from '../domain/trip-track'
 import {
   adjacentPositionedEntryPairs,
@@ -42,7 +42,9 @@ describe('logEntryMapPoint', () => {
   })
 
   it('returns null when coordinates are missing', () => {
-    expect(logEntryMapPoint(baseEntry({ latitude: null, longitude: null }))).toBeNull()
+    expect(
+      logEntryMapPoint(baseEntry({ latitude: null, longitude: null })),
+    ).toBeNull()
   })
 })
 
@@ -320,11 +322,18 @@ describe('buildLegTrackGeoJson', () => {
       [-123.2, 48.2],
       [-123.3, 48.3],
     ])
-    expect(geojson.features.some((feature) => {
-      const [fromLng, fromLat] = feature.geometry.coordinates[0]
-      const [toLng, toLat] = feature.geometry.coordinates[1]
-      return fromLat === 48.3 && fromLng === -123.3 && toLat === 48.1 && toLng === -123.1
-    })).toBe(false)
+    expect(
+      geojson.features.some((feature) => {
+        const [fromLng, fromLat] = feature.geometry.coordinates[0]
+        const [toLng, toLat] = feature.geometry.coordinates[1]
+        return (
+          fromLat === 48.3 &&
+          fromLng === -123.3 &&
+          toLat === 48.1 &&
+          toLng === -123.1
+        )
+      }),
+    ).toBe(false)
   })
 
   it('connects positioned entries even when a note sits between hourly logs', () => {

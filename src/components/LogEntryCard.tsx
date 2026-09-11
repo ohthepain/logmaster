@@ -1,10 +1,7 @@
 import { Camera, Video } from 'lucide-react'
 import { entryIcon, entryTitle, isVideoMediaData } from '../domain/logbook'
 import type { LogEntry, Media } from '../domain/logbook'
-import {
-  formatDateTime,
-  formatWeather,
-} from '../lib/logbook-format'
+import { formatDateTime, formatWeather } from '../lib/logbook-format'
 import { formatPositionDisplay, entryPlaceFromData } from '../lib/logbook-place'
 import { cn } from '../lib/cn'
 import { DevComponentLabel } from './DevComponentLabel'
@@ -17,9 +14,7 @@ type LogEntryCardProps = {
 
 export function LogEntryCard({ entry, media, onOpen }: LogEntryCardProps) {
   if (entry.type === 'MEDIA') {
-    return (
-      <MediaLogEntryCard entry={entry} media={media} onOpen={onOpen} />
-    )
+    return <MediaLogEntryCard entry={entry} media={media} onOpen={onOpen} />
   }
 
   return (
@@ -31,7 +26,10 @@ export function LogEntryCard({ entry, media, onOpen }: LogEntryCardProps) {
           : 'cursor-pointer border-[var(--panel-border)] bg-[var(--surface-strong)] hover:border-[var(--sea-ink)]/20',
       )}
     >
-      <DevComponentLabel name="LogEntryCard" className="absolute left-3 top-3" />
+      <DevComponentLabel
+        name="LogEntryCard"
+        className="absolute left-3 top-3"
+      />
       <button
         type="button"
         onClick={onOpen}
@@ -107,17 +105,16 @@ export function LogEntryCard({ entry, media, onOpen }: LogEntryCardProps) {
   )
 }
 
-function MediaLogEntryCard({
-  entry,
-  media,
-  onOpen,
-}: LogEntryCardProps) {
+function MediaLogEntryCard({ entry, media, onOpen }: LogEntryCardProps) {
   const preview = media.find((item) => item.thumbnailUrl)?.thumbnailUrl
   const title = entryTitle(entry.type, entry.data)
 
   return (
     <article className="relative rounded-[1.25rem] border border-[var(--panel-border)] bg-[var(--surface-strong)] shadow-sm transition hover:border-[var(--sea-ink)]/20">
-      <DevComponentLabel name="LogEntryCard" className="absolute left-3 top-3" />
+      <DevComponentLabel
+        name="LogEntryCard"
+        className="absolute left-3 top-3"
+      />
       <button
         type="button"
         onClick={onOpen}

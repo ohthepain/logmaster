@@ -1,7 +1,4 @@
-import {
-  needsCastOff,
-  resolveTripOperationalState,
-} from './trip-state'
+import { needsCastOff, resolveTripOperationalState } from './trip-state'
 import type { TripOperationalState } from './trip-state'
 
 export const TRIP_STATUSES = ['PLANNED', 'IN_PROGRESS', 'COMPLETED'] as const
@@ -195,7 +192,9 @@ export function entryIcon(
 
 const VIDEO_MEDIA_EXTENSIONS = /\.(mp4|mov|m4v|webm)$/i
 
-export function isVideoMediaData(data?: Record<string, unknown> | null): boolean {
+export function isVideoMediaData(
+  data?: Record<string, unknown> | null,
+): boolean {
   if (!data) return false
   if (data.video === true) return true
   if (data.mediaType === 'video') return true
@@ -218,11 +217,7 @@ const LOG_ENTRY_NAVIGATION_ORDER: LogEntryType[] = [
   'MOORED',
 ]
 
-const LOG_ENTRY_GENERAL_ORDER: LogEntryType[] = [
-  'NOTE',
-  'PHOTO',
-  'VOICE_NOTE',
-]
+const LOG_ENTRY_GENERAL_ORDER: LogEntryType[] = ['NOTE', 'PHOTO', 'VOICE_NOTE']
 
 function logEntryTypeSortKey(
   type: LogEntryType,

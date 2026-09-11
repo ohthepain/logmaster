@@ -18,7 +18,10 @@ import {
   resolveTripPersonOption,
   userTripPersonKey,
 } from '../lib/trip-people'
-import { tripDisplayName, resolveDefaultBoatIdForNewTrip } from '../lib/trip-display'
+import {
+  tripDisplayName,
+  resolveDefaultBoatIdForNewTrip,
+} from '../lib/trip-display'
 import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore, triggerLogbookSyncRetry } from '../stores/logbook'
 
@@ -29,7 +32,9 @@ type StartTripLauncherProps = {
 
 export function StartTripLauncher({ open, onClose }: StartTripLauncherProps) {
   const store = useLogbookStore()
-  const setLastTripBoatId = useAppOptionsStore((state) => state.setLastTripBoatId)
+  const setLastTripBoatId = useAppOptionsStore(
+    (state) => state.setLastTripBoatId,
+  )
   const session = useSession()
   const navigate = useNavigate()
   const [addBoatOpen, setAddBoatOpen] = useState(false)
@@ -149,7 +154,10 @@ export function StartTripLauncher({ open, onClose }: StartTripLauncherProps) {
   useEffect(() => {
     if (!open || user) return
     onClose()
-    void navigate({ to: '/sign-in', search: { redirect: '/trips?startTrip=1' } })
+    void navigate({
+      to: '/sign-in',
+      search: { redirect: '/trips?startTrip=1' },
+    })
   }, [open, user, navigate, onClose])
 
   const defaultSkipperKey = user ? userTripPersonKey(user.id) : ''
@@ -167,7 +175,10 @@ export function StartTripLauncher({ open, onClose }: StartTripLauncherProps) {
     if (!user) {
       toast.error('Sign in to start a trip')
       handleClose()
-      void navigate({ to: '/sign-in', search: { redirect: '/trips?startTrip=1' } })
+      void navigate({
+        to: '/sign-in',
+        search: { redirect: '/trips?startTrip=1' },
+      })
       return
     }
     if (!selectedBoatId || !startForm.boatName.trim()) {
@@ -175,7 +186,9 @@ export function StartTripLauncher({ open, onClose }: StartTripLauncherProps) {
       return
     }
     const selectedBoat = boats.find((boat) => boat.id === selectedBoatId)
-    const boatPhoto = selectedBoat ? defaultBoatPhoto(selectedBoat.photos) : null
+    const boatPhoto = selectedBoat
+      ? defaultBoatPhoto(selectedBoat.photos)
+      : null
     const skipper = resolveTripPersonOption(effectiveSkipperKey, skipperOptions)
     setCreatingTrip(true)
     try {
@@ -196,7 +209,9 @@ export function StartTripLauncher({ open, onClose }: StartTripLauncherProps) {
         void navigate({ to: '/trips/$tripId', params: { tripId: trip.id } })
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create trip')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create trip',
+      )
     } finally {
       setCreatingTrip(false)
     }

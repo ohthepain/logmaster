@@ -86,7 +86,11 @@ export function AddCrewMemberModal({
   }
 
   return (
-    <Modal title="Add crew member" onClose={handleClose} devComponentName="AddCrewMemberModal">
+    <Modal
+      title="Add crew member"
+      onClose={handleClose}
+      devComponentName="AddCrewMemberModal"
+    >
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <div className="flex items-center gap-4">
           <button
@@ -131,9 +135,7 @@ export function AddCrewMemberModal({
             type="file"
             accept="image/*"
             className="sr-only"
-            onChange={(e) =>
-              handlePhotoChange(e.target.files?.[0] ?? null)
-            }
+            onChange={(e) => handlePhotoChange(e.target.files?.[0] ?? null)}
           />
         </div>
 
@@ -152,7 +154,10 @@ export function AddCrewMemberModal({
 
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
-            Email <span className="font-normal text-[var(--sea-ink-soft)]">(optional)</span>
+            Email{' '}
+            <span className="font-normal text-[var(--sea-ink-soft)]">
+              (optional)
+            </span>
           </span>
           <input
             type="email"
@@ -174,7 +179,11 @@ export function AddCrewMemberModal({
             disabled={loading}
             className="inline-flex rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
           >
-            {loading ? 'Saving…' : email.trim() ? 'Add & send invite' : 'Add crew member'}
+            {loading
+              ? 'Saving…'
+              : email.trim()
+                ? 'Add & send invite'
+                : 'Add crew member'}
           </button>
           <button
             type="button"

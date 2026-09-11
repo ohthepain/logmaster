@@ -1,6 +1,6 @@
 import type { FeatureCollection, Point } from 'geojson'
 import { apiUrl } from './app-origin'
-import type { AisBoundingBox, AisVessel  } from '../domain/ais-vessel'
+import type { AisBoundingBox, AisVessel } from '../domain/ais-vessel'
 import type { AisVesselPopupDetails } from './maplibre-ais-layer'
 
 export type AisVesselsResponse = {

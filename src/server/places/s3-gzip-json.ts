@@ -1,6 +1,6 @@
 import { gunzipSync } from 'node:zlib'
-import { GetObjectCommand, NoSuchKey  } from '@aws-sdk/client-s3'
-import type {S3Client} from '@aws-sdk/client-s3';
+import { GetObjectCommand, NoSuchKey } from '@aws-sdk/client-s3'
+import type { S3Client } from '@aws-sdk/client-s3'
 
 export async function readS3GzipJson(
   s3: S3Client,
@@ -15,9 +15,7 @@ export async function readS3GzipJson(
     if (!bytes) return null
     const encoding = response.ContentEncoding?.toLowerCase()
     const raw =
-      encoding === 'gzip'
-        ? gunzipSync(Buffer.from(bytes))
-        : Buffer.from(bytes)
+      encoding === 'gzip' ? gunzipSync(Buffer.from(bytes)) : Buffer.from(bytes)
     return JSON.parse(raw.toString('utf8'))
   } catch (error) {
     if (

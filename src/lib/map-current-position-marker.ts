@@ -1,6 +1,8 @@
 import { mapBrandColor } from './logbook-map-geo'
 
-export function createCurrentPositionMarkerElement(options?: { devDraggable?: boolean }) {
+export function createCurrentPositionMarkerElement(options?: {
+  devDraggable?: boolean
+}) {
   const el = document.createElement('div')
   el.style.position = 'relative'
   el.style.width = '28px'

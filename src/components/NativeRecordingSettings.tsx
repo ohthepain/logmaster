@@ -52,9 +52,7 @@ export function NativeRecordingSettings({
           type="checkbox"
           className="size-4 accent-[var(--brand)]"
           checked={backgroundTripRecording}
-          onChange={(event) =>
-            setBackgroundTripRecording(event.target.checked)
-          }
+          onChange={(event) => setBackgroundTripRecording(event.target.checked)}
         />
       </label>
 

@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   encodePositionTrackSamples,
-  encodeScalarTrackSamples
-  
+  encodeScalarTrackSamples,
 } from '../domain/trip-track'
-import type {TripTrack} from '../domain/trip-track';
+import type { TripTrack } from '../domain/trip-track'
 import {
   availablePlaybackPanels,
   buildPlaybackGraphSeries,
@@ -82,7 +81,11 @@ describe('trip-playback-panels', () => {
     ]
 
     const options = availablePlaybackPanels(tripId, tracks, [])
-    expect(options.map((option) => option.id)).toEqual(['log-entries', 'media', 'sog'])
+    expect(options.map((option) => option.id)).toEqual([
+      'log-entries',
+      'media',
+      'sog',
+    ])
     expect(options[0]?.disabled).toBe(true)
     expect(options[1]?.disabled).toBe(true)
   })
@@ -98,9 +101,11 @@ describe('trip-playback-panels', () => {
       disabled: true,
     })
 
-    const withEntries = availablePlaybackPanels(tripId, [], [
-      { id: 'e1', deleted: false } as never,
-    ])
+    const withEntries = availablePlaybackPanels(
+      tripId,
+      [],
+      [{ id: 'e1', deleted: false } as never],
+    )
     expect(withEntries[0]).toMatchObject({
       id: 'log-entries',
       disabled: false,
@@ -133,14 +138,19 @@ describe('trip-playback-panels', () => {
     ])
 
     expect(
-      interpolatePlaybackGraphValue(points, Date.parse('2026-06-01T09:30:00.000Z')),
+      interpolatePlaybackGraphValue(
+        points,
+        Date.parse('2026-06-01T09:30:00.000Z'),
+      ),
     ).toBe(6)
   })
 
   it('defaults log entries off and enables one graph track when available', () => {
-    const options = availablePlaybackPanels(tripId, [], [
-      { id: 'e1', deleted: false } as never,
-    ])
+    const options = availablePlaybackPanels(
+      tripId,
+      [],
+      [{ id: 'e1', deleted: false } as never],
+    )
     const state = defaultPlaybackViewState(options)
     expect(state['log-entries']).toBe(false)
   })

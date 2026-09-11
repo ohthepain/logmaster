@@ -47,7 +47,9 @@ function readString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
-function readPositionPayload(message: Record<string, unknown> | undefined): PositionPayload | null {
+function readPositionPayload(
+  message: Record<string, unknown> | undefined,
+): PositionPayload | null {
   if (!message) return null
   for (const key of [
     'PositionReport',
@@ -73,7 +75,9 @@ function normalizeStaticRecord(raw: Record<string, unknown>): StaticPayload {
 
   const payload: StaticPayload = {}
   const type =
-    readNumber(source.Type) ?? readNumber(source.ShipType) ?? readNumber(source.type)
+    readNumber(source.Type) ??
+    readNumber(source.ShipType) ??
+    readNumber(source.type)
   if (type != null) payload.Type = type
 
   const name = readString(source.Name)
@@ -82,7 +86,10 @@ function normalizeStaticRecord(raw: Record<string, unknown>): StaticPayload {
   const callSign = readString(source.CallSign)
   if (callSign) payload.CallSign = callSign
 
-  if (typeof source.ImoNumber === 'number' || typeof source.ImoNumber === 'string') {
+  if (
+    typeof source.ImoNumber === 'number' ||
+    typeof source.ImoNumber === 'string'
+  ) {
     payload.ImoNumber = source.ImoNumber
   }
 
@@ -96,7 +103,9 @@ function normalizeStaticRecord(raw: Record<string, unknown>): StaticPayload {
   return payload
 }
 
-function readStaticPayload(message: Record<string, unknown> | undefined): StaticPayload | null {
+function readStaticPayload(
+  message: Record<string, unknown> | undefined,
+): StaticPayload | null {
   if (!message) return null
   for (const key of ['ShipStaticData', 'StaticDataReport']) {
     const payload = message[key]
@@ -116,7 +125,10 @@ function readMetaShipType(meta: Record<string, unknown>): number | null {
   )
 }
 
-function readMmsi(meta: Record<string, unknown>, position: PositionPayload | null): string | null {
+function readMmsi(
+  meta: Record<string, unknown>,
+  position: PositionPayload | null,
+): string | null {
   const fromMeta = meta.MMSI ?? meta.MMSI_String
   if (fromMeta != null) return String(fromMeta)
   if (position?.UserID != null) return String(position.UserID)
@@ -239,7 +251,8 @@ export function parseAisStreamMessage(raw: unknown): Partial<AisVessel> | null {
 
   if (navigationalStatus != null) {
     base.navigationalStatus = navigationalStatus
-    base.navigationalStatusLabel = aisNavigationalStatusLabel(navigationalStatus)
+    base.navigationalStatusLabel =
+      aisNavigationalStatusLabel(navigationalStatus)
   }
 
   if (latitude == null || longitude == null) {
@@ -261,6 +274,7 @@ export function aisCategoryFromUpdate(
   fallback: AisVesselCategory = 'unspecified',
 ): AisVesselCategory {
   if (update.shipType != null) return aisCategoryForShipType(update.shipType)
-  if (update.category && update.category !== 'unspecified') return update.category
+  if (update.category && update.category !== 'unspecified')
+    return update.category
   return fallback
 }

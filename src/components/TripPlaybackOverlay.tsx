@@ -16,10 +16,7 @@ import type { TripTrack } from '../domain/trip-track'
 import { formatDateTime } from '../lib/logbook-format'
 import { logEntryLegColor } from '../lib/logbook-map-geo'
 import { isVideoLogEntry } from '../lib/log-entry-map-marker'
-import {
-  tripPlaybackRange,
-  tripPlaybackWindow,
-} from '../lib/trip-playback'
+import { tripPlaybackRange, tripPlaybackWindow } from '../lib/trip-playback'
 import { computePlaybackTimelineTicks } from '../lib/trip-playback-timeline-ticks'
 import {
   buildPlaybackTimelineMediaMarkers,
@@ -76,7 +73,9 @@ function clamp(value: number, min: number, max: number) {
 function isVideoMedia(entry: LogEntry, media: Media[]) {
   if (isVideoLogEntry(entry)) return true
   return media.some((item) =>
-    /\.(mp4|mov|m4v|webm)(?:$|\?)/i.test(item.remoteUrl ?? item.localPath ?? ''),
+    /\.(mp4|mov|m4v|webm)(?:$|\?)/i.test(
+      item.remoteUrl ?? item.localPath ?? '',
+    ),
   )
 }
 
@@ -99,7 +98,9 @@ function formatDuration(durationMs: number) {
   const totalMinutes = Math.max(0, Math.round(durationMs / 60_000))
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60
-  return hours > 0 ? `${hours}h ${minutes.toString().padStart(2, '0')}m` : `${minutes}m`
+  return hours > 0
+    ? `${hours}h ${minutes.toString().padStart(2, '0')}m`
+    : `${minutes}m`
 }
 
 export function TripPlaybackOverlay({
@@ -119,7 +120,10 @@ export function TripPlaybackOverlay({
   const wasPlayingRef = useRef(false)
   currentTimeRef.current = currentTimeMs
   const chronologicalEntries = useMemo(
-    () => [...entries].filter((entry) => !entry.deleted).sort(compareLogEntriesChronologically),
+    () =>
+      [...entries]
+        .filter((entry) => !entry.deleted)
+        .sort(compareLogEntriesChronologically),
     [entries],
   )
   const range = useMemo(
@@ -143,7 +147,11 @@ export function TripPlaybackOverlay({
     showInstrumentGraph,
   } = usePlaybackViewState(trip.id, tracks, chronologicalEntries, mediaByEntry)
   const effectiveWindowCenterMs = playing ? currentTimeMs : windowCenterMs
-  const windowRange = tripPlaybackWindow(range, effectiveWindowCenterMs, timeZoom)
+  const windowRange = tripPlaybackWindow(
+    range,
+    effectiveWindowCenterMs,
+    timeZoom,
+  )
   const timelineMediaMarkers = useMemo(
     () => buildPlaybackTimelineMediaMarkers(chronologicalEntries, mediaByEntry),
     [chronologicalEntries, mediaByEntry],
@@ -154,7 +162,11 @@ export function TripPlaybackOverlay({
   const graphTopPx = timelineRowHeightPx
   const timelineTrackTopPx =
     timelineRowHeightPx +
-    (showInstrumentGraph ? TIMELINE_GRAPH_ROW_PX + 4 : timelineRowHeightPx > 0 ? 0 : 22)
+    (showInstrumentGraph
+      ? TIMELINE_GRAPH_ROW_PX + 4
+      : timelineRowHeightPx > 0
+        ? 0
+        : 22)
   const timelineHeightPx = timelineTrackTopPx + TIMELINE_TRACK_SECTION_PX
   const timelineTicks = useMemo(
     () => computePlaybackTimelineTicks(windowRange, range.startMs),
@@ -178,13 +190,15 @@ export function TripPlaybackOverlay({
     0,
     100,
   )
-  const activeEntry = chronologicalEntries.find((entry) => entry.id === activeEntryId) ?? null
-  const mediaEntry = chronologicalEntries.find((entry) => entry.id === mediaEntryId) ?? null
-  const mediaItems = mediaEntry ? mediaByEntry.get(mediaEntry.id) ?? [] : []
+  const activeEntry =
+    chronologicalEntries.find((entry) => entry.id === activeEntryId) ?? null
+  const mediaEntry =
+    chronologicalEntries.find((entry) => entry.id === mediaEntryId) ?? null
+  const mediaItems = mediaEntry ? (mediaByEntry.get(mediaEntry.id) ?? []) : []
   const mediaIsVideo = mediaEntry ? isVideoMedia(mediaEntry, mediaItems) : false
   const fullMediaSource = mediaSource(mediaItems)
   const videoSource = mediaIsVideo
-    ? mediaItems.find((item) => item.remoteUrl)?.remoteUrl ?? null
+    ? (mediaItems.find((item) => item.remoteUrl)?.remoteUrl ?? null)
     : null
   const mediaThumbnail =
     mediaItems.find((item) => item.thumbnailUrl)?.thumbnailUrl ??
@@ -278,7 +292,11 @@ export function TripPlaybackOverlay({
   }
 
   const moveToEntry = (entry: LogEntry) => {
-    const timeMs = clamp(new Date(entry.timestamp).getTime(), range.startMs, range.endMs)
+    const timeMs = clamp(
+      new Date(entry.timestamp).getTime(),
+      range.startMs,
+      range.endMs,
+    )
     setPlaying(false)
     onCurrentTimeChange(timeMs)
     setWindowCenterMs(timeMs)
@@ -288,9 +306,17 @@ export function TripPlaybackOverlay({
   const skipEntry = (direction: -1 | 1) => {
     const candidates =
       direction < 0
-        ? [...chronologicalEntries].reverse().filter((entry) => new Date(entry.timestamp).getTime() < currentTimeMs)
-        : chronologicalEntries.filter((entry) => new Date(entry.timestamp).getTime() > currentTimeMs)
-    const target = candidates[0] ?? chronologicalEntries[direction < 0 ? 0 : chronologicalEntries.length - 1]
+        ? [...chronologicalEntries]
+            .reverse()
+            .filter(
+              (entry) => new Date(entry.timestamp).getTime() < currentTimeMs,
+            )
+        : chronologicalEntries.filter(
+            (entry) => new Date(entry.timestamp).getTime() > currentTimeMs,
+          )
+    const target =
+      candidates[0] ??
+      chronologicalEntries[direction < 0 ? 0 : chronologicalEntries.length - 1]
     if (target) moveToEntry(target)
   }
 
@@ -324,24 +350,42 @@ export function TripPlaybackOverlay({
                 poster={mediaThumbnail ?? undefined}
                 controls={mediaPinned}
                 playsInline
-                className={cn('max-h-full max-w-full object-contain', mediaPinned && 'pointer-events-auto')}
+                className={cn(
+                  'max-h-full max-w-full object-contain',
+                  mediaPinned && 'pointer-events-auto',
+                )}
               />
             ) : mediaThumbnail ? (
               <div className="relative flex size-full items-center justify-center">
-                <img src={mediaThumbnail} alt="" className="max-h-full max-w-full object-contain" />
-                <Play className="absolute left-1/2 top-1/2 size-16 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow-lg" fill="currentColor" />
+                <img
+                  src={mediaThumbnail}
+                  alt=""
+                  className="max-h-full max-w-full object-contain"
+                />
+                <Play
+                  className="absolute left-1/2 top-1/2 size-16 -translate-x-1/2 -translate-y-1/2 text-white drop-shadow-lg"
+                  fill="currentColor"
+                />
               </div>
             ) : (
               <div className="flex flex-col items-center gap-3 text-white">
                 <Play className="size-14" fill="currentColor" />
-                <p className="m-0 text-sm font-semibold">Video unavailable on this device</p>
+                <p className="m-0 text-sm font-semibold">
+                  Video unavailable on this device
+                </p>
               </div>
             )
           ) : fullMediaSource ? (
-            <img src={fullMediaSource} alt="" className="max-h-full max-w-full object-contain" />
+            <img
+              src={fullMediaSource}
+              alt=""
+              className="max-h-full max-w-full object-contain"
+            />
           ) : (
             <div className="flex flex-col items-center gap-3 text-white">
-              <p className="m-0 text-sm font-semibold">Media unavailable on this device</p>
+              <p className="m-0 text-sm font-semibold">
+                Media unavailable on this device
+              </p>
             </div>
           )}
           {mediaPinned ? (
@@ -362,11 +406,21 @@ export function TripPlaybackOverlay({
         <div className="pointer-events-none absolute inset-x-3 bottom-[calc(12.75rem+env(safe-area-inset-bottom,0px))] z-30 flex justify-center">
           <div className="max-w-md rounded-2xl border border-white/25 bg-black/65 px-4 py-3 text-white shadow-xl backdrop-blur-md">
             <div className="flex items-start gap-3">
-              <span className="text-xl" aria-hidden>{entryIcon(activeEntry.type)}</span>
+              <span className="text-xl" aria-hidden>
+                {entryIcon(activeEntry.type)}
+              </span>
               <div className="min-w-0">
-                <p className="m-0 text-sm font-bold">{entryTitle(activeEntry.type)}</p>
-                <p className="m-0 mt-0.5 text-xs text-white/70">{formatDateTime(activeEntry.timestamp)}</p>
-                {activeEntry.notes ? <p className="m-0 mt-1 line-clamp-2 text-sm">{activeEntry.notes}</p> : null}
+                <p className="m-0 text-sm font-bold">
+                  {entryTitle(activeEntry.type)}
+                </p>
+                <p className="m-0 mt-0.5 text-xs text-white/70">
+                  {formatDateTime(activeEntry.timestamp)}
+                </p>
+                {activeEntry.notes ? (
+                  <p className="m-0 mt-1 line-clamp-2 text-sm">
+                    {activeEntry.notes}
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>
@@ -382,7 +436,10 @@ export function TripPlaybackOverlay({
         <div className="mx-auto max-w-4xl">
           <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-semibold text-white/75">
             <span>{formatClock(currentTimeMs)}</span>
-            <span>{formatDuration(Math.max(0, currentTimeMs - range.startMs))} / {formatDuration(range.durationMs)}</span>
+            <span>
+              {formatDuration(Math.max(0, currentTimeMs - range.startMs))} /{' '}
+              {formatDuration(range.durationMs)}
+            </span>
             <span>Time zoom {timeZoom.toFixed(timeZoom < 2 ? 1 : 0)}×</span>
           </div>
 
@@ -391,9 +448,14 @@ export function TripPlaybackOverlay({
             className="relative touch-none select-none"
             style={{ height: timelineHeightPx }}
             onPointerDown={(event) => {
-              if ((event.target as HTMLElement).closest('[data-playback-control]')) return
+              if (
+                (event.target as HTMLElement).closest('[data-playback-control]')
+              )
+                return
               event.currentTarget.setPointerCapture(event.pointerId)
-              const entryButton = (event.target as HTMLElement).closest('[data-entry-id]')
+              const entryButton = (event.target as HTMLElement).closest(
+                '[data-entry-id]',
+              )
               dragRef.current = {
                 pointerId: event.pointerId,
                 startX: event.clientX,
@@ -401,7 +463,8 @@ export function TripPlaybackOverlay({
                 startTimeMs: currentTimeMs,
                 startZoom: timeZoom,
                 windowDurationMs: windowRange.durationMs,
-                startedOnEntryId: entryButton?.getAttribute('data-entry-id') ?? null,
+                startedOnEntryId:
+                  entryButton?.getAttribute('data-entry-id') ?? null,
                 didDrag: false,
               }
               setPlaying(false)
@@ -418,7 +481,11 @@ export function TripPlaybackOverlay({
               }
               if (Math.abs(dy) >= ZOOM_DRAG_PX) {
                 drag.didDrag = true
-                const nextZoom = clamp(drag.startZoom * Math.exp(-dy / 288), 1, MAX_TIME_ZOOM)
+                const nextZoom = clamp(
+                  drag.startZoom * Math.exp(-dy / 288),
+                  1,
+                  MAX_TIME_ZOOM,
+                )
                 setTimeZoom(nextZoom)
                 setWindowCenterMs(currentTimeMs)
               }
@@ -429,14 +496,24 @@ export function TripPlaybackOverlay({
               event.currentTarget.releasePointerCapture(event.pointerId)
               if (!drag.didDrag) {
                 if (drag.startedOnEntryId) {
-                  const entry = chronologicalEntries.find((item) => item.id === drag.startedOnEntryId)
+                  const entry = chronologicalEntries.find(
+                    (item) => item.id === drag.startedOnEntryId,
+                  )
                   if (entry) openEntryAtTime(entry)
                 } else {
                   setTimeFromClientX(event.clientX, drag)
                 }
               }
-              const previewEntry = chronologicalEntries.find((entry) => entry.id === mediaEntryId)
-              if (previewEntry && isVideoMedia(previewEntry, mediaByEntry.get(previewEntry.id) ?? [])) {
+              const previewEntry = chronologicalEntries.find(
+                (entry) => entry.id === mediaEntryId,
+              )
+              if (
+                previewEntry &&
+                isVideoMedia(
+                  previewEntry,
+                  mediaByEntry.get(previewEntry.id) ?? [],
+                )
+              ) {
                 setMediaPinned(true)
               } else {
                 setMediaEntryId(null)
@@ -499,17 +576,25 @@ export function TripPlaybackOverlay({
             {showTimelineEntries
               ? chronologicalEntries.map((entry, index) => {
                   const timeMs = new Date(entry.timestamp).getTime()
-                  if (timeMs < windowRange.startMs || timeMs > windowRange.endMs) {
+                  if (
+                    timeMs < windowRange.startMs ||
+                    timeMs > windowRange.endMs
+                  ) {
                     return null
                   }
-                  const left = ((timeMs - windowRange.startMs) / windowRange.durationMs) * 100
+                  const left =
+                    ((timeMs - windowRange.startMs) / windowRange.durationMs) *
+                    100
                   return (
                     <button
                       key={entry.id}
                       type="button"
                       data-entry-id={entry.id}
                       className="absolute top-0 z-10 flex -translate-x-1/2 touch-manipulation flex-col items-center"
-                      style={{ left: `${left}%`, height: TIMELINE_ENTRY_ROW_PX }}
+                      style={{
+                        left: `${left}%`,
+                        height: TIMELINE_ENTRY_ROW_PX,
+                      }}
                       aria-label={`${entryTitle(entry.type, entry.data)} at ${formatClock(timeMs)}`}
                     >
                       <PlaybackTimelineLogEntryMarker
@@ -526,12 +611,14 @@ export function TripPlaybackOverlay({
             {showTimelineMedia
               ? visibleMediaMarkers.map((marker) => {
                   const left =
-                    ((marker.timeMs - windowRange.startMs) / windowRange.durationMs) *
+                    ((marker.timeMs - windowRange.startMs) /
+                      windowRange.durationMs) *
                     100
                   const offsetPx = mediaMarkerOffsets.get(marker.id) ?? 0
                   const entry =
-                    chronologicalEntries.find((item) => item.id === marker.entryId) ??
-                    null
+                    chronologicalEntries.find(
+                      (item) => item.id === marker.entryId,
+                    ) ?? null
                   const label = entry
                     ? `${entryTitle(entry.type, entry.data)} media at ${formatClock(marker.timeMs)}`
                     : `Media at ${formatClock(marker.timeMs)}`
@@ -588,7 +675,10 @@ export function TripPlaybackOverlay({
             </div>
           </div>
 
-          <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center" data-playback-control>
+          <div
+            className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center"
+            data-playback-control
+          >
             <div className="justify-self-start">
               {onShowLogEntries ? (
                 <button
@@ -605,55 +695,62 @@ export function TripPlaybackOverlay({
             </div>
 
             <div className="flex items-center gap-2">
-            <button
-              type="button"
-              data-playback-control
-              onClick={() => {
-                setPlaying(false)
-                onCurrentTimeChange(range.startMs)
-                setWindowCenterMs(range.startMs)
-                setActiveEntryId(null)
-              }}
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
-              aria-label="Restart trip"
-            >
-              <RotateCcw className="size-4" />
-            </button>
-            <button
-              type="button"
-              data-playback-control
-              onClick={() => skipEntry(-1)}
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
-              aria-label="Previous log entry"
-            >
-              <ChevronLeft className="size-5" />
-            </button>
-            <button
-              type="button"
-              data-playback-control
-              onClick={() => {
-                if (currentTimeMs >= range.endMs) {
+              <button
+                type="button"
+                data-playback-control
+                onClick={() => {
+                  setPlaying(false)
                   onCurrentTimeChange(range.startMs)
                   setWindowCenterMs(range.startMs)
-                }
-                setPlaying((value) => !value)
-              }}
-              className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-black shadow-md hover:bg-white/90"
-              aria-label={playing ? 'Pause trip' : 'Play trip'}
-            >
-              {playing ? <Pause className="size-5" fill="currentColor" /> : <Play className="ml-0.5 size-5" fill="currentColor" />}
-            </button>
-            <button
-              type="button"
-              data-playback-control
-              onClick={() => skipEntry(1)}
-              className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
-              aria-label="Next log entry"
-            >
-              <ChevronRight className="size-5" />
-            </button>
+                  setActiveEntryId(null)
+                }}
+                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
+                aria-label="Restart trip"
+              >
+                <RotateCcw className="size-4" />
+              </button>
+              <button
+                type="button"
+                data-playback-control
+                onClick={() => skipEntry(-1)}
+                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
+                aria-label="Previous log entry"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+              <button
+                type="button"
+                data-playback-control
+                onClick={() => {
+                  if (currentTimeMs >= range.endMs) {
+                    onCurrentTimeChange(range.startMs)
+                    setWindowCenterMs(range.startMs)
+                  }
+                  setPlaying((value) => !value)
+                }}
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-black shadow-md hover:bg-white/90"
+                aria-label={playing ? 'Pause trip' : 'Play trip'}
+              >
+                {playing ? (
+                  <Pause className="size-5" fill="currentColor" />
+                ) : (
+                  <Play className="ml-0.5 size-5" fill="currentColor" />
+                )}
+              </button>
+              <button
+                type="button"
+                data-playback-control
+                onClick={() => skipEntry(1)}
+                className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20"
+                aria-label="Next log entry"
+              >
+                <ChevronRight className="size-5" />
+              </button>
 
-            <PlaybackSpeedControl speedIndex={speedIndex} onSpeedIndexChange={setSpeedIndex} />
+              <PlaybackSpeedControl
+                speedIndex={speedIndex}
+                onSpeedIndexChange={setSpeedIndex}
+              />
             </div>
 
             <div className="justify-self-end">

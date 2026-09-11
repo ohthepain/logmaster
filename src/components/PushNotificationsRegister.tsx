@@ -104,7 +104,8 @@ export function PushNotificationsRegister() {
     }
 
     navigator.serviceWorker?.addEventListener('message', onMessage)
-    return () => navigator.serviceWorker?.removeEventListener('message', onMessage)
+    return () =>
+      navigator.serviceWorker?.removeEventListener('message', onMessage)
   }, [])
 
   return null

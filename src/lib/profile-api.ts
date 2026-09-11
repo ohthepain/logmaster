@@ -28,7 +28,9 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export function isCustomProfilePhoto(image: string | null | undefined): boolean {
+export function isCustomProfilePhoto(
+  image: string | null | undefined,
+): boolean {
   return image === PROFILE_IMAGE_PATH
 }
 
@@ -38,7 +40,9 @@ export function profilePhotoUrl(
 ): string | null {
   if (!image) return null
   if (isCustomProfilePhoto(image)) {
-    const path = cacheBust ? `${PROFILE_IMAGE_PATH}?v=${cacheBust}` : PROFILE_IMAGE_PATH
+    const path = cacheBust
+      ? `${PROFILE_IMAGE_PATH}?v=${cacheBust}`
+      : PROFILE_IMAGE_PATH
     return apiUrl(path)
   }
   return image
@@ -75,9 +79,12 @@ export async function deleteProfilePhoto(): Promise<ProfileUser> {
 }
 
 export async function completeTutorial(): Promise<ProfileUser> {
-  const data = await api<{ user: ProfileUser }>('/api/profile/tutorial/complete', {
-    method: 'POST',
-  })
+  const data = await api<{ user: ProfileUser }>(
+    '/api/profile/tutorial/complete',
+    {
+      method: 'POST',
+    },
+  )
   return data.user
 }
 

@@ -7,7 +7,10 @@ import {
   BOAT_CONTACT_AREAS,
   ContactGrantsEditor,
 } from '../../../../../components/ResourceContactsTab'
-import type { BoatContactDetail, ContactResourceArea } from '../../../../../domain/contact'
+import type {
+  BoatContactDetail,
+  ContactResourceArea,
+} from '../../../../../domain/contact'
 import { formatContactGrants } from '../../../../../domain/contact'
 import { fetchBoat } from '../../../../../lib/boats-api'
 import {
@@ -15,7 +18,9 @@ import {
   updateBoatContact,
 } from '../../../../../lib/boat-contacts-api'
 
-export const Route = createFileRoute('/_main/boats/$boatId/contacts/$contactId')({
+export const Route = createFileRoute(
+  '/_main/boats/$boatId/contacts/$contactId',
+)({
   component: BoatContactDetailPage,
 })
 
@@ -39,9 +44,7 @@ function ContactRow({
 }) {
   if (!value) {
     return (
-      <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-        {label}: not set
-      </p>
+      <p className="m-0 text-sm text-[var(--sea-ink-soft)]">{label}: not set</p>
     )
   }
   return (
@@ -80,7 +83,10 @@ function BoatContactDetailPage() {
   const loadDetail = () => {
     setLoading(true)
     setError(null)
-    return Promise.all([fetchBoat(boatId), fetchBoatContactDetail(boatId, contactId)])
+    return Promise.all([
+      fetchBoat(boatId),
+      fetchBoatContactDetail(boatId, contactId),
+    ])
       .then(([boatPayload, contactDetail]) => {
         setBoatName(boatPayload.boat.name)
         setDetail(contactDetail)
@@ -114,13 +120,13 @@ function BoatContactDetailPage() {
         whatsapp: whatsappDraft.trim() || null,
         notes: notesDraft.trim() || null,
       })
-      setDetail((current) =>
-        current ? { ...current, contact } : current,
-      )
+      setDetail((current) => (current ? { ...current, contact } : current))
       setEditing(false)
       toast.success('Contact info updated')
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save contact info')
+      toast.error(
+        e instanceof Error ? e.message : 'Failed to save contact info',
+      )
     } finally {
       setSaving(false)
     }
@@ -133,12 +139,12 @@ function BoatContactDetailPage() {
       const contact = await updateBoatContact(boatId, contactId, {
         grants: grantsDraft,
       })
-      setDetail((current) =>
-        current ? { ...current, contact } : current,
-      )
+      setDetail((current) => (current ? { ...current, contact } : current))
       toast.success('Guest access updated')
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to update guest access')
+      toast.error(
+        e instanceof Error ? e.message : 'Failed to update guest access',
+      )
     } finally {
       setSavingGrants(false)
     }
@@ -331,8 +337,8 @@ function BoatContactDetailPage() {
           Guest access
         </h2>
         <p className="mt-2 text-sm text-[var(--sea-ink-soft)]">
-          Linked registered users can view only the selected boat areas. No invite
-          is sent.
+          Linked registered users can view only the selected boat areas. No
+          invite is sent.
         </p>
         <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] p-4">
           <ContactGrantsEditor

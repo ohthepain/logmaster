@@ -1,9 +1,7 @@
 import { sendMemberInviteEmail } from './email/ses'
 import { prisma } from './db'
 import { inviteeHasAccount } from './invite-signup'
-import {
-  linkContactToMember,
-} from './org-contacts'
+import { linkContactToMember } from './org-contacts'
 import { fireOrgMembersNotification } from './notifications/route-hooks'
 import { ensureOrgMemberForBoatMember } from './permissions/consortium'
 import type { ConsortiumMemberRole } from './permissions/roles'
@@ -482,8 +480,11 @@ export async function acceptPendingInvitesForEmail(
     orderBy: { createdAt: 'asc' },
   })
 
-  const accepted: Array<{ kind: string; orgId: string | null; boatId: string | null }> =
-    []
+  const accepted: Array<{
+    kind: string
+    orgId: string | null
+    boatId: string | null
+  }> = []
   for (const invite of pending) {
     try {
       const result = await acceptMemberInvite({

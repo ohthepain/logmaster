@@ -18,7 +18,10 @@ import {
 import { formatPosition } from './logbook-format'
 import { compareLogEntriesChronologically } from './logbook-entry-order'
 import type { TripPlaybackPosition } from './trip-playback'
-import { tripPlaybackPositionFromTrackSamples, tripTrackSamplesForTrip } from './trip-track-playback'
+import {
+  tripPlaybackPositionFromTrackSamples,
+  tripTrackSamplesForTrip,
+} from './trip-track-playback'
 
 export type TripPlaybackInfoLine = {
   label: string
@@ -92,7 +95,10 @@ function sampleBeforeTime<T extends { time: string }>(
   return result
 }
 
-function interpolateScalar(samples: ScalarTrackSample[], timeMs: number): number | null {
+function interpolateScalar(
+  samples: ScalarTrackSample[],
+  timeMs: number,
+): number | null {
   if (samples.length === 0) return null
   let before = samples[0]
   let after = samples[samples.length - 1]
@@ -108,11 +114,17 @@ function interpolateScalar(samples: ScalarTrackSample[], timeMs: number): number
   const beforeMs = validDateMs(before.time) ?? timeMs
   const afterMs = validDateMs(after.time) ?? beforeMs
   if (beforeMs === afterMs) return before.value
-  const progress = Math.min(1, Math.max(0, (timeMs - beforeMs) / (afterMs - beforeMs)))
+  const progress = Math.min(
+    1,
+    Math.max(0, (timeMs - beforeMs) / (afterMs - beforeMs)),
+  )
   return before.value + (after.value - before.value) * progress
 }
 
-function interpolateAngle(samples: AngleTrackSample[], timeMs: number): number | null {
+function interpolateAngle(
+  samples: AngleTrackSample[],
+  timeMs: number,
+): number | null {
   const sample = sampleBeforeTime(samples, timeMs)
   return sample?.degrees ?? null
 }
@@ -157,7 +169,8 @@ function positionDetailAt(
   let elevationM: number | null = null
   if (elevationBefore != null && Number.isFinite(elevationBefore)) {
     if (elevationAfter != null && Number.isFinite(elevationAfter)) {
-      elevationM = elevationBefore + (elevationAfter - elevationBefore) * progress
+      elevationM =
+        elevationBefore + (elevationAfter - elevationBefore) * progress
     } else {
       elevationM = elevationBefore
     }
@@ -213,7 +226,8 @@ export function tripPlaybackInfoAt(
     (positionSamples.length > 0
       ? tripPlaybackPositionFromTrackSamples(positionSamples, timeMs)
       : null)
-  const elevation = positionDetailAt(positionSamples, timeMs)?.elevationM ?? null
+  const elevation =
+    positionDetailAt(positionSamples, timeMs)?.elevationM ?? null
   const entryInstruments = nearestEntryInstruments(
     [...entries].sort(compareLogEntriesChronologically),
     timeMs,
@@ -222,9 +236,17 @@ export function tripPlaybackInfoAt(
   pushLine(lines, seen, 'Time', formatClock(timeMs))
 
   if (position) {
-    pushLine(lines, seen, 'Position', formatPosition(position.latitude, position.longitude))
+    pushLine(
+      lines,
+      seen,
+      'Position',
+      formatPosition(position.latitude, position.longitude),
+    )
     pushLine(lines, seen, 'Heading', formatDegrees(position.heading))
-  } else if (entryInstruments?.latitude != null && entryInstruments.longitude != null) {
+  } else if (
+    entryInstruments?.latitude != null &&
+    entryInstruments.longitude != null
+  ) {
     pushLine(
       lines,
       seen,
@@ -233,8 +255,16 @@ export function tripPlaybackInfoAt(
     )
   }
 
-  if (entryInstruments?.headingTrue != null && Number.isFinite(entryInstruments.headingTrue)) {
-    pushLine(lines, seen, 'Heading', formatDegrees(entryInstruments.headingTrue))
+  if (
+    entryInstruments?.headingTrue != null &&
+    Number.isFinite(entryInstruments.headingTrue)
+  ) {
+    pushLine(
+      lines,
+      seen,
+      'Heading',
+      formatDegrees(entryInstruments.headingTrue),
+    )
   }
 
   for (const track of instrumentTracksForTrip(tripId, tracks)) {
@@ -245,12 +275,22 @@ export function tripPlaybackInfoAt(
     switch (track.kind) {
       case 'sog': {
         const value = interpolateScalar(samples as ScalarTrackSample[], timeMs)
-        pushLine(lines, seen, meta.label, value != null ? formatKnots(value) : null)
+        pushLine(
+          lines,
+          seen,
+          meta.label,
+          value != null ? formatKnots(value) : null,
+        )
         break
       }
       case 'stw': {
         const value = interpolateScalar(samples as ScalarTrackSample[], timeMs)
-        pushLine(lines, seen, meta.label, value != null ? formatKnots(value) : null)
+        pushLine(
+          lines,
+          seen,
+          meta.label,
+          value != null ? formatKnots(value) : null,
+        )
         break
       }
       case 'water-temperature': {
@@ -266,7 +306,12 @@ export function tripPlaybackInfoAt(
       case 'heading':
       case 'cog': {
         const value = interpolateAngle(samples as AngleTrackSample[], timeMs)
-        pushLine(lines, seen, meta.label, value != null ? formatDegrees(value) : null)
+        pushLine(
+          lines,
+          seen,
+          meta.label,
+          value != null ? formatDegrees(value) : null,
+        )
         break
       }
       case 'wind': {
@@ -275,7 +320,9 @@ export function tripPlaybackInfoAt(
           lines,
           seen,
           meta.label,
-          value != null ? formatWind(value.speedKnots, value.directionTrue) : null,
+          value != null
+            ? formatWind(value.speedKnots, value.directionTrue)
+            : null,
         )
         break
       }
@@ -288,16 +335,25 @@ export function tripPlaybackInfoAt(
     pushLine(lines, seen, 'Elevation', `${elevation.toFixed(0)} m`)
   }
 
-  if (entryInstruments?.windSpeedKnots != null && entryInstruments.windDirectionTrue != null) {
+  if (
+    entryInstruments?.windSpeedKnots != null &&
+    entryInstruments.windDirectionTrue != null
+  ) {
     pushLine(
       lines,
       seen,
       'Wind',
-      formatWind(entryInstruments.windSpeedKnots, entryInstruments.windDirectionTrue),
+      formatWind(
+        entryInstruments.windSpeedKnots,
+        entryInstruments.windDirectionTrue,
+      ),
     )
   }
 
-  if (entryInstruments?.waterTemperatureC != null && Number.isFinite(entryInstruments.waterTemperatureC)) {
+  if (
+    entryInstruments?.waterTemperatureC != null &&
+    Number.isFinite(entryInstruments.waterTemperatureC)
+  ) {
     pushLine(
       lines,
       seen,
@@ -306,16 +362,40 @@ export function tripPlaybackInfoAt(
     )
   }
 
-  if (entryInstruments?.depthMeters != null && Number.isFinite(entryInstruments.depthMeters)) {
-    pushLine(lines, seen, 'Depth', `${entryInstruments.depthMeters.toFixed(1)} m`)
+  if (
+    entryInstruments?.depthMeters != null &&
+    Number.isFinite(entryInstruments.depthMeters)
+  ) {
+    pushLine(
+      lines,
+      seen,
+      'Depth',
+      `${entryInstruments.depthMeters.toFixed(1)} m`,
+    )
   }
 
-  if (entryInstruments?.engineRpm != null && Number.isFinite(entryInstruments.engineRpm)) {
-    pushLine(lines, seen, 'Engine', `${Math.round(entryInstruments.engineRpm)} rpm`)
+  if (
+    entryInstruments?.engineRpm != null &&
+    Number.isFinite(entryInstruments.engineRpm)
+  ) {
+    pushLine(
+      lines,
+      seen,
+      'Engine',
+      `${Math.round(entryInstruments.engineRpm)} rpm`,
+    )
   }
 
-  if (entryInstruments?.batteryVoltage != null && Number.isFinite(entryInstruments.batteryVoltage)) {
-    pushLine(lines, seen, 'Battery', `${entryInstruments.batteryVoltage.toFixed(1)} V`)
+  if (
+    entryInstruments?.batteryVoltage != null &&
+    Number.isFinite(entryInstruments.batteryVoltage)
+  ) {
+    pushLine(
+      lines,
+      seen,
+      'Battery',
+      `${entryInstruments.batteryVoltage.toFixed(1)} V`,
+    )
   }
 
   if (position && !seen.has('Heading')) {
@@ -323,9 +403,17 @@ export function tripPlaybackInfoAt(
   }
 
   if (!seen.has('Position') && positionSamples.length > 0) {
-    const fromTrack = tripPlaybackPositionFromTrackSamples(positionSamples, timeMs)
+    const fromTrack = tripPlaybackPositionFromTrackSamples(
+      positionSamples,
+      timeMs,
+    )
     if (fromTrack) {
-      pushLine(lines, seen, 'Position', formatPosition(fromTrack.latitude, fromTrack.longitude))
+      pushLine(
+        lines,
+        seen,
+        'Position',
+        formatPosition(fromTrack.latitude, fromTrack.longitude),
+      )
     }
   }
 

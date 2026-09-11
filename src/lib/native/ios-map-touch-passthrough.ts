@@ -1,5 +1,8 @@
 import { useEffect } from 'react'
-import { isIosWebUiBlockingMapTouch, requestIosMapTouchSync } from './ios-map-touch-suspend'
+import {
+  isIosWebUiBlockingMapTouch,
+  requestIosMapTouchSync,
+} from './ios-map-touch-suspend'
 import { getNativePlatform } from '../platform'
 
 const ROOT_CLASS = 'ios-native-map-touch-root'

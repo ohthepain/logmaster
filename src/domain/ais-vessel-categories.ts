@@ -94,18 +94,24 @@ const NAVIGATIONAL_STATUS_LABELS: Record<number, string> = {
   15: 'Undefined',
 }
 
-export function aisShipTypeLabel(shipType: number | null | undefined): string | null {
+export function aisShipTypeLabel(
+  shipType: number | null | undefined,
+): string | null {
   if (shipType == null || !Number.isFinite(shipType)) return null
   return AIS_SHIP_TYPE_LABELS[shipType] ?? `AIS type ${shipType}`
 }
 
-export function aisNavigationalStatusLabel(status: number | null | undefined): string | null {
+export function aisNavigationalStatusLabel(
+  status: number | null | undefined,
+): string | null {
   if (status == null || !Number.isFinite(status)) return null
   return NAVIGATIONAL_STATUS_LABELS[status] ?? `Status ${status}`
 }
 
 /** Map IMO/AIS ship type code to a MarineTraffic-style category. */
-export function aisCategoryForShipType(shipType: number | null | undefined): AisVesselCategory {
+export function aisCategoryForShipType(
+  shipType: number | null | undefined,
+): AisVesselCategory {
   if (shipType == null || !Number.isFinite(shipType) || shipType === 0) {
     return 'unspecified'
   }

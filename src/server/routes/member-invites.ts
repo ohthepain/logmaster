@@ -44,7 +44,8 @@ memberInvitesRoutes.post('/accept', async (c) => {
     })
     return c.json({ ok: true, ...result })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to accept invite'
+    const message =
+      error instanceof Error ? error.message : 'Failed to accept invite'
     return c.json({ error: message }, 400)
   }
 })

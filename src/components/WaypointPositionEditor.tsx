@@ -13,8 +13,14 @@ import {
   loadSailingMapStyle,
   scheduleSeamarkTileRefresh,
 } from '../lib/maplibre-sailing-map-setup'
-import { applySailingLogMapTheme, SailingMapColors } from '../lib/maplibre-sailing-theme'
-import { queryTappableMapDataFeatures, installMapDataLayers  } from '../lib/maplibre-data-layers'
+import {
+  applySailingLogMapTheme,
+  SailingMapColors,
+} from '../lib/maplibre-sailing-theme'
+import {
+  queryTappableMapDataFeatures,
+  installMapDataLayers,
+} from '../lib/maplibre-data-layers'
 import { defaultRasterMapId } from '../lib/map-styles'
 import {
   centerMapOnCurrentLocation,
@@ -56,8 +62,12 @@ export function WaypointPositionEditor({
   const initialFitDoneRef = useRef(false)
   const [mapReady, setMapReady] = useState(false)
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
-  const mapDataLayerToggles = useAppOptionsStore((state) => state.mapDataLayerToggles)
-  const setMapDataLayerToggles = useAppOptionsStore((state) => state.setMapDataLayerToggles)
+  const mapDataLayerToggles = useAppOptionsStore(
+    (state) => state.mapDataLayerToggles,
+  )
+  const setMapDataLayerToggles = useAppOptionsStore(
+    (state) => state.setMapDataLayerToggles,
+  )
 
   useMapDataLayerSync(mapRef, mapReady, mapDataLayerToggles, {
     enablePopups: true,
@@ -83,7 +93,10 @@ export function WaypointPositionEditor({
         map = new maplibregl.Map({
           container,
           style,
-          center: [DEV_FALLBACK_POSITION.longitude, DEV_FALLBACK_POSITION.latitude],
+          center: [
+            DEV_FALLBACK_POSITION.longitude,
+            DEV_FALLBACK_POSITION.latitude,
+          ],
           zoom: 10,
           pitch: 0,
           maxPitch: 0,
@@ -208,7 +221,10 @@ export function WaypointPositionEditor({
       className="relative h-full min-h-0 w-full overflow-hidden"
       style={{ backgroundColor: SailingMapColors.background }}
     >
-      <DevComponentLabel name="WaypointPositionEditor" className="absolute left-2 top-2 z-10" />
+      <DevComponentLabel
+        name="WaypointPositionEditor"
+        className="absolute left-2 top-2 z-10"
+      />
       <div ref={containerRef} className={cn('sailing-map', mapClassName)} />
       {mapReady ? (
         <SailingMapControlStack

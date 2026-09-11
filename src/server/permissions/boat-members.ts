@@ -51,7 +51,8 @@ export async function assertCanChangeBoatMemberRole(
   if (boat.userId === targetUserId) {
     return {
       ok: false,
-      error: 'Cannot change the boat owner role here. Transfer ownership first.',
+      error:
+        'Cannot change the boat owner role here. Transfer ownership first.',
     }
   }
 

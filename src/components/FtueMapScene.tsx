@@ -21,7 +21,14 @@ export function FtueMapScene() {
           strokeDasharray="8 6"
           strokeLinecap="round"
         />
-        <circle cx="228" cy="93" r="11" fill="#ffffff" stroke="var(--brand)" strokeWidth="3" />
+        <circle
+          cx="228"
+          cy="93"
+          r="11"
+          fill="#ffffff"
+          stroke="var(--brand)"
+          strokeWidth="3"
+        />
         <circle cx="228" cy="93" r="4" fill="var(--brand)" />
       </svg>
 
@@ -33,7 +40,10 @@ export function FtueMapScene() {
           </span>
           <span className="h-4 w-px bg-black/10" aria-hidden />
           <span className="inline-flex items-center gap-1.5">
-            <RotateCcw className="size-4 text-[var(--brand)]" strokeWidth={2.25} />
+            <RotateCcw
+              className="size-4 text-[var(--brand)]"
+              strokeWidth={2.25}
+            />
             8 trips recorded
           </span>
         </div>

@@ -136,15 +136,15 @@ body {
 @media (hover: none) and (pointer: coarse) {
   :is(
     input:not(
-        [type="checkbox"],
-        [type="radio"],
-        [type="range"],
-        [type="file"],
-        [type="button"],
-        [type="submit"],
-        [type="reset"],
-        [type="hidden"]
-      ),
+      [type="checkbox"],
+      [type="radio"],
+      [type="range"],
+      [type="file"],
+      [type="button"],
+      [type="submit"],
+      [type="reset"],
+      [type="hidden"]
+    ),
     textarea,
     select
   ) {
@@ -508,7 +508,8 @@ a {
   border-top-color: rgba(26, 51, 72, 0.97);
 }
 
-.sailing-map-feature-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+.sailing-map-feature-popup.maplibregl-popup-anchor-bottom
+  .maplibregl-popup-tip {
   border-bottom-color: rgba(26, 51, 72, 0.97);
 }
 
@@ -574,7 +575,7 @@ a {
 }
 
 /* Sonner — below Dynamic Island + Header (see AppToaster / APP_HEADER_TOP_OFFSET) */
-[data-sonner-toaster][data-y-position='top'] {
+[data-sonner-toaster][data-y-position="top"] {
   top: calc(env(safe-area-inset-top, 0px) + 5rem) !important;
 }
 

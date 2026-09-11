@@ -3,7 +3,9 @@ import { readImageFile } from './image-file'
 
 /** EXIF date format: `YYYY:MM:DD HH:MM:SS` in local wall time. */
 export function exifDateTimeToIso(dateTime: string): string | undefined {
-  const match = dateTime.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})$/)
+  const match = dateTime.match(
+    /^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})$/,
+  )
   if (!match) return undefined
 
   const [, year, month, day, hour, minute, second] = match
@@ -43,14 +45,8 @@ export async function readPhotoGpsFromFile(
   if (typeof latRef !== 'string' || typeof lonRef !== 'string') return null
   if (!Array.isArray(latDms) || !Array.isArray(lonDms)) return null
 
-  const latitude = piexif.GPSHelper.dmsRationalToDeg(
-    latDms,
-    latRef,
-  )
-  const longitude = piexif.GPSHelper.dmsRationalToDeg(
-    lonDms,
-    lonRef,
-  )
+  const latitude = piexif.GPSHelper.dmsRationalToDeg(latDms, latRef)
+  const longitude = piexif.GPSHelper.dmsRationalToDeg(lonDms, lonRef)
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null
   return { latitude, longitude }
 }

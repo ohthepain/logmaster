@@ -54,7 +54,7 @@ function serializeBoatContact(contact: {
     phone: contact.phone,
     whatsapp: contact.whatsapp ?? null,
     notes: contact.notes,
-    grants: (contact.grants ?? []),
+    grants: contact.grants ?? [],
     createdAt: contact.createdAt.toISOString(),
     updatedAt: contact.updatedAt.toISOString(),
   }
@@ -96,7 +96,10 @@ boatContactsRoutes.post('/:boatId/contacts', async (c) => {
   if (!userId) return unauthorized()
 
   const boatId = c.req.param('boatId')
-  const allowed = await canAccess(userId, 'manage', { type: 'boat', id: boatId })
+  const allowed = await canAccess(userId, 'manage', {
+    type: 'boat',
+    id: boatId,
+  })
   if (!allowed) return c.json({ error: 'Boat not found' }, 403)
 
   const body = (await c.req.json().catch(() => ({}))) as {
@@ -134,7 +137,11 @@ boatContactsRoutes.post('/:boatId/contacts', async (c) => {
 
   const boat = await getBoatSummary(boatId)
   if (boat) {
-    fireBoatContactsNotification(userId, boat, `added contact “${displayName}”.`)
+    fireBoatContactsNotification(
+      userId,
+      boat,
+      `added contact “${displayName}”.`,
+    )
   }
 
   return c.json({ contact: serializeBoatContact(contact) }, 201)
@@ -155,7 +162,10 @@ boatContactsRoutes.get('/:boatId/contacts/:contactId', async (c) => {
   if (!contact) return c.json({ error: 'Contact not found' }, 404)
 
   const isSelf = contact.userId === userId
-  const canManage = await canAccess(userId, 'manage', { type: 'boat', id: boatId })
+  const canManage = await canAccess(userId, 'manage', {
+    type: 'boat',
+    id: boatId,
+  })
 
   return c.json({
     contact: serializeBoatContact(contact),
@@ -177,7 +187,10 @@ boatContactsRoutes.patch('/:boatId/contacts/:contactId', async (c) => {
   if (!existing) return c.json({ error: 'Contact not found' }, 404)
 
   const isSelf = existing.userId === userId
-  const canManage = await canAccess(userId, 'manage', { type: 'boat', id: boatId })
+  const canManage = await canAccess(userId, 'manage', {
+    type: 'boat',
+    id: boatId,
+  })
   if (!canManage && !isSelf) return c.json({ error: 'Boat not found' }, 403)
 
   const body = (await c.req.json().catch(() => ({}))) as {
@@ -212,7 +225,9 @@ boatContactsRoutes.patch('/:boatId/contacts/:contactId', async (c) => {
       ...(body.displayName !== undefined
         ? { displayName: body.displayName.trim() || existing.displayName }
         : {}),
-      ...(body.email !== undefined ? { email: nextEmail, userId: linkedUserId } : {}),
+      ...(body.email !== undefined
+        ? { email: nextEmail, userId: linkedUserId }
+        : {}),
       ...(body.phone !== undefined
         ? { phone: normalizeOptionalString(body.phone) }
         : {}),
@@ -241,7 +256,10 @@ boatContactsRoutes.delete('/:boatId/contacts/:contactId', async (c) => {
 
   const boatId = c.req.param('boatId')
   const contactId = c.req.param('contactId')
-  const allowed = await canAccess(userId, 'manage', { type: 'boat', id: boatId })
+  const allowed = await canAccess(userId, 'manage', {
+    type: 'boat',
+    id: boatId,
+  })
   if (!allowed) return c.json({ error: 'Boat not found' }, 403)
 
   const existing = await db.boatContact.findFirst({

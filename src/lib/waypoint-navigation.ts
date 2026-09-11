@@ -7,9 +7,9 @@ export type OrderedWaypoint = Pick<
   'id' | 'sequence' | 'latitude' | 'longitude' | 'name'
 >
 
-export function sortWaypointsBySequence<T extends Pick<RouteWaypoint, 'sequence'>>(
-  waypoints: T[],
-): T[] {
+export function sortWaypointsBySequence<
+  T extends Pick<RouteWaypoint, 'sequence'>,
+>(waypoints: T[]): T[] {
   return [...waypoints].sort((a, b) => a.sequence - b.sequence)
 }
 
@@ -20,10 +20,7 @@ function distanceSquared(a: MapLngLat, b: MapLngLat) {
 }
 
 /** Project boat position onto polyline; return cumulative fraction along path [0,1]. */
-function projectOntoPolyline(
-  position: MapLngLat,
-  points: MapLngLat[],
-): number {
+function projectOntoPolyline(position: MapLngLat, points: MapLngLat[]): number {
   if (points.length === 0) return 0
   if (points.length === 1) return 0
 
@@ -41,17 +38,20 @@ function projectOntoPolyline(
     const start = points[index]
     const end = points[index + 1]
     const segmentLength = Math.sqrt(distanceSquared(start, end))
-    const t = segmentLength === 0
-      ? 0
-      : Math.max(
-          0,
-          Math.min(
-            1,
-            ((position.longitude - start.longitude) * (end.longitude - start.longitude) +
-              (position.latitude - start.latitude) * (end.latitude - start.latitude)) /
-              (segmentLength * segmentLength || 1),
-          ),
-        )
+    const t =
+      segmentLength === 0
+        ? 0
+        : Math.max(
+            0,
+            Math.min(
+              1,
+              ((position.longitude - start.longitude) *
+                (end.longitude - start.longitude) +
+                (position.latitude - start.latitude) *
+                  (end.latitude - start.latitude)) /
+                (segmentLength * segmentLength || 1),
+            ),
+          )
     const projected = {
       latitude: start.latitude + t * (end.latitude - start.latitude),
       longitude: start.longitude + t * (end.longitude - start.longitude),

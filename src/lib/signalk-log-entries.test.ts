@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { LogEntry } from '../domain/logbook'
-import {
-  encodePositionTrackSamples
-  
-} from '../domain/trip-track'
-import type {TripTrack} from '../domain/trip-track';
+import { encodePositionTrackSamples } from '../domain/trip-track'
+import type { TripTrack } from '../domain/trip-track'
 import { buildTripSignalKExport } from './signalk-export'
 import {
   collectWaypointsFromEntries,
@@ -136,7 +133,9 @@ describe('signalk log entries and waypoints', () => {
     ]
     expect(collectWaypointsFromEntries(manualWaypointEntries)).toHaveLength(1)
 
-    const exported = JSON.parse(buildTripSignalKExport(trip, tracks, entries)) as {
+    const exported = JSON.parse(
+      buildTripSignalKExport(trip, tracks, entries),
+    ) as {
       version: number
       logEntries: Array<{ type: string }>
       waypoints: Array<{ name: string }>
@@ -154,7 +153,9 @@ describe('signalk log entries and waypoints', () => {
     expect(exported.waypoints[0]?.name).toBe('Harbour entrance')
 
     const paths = exported.deltas.flatMap((delta) =>
-      delta.updates.flatMap((update) => update.values.map((value) => value.path)),
+      delta.updates.flatMap((update) =>
+        update.values.map((value) => value.path),
+      ),
     )
     expect(paths).not.toContain(SIGNALK_LOG_ENTRY_PATH)
     expect(paths).not.toContain(SIGNALK_WAYPOINTS_PATH)
@@ -166,8 +167,10 @@ describe('signalk log entries and waypoints', () => {
       imported.entries.some(
         (entry) =>
           entry.type === 'NOTE' &&
-          (entry.data?.signalkWaypoint === true || entry.data?.gpxWaypoint === true) &&
-          (entry.data?.place as { name?: string } | undefined)?.name === 'Harbour entrance',
+          (entry.data?.signalkWaypoint === true ||
+            entry.data?.gpxWaypoint === true) &&
+          (entry.data?.place as { name?: string } | undefined)?.name ===
+            'Harbour entrance',
       ),
     ).toBe(true)
   })

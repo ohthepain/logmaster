@@ -50,7 +50,9 @@ export function formatRouteListWaypointCount(count: number): string {
   return `${count} waypoint${count === 1 ? '' : 's'}`
 }
 
-export function formatRouteListDistanceMeters(distanceM: number | null): string {
+export function formatRouteListDistanceMeters(
+  distanceM: number | null,
+): string {
   if (distanceM == null || !Number.isFinite(distanceM) || distanceM <= 0) {
     return '—'
   }
@@ -61,7 +63,9 @@ export function formatRouteListDistanceMeters(distanceM: number | null): string 
   return `${nauticalMiles.toFixed(1)} nm`
 }
 
-export function routePlannedDistanceMeters(waypoints: RouteWaypoint[]): number | null {
+export function routePlannedDistanceMeters(
+  waypoints: RouteWaypoint[],
+): number | null {
   const ordered = sortRouteWaypoints(waypoints)
   if (ordered.length < 2) return null
 

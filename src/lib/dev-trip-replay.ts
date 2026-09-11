@@ -26,16 +26,11 @@ export type ReplayPosition = {
   heading: number | null
 }
 
-export function defaultReplayTripName(
-  trip: Pick<Trip, 'title' | 'boatName'>,
-) {
+export function defaultReplayTripName(trip: Pick<Trip, 'title' | 'boatName'>) {
   return `${trip.title?.trim() || trip.boatName} replay`
 }
 
-export function replaySourceEntries(
-  entries: LogEntry[],
-  sourceTripId: string,
-) {
+export function replaySourceEntries(entries: LogEntry[], sourceTripId: string) {
   return entries
     .filter(
       (entry) =>
@@ -46,7 +41,10 @@ export function replaySourceEntries(
     .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
 }
 
-export function replayEntryElapsedMs(entry: Pick<LogEntry, 'timestamp'>, sourceStartedAt: string) {
+export function replayEntryElapsedMs(
+  entry: Pick<LogEntry, 'timestamp'>,
+  sourceStartedAt: string,
+) {
   const sourceStartMs = Date.parse(sourceStartedAt)
   const entryMs = Date.parse(entry.timestamp)
   if (!Number.isFinite(sourceStartMs) || !Number.isFinite(entryMs)) return 0
@@ -64,7 +62,9 @@ export function replayDurationMs(
   entries: LogEntry[],
 ) {
   const sourceStartMs = Date.parse(trip.startedAt)
-  const completedMs = trip.completedAt ? Date.parse(trip.completedAt) : Number.NaN
+  const completedMs = trip.completedAt
+    ? Date.parse(trip.completedAt)
+    : Number.NaN
   const lastEntryMs = entries.reduce((latest, entry) => {
     if (entry.deleted) return latest
     const entryMs = Date.parse(entry.timestamp)
@@ -74,7 +74,10 @@ export function replayDurationMs(
   return Math.max(0, endMs - sourceStartMs)
 }
 
-function validCoordinate(latitude: number | null | undefined, longitude: number | null | undefined) {
+function validCoordinate(
+  latitude: number | null | undefined,
+  longitude: number | null | undefined,
+) {
   return (
     latitude != null &&
     longitude != null &&
@@ -113,10 +116,7 @@ export function replayPositionAt(
   }
 
   for (const entry of entries) {
-    if (
-      entry.deleted ||
-      !validCoordinate(entry.latitude, entry.longitude)
-    ) {
+    if (entry.deleted || !validCoordinate(entry.latitude, entry.longitude)) {
       continue
     }
     points.push({
@@ -133,7 +133,8 @@ export function replayPositionAt(
 
   const elapsed = Math.max(0, elapsedMs)
   const nextIndex = points.findIndex((point) => point.elapsedMs >= elapsed)
-  if (nextIndex <= 0) return points[nextIndex < 0 ? points.length - 1 : 0] ?? null
+  if (nextIndex <= 0)
+    return points[nextIndex < 0 ? points.length - 1 : 0] ?? null
 
   const previous = points[nextIndex - 1]
   const next = points[nextIndex]
@@ -143,7 +144,8 @@ export function replayPositionAt(
   return {
     latitude: previous.latitude + (next.latitude - previous.latitude) * ratio,
     longitude: normalizeLongitude(
-      previous.longitude + shortestLongitudeDelta(previous.longitude, next.longitude) * ratio,
+      previous.longitude +
+        shortestLongitudeDelta(previous.longitude, next.longitude) * ratio,
     ),
     accuracy: next.accuracy ?? previous.accuracy,
     heading: next.heading ?? previous.heading,

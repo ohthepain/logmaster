@@ -43,7 +43,9 @@ describe('osm-feature-display', () => {
   })
 
   it('parses stringified GeoJSON tags', () => {
-    expect(parseOsmFeatureTags('{"seamark:type":"wreck","depth":"12"}')).toEqual({
+    expect(
+      parseOsmFeatureTags('{"seamark:type":"wreck","depth":"12"}'),
+    ).toEqual({
       'seamark:type': 'wreck',
       depth: '12',
     })
@@ -90,10 +92,7 @@ describe('osm-feature-display', () => {
         'seamark:light:2:sector_start': '208',
         'seamark:light:2:sector_end': '262',
       }),
-    ).toEqual([
-      'Fl.W 10s 12M (262°–208°)',
-      'Fl.R 9M (208°–262°)',
-    ])
+    ).toEqual(['Fl.W 10s 12M (262°–208°)', 'Fl.R 9M (208°–262°)'])
   })
 
   it('renders light and hazard popup details', () => {

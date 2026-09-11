@@ -1,8 +1,5 @@
 import type { LogEntry, LogEntryType } from '../domain/logbook'
-import {
-  isDirectionChangeEntry,
-  isVideoLogEntry,
-} from './log-entry-map-marker'
+import { isDirectionChangeEntry, isVideoLogEntry } from './log-entry-map-marker'
 
 /** User-facing map layer toggle — one checkbox may cover several entry types. */
 export type MapLogEntryLayerToggleId =
@@ -69,25 +66,26 @@ export const MAP_LOG_ENTRY_LAYER_TOGGLES: MapLogEntryLayerToggleDefinition[] = [
   },
 ]
 
-const LAYER_ID_TO_TOGGLE: Record<MapLogEntryLayerId, MapLogEntryLayerToggleId> = {
-  START_TRIP: 'trip',
-  END_TRIP: 'trip',
-  SAILS_UP: 'sails',
-  SAILS_DOWN: 'sails',
-  ENGINE_ON: 'engine',
-  ENGINE_OFF: 'engine',
-  ANCHOR_DROPPED: 'anchor-mooring',
-  ANCHOR_WEIGHED: 'anchor-mooring',
-  MOORED: 'anchor-mooring',
-  CAST_OFF: 'anchor-mooring',
-  NOTE: 'log',
-  HOURLY_LOG: 'log',
-  PHOTO: 'media',
-  MEDIA: 'media',
-  VIDEO: 'media',
-  VOICE_NOTE: 'media',
-  DIRECTION_CHANGE: 'auto',
-}
+const LAYER_ID_TO_TOGGLE: Record<MapLogEntryLayerId, MapLogEntryLayerToggleId> =
+  {
+    START_TRIP: 'trip',
+    END_TRIP: 'trip',
+    SAILS_UP: 'sails',
+    SAILS_DOWN: 'sails',
+    ENGINE_ON: 'engine',
+    ENGINE_OFF: 'engine',
+    ANCHOR_DROPPED: 'anchor-mooring',
+    ANCHOR_WEIGHED: 'anchor-mooring',
+    MOORED: 'anchor-mooring',
+    CAST_OFF: 'anchor-mooring',
+    NOTE: 'log',
+    HOURLY_LOG: 'log',
+    PHOTO: 'media',
+    MEDIA: 'media',
+    VIDEO: 'media',
+    VOICE_NOTE: 'media',
+    DIRECTION_CHANGE: 'auto',
+  }
 
 const TOGGLE_MEMBER_LAYER_IDS: Record<
   MapLogEntryLayerToggleId,
@@ -106,7 +104,10 @@ export type MapLogEntryLayerToggles = Record<MapLogEntryLayerToggleId, boolean>
 
 export function defaultMapLogEntryLayerToggles(): MapLogEntryLayerToggles {
   return Object.fromEntries(
-    MAP_LOG_ENTRY_LAYER_TOGGLES.map((layer) => [layer.id, layer.defaultVisible]),
+    MAP_LOG_ENTRY_LAYER_TOGGLES.map((layer) => [
+      layer.id,
+      layer.defaultVisible,
+    ]),
   ) as MapLogEntryLayerToggles
 }
 
@@ -169,8 +170,7 @@ export function filterEntriesForMapLogLayers<T extends LogEntry>(
   toggles: MapLogEntryLayerToggles,
 ): T[] {
   return entries.filter(
-    (entry) =>
-      !entry.deleted && isLogEntryMapLayerVisible(entry, toggles),
+    (entry) => !entry.deleted && isLogEntryMapLayerVisible(entry, toggles),
   )
 }
 

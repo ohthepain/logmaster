@@ -19,7 +19,9 @@ export function tripTrackDistanceMeters(
   return distanceFromPositionSamples(samples)
 }
 
-export function distanceFromPositionSamples(samples: PositionTrackSample[]): number {
+export function distanceFromPositionSamples(
+  samples: PositionTrackSample[],
+): number {
   let total = 0
   for (let index = 1; index < samples.length; index += 1) {
     const previous = samples[index - 1]
@@ -45,7 +47,7 @@ export function tripDurationMs(
 
   const endMs =
     trip.status === 'COMPLETED'
-      ? validDateMs(trip.completedAt) ?? nowMs
+      ? (validDateMs(trip.completedAt) ?? nowMs)
       : nowMs
 
   if (endMs <= startMs) return null

@@ -15,7 +15,10 @@ const MAP_TOUCH_ZONE_SELECTOR = [
   '[data-trip-operational-controls]',
 ].join(', ')
 
-function inflateRect(rect: DOMRect, padding = ZONE_PADDING_PX): MapPassThroughZone {
+function inflateRect(
+  rect: DOMRect,
+  padding = ZONE_PADDING_PX,
+): MapPassThroughZone {
   const x = Math.max(0, rect.left - padding)
   const y = Math.max(0, rect.top - padding)
   const width = Math.min(window.innerWidth - x, rect.width + padding * 2)

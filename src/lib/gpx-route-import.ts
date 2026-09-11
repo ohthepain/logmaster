@@ -1,11 +1,6 @@
 import type { Route, RouteWaypoint } from '../domain/route'
-import {
-  GPX_IMPORT_SOURCE,
-  parseGpxRoute
-  
-  
-} from './gpx-import'
-import type {GpxImportFile, GpxWaypoint} from './gpx-import';
+import { GPX_IMPORT_SOURCE, parseGpxRoute } from './gpx-import'
+import type { GpxImportFile, GpxWaypoint } from './gpx-import'
 
 function makeId() {
   return crypto.randomUUID()
@@ -21,7 +16,9 @@ function routeTitle(
   fileName?: string,
 ): string {
   if (name?.trim()) return name.trim()
-  const firstName = waypoints.find((waypoint) => waypoint.name?.trim())?.name?.trim()
+  const firstName = waypoints
+    .find((waypoint) => waypoint.name?.trim())
+    ?.name?.trim()
   if (firstName) return firstName
   const fromFile = fileName?.replace(/\.gpx$/i, '').trim()
   if (fromFile) return fromFile
@@ -80,7 +77,9 @@ export function buildRouteFromGpxFile(file: GpxImportFile): GpxImportedRoute {
   return { route, waypoints }
 }
 
-export function buildRouteFromGpxFiles(files: GpxImportFile[]): GpxImportedRoute[] {
+export function buildRouteFromGpxFiles(
+  files: GpxImportFile[],
+): GpxImportedRoute[] {
   if (files.length === 0) {
     throw new Error('No GPX files were provided.')
   }

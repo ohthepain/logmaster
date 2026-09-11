@@ -67,15 +67,15 @@ function writeLog(line: ServerLogLine) {
   }
 }
 
-export function logHttpRequest(fields: Omit<HttpRequestLog, 'kind' | 'timestamp' | 'level'> & {
-  level?: ServerLogLevel
-}) {
+export function logHttpRequest(
+  fields: Omit<HttpRequestLog, 'kind' | 'timestamp' | 'level'> & {
+    level?: ServerLogLevel
+  },
+) {
   const status = fields.httpStatus ?? 0
   const level =
-    fields.level ??
-    (status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info')
-  const errorCode =
-    fields.errorCode ?? httpStatusToErrorCode(status)
+    fields.level ?? (status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info')
+  const errorCode = fields.errorCode ?? httpStatusToErrorCode(status)
 
   writeLog({
     kind: 'http_request',

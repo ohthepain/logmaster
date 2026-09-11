@@ -48,9 +48,7 @@ function AdminOrgsPage() {
       setOrgs(orgsData)
       setUsers(usersData)
       setOwnerDrafts(
-        Object.fromEntries(
-          orgsData.map((org) => [org.id, org.ownerUserId]),
-        ),
+        Object.fromEntries(orgsData.map((org) => [org.id, org.ownerUserId])),
       )
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load orgs')
@@ -67,7 +65,14 @@ function AdminOrgsPage() {
       return
     }
     void load()
-  }, [adminLoading, isAdmin, load, navigate, session.data?.user, session.isPending])
+  }, [
+    adminLoading,
+    isAdmin,
+    load,
+    navigate,
+    session.data?.user,
+    session.isPending,
+  ])
 
   const handleDelete = async (org: AdminOrg) => {
     if (
@@ -176,9 +181,8 @@ function AdminOrgsPage() {
                       <p className="m-0 mt-2 text-sm text-[var(--sea-ink-soft)]">
                         {org.memberCount}{' '}
                         {org.memberCount === 1 ? 'member' : 'members'} ·{' '}
-                        {org.boatCount}{' '}
-                        {org.boatCount === 1 ? 'boat' : 'boats'} ·{' '}
-                        {org.visibility.toLowerCase()} · updated{' '}
+                        {org.boatCount} {org.boatCount === 1 ? 'boat' : 'boats'}{' '}
+                        · {org.visibility.toLowerCase()} · updated{' '}
                         {formatDate(org.updatedAt)}
                       </p>
                     </div>

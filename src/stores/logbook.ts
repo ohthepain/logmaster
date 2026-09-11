@@ -9,8 +9,16 @@ import type {
 } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { normalizeTripTrack } from '../domain/trip-track'
-import { getTripTrackRecorder, isOpenPositionTrack, openPositionTrackId } from '../lib/trip-track-recorder'
-import { hydrateTripTrackPayload, fetchTripTrackManifests, mergeTrackManifests } from '../lib/trip-track-sync'
+import {
+  getTripTrackRecorder,
+  isOpenPositionTrack,
+  openPositionTrackId,
+} from '../lib/trip-track-recorder'
+import {
+  hydrateTripTrackPayload,
+  fetchTripTrackManifests,
+  mergeTrackManifests,
+} from '../lib/trip-track-sync'
 import {
   captureLogbookContext,
   fetchLogbookLocationContext,
@@ -21,15 +29,10 @@ import { defaultTripTitle } from '../lib/trip-display'
 import {
   bootstrapLogbook,
   hasPendingSync,
-  syncLogbook
-  
+  syncLogbook,
 } from '../lib/logbook-sync'
-import type {SyncLogbookOptions, LogbookSnapshot } from '../lib/logbook-sync';
-import {
-  mergeLegs,
-  rebuildLegsForTrip,
-  sortLegs,
-} from '../lib/trip-legs'
+import type { SyncLogbookOptions, LogbookSnapshot } from '../lib/logbook-sync'
+import { mergeLegs, rebuildLegsForTrip, sortLegs } from '../lib/trip-legs'
 import { withHumanEditedFlag } from '../domain/instrument-data'
 import { syncTripOperationalFields } from '../domain/trip-state'
 import {
@@ -48,15 +51,14 @@ import {
 } from '../lib/media-entry'
 import { buildTripFromGpxFiles } from '../lib/gpx-trip-import'
 import { buildTripFromSignalK } from '../lib/signalk-trip-import'
-import { GpxImportError, partitionGpxImportFiles  } from '../lib/gpx-import'
-import type {GpxImportFile} from '../lib/gpx-import';
+import { GpxImportError, partitionGpxImportFiles } from '../lib/gpx-import'
+import type { GpxImportFile } from '../lib/gpx-import'
 import { SignalKImportError } from '../lib/signalk-import'
 import {
   buildTripWaypointEntryInput,
-  isTripWaypointEntry
-  
+  isTripWaypointEntry,
 } from '../lib/trip-waypoint-entry'
-import type {TripWaypointInput} from '../lib/trip-waypoint-entry';
+import type { TripWaypointInput } from '../lib/trip-waypoint-entry'
 import { routeWaypointsToTripEntries } from '../lib/route-waypoint-ops'
 import { routeWaypointsForRoute, useRoutesStore } from './routes'
 import {
@@ -122,7 +124,14 @@ type SavePhotoVideoInput = {
 type UpdateEntryInput = Partial<
   Pick<
     LogEntry,
-    'notes' | 'data' | 'heading' | 'type' | 'deleted' | 'latitude' | 'longitude' | 'accuracy'
+    | 'notes'
+    | 'data'
+    | 'heading'
+    | 'type'
+    | 'deleted'
+    | 'latitude'
+    | 'longitude'
+    | 'accuracy'
   >
 >
 
@@ -195,7 +204,10 @@ type LogbookState = {
   deleteEntry: (entryId: string) => Promise<void>
   attachMedia: (
     entryId: string,
-    media: Omit<Media, 'id' | 'createdAt' | 'updatedAt' | 'synced' | 'order'> & {
+    media: Omit<
+      Media,
+      'id' | 'createdAt' | 'updatedAt' | 'synced' | 'order'
+    > & {
       order?: number
     },
     options?: LogbookWriteOptions,
@@ -203,12 +215,19 @@ type LogbookState = {
   savePhotoVideo: (
     input: SavePhotoVideoInput,
     options?: LogbookWriteOptions,
-  ) => Promise<{ entry: LogEntry | null; media: Media | null; attached: boolean }>
+  ) => Promise<{
+    entry: LogEntry | null
+    media: Media | null
+    attached: boolean
+  }>
   removeMedia: (mediaId: string) => Promise<void>
   updateMedia: (
     mediaId: string,
     patch: Partial<
-      Pick<Media, 'logEntryId' | 'localPath' | 'remoteUrl' | 'thumbnailUrl' | 'order'>
+      Pick<
+        Media,
+        'logEntryId' | 'localPath' | 'remoteUrl' | 'thumbnailUrl' | 'order'
+      >
     >,
     options?: LogbookWriteOptions,
   ) => Promise<void>
@@ -268,7 +287,11 @@ function resolveActiveTripId(trips: Trip[], current: string | null) {
   return null
 }
 
-function applySnapshot(set: (partial: Partial<LogbookState>) => void, snapshot: LogbookSnapshot, selectedTripId: string | null) {
+function applySnapshot(
+  set: (partial: Partial<LogbookState>) => void,
+  snapshot: LogbookSnapshot,
+  selectedTripId: string | null,
+) {
   const sortedTrips = sortTrips(snapshot.trips)
   const sortedLegs = sortLegs(snapshot.legs ?? [])
   const sortedEntries = sortEntries(snapshot.logEntries)
@@ -289,7 +312,10 @@ function applySnapshot(set: (partial: Partial<LogbookState>) => void, snapshot: 
   })
 }
 
-function syncStatusMessage(snapshot: LogbookSnapshot, online: boolean): string | null {
+function syncStatusMessage(
+  snapshot: LogbookSnapshot,
+  online: boolean,
+): string | null {
   if (!online) return 'Offline — will sync when back online'
   if (hasPendingSync(snapshot)) return 'Not synced'
   return null
@@ -303,8 +329,7 @@ function scheduleBackgroundSync(
 }
 
 async function captureEntryContext(input: NewEntryInput) {
-  const hasPositionOverride =
-    input.latitude != null && input.longitude != null
+  const hasPositionOverride = input.latitude != null && input.longitude != null
 
   if (hasPositionOverride) {
     const [context, entryData] = await Promise.all([
@@ -350,7 +375,9 @@ async function captureEntryContext(input: NewEntryInput) {
 async function persistLegsAndEntries(legs: Leg[], entries: LogEntry[]) {
   await Promise.all([
     ...legs.filter((leg) => !leg.synced).map((leg) => putLeg(leg)),
-    ...entries.filter((entry) => !entry.synced).map((entry) => putLogEntry(entry)),
+    ...entries
+      .filter((entry) => !entry.synced)
+      .map((entry) => putLogEntry(entry)),
   ])
 }
 
@@ -363,7 +390,11 @@ type ImportedTripBundle = {
 
 async function persistImportedTrip(
   get: () => LogbookState,
-  set: (partial: Partial<LogbookState> | ((state: LogbookState) => Partial<LogbookState>)) => void,
+  set: (
+    partial:
+      | Partial<LogbookState>
+      | ((state: LogbookState) => Partial<LogbookState>),
+  ) => void,
   imported: ImportedTripBundle,
 ): Promise<Trip> {
   const { trip, entries, tracks, legs: tripLegs } = imported
@@ -383,7 +414,9 @@ async function persistImportedTrip(
     entries: sortEntries([...state.entries, ...entries]),
     tracks: [...state.tracks, ...tracks],
     selectedTripId: trip.id,
-    syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+    syncMessage: get().online
+      ? 'Syncing…'
+      : 'Offline — will sync when back online',
     autoMapCoverTripIds: state.autoMapCoverTripIds.includes(trip.id)
       ? state.autoMapCoverTripIds
       : [...state.autoMapCoverTripIds, trip.id],
@@ -396,12 +429,22 @@ async function persistImportedTrip(
 async function applyTripLegRebuild(
   tripId: string,
   get: () => LogbookState,
-  set: (partial: Partial<LogbookState> | ((state: LogbookState) => Partial<LogbookState>)) => void,
+  set: (
+    partial:
+      | Partial<LogbookState>
+      | ((state: LogbookState) => Partial<LogbookState>),
+  ) => void,
 ) {
   const previousLegIds = new Set(
-    get().legs.filter((leg) => leg.tripId === tripId).map((leg) => leg.id),
+    get()
+      .legs.filter((leg) => leg.tripId === tripId)
+      .map((leg) => leg.id),
   )
-  const { legs, entries } = rebuildLegsForTrip(tripId, get().entries, get().legs)
+  const { legs, entries } = rebuildLegsForTrip(
+    tripId,
+    get().entries,
+    get().legs,
+  )
   const nextLegIds = new Set(
     legs.filter((leg) => leg.tripId === tripId).map((leg) => leg.id),
   )
@@ -417,21 +460,30 @@ async function applyTripLegRebuild(
   set({
     legs,
     entries: sortEntries(entries),
-    syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+    syncMessage: get().online
+      ? 'Syncing…'
+      : 'Offline — will sync when back online',
   })
 }
 
 async function applyTripOperationalSync(
   tripId: string,
   get: () => LogbookState,
-  set: (partial: Partial<LogbookState> | ((state: LogbookState) => Partial<LogbookState>)) => void,
+  set: (
+    partial:
+      | Partial<LogbookState>
+      | ((state: LogbookState) => Partial<LogbookState>),
+  ) => void,
   patch: Partial<Trip> = {},
 ) {
   const trip = get().trips.find((item) => item.id === tripId)
   if (!trip) return
 
   const nextTrip = {
-    ...syncTripOperationalFields(trip, get().entries.filter((entry) => entry.tripId === tripId)),
+    ...syncTripOperationalFields(
+      trip,
+      get().entries.filter((entry) => entry.tripId === tripId),
+    ),
     ...patch,
     updatedAt: nowIso(),
   }
@@ -446,7 +498,9 @@ async function applyTripOperationalSync(
         : patch.status === 'COMPLETED' && state.activeTripId === tripId
           ? null
           : state.activeTripId,
-    syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+    syncMessage: get().online
+      ? 'Syncing…'
+      : 'Offline — will sync when back online',
   }))
 }
 
@@ -527,7 +581,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     set((state) => ({
       trips: sortTrips([trip, ...state.trips]),
       selectedTripId: trip.id,
-      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      syncMessage: get().online
+        ? 'Syncing…'
+        : 'Offline — will sync when back online',
     }))
 
     scheduleBackgroundSync(get, { skipBootstrap: true, skipTracks: true })
@@ -543,24 +599,26 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       title:
         patch.title !== undefined
           ? patch.title?.trim() || null
-          : current.title ?? null,
+          : (current.title ?? null),
       subtitle:
         patch.subtitle !== undefined
           ? patch.subtitle?.trim() || null
-          : current.subtitle ?? null,
+          : (current.subtitle ?? null),
       crewMemberIds:
         patch.crewMemberIds !== undefined
           ? patch.crewMemberIds?.length
             ? patch.crewMemberIds
             : null
-          : current.crewMemberIds ?? null,
+          : (current.crewMemberIds ?? null),
       updatedAt: nowIso(),
     }
     await putTrip(next)
     addPendingTripId(tripId)
     set((state) => ({
       trips: state.trips.map((trip) => (trip.id === tripId ? next : trip)),
-      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      syncMessage: get().online
+        ? 'Syncing…'
+        : 'Offline — will sync when back online',
     }))
     void get().syncNow({ skipBootstrap: true })
   },
@@ -597,9 +655,10 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
         tracks: state.tracks.filter((track) => track.tripId !== tripId),
         media: state.media.filter((item) => !entryIds.has(item.logEntryId)),
         selectedTripId: nextSelected,
-        activeTripId:
-          state.activeTripId === tripId ? null : state.activeTripId,
-        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+        activeTripId: state.activeTripId === tripId ? null : state.activeTripId,
+        syncMessage: get().online
+          ? 'Syncing…'
+          : 'Offline — will sync when back online',
       }
     })
 
@@ -613,14 +672,18 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       ...current,
       ...patch,
       title:
-        patch.title !== undefined ? patch.title?.trim() || null : current.title ?? null,
+        patch.title !== undefined
+          ? patch.title?.trim() || null
+          : (current.title ?? null),
       updatedAt: nowIso(),
       synced: false,
     }
     await putLeg(next)
     set((state) => ({
       legs: state.legs.map((leg) => (leg.id === legId ? next : leg)),
-      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      syncMessage: get().online
+        ? 'Syncing…'
+        : 'Offline — will sync when back online',
     }))
     void get().syncNow({ skipBootstrap: true })
   },
@@ -629,7 +692,8 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     const leg = get().legs.find((item) => item.id === legId)
     if (!leg || leg.sequence === 0) return
     const previous = get().legs.find(
-      (item) => item.tripId === leg.tripId && item.sequence === leg.sequence - 1,
+      (item) =>
+        item.tripId === leg.tripId && item.sequence === leg.sequence - 1,
     )
     if (!previous) return
     const result = mergeLegs(previous.id, leg.id, get().legs, get().entries)
@@ -643,7 +707,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     set({
       legs: result.legs,
       entries: sortEntries(result.entries),
-      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      syncMessage: get().online
+        ? 'Syncing…'
+        : 'Offline — will sync when back online',
     })
     void get().syncNow({ skipBootstrap: true })
   },
@@ -702,7 +768,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     }
     set((state) => ({
       entries: sortEntries([...state.entries, entry]),
-      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      syncMessage: get().online
+        ? 'Syncing…'
+        : 'Offline — will sync when back online',
     }))
 
     await applyTripLegRebuild(input.tripId, get, set)
@@ -710,7 +778,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     const trip = get().trips.find((item) => item.id === input.tripId)
     if (trip) {
       if (input.type === 'END_TRIP') {
-        await get().upsertTripTracks(getTripTrackRecorder().sealTrip(input.tripId))
+        await get().upsertTripTracks(
+          getTripTrackRecorder().sealTrip(input.tripId),
+        )
         getTripTrackRecorder().clearTrip(input.tripId)
         await deleteTripTrack(openPositionTrackId(input.tripId))
         set((state) => ({
@@ -770,7 +840,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     await Promise.all(newEntries.map((entry) => putLogEntry(entry)))
     set((state) => ({
       entries: sortEntries([...state.entries, ...newEntries]),
-      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      syncMessage: get().online
+        ? 'Syncing…'
+        : 'Offline — will sync when back online',
     }))
     await applyTripLegRebuild(tripId, get, set)
     scheduleBackgroundSync(get, { skipBootstrap: true, skipTracks: true })
@@ -788,8 +860,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     const positionChanged =
       (patch.latitude !== undefined && patch.latitude !== current.latitude) ||
       (patch.longitude !== undefined && patch.longitude !== current.longitude)
-    let data =
-      patch.data !== undefined ? patch.data : (current.data ?? null)
+    let data = patch.data !== undefined ? patch.data : (current.data ?? null)
 
     const skipPlaceLookup =
       isTripWaypointEntry(current.data) &&
@@ -827,7 +898,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       entries: sortEntries(
         state.entries.map((entry) => (entry.id === entryId ? next : entry)),
       ),
-      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      syncMessage: get().online
+        ? 'Syncing…'
+        : 'Offline — will sync when back online',
     }))
     await applyTripLegRebuild(current.tripId, get, set)
     await applyTripOperationalSync(current.tripId, get, set)
@@ -841,7 +914,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     if (!current) return
 
     if (current.type !== 'MEDIA') {
-      const entryMedia = get().media.filter((item) => item.logEntryId === entryId)
+      const entryMedia = get().media.filter(
+        (item) => item.logEntryId === entryId,
+      )
       for (const item of entryMedia) {
         if (!isPromotableMedia(item)) continue
 
@@ -873,7 +948,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       entries: state.entries.map((entry) =>
         entry.id === entryId ? next : entry,
       ),
-      syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+      syncMessage: get().online
+        ? 'Syncing…'
+        : 'Offline — will sync when back online',
     }))
     await applyTripLegRebuild(current.tripId, get, set)
     await applyTripOperationalSync(current.tripId, get, set)
@@ -897,7 +974,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     })
 
     if (resolution.action === 'attach') {
-      const target = get().entries.find((entry) => entry.id === resolution.entryId)
+      const target = get().entries.find(
+        (entry) => entry.id === resolution.entryId,
+      )
       if (input.note?.trim() && target) {
         await get().updateEntry(
           resolution.entryId,
@@ -921,13 +1000,17 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
         options,
       )
       return {
-        entry: get().entries.find((entry) => entry.id === resolution.entryId) ?? null,
+        entry:
+          get().entries.find((entry) => entry.id === resolution.entryId) ??
+          null,
         media,
         attached: true,
       }
     }
 
-    const entry = await get().addEntry(resolution.entryInput, { skipSync: true })
+    const entry = await get().addEntry(resolution.entryInput, {
+      skipSync: true,
+    })
     if (!entry) {
       return { entry: null, media: null, attached: false }
     }
@@ -992,12 +1075,16 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
             entry.id === entryId ? nextEntry : entry,
           ),
         ),
-        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+        syncMessage: get().online
+          ? 'Syncing…'
+          : 'Offline — will sync when back online',
       }))
     } else {
       set((state) => ({
         media: [...state.media, media],
-        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+        syncMessage: get().online
+          ? 'Syncing…'
+          : 'Offline — will sync when back online',
       }))
     }
     if (!options?.skipSync) {
@@ -1031,12 +1118,16 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
             entry.id === current.id ? nextEntry : entry,
           ),
         ),
-        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+        syncMessage: get().online
+          ? 'Syncing…'
+          : 'Offline — will sync when back online',
       }))
     } else {
       set((state) => ({
         media: state.media.filter((candidate) => candidate.id !== mediaId),
-        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+        syncMessage: get().online
+          ? 'Syncing…'
+          : 'Offline — will sync when back online',
       }))
     }
 
@@ -1073,14 +1164,18 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
             entry.id === current.id ? nextEntry : entry,
           ),
         ),
-        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+        syncMessage: get().online
+          ? 'Syncing…'
+          : 'Offline — will sync when back online',
       }))
     } else {
       set((state) => ({
         media: state.media.map((candidate) =>
           candidate.id === mediaId ? next : candidate,
         ),
-        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+        syncMessage: get().online
+          ? 'Syncing…'
+          : 'Offline — will sync when back online',
       }))
     }
 
@@ -1090,15 +1185,20 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
   },
 
   importTripFromGpx: async (gpxXml, options) => {
-    return get().importTripFromGpxFiles([{ gpxXml, fileName: options?.fileName }], {
-      boatName: options?.boatName,
-    })
+    return get().importTripFromGpxFiles(
+      [{ gpxXml, fileName: options?.fileName }],
+      {
+        boatName: options?.boatName,
+      },
+    )
   },
 
   importTripFromGpxFiles: async (files, options) => {
     const { tripFiles } = partitionGpxImportFiles(files)
     if (tripFiles.length === 0) {
-      throw new GpxImportError('No GPX track files were found in that selection.')
+      throw new GpxImportError(
+        'No GPX track files were found in that selection.',
+      )
     }
 
     let imported: ReturnType<typeof buildTripFromGpxFiles>
@@ -1121,7 +1221,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     } catch (error) {
       if (error instanceof SignalKImportError) throw error
       throw new SignalKImportError(
-        error instanceof Error ? error.message : 'Could not import Signal K file',
+        error instanceof Error
+          ? error.message
+          : 'Could not import Signal K file',
       )
     }
 
@@ -1138,7 +1240,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
 
   clearAutoMapCoverRequest: (tripId) => {
     set((state) => ({
-      autoMapCoverTripIds: state.autoMapCoverTripIds.filter((id) => id !== tripId),
+      autoMapCoverTripIds: state.autoMapCoverTripIds.filter(
+        (id) => id !== tripId,
+      ),
     }))
   },
 
@@ -1160,7 +1264,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
           (a, b) =>
             new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
         ),
-        syncMessage: get().online ? 'Syncing…' : 'Offline — will sync when back online',
+        syncMessage: get().online
+          ? 'Syncing…'
+          : 'Offline — will sync when back online',
       }
     })
     void get().syncNow({ skipBootstrap: true })
@@ -1177,7 +1283,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     set((state) => {
       const byId = new Map(
         state.tracks
-          .filter((track) => !isOpenPositionTrack(track) || track.tripId !== tripId)
+          .filter(
+            (track) => !isOpenPositionTrack(track) || track.tripId !== tripId,
+          )
           .map((track) => [track.id, track]),
       )
       for (const track of sealed) {
@@ -1259,12 +1367,11 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       }
     } catch (error) {
       const snapshot = await loadLogbookSnapshot()
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Sync failed'
+      const message = error instanceof Error ? error.message : 'Sync failed'
       set({
-        syncMessage: get().online ? message : syncStatusMessage(snapshot, get().online),
+        syncMessage: get().online
+          ? message
+          : syncStatusMessage(snapshot, get().online),
       })
       success = false
     } finally {
@@ -1274,7 +1381,9 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
         void get().syncNow(options)
       } else if (options?.skipTracks) {
         const snapshot = await loadLogbookSnapshot()
-        const pendingTracks = (snapshot.tripTracks ?? []).filter((track) => !track.synced)
+        const pendingTracks = (snapshot.tripTracks ?? []).filter(
+          (track) => !track.synced,
+        )
         if (pendingTracks.length > 0) {
           void get().syncNow({ skipBootstrap: true, skipTracks: false })
         }

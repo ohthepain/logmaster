@@ -1,9 +1,6 @@
 import { Hono } from 'hono'
 import { prisma } from '../db'
-import {
-  canAccess,
-  routeAccessFilter,
-} from '../permissions'
+import { canAccess, routeAccessFilter } from '../permissions'
 import { getSessionUserId } from '../session'
 
 const db = prisma as any
@@ -25,10 +22,7 @@ function parseDate(value: unknown) {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
-function toRoute(
-  data: Record<string, unknown>,
-  userId?: string | null,
-) {
+function toRoute(data: Record<string, unknown>, userId?: string | null) {
   const createdAt = parseDate(data.createdAt) ?? new Date()
   const updatedAt = parseDate(data.updatedAt) ?? createdAt
   return {
@@ -38,7 +32,9 @@ function toRoute(
     description: (data.description as string | null | undefined) ?? null,
     boatId: (data.boatId as string | null | undefined) ?? null,
     coverKind:
-      data.coverKind === 'photo' || data.coverKind === 'map' ? data.coverKind : null,
+      data.coverKind === 'photo' || data.coverKind === 'map'
+        ? data.coverKind
+        : null,
     coverPhotoDataUrl:
       (data.coverPhotoDataUrl as string | null | undefined) ?? null,
     source: (data.source as string | null | undefined) ?? null,
@@ -56,7 +52,10 @@ async function prepareRouteForSync(
   const existing = await db.route.findUnique({ where: { id: routeId } })
 
   if (existing) {
-    const allowed = await canAccess(userId, 'edit', { type: 'route', id: routeId })
+    const allowed = await canAccess(userId, 'edit', {
+      type: 'route',
+      id: routeId,
+    })
     if (!allowed) {
       throw new Error(`Forbidden: cannot update route ${routeId}`)
     }
@@ -123,7 +122,10 @@ async function assertCanEditRoute(
   allowedFromBatch: Set<string>,
 ) {
   if (allowedFromBatch.has(routeId)) return
-  const allowed = await canAccess(userId, 'edit', { type: 'route', id: routeId })
+  const allowed = await canAccess(userId, 'edit', {
+    type: 'route',
+    id: routeId,
+  })
   if (!allowed) {
     throw new Error(`Forbidden: cannot update route ${routeId}`)
   }
@@ -142,27 +144,29 @@ routesApi.get('/bootstrap', async (c) => {
   })
   const routeIds = routes.map((route: { id: string }) => route.id)
 
-  const [waypoints, annotations, routeMedia, deletedRoutes] = await Promise.all([
-    routeIds.length > 0
-      ? db.routeWaypoint.findMany({
-          where: { routeId: { in: routeIds } },
-          orderBy: [{ routeId: 'asc' }, { sequence: 'asc' }],
-        })
-      : [],
-    routeIds.length > 0
-      ? db.routeAnnotation.findMany({
-          where: { routeId: { in: routeIds } },
-          orderBy: [{ createdAt: 'asc' }],
-        })
-      : [],
-    routeIds.length > 0
-      ? db.routeMedia.findMany({
-          where: { annotation: { routeId: { in: routeIds } } },
-          orderBy: [{ createdAt: 'asc' }],
-        })
-      : [],
-    db.deletedRoute.findMany(),
-  ])
+  const [waypoints, annotations, routeMedia, deletedRoutes] = await Promise.all(
+    [
+      routeIds.length > 0
+        ? db.routeWaypoint.findMany({
+            where: { routeId: { in: routeIds } },
+            orderBy: [{ routeId: 'asc' }, { sequence: 'asc' }],
+          })
+        : [],
+      routeIds.length > 0
+        ? db.routeAnnotation.findMany({
+            where: { routeId: { in: routeIds } },
+            orderBy: [{ createdAt: 'asc' }],
+          })
+        : [],
+      routeIds.length > 0
+        ? db.routeMedia.findMany({
+            where: { annotation: { routeId: { in: routeIds } } },
+            orderBy: [{ createdAt: 'asc' }],
+          })
+        : [],
+      db.deletedRoute.findMany(),
+    ],
+  )
 
   return c.json({
     routes,

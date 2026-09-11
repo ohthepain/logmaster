@@ -7,7 +7,11 @@ import { useAppOptionsStore } from '../stores/app-options'
 import { DevComponentLabel } from './DevComponentLabel'
 import { TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS } from '../lib/trip-map-overlay'
 
-export default function DevModeToggle({ mapOverlay = false }: { mapOverlay?: boolean }) {
+export default function DevModeToggle({
+  mapOverlay = false,
+}: {
+  mapOverlay?: boolean
+}) {
   const devMode = useAppOptionsStore((state) => state.devMode)
   const setDevMode = useAppOptionsStore((state) => state.setDevMode)
   const [open, setOpen] = useState(false)
@@ -36,7 +40,10 @@ export default function DevModeToggle({ mapOverlay = false }: { mapOverlay?: boo
 
   return (
     <div className="relative" ref={rootRef}>
-      <DevComponentLabel name="DevModeToggle" className="absolute -top-5 left-0" />
+      <DevComponentLabel
+        name="DevModeToggle"
+        className="absolute -top-5 left-0"
+      />
       <button
         type="button"
         className={cn(
@@ -68,7 +75,10 @@ export default function DevModeToggle({ mapOverlay = false }: { mapOverlay?: boo
         onClick={() => setOpen((current) => !current)}
       >
         DEV
-        <ChevronDown className={cn('size-3 transition', open && 'rotate-180')} aria-hidden />
+        <ChevronDown
+          className={cn('size-3 transition', open && 'rotate-180')}
+          aria-hidden
+        />
       </button>
 
       {open ? (

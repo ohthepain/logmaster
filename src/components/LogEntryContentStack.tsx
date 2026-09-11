@@ -2,9 +2,7 @@ import { Mic } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { LogEntryPhotoMenu } from './LogEntryPhotoMenu'
 import { VoiceNotePlayback } from './VoiceNotePlayback'
-import {
-  sortContentBlocksByOrderDesc,
-} from '../lib/log-entry-content-order'
+import { sortContentBlocksByOrderDesc } from '../lib/log-entry-content-order'
 
 export type EntryContentBlock =
   | {
@@ -41,7 +39,10 @@ type LogEntryContentStackProps = {
   map: ReactNode
 }
 
-export function LogEntryContentStack({ blocks, map }: LogEntryContentStackProps) {
+export function LogEntryContentStack({
+  blocks,
+  map,
+}: LogEntryContentStackProps) {
   const sortedBlocks = sortContentBlocksByOrderDesc(blocks)
 
   return (
@@ -63,7 +64,11 @@ function EntryContentBlockView({ block }: { block: EntryContentBlock }) {
     <div data-content-kind={block.kind}>
       {block.kind === 'photo' ? (
         <div className="relative overflow-hidden rounded-2xl border border-[var(--panel-border)]">
-          <img src={block.src} alt="" className="aspect-[4/3] w-full object-cover" />
+          <img
+            src={block.src}
+            alt=""
+            className="aspect-[4/3] w-full object-cover"
+          />
           <LogEntryPhotoMenu
             onDelete={block.onDelete}
             onSetMetadata={block.onSetMetadata}
@@ -86,7 +91,10 @@ function EntryContentBlockView({ block }: { block: EntryContentBlock }) {
 
       {block.kind === 'voice' ? (
         block.src ? (
-          <VoiceNotePlayback src={block.src} onRemove={block.onRemove ?? (() => {})} />
+          <VoiceNotePlayback
+            src={block.src}
+            onRemove={block.onRemove ?? (() => {})}
+          />
         ) : block.recording ? (
           <p className="m-0 text-xs font-medium text-[var(--brand)]">
             Recording… tap mic to stop

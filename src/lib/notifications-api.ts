@@ -37,7 +37,9 @@ export async function fetchNotifications(limit = 30): Promise<{
   return api(`/api/notifications?limit=${limit}`)
 }
 
-export async function markNotificationRead(notificationId: string): Promise<void> {
+export async function markNotificationRead(
+  notificationId: string,
+): Promise<void> {
   await api(`/api/notifications/${notificationId}/read`, { method: 'PATCH' })
 }
 
@@ -123,7 +125,9 @@ export async function unregisterPushDevice(input: {
 }
 
 export async function fetchPushDevices(): Promise<PushDevice[]> {
-  const data = await api<{ devices: PushDevice[] }>('/api/notifications/devices')
+  const data = await api<{ devices: PushDevice[] }>(
+    '/api/notifications/devices',
+  )
   return data.devices
 }
 
@@ -138,7 +142,9 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray
 }
 
-export async function subscribeWebPush(publicKey: string): Promise<PushSubscription | null> {
+export async function subscribeWebPush(
+  publicKey: string,
+): Promise<PushSubscription | null> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     return null
   }

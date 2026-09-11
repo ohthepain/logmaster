@@ -30,7 +30,9 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export async function fetchBoatShares(boatId: string): Promise<BoatSharesPayload> {
+export async function fetchBoatShares(
+  boatId: string,
+): Promise<BoatSharesPayload> {
   return api<BoatSharesPayload>(`/api/boats/${boatId}/shares`)
 }
 

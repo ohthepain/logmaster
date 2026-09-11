@@ -19,7 +19,10 @@ export type RetripPosition = {
   heading: number | null
 }
 
-export function retripSourceElapsedMs(state: DevTripRetrip, nowMs: number): number {
+export function retripSourceElapsedMs(
+  state: DevTripRetrip,
+  nowMs: number,
+): number {
   if (state.paused) return Math.max(0, state.pausedSourceElapsedMs)
 
   const realStartedMs = Date.parse(state.realStartedAt)

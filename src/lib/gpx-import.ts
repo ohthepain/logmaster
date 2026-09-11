@@ -123,7 +123,9 @@ export function decodeXmlText(text: string): string {
 }
 
 function readChildText(content: string, tag: string): string | null {
-  const match = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i').exec(content)
+  const match = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i').exec(
+    content,
+  )
   if (!match) return null
   const text = decodeXmlText(match[1]?.trim() ?? '')
   return text || null
@@ -144,10 +146,7 @@ function parseExtensionsNumeric(block: string): Record<string, number> {
   return result
 }
 
-function parsePointBlock(
-  block: string,
-  attrs: string,
-): GpxTrackPoint | null {
+function parsePointBlock(block: string, attrs: string): GpxTrackPoint | null {
   const lat = parseNumber(/lat="([^"]+)"/i.exec(attrs)?.[1])
   const lon = parseNumber(/lon="([^"]+)"/i.exec(attrs)?.[1])
   if (lat == null || lon == null) return null
@@ -170,7 +169,10 @@ function parsePointBlock(
   }
 }
 
-function parsePointTags(xml: string, tag: 'trkpt' | 'rtept' | 'wpt'): GpxTrackPoint[] {
+function parsePointTags(
+  xml: string,
+  tag: 'trkpt' | 'rtept' | 'wpt',
+): GpxTrackPoint[] {
   const points: GpxTrackPoint[] = []
   const pattern = new RegExp(`<${tag}\\b([^>]*)>([\\s\\S]*?)<\\/${tag}>`, 'gi')
   for (const match of xml.matchAll(pattern)) {
@@ -236,7 +238,10 @@ function parseTrackSegments(xml: string): GpxTrackSegment[] {
   return segments
 }
 
-function parseRoutePointBlock(block: string, attrs: string): GpxWaypoint | null {
+function parseRoutePointBlock(
+  block: string,
+  attrs: string,
+): GpxWaypoint | null {
   const lat = parseNumber(/lat="([^"]+)"/i.exec(attrs)?.[1])
   const lon = parseNumber(/lon="([^"]+)"/i.exec(attrs)?.[1])
   if (lat == null || lon == null) return null
@@ -334,7 +339,10 @@ export function downsampleGpxSegments(
   segments: GpxTrackSegment[],
   maxPoints: number,
 ): GpxTrackSegment[] {
-  const total = segments.reduce((sum, segment) => sum + segment.points.length, 0)
+  const total = segments.reduce(
+    (sum, segment) => sum + segment.points.length,
+    0,
+  )
   if (total <= maxPoints) return segments
 
   return segments.map((segment) => {
@@ -345,7 +353,10 @@ export function downsampleGpxSegments(
     )
     return {
       ...segment,
-      points: downsampleGpxPoints(segment.points, Math.min(budget, segment.points.length)),
+      points: downsampleGpxPoints(
+        segment.points,
+        Math.min(budget, segment.points.length),
+      ),
     }
   })
 }
@@ -408,11 +419,15 @@ function segmentStartMs(segment: GpxTrackSegment): number {
 }
 
 function prepareSegment(segment: GpxTrackSegment): GpxTrackSegment {
-  const points = enrichHeadings(assignMissingTimes(sortTrackPoints(segment.points)))
+  const points = enrichHeadings(
+    assignMissingTimes(sortTrackPoints(segment.points)),
+  )
   return { ...segment, points }
 }
 
-function sortSegmentsChronologically(segments: GpxTrackSegment[]): GpxTrackSegment[] {
+function sortSegmentsChronologically(
+  segments: GpxTrackSegment[],
+): GpxTrackSegment[] {
   return [...segments].sort((a, b) => segmentStartMs(a) - segmentStartMs(b))
 }
 
@@ -420,7 +435,10 @@ function flattenSegmentPoints(segments: GpxTrackSegment[]): GpxTrackPoint[] {
   return segments.flatMap((segment) => segment.points)
 }
 
-function primaryTrackName(segments: GpxTrackSegment[], metadataName: string | null): string | null {
+function primaryTrackName(
+  segments: GpxTrackSegment[],
+  metadataName: string | null,
+): string | null {
   for (const segment of segments) {
     if (segment.trackName?.trim()) return segment.trackName.trim()
   }
@@ -478,13 +496,17 @@ function finalizeParsedGpx(raw: GpxRawDocument): ParsedGpxTrack {
 }
 
 export function classifyGpxDocument(raw: GpxRawDocument): GpxImportKind {
-  if (raw.trackSegments.some((segment) => segment.points.length > 0)) return 'trip'
-  if (raw.routeSegments.some((segment) => segment.points.length > 0)) return 'route'
+  if (raw.trackSegments.some((segment) => segment.points.length > 0))
+    return 'trip'
+  if (raw.routeSegments.some((segment) => segment.points.length > 0))
+    return 'route'
   if (raw.waypoints.length > 0) return 'route'
   throw new GpxImportError('No track, route, or waypoint data found.')
 }
 
-function gpxWaypointCoordinateKey(waypoint: Pick<GpxWaypoint, 'latitude' | 'longitude'>) {
+function gpxWaypointCoordinateKey(
+  waypoint: Pick<GpxWaypoint, 'latitude' | 'longitude'>,
+) {
   return `${waypoint.latitude.toFixed(6)},${waypoint.longitude.toFixed(6)}`
 }
 
@@ -510,11 +532,15 @@ export function finalizeParsedGpxRoute(raw: GpxRawDocument): ParsedGpxRoute {
   }
 
   if (waypoints.length === 0) {
-    throw new GpxImportError('No route or waypoint data found in this GPX file.')
+    throw new GpxImportError(
+      'No route or waypoint data found in this GPX file.',
+    )
   }
 
   const routeName =
-    raw.routeSegments.map((segment) => segment.trackName?.trim()).find(Boolean) ??
+    raw.routeSegments
+      .map((segment) => segment.trackName?.trim())
+      .find(Boolean) ??
     raw.metadataName ??
     waypoints[0]?.name
 
@@ -569,7 +595,9 @@ export function parseGpxRaw(xml: string): GpxRawDocument {
   }
 }
 
-export function mergeGpxRawDocuments(rawDocuments: GpxRawDocument[]): ParsedGpxTrack {
+export function mergeGpxRawDocuments(
+  rawDocuments: GpxRawDocument[],
+): ParsedGpxTrack {
   if (rawDocuments.length === 0) {
     throw new GpxImportError('No GPX files were provided.')
   }
@@ -577,13 +605,25 @@ export function mergeGpxRawDocuments(rawDocuments: GpxRawDocument[]): ParsedGpxT
     return finalizeParsedGpx(rawDocuments[0])
   }
 
-  const trackSegments = rawDocuments.flatMap((document) => document.trackSegments)
-  const routeSegments = rawDocuments.flatMap((document) => document.routeSegments)
-  const waypoints = dedupeWaypoints(rawDocuments.flatMap((document) => document.waypoints))
+  const trackSegments = rawDocuments.flatMap(
+    (document) => document.trackSegments,
+  )
+  const routeSegments = rawDocuments.flatMap(
+    (document) => document.routeSegments,
+  )
+  const waypoints = dedupeWaypoints(
+    rawDocuments.flatMap((document) => document.waypoints),
+  )
   const metadataName =
-    rawDocuments.map((document) => document.metadataName?.trim()).find(Boolean) ?? null
+    rawDocuments
+      .map((document) => document.metadataName?.trim())
+      .find(Boolean) ?? null
 
-  if (trackSegments.length === 0 && routeSegments.length === 0 && waypoints.length > 0) {
+  if (
+    trackSegments.length === 0 &&
+    routeSegments.length === 0 &&
+    waypoints.length > 0
+  ) {
     throw new GpxImportError(
       'These GPX files only contain marks or waypoints. Include a tracks GPX file from your OpenCPN export.',
     )
@@ -689,7 +729,9 @@ export function isLikelyGpxFile(file: Pick<File, 'name' | 'type'>): boolean {
 }
 
 /** macOS/OpenCPN export folders are often named `Something.gpx` and surface as empty files. */
-export function isLikelyGpxExportFolder(file: Pick<File, 'name' | 'size' | 'type'>): boolean {
+export function isLikelyGpxExportFolder(
+  file: Pick<File, 'name' | 'size' | 'type'>,
+): boolean {
   if (!file.name.toLowerCase().endsWith('.gpx')) return false
   return file.size === 0
 }
@@ -745,7 +787,8 @@ export async function readGpxImportFilesFromFileList(
       if (
         gpxFiles.length === 1 &&
         (isLikelyGpxExportFolder(file) ||
-          (error instanceof GpxImportError && file.name.toLowerCase().endsWith('.gpx')))
+          (error instanceof GpxImportError &&
+            file.name.toLowerCase().endsWith('.gpx')))
       ) {
         throw new GpxFolderImportNeededError()
       }

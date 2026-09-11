@@ -10,7 +10,9 @@ export type LogEntryPlace = {
   distanceM: number
 }
 
-export function logEntryPlaceFromLookup(result: PlaceLookupResult): LogEntryPlace {
+export function logEntryPlaceFromLookup(
+  result: PlaceLookupResult,
+): LogEntryPlace {
   return {
     name: result.name,
     detail: result.detail,

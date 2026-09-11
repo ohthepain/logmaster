@@ -19,11 +19,13 @@ import { generateLegColor } from './leg-colors'
 import {
   parseSignalKImportJson,
   SIGNALK_IMPORT_SOURCE,
-  signalKImportBoatName
-  
+  signalKImportBoatName,
 } from './signalk-import'
-import type {ParsedSignalKImport} from './signalk-import';
-import type { SignalKLogEntryExport, SignalKWaypointExport } from './signalk-log-entries'
+import type { ParsedSignalKImport } from './signalk-import'
+import type {
+  SignalKLogEntryExport,
+  SignalKWaypointExport,
+} from './signalk-log-entries'
 
 function makeId() {
   return crypto.randomUUID()
@@ -121,7 +123,10 @@ function buildAngleTripTrack(
   }
 }
 
-function buildWindTripTrack(tripId: string, samples: WindTrackSample[]): TripTrack {
+function buildWindTripTrack(
+  tripId: string,
+  samples: WindTrackSample[],
+): TripTrack {
   const now = nowIso()
   return {
     id: makeId(),
@@ -144,7 +149,10 @@ function buildWindTripTrack(tripId: string, samples: WindTrackSample[]): TripTra
   }
 }
 
-function buildInstrumentTracks(tripId: string, parsed: ParsedSignalKImport): TripTrack[] {
+function buildInstrumentTracks(
+  tripId: string,
+  parsed: ParsedSignalKImport,
+): TripTrack[] {
   const tracks: TripTrack[] = []
 
   if (parsed.sogSamples.length >= 1) {
@@ -155,7 +163,11 @@ function buildInstrumentTracks(tripId: string, parsed: ParsedSignalKImport): Tri
   }
   if (parsed.waterTemperatureSamples.length >= 1) {
     tracks.push(
-      buildScalarTripTrack(tripId, 'water-temperature', parsed.waterTemperatureSamples),
+      buildScalarTripTrack(
+        tripId,
+        'water-temperature',
+        parsed.waterTemperatureSamples,
+      ),
     )
   }
   if (parsed.headingSamples.length >= 1) {
@@ -258,8 +270,10 @@ function buildImportedLogEntries(
         'name' in entry.data.place &&
         typeof entry.data.place.name === 'string'
           ? entry.data.place.name
-          : entry.notes ?? ''
-      return [`${placeName}:${entry.latitude.toFixed(5)}:${entry.longitude.toFixed(5)}`]
+          : (entry.notes ?? '')
+      return [
+        `${placeName}:${entry.latitude.toFixed(5)}:${entry.longitude.toFixed(5)}`,
+      ]
     }),
   )
 
@@ -267,7 +281,12 @@ function buildImportedLogEntries(
     const key = `${waypoint.name}:${waypoint.latitude.toFixed(5)}:${waypoint.longitude.toFixed(5)}`
     if (coveredWaypointKeys.has(key)) continue
     entries.push(
-      buildImportedWaypointEntry(tripId, waypoint, parsed.logEntries.length + index, legId),
+      buildImportedWaypointEntry(
+        tripId,
+        waypoint,
+        parsed.logEntries.length + index,
+        legId,
+      ),
     )
   }
 
@@ -305,8 +324,13 @@ export function buildTripFromSignalK(
 ): SignalKImportedTrip {
   const parsed = parseSignalKImportJson(json)
   const startedAt = parsed.positionSamples[0].time
-  const completedAt = parsed.positionSamples[parsed.positionSamples.length - 1].time
-  const boatName = signalKImportBoatName(parsed, options?.fileName, options?.boatName)
+  const completedAt =
+    parsed.positionSamples[parsed.positionSamples.length - 1].time
+  const boatName = signalKImportBoatName(
+    parsed,
+    options?.fileName,
+    options?.boatName,
+  )
   const tripId = makeId()
   const now = nowIso()
   const firstPoint = parsed.positionSamples[0]

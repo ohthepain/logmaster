@@ -94,7 +94,9 @@ describe('ais vessel cache and GeoJSON', () => {
       sog: 12,
       updatedAt: new Date().toISOString(),
     })
-    expect(getAisVesselsInBbox({ north: 58, south: 57, east: 19, west: 18 })[0]).toEqual(
+    expect(
+      getAisVesselsInBbox({ north: 58, south: 57, east: 19, west: 18 })[0],
+    ).toEqual(
       expect.objectContaining({
         category: 'tanker',
         shipType: 80,

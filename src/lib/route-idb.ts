@@ -144,6 +144,8 @@ export async function persistImportedRoute(imported: {
   waypoints: RouteWaypoint[]
 }) {
   await putRoute(imported.route)
-  await Promise.all(imported.waypoints.map((waypoint) => putRouteWaypoint(waypoint)))
+  await Promise.all(
+    imported.waypoints.map((waypoint) => putRouteWaypoint(waypoint)),
+  )
   addPendingRouteId(imported.route.id)
 }

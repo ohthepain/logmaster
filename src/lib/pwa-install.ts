@@ -80,5 +80,11 @@ export function usePwaInstall() {
     })
   }
 
-  return { canInstall, installed, promptInstall, isIos, isIosSafari: isIosSafari() }
+  return {
+    canInstall,
+    installed,
+    promptInstall,
+    isIos,
+    isIosSafari: isIosSafari(),
+  }
 }

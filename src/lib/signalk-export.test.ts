@@ -3,10 +3,9 @@ import {
   encodeAngleTrackSamples,
   encodePositionTrackSamples,
   encodeScalarTrackSamples,
-  encodeWindTrackSamples
-  
+  encodeWindTrackSamples,
 } from '../domain/trip-track'
-import type {TripTrack} from '../domain/trip-track';
+import type { TripTrack } from '../domain/trip-track'
 import { buildTripSignalKExport } from './signalk-export'
 
 const trip = {
@@ -110,7 +109,9 @@ describe('signalk-export', () => {
     expect(exported.name).toBe('Harbour sail')
     expect(exported.positionTrack).toHaveLength(1)
     const paths = exported.deltas.flatMap((delta) =>
-      delta.updates.flatMap((update) => update.values.map((value) => value.path)),
+      delta.updates.flatMap((update) =>
+        update.values.map((value) => value.path),
+      ),
     )
     expect(paths).toContain('navigation.position')
     expect(paths).toContain('navigation.speedOverGround')
@@ -119,7 +120,9 @@ describe('signalk-export', () => {
   })
 
   it('throws when there is nothing to export', () => {
-    expect(() => buildTripSignalKExport(trip, [])).toThrow(/no track data or log entries/i)
+    expect(() => buildTripSignalKExport(trip, [])).toThrow(
+      /no track data or log entries/i,
+    )
   })
 
   it('dedupes duplicate position tracks on export', () => {
@@ -175,13 +178,15 @@ describe('signalk-export', () => {
     }
 
     expect(exported.positionTrack).toHaveLength(2)
-    expect(exported.deltas.filter((delta) => {
-      const record = delta as {
-        updates?: Array<{ values?: Array<{ path?: string }> }>
-      }
-      return record.updates?.some((update) =>
-        update.values?.some((value) => value.path === 'navigation.position'),
-      )
-    })).toHaveLength(2)
+    expect(
+      exported.deltas.filter((delta) => {
+        const record = delta as {
+          updates?: Array<{ values?: Array<{ path?: string }> }>
+        }
+        return record.updates?.some((update) =>
+          update.values?.some((value) => value.path === 'navigation.position'),
+        )
+      }),
+    ).toHaveLength(2)
   })
 })

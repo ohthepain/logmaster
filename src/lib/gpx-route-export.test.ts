@@ -67,14 +67,15 @@ describe('gpx-route-export', () => {
   })
 
   it('round-trips NYC-style waypoints-only exports', () => {
-    const { route: importedRoute, waypoints: importedWaypoints } = buildRouteFromGpxFile({
-      gpxXml: `<?xml version="1.0" encoding="UTF-8"?>
+    const { route: importedRoute, waypoints: importedWaypoints } =
+      buildRouteFromGpxFile({
+        gpxXml: `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="MergeTool" xmlns="http://www.topografix.com/GPX/1/1">
   <wpt lat="40.7484" lon="-73.9857"><name>Empire State Building</name></wpt>
   <wpt lat="40.7580" lon="-73.9855"><name>Times Square</name></wpt>
 </gpx>`,
-      fileName: 'sample-waypoints-nyc.gpx',
-    })
+        fileName: 'sample-waypoints-nyc.gpx',
+      })
 
     const exported = buildRouteGpx(importedRoute, importedWaypoints)
     const parsed = parseGpxRoute(exported)

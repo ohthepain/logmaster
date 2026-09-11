@@ -2,17 +2,16 @@ import type { OsmPointDatasetId } from '../../lib/map-data-layers'
 import type { GridCell } from '../marinas/grid'
 import {
   fetchOverpassElementsForCells,
-  formatMarinaCellLogLine
-  
-  
-  
+  formatMarinaCellLogLine,
 } from '../marinas/overpass'
-import type {FetchMarinasOptions, MarinaCellResult, OverpassElement} from '../marinas/overpass';
+import type {
+  FetchMarinasOptions,
+  MarinaCellResult,
+  OverpassElement,
+} from '../marinas/overpass'
 import { kindForTags, overpassQueryForCell } from './queries'
-import {
-  mergeOsmPointFeatures
-} from './schema'
-import type {OsmPointFeature} from './schema';
+import { mergeOsmPointFeatures } from './schema'
+import type { OsmPointFeature } from './schema'
 import { formatOsmDepthLabel } from '../../lib/osm-feature-display'
 
 function defaultKindForDataset(dataset: OsmPointDatasetId): string {

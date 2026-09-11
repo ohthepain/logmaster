@@ -49,7 +49,8 @@ export function DevTripReplayModal({
       >
         <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">
           The original timing and track will drive a new trip in real time.
-          Notes, photos, voice notes, and other human-authored content are not copied.
+          Notes, photos, voice notes, and other human-authored content are not
+          copied.
         </p>
 
         <label className="block">

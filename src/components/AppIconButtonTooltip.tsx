@@ -1,12 +1,5 @@
-import {
-  cloneElement,
-  isValidElement,
-  useState
-  
-  
-  
-} from 'react'
-import type {PointerEvent, ReactElement, ReactNode} from 'react';
+import { cloneElement, isValidElement, useState } from 'react'
+import type { PointerEvent, ReactElement, ReactNode } from 'react'
 import { cn } from '../lib/cn'
 
 type AppIconButtonTooltipProps = {
@@ -35,16 +28,23 @@ export function AppIconButtonTooltip({
   const [dismissed, setDismissed] = useState(false)
   const showTooltip = !hidden && !dismissed
 
-  const child =
-    isValidElement(children) ?
-      cloneElement(children as ReactElement<{ onPointerDown?: (event: PointerEvent) => void }>, {
-        onPointerDown: (event: PointerEvent) => {
-          setDismissed(true)
-          const existing = (children as ReactElement<{ onPointerDown?: (event: PointerEvent) => void }>)
-            .props.onPointerDown
-          existing?.(event)
+  const child = isValidElement(children)
+    ? cloneElement(
+        children as ReactElement<{
+          onPointerDown?: (event: PointerEvent) => void
+        }>,
+        {
+          onPointerDown: (event: PointerEvent) => {
+            setDismissed(true)
+            const existing = (
+              children as ReactElement<{
+                onPointerDown?: (event: PointerEvent) => void
+              }>
+            ).props.onPointerDown
+            existing?.(event)
+          },
         },
-      })
+      )
     : children
 
   return (
@@ -61,9 +61,9 @@ export function AppIconButtonTooltip({
           'whitespace-nowrap rounded-lg border border-[var(--chip-line)] bg-[var(--surface-strong)] px-2.5 py-1',
           'text-[11px] font-semibold text-[var(--sea-ink)] shadow-md',
           'transition-opacity duration-150',
-          showTooltip ?
-            'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
-          : 'opacity-0',
+          showTooltip
+            ? 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+            : 'opacity-0',
         )}
       >
         {label}

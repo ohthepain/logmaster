@@ -102,7 +102,9 @@ export async function deleteBoatAsset(
   })
 }
 
-export async function fetchBoatPurchases(boatId: string): Promise<BoatPurchase[]> {
+export async function fetchBoatPurchases(
+  boatId: string,
+): Promise<BoatPurchase[]> {
   const data = await api<{ purchases: BoatPurchase[] }>(
     `/api/boats/${boatId}/purchases`,
   )

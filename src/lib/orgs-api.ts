@@ -8,10 +8,7 @@ import type {
 } from '../domain/org'
 import type { OrgContactsPayload, ContactResourceArea } from '../domain/contact'
 import type { Boat } from '../domain/boat'
-import type {
-  InviteMemberResult,
-  MemberInvite,
-} from '../domain/member-invite'
+import type { InviteMemberResult, MemberInvite } from '../domain/member-invite'
 import { apiUrl } from './app-origin'
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -174,7 +171,9 @@ export async function addOrgContactMembership(
   })
 }
 
-export async function fetchOrgContacts(orgId: string): Promise<OrgContactsPayload> {
+export async function fetchOrgContacts(
+  orgId: string,
+): Promise<OrgContactsPayload> {
   return api<OrgContactsPayload>(`/api/orgs/${orgId}/contacts`)
 }
 
@@ -189,10 +188,13 @@ export async function createOrgContact(
     grants?: ContactResourceArea[]
   },
 ): Promise<OrgContact> {
-  const data = await api<{ contact: OrgContact }>(`/api/orgs/${orgId}/contacts`, {
-    method: 'POST',
-    body: JSON.stringify(input),
-  })
+  const data = await api<{ contact: OrgContact }>(
+    `/api/orgs/${orgId}/contacts`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  )
   return data.contact
 }
 
@@ -223,7 +225,10 @@ export async function fetchOrgBoats(orgId: string): Promise<{
   )
 }
 
-export async function uploadOrgPhoto(orgId: string, file: File): Promise<OrgPhoto> {
+export async function uploadOrgPhoto(
+  orgId: string,
+  file: File,
+): Promise<OrgPhoto> {
   const form = new FormData()
   form.append('file', file)
   const data = await api<{ photo: OrgPhoto }>(`/api/orgs/${orgId}/photos`, {

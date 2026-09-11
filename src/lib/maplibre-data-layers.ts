@@ -1,21 +1,28 @@
 import type { FeatureCollection, Point } from 'geojson'
 import type maplibregl from 'maplibre-gl'
-import { degreeTilesForBbox,
+import {
+  degreeTilesForBbox,
   appGeoFeatureTileUrl,
   isGeoFeatureCollection,
-  mergeGeoFeatureCollections
-  
- } from './geo-feature-tiles'
-import type {GeoFeatureCollection} from './geo-feature-tiles';
+  mergeGeoFeatureCollections,
+} from './geo-feature-tiles'
+import type { GeoFeatureCollection } from './geo-feature-tiles'
 import {
   MAP_DATA_LAYERS,
   isRasterMapDataLayerId,
   mapDataLayerAuxiliaryLayerId,
   mapDataLayerCircleLayerId,
   mapDataLayerRenderLayerId,
-  mapDataLayerSymbolLayerId, resolveMapDataLayerToggle, resolveMapDataLayerToggles 
+  mapDataLayerSymbolLayerId,
+  resolveMapDataLayerToggle,
+  resolveMapDataLayerToggles,
 } from './map-data-layers'
-import type {MapDataLayerDefinition, MapDataLayerId, MapDataLayerToggles, OsmPointDatasetId} from './map-data-layers';
+import type {
+  MapDataLayerDefinition,
+  MapDataLayerId,
+  MapDataLayerToggles,
+  OsmPointDatasetId,
+} from './map-data-layers'
 import {
   hazardIconImageExpression,
   hazardIconSizeExpression,
@@ -25,8 +32,8 @@ import {
   enrichOsmPointProperties,
   parseOsmFeatureTags,
 } from './osm-feature-display'
-import { appOsmPointTileUrl  } from './osm-point-tiles'
-import type {OsmPointProperties} from './osm-point-tiles';
+import { appOsmPointTileUrl } from './osm-point-tiles'
+import type { OsmPointProperties } from './osm-point-tiles'
 import {
   OPEN_SEAMAP_BATHYMETRY_CONTOURS_LAYER_ID,
   OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID,
@@ -51,10 +58,14 @@ function geoSourceId(resolution: 'highres' | 'lowres'): string {
   return `geo-geonames-${resolution}`
 }
 
-function isOsmPointCollection(value: unknown): value is OsmPointFeatureCollection {
+function isOsmPointCollection(
+  value: unknown,
+): value is OsmPointFeatureCollection {
   if (!value || typeof value !== 'object') return false
   const candidate = value as { type?: unknown; features?: unknown }
-  return candidate.type === 'FeatureCollection' && Array.isArray(candidate.features)
+  return (
+    candidate.type === 'FeatureCollection' && Array.isArray(candidate.features)
+  )
 }
 
 function mergeOsmCollections(
@@ -287,14 +298,20 @@ function ensureDatasetSource(map: maplibregl.Map, dataset: OsmPointDatasetId) {
   }
 }
 
-function ensureGeoSource(map: maplibregl.Map, resolution: 'highres' | 'lowres') {
+function ensureGeoSource(
+  map: maplibregl.Map,
+  resolution: 'highres' | 'lowres',
+) {
   const sourceId = geoSourceId(resolution)
   if (!map.getSource(sourceId)) {
     map.addSource(sourceId, { type: 'geojson', data: emptyCollection() })
   }
 }
 
-function ensureHazardSymbolLayer(map: maplibregl.Map, layer: MapDataLayerDefinition) {
+function ensureHazardSymbolLayer(
+  map: maplibregl.Map,
+  layer: MapDataLayerDefinition,
+) {
   const layerId = mapDataLayerRenderLayerId(layer.id)
   if (map.getLayer(layerId)) return
   if (!layer.dataset || !layer.kindFilter) return
@@ -321,7 +338,10 @@ function defaultMapTextFont(map: maplibregl.Map): string[] {
   for (const layer of layers) {
     if (layer.type !== 'symbol') continue
     const textFont = layer.layout?.['text-font']
-    if (Array.isArray(textFont) && textFont.every((entry) => typeof entry === 'string')) {
+    if (
+      Array.isArray(textFont) &&
+      textFont.every((entry) => typeof entry === 'string')
+    ) {
       return textFont as string[]
     }
   }
@@ -334,7 +354,10 @@ const depthLabelFilter = [
   ['!=', ['get', 'depthLabel'], ''],
 ] as maplibregl.FilterSpecification
 
-function ensureDepthSoundingLayers(map: maplibregl.Map, layer: MapDataLayerDefinition) {
+function ensureDepthSoundingLayers(
+  map: maplibregl.Map,
+  layer: MapDataLayerDefinition,
+) {
   if (!layer.dataset || !layer.kindFilter) return
 
   const circleLayerId = mapDataLayerCircleLayerId(layer.id)
@@ -389,7 +412,10 @@ function ensureDepthSoundingLayers(map: maplibregl.Map, layer: MapDataLayerDefin
   }
 }
 
-function ensureDataLayerCircle(map: maplibregl.Map, layer: MapDataLayerDefinition) {
+function ensureDataLayerCircle(
+  map: maplibregl.Map,
+  layer: MapDataLayerDefinition,
+) {
   if (layer.id === 'osm-seamarks-other') {
     ensureHazardSymbolLayer(map, layer)
     return
@@ -426,7 +452,9 @@ function ensureDataLayerCircle(map: maplibregl.Map, layer: MapDataLayerDefinitio
     id: layerId,
     type: 'circle',
     source: datasetSourceId(layer.dataset),
-    filter: layer.kindFilter ? kindFilterExpression(layer.kindFilter) : undefined,
+    filter: layer.kindFilter
+      ? kindFilterExpression(layer.kindFilter)
+      : undefined,
     paint: circlePaintForLayer(layer),
     layout: { visibility: 'none' },
   })
@@ -449,7 +477,9 @@ export function applyMapDataLayerToggles(
     map.setLayoutProperty(
       layerId,
       'visibility',
-      resolvedLayerToggle(toggles, toggleId as MapDataLayerId) ? 'visible' : 'none',
+      resolvedLayerToggle(toggles, toggleId as MapDataLayerId)
+        ? 'visible'
+        : 'none',
     )
   }
 
@@ -520,7 +550,9 @@ export async function refreshMapDataLayersForViewport(
   if (geoResolution && resolvedToggles['geonames-cities']) {
     const collections: GeoFeatureCollection[] = []
     for (const tile of tiles) {
-      const payload = await fetchJsonTile(appGeoFeatureTileUrl(tile, geoResolution))
+      const payload = await fetchJsonTile(
+        appGeoFeatureTileUrl(tile, geoResolution),
+      )
       if (isGeoFeatureCollection(payload)) collections.push(payload)
     }
     const source = getGeoJsonSource(map, geoSourceId(geoResolution))
@@ -615,7 +647,10 @@ export function bindMapDataLayerRefreshOnViewChange(
   }
 }
 
-export function setOpenSeaMapOverlayVisible(map: maplibregl.Map, visible: boolean) {
+export function setOpenSeaMapOverlayVisible(
+  map: maplibregl.Map,
+  visible: boolean,
+) {
   if (!map.getLayer(OPEN_SEAMAP_SEAMARK_LAYER_ID)) return
   map.setLayoutProperty(
     OPEN_SEAMAP_SEAMARK_LAYER_ID,

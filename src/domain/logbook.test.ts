@@ -123,7 +123,9 @@ describe('trip operational persistence helpers', () => {
       entry('ENGINE_ON', '2026-01-01T10:05:00Z'),
     ]
 
-    expect(operationalFieldsFromState(deriveTripOperationalState(trip, entries))).toEqual({
+    expect(
+      operationalFieldsFromState(deriveTripOperationalState(trip, entries)),
+    ).toEqual({
       sailsUp: false,
       engineOn: true,
       moored: true,
@@ -245,7 +247,9 @@ describe('operational toggles', () => {
     expect(operationalToggleConfirmPrompt('moored', true)).toBe('Tie up?')
     expect(operationalToggleConfirmPrompt('moored', false)).toBe('Cast off?')
     expect(operationalToggleConfirmPrompt('anchor', true)).toBe('Drop anchor?')
-    expect(operationalToggleConfirmPrompt('anchor', false)).toBe('Weigh anchor?')
+    expect(operationalToggleConfirmPrompt('anchor', false)).toBe(
+      'Weigh anchor?',
+    )
   })
 })
 
@@ -292,9 +296,9 @@ describe('isLogEntryTypeVisible', () => {
   it('shows cast off before departure and hides it once underway', () => {
     const startedEntries = [entry('START_TRIP', '2026-01-01T10:00:00Z')]
 
-    expect(isLogEntryTypeVisible('CAST_OFF', inProgressTrip, startedEntries)).toBe(
-      true,
-    )
+    expect(
+      isLogEntryTypeVisible('CAST_OFF', inProgressTrip, startedEntries),
+    ).toBe(true)
 
     const departedEntries = [
       ...startedEntries,
@@ -315,9 +319,9 @@ describe('isLogEntryTypeVisible', () => {
     expect(isLogEntryTypeVisible('MOORED', inProgressTrip, mooredEntries)).toBe(
       false,
     )
-    expect(isLogEntryTypeVisible('CAST_OFF', inProgressTrip, mooredEntries)).toBe(
-      true,
-    )
+    expect(
+      isLogEntryTypeVisible('CAST_OFF', inProgressTrip, mooredEntries),
+    ).toBe(true)
     expect(
       isLogEntryTypeVisible('ANCHOR_WEIGHED', inProgressTrip, mooredEntries),
     ).toBe(false)
@@ -349,7 +353,11 @@ describe('isLogEntryTypeVisible', () => {
     ]
 
     expect(
-      isLogEntryTypeVisible('CAST_OFF', inProgressTrip, mooredAndAnchoredEntries),
+      isLogEntryTypeVisible(
+        'CAST_OFF',
+        inProgressTrip,
+        mooredAndAnchoredEntries,
+      ),
     ).toBe(true)
     expect(
       isLogEntryTypeVisible('MOORED', inProgressTrip, mooredAndAnchoredEntries),
@@ -358,16 +366,24 @@ describe('isLogEntryTypeVisible', () => {
 
   it('uses stored trip fields when entries are omitted', () => {
     expect(
-      isLogEntryTypeVisible('ENGINE_ON', {
-        status: 'IN_PROGRESS',
-        engineOn: true,
-      }, []),
+      isLogEntryTypeVisible(
+        'ENGINE_ON',
+        {
+          status: 'IN_PROGRESS',
+          engineOn: true,
+        },
+        [],
+      ),
     ).toBe(false)
     expect(
-      isLogEntryTypeVisible('ENGINE_OFF', {
-        status: 'IN_PROGRESS',
-        engineOn: true,
-      }, []),
+      isLogEntryTypeVisible(
+        'ENGINE_OFF',
+        {
+          status: 'IN_PROGRESS',
+          engineOn: true,
+        },
+        [],
+      ),
     ).toBe(true)
   })
 

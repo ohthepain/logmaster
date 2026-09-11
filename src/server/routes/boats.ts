@@ -6,12 +6,11 @@ import {
   boatAccessFilter,
   canAccess,
   getBoatContactGrants,
-  initializeBoatShares
-  
+  initializeBoatShares,
 } from '../permissions'
 import { canAccessBoatResource } from '../contact-utils'
-import type {ContactResourceArea} from '../../domain/contact';
-import type {Privilege} from '../permissions';
+import type { ContactResourceArea } from '../../domain/contact'
+import type { Privilege } from '../permissions'
 import { getSessionUserId } from '../session'
 import {
   deletePhotoObject,
@@ -120,7 +119,8 @@ async function getBoatForUser(
 ) {
   const allowed =
     (await canAccess(userId, privilege, { type: 'boat', id: boatId })) ||
-    (privilege === 'view' && (await getBoatContactGrants(userId, boatId)).length > 0)
+    (privilege === 'view' &&
+      (await getBoatContactGrants(userId, boatId)).length > 0)
   if (!allowed) return null
   return db.boat.findUnique({
     where: { id: boatId },
@@ -158,7 +158,12 @@ async function getPhotoForUser(
     include: { boat: true },
   })
   if (!photo) return null
-  const allowed = await canAccessBoatResource(userId, photo.boatId, 'PHOTOS', privilege)
+  const allowed = await canAccessBoatResource(
+    userId,
+    photo.boatId,
+    'PHOTOS',
+    privilege,
+  )
   if (!allowed) return null
   return photo
 }
@@ -305,7 +310,10 @@ async function getOwnedCategory(
   categoryId: string,
   privilege: Privilege = 'edit',
 ) {
-  const allowed = await canAccess(userId, privilege, { type: 'boat', id: boatId })
+  const allowed = await canAccess(userId, privilege, {
+    type: 'boat',
+    id: boatId,
+  })
   if (!allowed) return null
   return db.boatDocumentCategory.findFirst({
     where: { id: categoryId, boatId },
@@ -604,7 +612,11 @@ boatsRoutes.delete('/photos/:photoId', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const existing = await getPhotoForUser(userId, c.req.param('photoId'), 'manage')
+  const existing = await getPhotoForUser(
+    userId,
+    c.req.param('photoId'),
+    'manage',
+  )
   if (!existing) return c.json({ error: 'Photo not found' }, 404)
 
   try {
@@ -666,7 +678,12 @@ boatsRoutes.get('/:boatId/documents', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const boat = await getBoatForArea(userId, c.req.param('boatId'), 'DOCUMENTS', 'view')
+  const boat = await getBoatForArea(
+    userId,
+    c.req.param('boatId'),
+    'DOCUMENTS',
+    'view',
+  )
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   await ensureDefaultDocumentCategory(boat.id)
@@ -687,8 +704,9 @@ boatsRoutes.get('/:boatId/documents', async (c) => {
 
   return c.json({
     categories: categories.map(serializeDocumentCategory),
-    documents: documents.map((document: Parameters<typeof serializeDocument>[0]) =>
-      serializeDocument(document),
+    documents: documents.map(
+      (document: Parameters<typeof serializeDocument>[0]) =>
+        serializeDocument(document),
     ),
   })
 })
@@ -712,10 +730,12 @@ boatsRoutes.post('/:boatId/document-categories', async (c) => {
   }
 
   const maxSort =
-    (await db.boatDocumentCategory.aggregate({
-      where: { boatId: boat.id },
-      _max: { sortOrder: true },
-    }))._max.sortOrder ?? -1
+    (
+      await db.boatDocumentCategory.aggregate({
+        where: { boatId: boat.id },
+        _max: { sortOrder: true },
+      })
+    )._max.sortOrder ?? -1
 
   const category = await db.boatDocumentCategory.create({
     data: { boatId: boat.id, name, sortOrder: maxSort + 1 },
@@ -760,21 +780,21 @@ boatsRoutes.post('/:boatId/documents', async (c) => {
     const documentId = crypto.randomUUID()
     const versionId = crypto.randomUUID()
     const ext = extensionForDocumentMime(file.type, file.name)
-    const s3Key = boatDocumentS3Key(
-      userId,
-      boat.id,
-      documentId,
-      versionId,
-      ext,
-    )
+    const s3Key = boatDocumentS3Key(userId, boat.id, documentId, versionId, ext)
     const buffer = Buffer.from(await file.arrayBuffer())
-    await uploadPhotoObject(s3Key, buffer, file.type || 'application/octet-stream')
+    await uploadPhotoObject(
+      s3Key,
+      buffer,
+      file.type || 'application/octet-stream',
+    )
 
     const maxSort =
-      (await db.boatDocument.aggregate({
-        where: { boatId: boat.id, categoryId },
-        _max: { sortOrder: true },
-      }))._max.sortOrder ?? -1
+      (
+        await db.boatDocument.aggregate({
+          where: { boatId: boat.id, categoryId },
+          _max: { sortOrder: true },
+        })
+      )._max.sortOrder ?? -1
 
     const document = await db.boatDocument.create({
       data: {
@@ -830,10 +850,12 @@ boatsRoutes.post('/:boatId/documents', async (c) => {
   if (!category) return c.json({ error: 'Category not found' }, 404)
 
   const maxSort =
-    (await db.boatDocument.aggregate({
-      where: { boatId: boat.id, categoryId },
-      _max: { sortOrder: true },
-    }))._max.sortOrder ?? -1
+    (
+      await db.boatDocument.aggregate({
+        where: { boatId: boat.id, categoryId },
+        _max: { sortOrder: true },
+      })
+    )._max.sortOrder ?? -1
 
   const document = await db.boatDocument.create({
     data: {
@@ -869,7 +891,11 @@ boatsRoutes.patch('/documents/:documentId', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const existing = await getDocumentForUser(userId, c.req.param('documentId'), 'edit')
+  const existing = await getDocumentForUser(
+    userId,
+    c.req.param('documentId'),
+    'edit',
+  )
   if (!existing) return c.json({ error: 'Document not found' }, 404)
 
   const contentType = c.req.header('content-type') ?? ''
@@ -890,14 +916,20 @@ boatsRoutes.patch('/documents/:documentId', async (c) => {
       ext,
     )
     const buffer = Buffer.from(await file.arrayBuffer())
-    await uploadPhotoObject(s3Key, buffer, file.type || 'application/octet-stream')
+    await uploadPhotoObject(
+      s3Key,
+      buffer,
+      file.type || 'application/octet-stream',
+    )
 
     const nextVersion =
       (existing.versions[0]?.versionNumber ??
-        (await db.boatDocumentVersion.aggregate({
-          where: { documentId: existing.id },
-          _max: { versionNumber: true },
-        }))._max.versionNumber ??
+        (
+          await db.boatDocumentVersion.aggregate({
+            where: { documentId: existing.id },
+            _max: { versionNumber: true },
+          })
+        )._max.versionNumber ??
         0) + 1
 
     await db.boatDocumentVersion.create({
@@ -971,10 +1003,12 @@ boatsRoutes.patch('/documents/:documentId', async (c) => {
 
     const nextVersion =
       (existing.versions[0]?.versionNumber ??
-        (await db.boatDocumentVersion.aggregate({
-          where: { documentId: existing.id },
-          _max: { versionNumber: true },
-        }))._max.versionNumber ??
+        (
+          await db.boatDocumentVersion.aggregate({
+            where: { documentId: existing.id },
+            _max: { versionNumber: true },
+          })
+        )._max.versionNumber ??
         0) + 1
 
     await db.boatDocumentVersion.create({
@@ -1009,7 +1043,11 @@ boatsRoutes.delete('/documents/:documentId', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const existing = await getDocumentForUser(userId, c.req.param('documentId'), 'manage')
+  const existing = await getDocumentForUser(
+    userId,
+    c.req.param('documentId'),
+    'manage',
+  )
   if (!existing) return c.json({ error: 'Document not found' }, 404)
 
   const versions = await db.boatDocumentVersion.findMany({
@@ -1075,7 +1113,11 @@ boatsRoutes.get('/documents/:documentId/versions', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()
 
-  const existing = await getDocumentForUser(userId, c.req.param('documentId'), 'view')
+  const existing = await getDocumentForUser(
+    userId,
+    c.req.param('documentId'),
+    'view',
+  )
   if (!existing) return c.json({ error: 'Document not found' }, 404)
 
   const versions = await db.boatDocumentVersion.findMany({

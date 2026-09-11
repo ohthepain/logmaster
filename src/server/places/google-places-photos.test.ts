@@ -12,9 +12,9 @@ describe('google-places-photos', () => {
   })
 
   it('validates Google photo resource names', () => {
-    expect(
-      isValidPlacePhotoName('places/ChIJ_test/photos/AUacShh_test'),
-    ).toBe(true)
+    expect(isValidPlacePhotoName('places/ChIJ_test/photos/AUacShh_test')).toBe(
+      true,
+    )
     expect(isValidPlacePhotoName('https://evil.example/photo')).toBe(false)
     expect(isValidPlacePhotoName('places/evil')).toBe(false)
   })

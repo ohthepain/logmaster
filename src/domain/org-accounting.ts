@@ -64,7 +64,11 @@ export type ExpenseClaim = {
   updatedAt: string
   claimant: OrgTransactionUserRef
   boat: { id: string; name: string } | null
-  purchase: { id: string; supplierName: string | null; totalAmount: string | null } | null
+  purchase: {
+    id: string
+    supplierName: string | null
+    totalAmount: string | null
+  } | null
   paidTransactionId: string | null
   documentIds: string[]
 }
@@ -96,8 +100,7 @@ export function computeBankBalance(
   transactionAmounts: number[],
 ): number {
   return (
-    openingBalance +
-    transactionAmounts.reduce((sum, amount) => sum + amount, 0)
+    openingBalance + transactionAmounts.reduce((sum, amount) => sum + amount, 0)
   )
 }
 

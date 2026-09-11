@@ -8,7 +8,9 @@ import {
 
 describe('decodeAisStreamWebSocketMessage', () => {
   it('decodes UTF-8 strings directly', async () => {
-    await expect(decodeAisStreamWebSocketMessage('{"ok":true}')).resolves.toBe('{"ok":true}')
+    await expect(decodeAisStreamWebSocketMessage('{"ok":true}')).resolves.toBe(
+      '{"ok":true}',
+    )
   })
 
   it('decodes Blob payloads from Node WebSocket', async () => {

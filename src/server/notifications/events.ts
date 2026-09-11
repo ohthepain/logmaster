@@ -210,7 +210,11 @@ export async function notifyAdminJobFinished(args: {
     title: args.success ? 'Background job completed' : 'Background job failed',
     body: `${args.queueName} (${args.jobId}): ${args.summary}`,
     linkUrl: appLink('/admin/job-management'),
-    metadata: { jobId: args.jobId, queueName: args.queueName, success: args.success },
+    metadata: {
+      jobId: args.jobId,
+      queueName: args.queueName,
+      success: args.success,
+    },
   })
 }
 
@@ -243,7 +247,12 @@ const ORG_TOPIC_TABS: Partial<Record<NotificationTopic, string>> = {
 export async function notifyBoatSection(args: {
   topic: Exclude<
     NotificationTopic,
-    'ORG_MEMBERS' | 'ORG_DOCUMENTS' | 'ORG_CONTACTS' | 'ORG_BOATS' | 'ADMIN_JOBS' | 'BOAT_TRIPS_COMPLETED'
+    | 'ORG_MEMBERS'
+    | 'ORG_DOCUMENTS'
+    | 'ORG_CONTACTS'
+    | 'ORG_BOATS'
+    | 'ADMIN_JOBS'
+    | 'BOAT_TRIPS_COMPLETED'
   >
   boatId: string
   boatName: string
@@ -283,18 +292,19 @@ export async function notifyOrgSection(args: {
   })
 }
 
-const NOTIFICATION_SECTION_LABELS: Partial<Record<NotificationTopic, string>> = {
-  BOAT_PHOTOS: 'photos updated',
-  BOAT_DOCUMENTS: 'documents updated',
-  BOAT_ASSETS: 'assets updated',
-  BOAT_MEMBERS: 'members updated',
-  BOAT_CONTACTS: 'contacts updated',
-  BOAT_SHARES: 'shares updated',
-  ORG_MEMBERS: 'members updated',
-  ORG_DOCUMENTS: 'documents updated',
-  ORG_CONTACTS: 'contacts updated',
-  ORG_BOATS: 'boats updated',
-}
+const NOTIFICATION_SECTION_LABELS: Partial<Record<NotificationTopic, string>> =
+  {
+    BOAT_PHOTOS: 'photos updated',
+    BOAT_DOCUMENTS: 'documents updated',
+    BOAT_ASSETS: 'assets updated',
+    BOAT_MEMBERS: 'members updated',
+    BOAT_CONTACTS: 'contacts updated',
+    BOAT_SHARES: 'shares updated',
+    ORG_MEMBERS: 'members updated',
+    ORG_DOCUMENTS: 'documents updated',
+    ORG_CONTACTS: 'contacts updated',
+    ORG_BOATS: 'boats updated',
+  }
 
 export function fireNotification(promise: Promise<void>) {
   void promise.catch((error) => {

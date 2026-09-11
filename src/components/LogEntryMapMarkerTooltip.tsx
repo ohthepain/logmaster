@@ -15,7 +15,9 @@ type LogEntryMapMarkerTooltipProps = {
 function isVideoMedia(entry: LogEntry, media: Media[]) {
   if (isVideoLogEntry(entry)) return true
   return media.some((item) =>
-    /\.(mp4|mov|m4v|webm)(?:$|\?)/i.test(item.remoteUrl ?? item.localPath ?? ''),
+    /\.(mp4|mov|m4v|webm)(?:$|\?)/i.test(
+      item.remoteUrl ?? item.localPath ?? '',
+    ),
   )
 }
 
@@ -51,7 +53,9 @@ export function LogEntryMapMarkerTooltip({
       <p className="m-0 text-[11px] font-semibold leading-tight">
         {entryTitle(entry.type, entry.data)}
       </p>
-      <p className="m-0 mt-0.5 text-[10px] text-white/70">{formatDateTime(entry.timestamp)}</p>
+      <p className="m-0 mt-0.5 text-[10px] text-white/70">
+        {formatDateTime(entry.timestamp)}
+      </p>
       {photoItems.length > 0 || videoItems.length > 0 ? (
         <div className="mt-1.5 flex flex-wrap gap-1">
           {photoItems.map((item) => {
@@ -87,9 +91,16 @@ export function LogEntryMapMarkerTooltip({
                 aria-label="Open video"
               >
                 {source ? (
-                  <img src={source} alt="" className="size-full object-cover opacity-80" />
+                  <img
+                    src={source}
+                    alt=""
+                    className="size-full object-cover opacity-80"
+                  />
                 ) : null}
-                <Play className="absolute size-3 text-white drop-shadow" fill="currentColor" />
+                <Play
+                  className="absolute size-3 text-white drop-shadow"
+                  fill="currentColor"
+                />
               </button>
             )
           })}

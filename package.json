@@ -16,7 +16,7 @@
     "test": "vitest run",
     "lint": "eslint src scripts vite.config.ts prisma.config.ts",
     "format": "biome format .",
-    "check": "biome format --write . && eslint --fix",
+    "check": "biome format --write . && eslint --fix src scripts vite.config.ts prisma.config.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",

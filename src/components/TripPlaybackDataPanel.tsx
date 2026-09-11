@@ -10,12 +10,13 @@ import {
   countEnabledPlaybackViews,
   defaultPlaybackViewState,
   enabledGraphPlaybackPanelIds,
-  sanitizePlaybackViewState
-  
-  
-  
+  sanitizePlaybackViewState,
 } from '../lib/trip-playback-panels'
-import type {PlaybackPanelId, PlaybackPanelOption, PlaybackViewState} from '../lib/trip-playback-panels';
+import type {
+  PlaybackPanelId,
+  PlaybackPanelOption,
+  PlaybackViewState,
+} from '../lib/trip-playback-panels'
 import { TripPlaybackMultiGraph } from './TripPlaybackMultiGraph'
 
 type TripPlaybackInstrumentGraphProps = {
@@ -40,7 +41,9 @@ export function TripPlaybackInstrumentGraph({
 
   if (series.length === 0) {
     return (
-      <p className="m-0 py-2 text-sm text-white/60">No graph data for selected tracks.</p>
+      <p className="m-0 py-2 text-sm text-white/60">
+        No graph data for selected tracks.
+      </p>
     )
   }
 
@@ -132,7 +135,9 @@ export function TripPlaybackViewSelector({
                     )}
                     aria-hidden
                   >
-                    {checked ? <Check className="size-3" strokeWidth={3} /> : null}
+                    {checked ? (
+                      <Check className="size-3" strokeWidth={3} />
+                    ) : null}
                   </span>
                   <span className="min-w-0 flex-1">{option.label}</span>
                   <span className="text-[10px] uppercase tracking-[0.12em] text-white/45">

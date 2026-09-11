@@ -2,10 +2,7 @@ import { FileUp, Link2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { toast } from 'sonner'
-import type {
-  BoatDocument,
-  BoatDocumentCategory,
-} from '../domain/boat'
+import type { BoatDocument, BoatDocumentCategory } from '../domain/boat'
 import {
   createBoatDocumentLink,
   createBoatDocumentUpload,
@@ -17,11 +14,8 @@ import {
   documentTitleFromUrl,
   resolveDocumentLinkTitle,
 } from '../lib/document-title'
-import {
-  openBoatDocumentRecord
-  
-} from '../lib/boat-document-open'
-import type {BoatDocumentViewerPayload} from '../lib/boat-document-open';
+import { openBoatDocumentRecord } from '../lib/boat-document-open'
+import type { BoatDocumentViewerPayload } from '../lib/boat-document-open'
 import { cn } from '../lib/cn'
 import { ResourceSectionHeader } from './NotificationBellToggle'
 import { Modal } from './Modal'
@@ -31,7 +25,10 @@ import {
   BoatDocumentActionsMenu,
   BoatDocumentKindIcon,
 } from './BoatDocumentActionsMenu'
-import { DocumentPurposeBadge, DocumentPurposeField } from './DocumentPurposeField'
+import {
+  DocumentPurposeBadge,
+  DocumentPurposeField,
+} from './DocumentPurposeField'
 import type { DocumentPurpose } from '../domain/boat-assets'
 
 type BoatDocumentsTabProps = {
@@ -60,27 +57,30 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
   const [documentViewer, setDocumentViewer] =
     useState<BoatDocumentViewerPayload | null>(null)
 
-  const load = useCallback(async (opts?: { background?: boolean }) => {
-    if (opts?.background) setRefreshing(true)
-    else setLoading(true)
-    setError(null)
-    try {
-      const data = await fetchBoatDocuments(boatId)
-      setCategories(data.categories)
-      setDocuments(data.documents)
-      setCategoryDraft((current) => {
-        if (current && data.categories.some((c) => c.id === current)) {
-          return current
-        }
-        return data.categories[0]?.id ?? ''
-      })
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load documents')
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }, [boatId])
+  const load = useCallback(
+    async (opts?: { background?: boolean }) => {
+      if (opts?.background) setRefreshing(true)
+      else setLoading(true)
+      setError(null)
+      try {
+        const data = await fetchBoatDocuments(boatId)
+        setCategories(data.categories)
+        setDocuments(data.documents)
+        setCategoryDraft((current) => {
+          if (current && data.categories.some((c) => c.id === current)) {
+            return current
+          }
+          return data.categories[0]?.id ?? ''
+        })
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load documents')
+      } finally {
+        setLoading(false)
+        setRefreshing(false)
+      }
+    },
+    [boatId],
+  )
 
   useEffect(() => {
     void load()
@@ -123,7 +123,11 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
         onOpenViewer: setDocumentViewer,
       })
     } catch (openError) {
-      toast.error(openError instanceof Error ? openError.message : 'Failed to open document')
+      toast.error(
+        openError instanceof Error
+          ? openError.message
+          : 'Failed to open document',
+      )
     }
   }
 
@@ -307,13 +311,13 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
                         <p className="m-0 truncate text-xs text-[var(--sea-ink-soft)]">
                           {document.currentVersion.kind === 'link'
                             ? document.currentVersion.url
-                            : (document.currentVersion.fileName ?? 'Uploaded file')}
+                            : (document.currentVersion.fileName ??
+                              'Uploaded file')}
                         </p>
                         <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
                           Updated{' '}
                           {new Date(document.updatedAt).toLocaleDateString()}
-                          {' · '}
-                          v{document.currentVersion.versionNumber}
+                          {' · '}v{document.currentVersion.versionNumber}
                         </p>
                       </div>
                     </button>

@@ -6,8 +6,12 @@ import {
 
 describe('trip-track-instruments', () => {
   it('maps instrument kinds to Signal K paths', () => {
-    expect(SIGNALK_PATHS_BY_TRACK_KIND.sog).toContain('navigation.speedOverGround')
-    expect(SIGNALK_PATHS_BY_TRACK_KIND.stw).toContain('navigation.speedThroughWater')
+    expect(SIGNALK_PATHS_BY_TRACK_KIND.sog).toContain(
+      'navigation.speedOverGround',
+    )
+    expect(SIGNALK_PATHS_BY_TRACK_KIND.stw).toContain(
+      'navigation.speedThroughWater',
+    )
     expect(SIGNALK_PATHS_BY_TRACK_KIND.wind.length).toBeGreaterThan(1)
   })
 

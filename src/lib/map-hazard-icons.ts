@@ -106,7 +106,10 @@ function drawOtherHazardIcon(ctx: CanvasRenderingContext2D) {
   ctx.fill()
 }
 
-const HAZARD_ICON_BUILDERS: Record<(typeof HAZARD_ICON_IDS)[number], () => ImageData> = {
+const HAZARD_ICON_BUILDERS: Record<
+  (typeof HAZARD_ICON_IDS)[number],
+  () => ImageData
+> = {
   [HAZARD_WRECK_ICON]: () => createHazardIconImage(drawWreckIcon),
   [HAZARD_RESTRICTED_ICON]: () => createHazardIconImage(drawRestrictedIcon),
   [HAZARD_NOTICE_ICON]: () => createHazardIconImage(drawNoticeIcon),

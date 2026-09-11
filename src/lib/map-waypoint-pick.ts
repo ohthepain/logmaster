@@ -47,14 +47,20 @@ export function isWaypointMapInteractionActive(
   return config != null
 }
 
-export function isWaypointCenterPickActive(config?: MapWaypointPickConfig | null) {
+export function isWaypointCenterPickActive(
+  config?: MapWaypointPickConfig | null,
+) {
   return config?.phase === 'add' || config?.phase === 'edit-pick'
 }
 
-export function isWaypointEditSelectActive(config?: MapWaypointPickConfig | null) {
+export function isWaypointEditSelectActive(
+  config?: MapWaypointPickConfig | null,
+) {
   return config?.phase === 'edit-select'
 }
 
-export function isWaypointEditCenteringActive(config?: MapWaypointPickConfig | null) {
+export function isWaypointEditCenteringActive(
+  config?: MapWaypointPickConfig | null,
+) {
   return config?.phase === 'edit-center'
 }

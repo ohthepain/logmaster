@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
 import { prisma } from '../db'
-import { canAccess, getOrgContactGrants  } from '../permissions'
+import { canAccess, getOrgContactGrants } from '../permissions'
 import { canAccessOrgResource } from '../contact-utils'
-import type {ContactResourceArea} from '../../domain/contact';
-import type {Privilege} from '../permissions';
+import type { ContactResourceArea } from '../../domain/contact'
+import type { Privilege } from '../permissions'
 import { getSessionUserId } from '../session'
 import { fireOrgDocumentsNotification } from '../notifications/route-hooks'
 import {
@@ -424,7 +424,11 @@ consortiaMediaRoutes.delete('/photos/:photoId', async (c) => {
   try {
     await deletePhotoObject(existing.s3Key)
   } catch (error) {
-    console.warn('[consortia] failed to delete S3 object', existing.s3Key, error)
+    console.warn(
+      '[consortia] failed to delete S3 object',
+      existing.s3Key,
+      error,
+    )
   }
 
   await db.consortiumPhoto.delete({ where: { id: existing.id } })
@@ -481,8 +485,9 @@ consortiaMediaRoutes.get('/:orgId/documents', async (c) => {
 
   return c.json({
     categories: categories.map(serializeDocumentCategory),
-    documents: documents.map((document: Parameters<typeof serializeDocument>[0]) =>
-      serializeDocument(document),
+    documents: documents.map(
+      (document: Parameters<typeof serializeDocument>[0]) =>
+        serializeDocument(document),
     ),
   })
 })
@@ -510,10 +515,12 @@ consortiaMediaRoutes.post('/:orgId/document-categories', async (c) => {
   }
 
   const maxSort =
-    (await db.consortiumDocumentCategory.aggregate({
-      where: { consortiumId: consortium.id },
-      _max: { sortOrder: true },
-    }))._max.sortOrder ?? -1
+    (
+      await db.consortiumDocumentCategory.aggregate({
+        where: { consortiumId: consortium.id },
+        _max: { sortOrder: true },
+      })
+    )._max.sortOrder ?? -1
 
   const category = await db.consortiumDocumentCategory.create({
     data: { consortiumId: consortium.id, name, sortOrder: maxSort + 1 },
@@ -570,13 +577,19 @@ consortiaMediaRoutes.post('/:orgId/documents', async (c) => {
       ext,
     )
     const buffer = Buffer.from(await file.arrayBuffer())
-    await uploadPhotoObject(s3Key, buffer, file.type || 'application/octet-stream')
+    await uploadPhotoObject(
+      s3Key,
+      buffer,
+      file.type || 'application/octet-stream',
+    )
 
     const maxSort =
-      (await db.consortiumDocument.aggregate({
-        where: { consortiumId: consortium.id, categoryId },
-        _max: { sortOrder: true },
-      }))._max.sortOrder ?? -1
+      (
+        await db.consortiumDocument.aggregate({
+          where: { consortiumId: consortium.id, categoryId },
+          _max: { sortOrder: true },
+        })
+      )._max.sortOrder ?? -1
 
     const document = await db.consortiumDocument.create({
       data: {
@@ -632,10 +645,12 @@ consortiaMediaRoutes.post('/:orgId/documents', async (c) => {
   if (!category) return c.json({ error: 'Category not found' }, 404)
 
   const maxSort =
-    (await db.consortiumDocument.aggregate({
-      where: { consortiumId: consortium.id, categoryId },
-      _max: { sortOrder: true },
-    }))._max.sortOrder ?? -1
+    (
+      await db.consortiumDocument.aggregate({
+        where: { consortiumId: consortium.id, categoryId },
+        _max: { sortOrder: true },
+      })
+    )._max.sortOrder ?? -1
 
   const document = await db.consortiumDocument.create({
     data: {
@@ -696,14 +711,20 @@ consortiaMediaRoutes.patch('/documents/:documentId', async (c) => {
       ext,
     )
     const buffer = Buffer.from(await file.arrayBuffer())
-    await uploadPhotoObject(s3Key, buffer, file.type || 'application/octet-stream')
+    await uploadPhotoObject(
+      s3Key,
+      buffer,
+      file.type || 'application/octet-stream',
+    )
 
     const nextVersion =
       (existing.versions[0]?.versionNumber ??
-        (await db.consortiumDocumentVersion.aggregate({
-          where: { documentId: existing.id },
-          _max: { versionNumber: true },
-        }))._max.versionNumber ??
+        (
+          await db.consortiumDocumentVersion.aggregate({
+            where: { documentId: existing.id },
+            _max: { versionNumber: true },
+          })
+        )._max.versionNumber ??
         0) + 1
 
     await db.consortiumDocumentVersion.create({
@@ -731,7 +752,11 @@ consortiaMediaRoutes.patch('/documents/:documentId', async (c) => {
       data: { updatedAt: new Date() },
     })
 
-    fireOrgDocumentsNotification(userId, existing.consortium, 'updated a document.')
+    fireOrgDocumentsNotification(
+      userId,
+      existing.consortium,
+      'updated a document.',
+    )
 
     return c.json({ document: serializeDocument(document) })
   }
@@ -777,10 +802,12 @@ consortiaMediaRoutes.patch('/documents/:documentId', async (c) => {
 
     const nextVersion =
       (existing.versions[0]?.versionNumber ??
-        (await db.consortiumDocumentVersion.aggregate({
-          where: { documentId: existing.id },
-          _max: { versionNumber: true },
-        }))._max.versionNumber ??
+        (
+          await db.consortiumDocumentVersion.aggregate({
+            where: { documentId: existing.id },
+            _max: { versionNumber: true },
+          })
+        )._max.versionNumber ??
         0) + 1
 
     await db.consortiumDocumentVersion.create({
@@ -806,7 +833,11 @@ consortiaMediaRoutes.patch('/documents/:documentId', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireOrgDocumentsNotification(userId, existing.consortium, 'updated a document.')
+  fireOrgDocumentsNotification(
+    userId,
+    existing.consortium,
+    'updated a document.',
+  )
 
   return c.json({ document: serializeDocument(document) })
 })
@@ -847,43 +878,52 @@ consortiaMediaRoutes.delete('/documents/:documentId', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireOrgDocumentsNotification(userId, existing.consortium, 'deleted a document.')
+  fireOrgDocumentsNotification(
+    userId,
+    existing.consortium,
+    'deleted a document.',
+  )
 
   return c.json({ ok: true })
 })
 
-consortiaMediaRoutes.get('/documents/versions/:versionId/content', async (c) => {
-  const userId = await requireUserId(c)
-  if (!userId) return unauthorized()
+consortiaMediaRoutes.get(
+  '/documents/versions/:versionId/content',
+  async (c) => {
+    const userId = await requireUserId(c)
+    if (!userId) return unauthorized()
 
-  const existing = await getDocumentVersionForUser(
-    userId,
-    c.req.param('versionId'),
-    'view',
-  )
-  if (!existing || existing.kind !== 'upload' || !existing.s3Key) {
-    return c.json({ error: 'Document not found' }, 404)
-  }
+    const existing = await getDocumentVersionForUser(
+      userId,
+      c.req.param('versionId'),
+      'view',
+    )
+    if (!existing || existing.kind !== 'upload' || !existing.s3Key) {
+      return c.json({ error: 'Document not found' }, 404)
+    }
 
-  try {
-    const object = await getPhotoObject(existing.s3Key)
-    if (!object.Body) return c.json({ error: 'Document unavailable' }, 404)
+    try {
+      const object = await getPhotoObject(existing.s3Key)
+      if (!object.Body) return c.json({ error: 'Document unavailable' }, 404)
 
-    const bytes = await object.Body.transformToByteArray()
-    const fileName = existing.fileName ?? 'document'
-    return new Response(Buffer.from(bytes), {
-      headers: {
-        'Content-Type':
-          existing.mimeType || object.ContentType || 'application/octet-stream',
-        'Content-Disposition': `inline; filename="${fileName.replace(/"/g, '')}"`,
-        'Cache-Control': 'private, max-age=3600',
-      },
-    })
-  } catch (error) {
-    console.warn('[consortia] S3 read failed', existing.s3Key, error)
-    return c.json({ error: 'Document unavailable' }, 404)
-  }
-})
+      const bytes = await object.Body.transformToByteArray()
+      const fileName = existing.fileName ?? 'document'
+      return new Response(Buffer.from(bytes), {
+        headers: {
+          'Content-Type':
+            existing.mimeType ||
+            object.ContentType ||
+            'application/octet-stream',
+          'Content-Disposition': `inline; filename="${fileName.replace(/"/g, '')}"`,
+          'Cache-Control': 'private, max-age=3600',
+        },
+      })
+    } catch (error) {
+      console.warn('[consortia] S3 read failed', existing.s3Key, error)
+      return c.json({ error: 'Document unavailable' }, 404)
+    }
+  },
+)
 
 consortiaMediaRoutes.get('/documents/:documentId/versions', async (c) => {
   const userId = await requireUserId(c)

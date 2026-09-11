@@ -1,165 +1,175 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { Check, Sailboat, Trash2, User } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, useState, useCallback } from "react";
-import { toast } from "sonner";
-import { DevComponentLabel } from "./DevComponentLabel";
-import { DevTripReplayModal } from "./DevTripReplayModal";
-import { LogEntryCreateModal } from "./LogEntryCreateModal";
-import { LogEntryComposerModal } from "./LogEntryComposerModal";
-import { Modal } from "./Modal";
-import { TripCrewPickerModal } from "./TripCrewPickerModal";
-import { TripCoverEditModal } from "./TripCoverEditModal";
-import { TripDetailHero } from "./TripDetailHero";
-import type { CompletedTripPanel } from "./TripDetailHero";
-import type { MapWaypointPickConfig } from "../lib/map-waypoint-pick";
-import { isWaypointMapInteractionActive } from "../lib/map-waypoint-pick";
+import { Link, useNavigate } from '@tanstack/react-router'
+import { Check, Sailboat, Trash2, User } from 'lucide-react'
+import { useEffect, useId, useMemo, useRef, useState, useCallback } from 'react'
+import { toast } from 'sonner'
+import { DevComponentLabel } from './DevComponentLabel'
+import { DevTripReplayModal } from './DevTripReplayModal'
+import { LogEntryCreateModal } from './LogEntryCreateModal'
+import { LogEntryComposerModal } from './LogEntryComposerModal'
+import { Modal } from './Modal'
+import { TripCrewPickerModal } from './TripCrewPickerModal'
+import { TripCoverEditModal } from './TripCoverEditModal'
+import { TripDetailHero } from './TripDetailHero'
+import type { CompletedTripPanel } from './TripDetailHero'
+import type { MapWaypointPickConfig } from '../lib/map-waypoint-pick'
+import { isWaypointMapInteractionActive } from '../lib/map-waypoint-pick'
 import {
   tripWaypointEntries,
   tripWaypointNameFromEntry,
   withTripWaypointName,
-} from "../lib/trip-waypoint-entry";
-import type { TripMapHandle } from "../lib/trip-map-handle";
-import { TripDetailBottomSheet } from "./TripDetailBottomSheet";
-import { TripRecordButton } from "./TripRecordButton";
-import { TripLegSection } from "./TripLegSection";
-import { NativeRecordingSettings } from "./NativeRecordingSettings";
-import type { Media } from "../domain/logbook";
-import type { CrewMember } from "../domain/crew";
-import { decodeTripTrack } from "../domain/trip-track";
-import { fetchCrew } from "../lib/crew-api";
-import { readImageFile } from "../lib/image-file";
+} from '../lib/trip-waypoint-entry'
+import type { TripMapHandle } from '../lib/trip-map-handle'
+import { TripDetailBottomSheet } from './TripDetailBottomSheet'
+import { TripRecordButton } from './TripRecordButton'
+import { TripLegSection } from './TripLegSection'
+import { NativeRecordingSettings } from './NativeRecordingSettings'
+import type { Media } from '../domain/logbook'
+import type { CrewMember } from '../domain/crew'
+import { decodeTripTrack } from '../domain/trip-track'
+import { fetchCrew } from '../lib/crew-api'
+import { readImageFile } from '../lib/image-file'
 import {
   tripMediaUploadToastMessage,
   uploadTripMediaFiles,
-} from "../lib/trip-media-upload";
+} from '../lib/trip-media-upload'
 import {
   DEV_TRIP_REPLAY_ENTRY_NOTE,
   DEV_TRIP_REPLAY_SOURCE,
   replayPositionAt,
   replaySourceEntries,
-} from "../lib/dev-trip-replay";
-import { isDevModeAvailable } from "../lib/dev-mode";
-import { setDevPositionOverride } from "../lib/device-position";
-import { formatDateTime, formatPosition } from "../lib/logbook-format";
-import { tripDetailCoverDisplay, defaultTripTitle, tripDisplayName } from "../lib/trip-display";
-import { getNativePlatform } from "../lib/platform";
-import { useIosNativeMapTouchPassthrough } from "../lib/native/ios-map-touch-passthrough";
-import { useAppOptionsStore } from "../stores/app-options";
-import { useLogbookStore, triggerLogbookSyncRetry } from "../stores/logbook";
+} from '../lib/dev-trip-replay'
+import { isDevModeAvailable } from '../lib/dev-mode'
+import { setDevPositionOverride } from '../lib/device-position'
+import { formatDateTime, formatPosition } from '../lib/logbook-format'
+import {
+  tripDetailCoverDisplay,
+  defaultTripTitle,
+  tripDisplayName,
+} from '../lib/trip-display'
+import { getNativePlatform } from '../lib/platform'
+import { useIosNativeMapTouchPassthrough } from '../lib/native/ios-map-touch-passthrough'
+import { useAppOptionsStore } from '../stores/app-options'
+import { useLogbookStore, triggerLogbookSyncRetry } from '../stores/logbook'
 
 type TripDetailPageProps = {
-  tripId: string;
-  startFromLiveActivity?: boolean;
-};
+  tripId: string
+  startFromLiveActivity?: boolean
+}
 
-export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDetailPageProps) {
-  const navigate = useNavigate();
-  const store = useLogbookStore();
-  const trip = store.trips.find((item) => item.id === tripId) ?? null;
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const mediaFileInputRef = useRef<HTMLInputElement>(null);
-  const heroMapRef = useRef<TripMapHandle>(null);
-  const autoMapCoverAttemptedRef = useRef<string | null>(null);
-  const fileInputId = useId();
-  const mediaFileInputId = useId();
-  const [busy, setBusy] = useState(false);
-  const [uploadingMedia, setUploadingMedia] = useState(false);
-  const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
-  const [crewPickerOpen, setCrewPickerOpen] = useState(false);
-  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
-  const [createEntryOpen, setCreateEntryOpen] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [coverEditOpen, setCoverEditOpen] = useState(false);
-  const [replayOpen, setReplayOpen] = useState(false);
+export function TripDetailPage({
+  tripId,
+  startFromLiveActivity = false,
+}: TripDetailPageProps) {
+  const navigate = useNavigate()
+  const store = useLogbookStore()
+  const trip = store.trips.find((item) => item.id === tripId) ?? null
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const mediaFileInputRef = useRef<HTMLInputElement>(null)
+  const heroMapRef = useRef<TripMapHandle>(null)
+  const autoMapCoverAttemptedRef = useRef<string | null>(null)
+  const fileInputId = useId()
+  const mediaFileInputId = useId()
+  const [busy, setBusy] = useState(false)
+  const [uploadingMedia, setUploadingMedia] = useState(false)
+  const [crewMembers, setCrewMembers] = useState<CrewMember[]>([])
+  const [crewPickerOpen, setCrewPickerOpen] = useState(false)
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null)
+  const [createEntryOpen, setCreateEntryOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [coverEditOpen, setCoverEditOpen] = useState(false)
+  const [replayOpen, setReplayOpen] = useState(false)
   const [waypointMapPhase, setWaypointMapPhase] = useState<
-    "idle" | "add" | "edit-select" | "edit-center" | "edit-pick"
-  >("idle");
-  const [editingWaypointEntryId, setEditingWaypointEntryId] = useState<string | null>(null);
-  const [waypointPickBusy, setWaypointPickBusy] = useState(false);
-  const [waypointDraftName, setWaypointDraftName] = useState("");
-  const [completedTripPanel, setCompletedTripPanel] = useState<CompletedTripPanel>("map");
-  const liveActivityStartHandledRef = useRef(false);
+    'idle' | 'add' | 'edit-select' | 'edit-center' | 'edit-pick'
+  >('idle')
+  const [editingWaypointEntryId, setEditingWaypointEntryId] = useState<
+    string | null
+  >(null)
+  const [waypointPickBusy, setWaypointPickBusy] = useState(false)
+  const [waypointDraftName, setWaypointDraftName] = useState('')
+  const [completedTripPanel, setCompletedTripPanel] =
+    useState<CompletedTripPanel>('map')
+  const liveActivityStartHandledRef = useRef(false)
 
   useEffect(() => {
-    void useLogbookStore.getState().load();
-  }, []);
+    void useLogbookStore.getState().load()
+  }, [])
 
   useEffect(() => {
-    useLogbookStore.getState().selectTrip(tripId);
-  }, [tripId]);
+    useLogbookStore.getState().selectTrip(tripId)
+  }, [tripId])
 
   useEffect(() => {
-    setCompletedTripPanel("map");
-  }, [tripId]);
+    setCompletedTripPanel('map')
+  }, [tripId])
 
   useEffect(() => {
-    if (!startFromLiveActivity || !store.booted || !trip) return;
-    if (liveActivityStartHandledRef.current) return;
-    liveActivityStartHandledRef.current = true;
+    if (!startFromLiveActivity || !store.booted || !trip) return
+    if (liveActivityStartHandledRef.current) return
+    liveActivityStartHandledRef.current = true
 
     // Clear the command URL first so an app reload cannot execute it twice.
     void navigate({
-      to: "/trips/$tripId",
+      to: '/trips/$tripId',
       params: { tripId },
       search: { liveActivity: undefined },
       replace: true,
-    });
+    })
 
     void (async () => {
-      setBusy(true);
+      setBusy(true)
       try {
-        const wasPlanned = trip.status === "PLANNED";
+        const wasPlanned = trip.status === 'PLANNED'
         if (wasPlanned) {
           await useLogbookStore.getState().addEntry({
             tripId,
-            type: "START_TRIP",
-          });
+            type: 'START_TRIP',
+          })
         }
         const current = useLogbookStore
           .getState()
-          .trips.find((item) => item.id === tripId);
-        if (current?.status === "IN_PROGRESS") {
-          useAppOptionsStore.getState().setRecordingTripId(tripId);
+          .trips.find((item) => item.id === tripId)
+        if (current?.status === 'IN_PROGRESS') {
+          useAppOptionsStore.getState().setRecordingTripId(tripId)
         }
-        toast.success(wasPlanned ? "Trip started" : "Recording resumed");
+        toast.success(wasPlanned ? 'Trip started' : 'Recording resumed')
       } catch (error) {
-        liveActivityStartHandledRef.current = false;
+        liveActivityStartHandledRef.current = false
         toast.error(
-          error instanceof Error ? error.message : "Failed to start trip",
-        );
+          error instanceof Error ? error.message : 'Failed to start trip',
+        )
       } finally {
-        setBusy(false);
+        setBusy(false)
       }
-    })();
-  }, [navigate, startFromLiveActivity, store.booted, trip, tripId]);
+    })()
+  }, [navigate, startFromLiveActivity, store.booted, trip, tripId])
 
   useEffect(() => {
     void fetchCrew()
       .then((payload) => {
-        setCrewMembers(payload.members);
-        triggerLogbookSyncRetry();
+        setCrewMembers(payload.members)
+        triggerLogbookSyncRetry()
       })
-      .catch(() => {});
-  }, [tripId]);
+      .catch(() => {})
+  }, [tripId])
 
   useEffect(() => {
-    if (getNativePlatform() !== "ios") return;
-    const { style: htmlStyle } = document.documentElement;
-    const { style: bodyStyle } = document.body;
-    const previousHtmlBackground = htmlStyle.backgroundColor;
-    const previousBodyBackground = bodyStyle.backgroundColor;
-    htmlStyle.backgroundColor = "transparent";
-    bodyStyle.backgroundColor = "transparent";
+    if (getNativePlatform() !== 'ios') return
+    const { style: htmlStyle } = document.documentElement
+    const { style: bodyStyle } = document.body
+    const previousHtmlBackground = htmlStyle.backgroundColor
+    const previousBodyBackground = bodyStyle.backgroundColor
+    htmlStyle.backgroundColor = 'transparent'
+    bodyStyle.backgroundColor = 'transparent'
     return () => {
-      htmlStyle.backgroundColor = previousHtmlBackground;
-      bodyStyle.backgroundColor = previousBodyBackground;
-    };
-  }, []);
+      htmlStyle.backgroundColor = previousHtmlBackground
+      bodyStyle.backgroundColor = previousBodyBackground
+    }
+  }, [])
 
   const tripLegs = useMemo(
     () => store.legs.filter((leg) => leg.tripId === tripId),
     [store.legs, tripId],
-  );
+  )
 
   const tripTracks = useMemo(
     () => store.tracks.filter((track) => track.tripId === tripId),
@@ -169,15 +179,15 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
   const positionSampleCount = useMemo(
     () =>
       tripTracks
-        .filter((track) => track.kind === "position")
+        .filter((track) => track.kind === 'position')
         .reduce((count, track) => count + decodeTripTrack(track).length, 0),
     [tripTracks],
   )
 
-  const devTripReplay = useAppOptionsStore((state) => state.devTripReplay);
-  const devTripRetrip = useAppOptionsStore((state) => state.devTripRetrip);
-  const recordingTripId = useAppOptionsStore((state) => state.recordingTripId);
-  const devMode = useAppOptionsStore((state) => state.devMode);
+  const devTripReplay = useAppOptionsStore((state) => state.devTripReplay)
+  const devTripRetrip = useAppOptionsStore((state) => state.devTripRetrip)
+  const recordingTripId = useAppOptionsStore((state) => state.recordingTripId)
+  const devMode = useAppOptionsStore((state) => state.devMode)
 
   const mapTracks = useMemo(() => {
     let tracks = tripTracks
@@ -188,7 +198,8 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
     ) {
       const sourceTracks = store.tracks.filter(
         (track) =>
-          track.tripId === devTripRetrip.sourceTripId && track.kind === 'position',
+          track.tripId === devTripRetrip.sourceTripId &&
+          track.kind === 'position',
       )
       tracks = [...sourceTracks, ...tracks]
     }
@@ -202,106 +213,116 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
     if (devTripRetrip?.sourceTripId) {
       void ensureTripTrackPayloads(devTripRetrip.sourceTripId)
     }
-  }, [trip, tripId, tripTracks.length, devTripRetrip?.sourceTripId]);
+  }, [trip, tripId, tripTracks.length, devTripRetrip?.sourceTripId])
 
   const tripEntries = useMemo(
     () =>
       store.entries
         .filter((entry) => entry.tripId === tripId && !entry.deleted)
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+        .sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+        ),
     [store.entries, tripId],
-  );
+  )
 
-  const inProgressTrip = store.trips.find((item) => item.status === "IN_PROGRESS");
+  const inProgressTrip = store.trips.find(
+    (item) => item.status === 'IN_PROGRESS',
+  )
 
   useIosNativeMapTouchPassthrough(
-    getNativePlatform() === "ios" &&
+    getNativePlatform() === 'ios' &&
       trip != null &&
-      (trip.status === "IN_PROGRESS" ||
-        trip.status === "PLANNED" ||
-        trip.status === "COMPLETED"),
-  );
+      (trip.status === 'IN_PROGRESS' ||
+        trip.status === 'PLANNED' ||
+        trip.status === 'COMPLETED'),
+  )
 
   const mediaByEntry = useMemo(() => {
-    const map = new Map<string, Media[]>();
+    const map = new Map<string, Media[]>()
     for (const item of store.media) {
-      const existing = map.get(item.logEntryId) ?? [];
-      existing.push(item);
-      map.set(item.logEntryId, existing);
+      const existing = map.get(item.logEntryId) ?? []
+      existing.push(item)
+      map.set(item.logEntryId, existing)
     }
-    return map;
-  }, [store.media]);
+    return map
+  }, [store.media])
 
   const saveMapAsCover = useCallback(async () => {
-    const coverPhotoDataUrl = await heroMapRef.current?.captureMapSnapshot();
+    const coverPhotoDataUrl = await heroMapRef.current?.captureMapSnapshot()
     if (!coverPhotoDataUrl) {
-      throw new Error("Could not capture the map");
+      throw new Error('Could not capture the map')
     }
     await useLogbookStore.getState().updateTrip(tripId, {
-      coverKind: "photo",
+      coverKind: 'photo',
       coverPhotoDataUrl,
-    });
-    useLogbookStore.getState().clearAutoMapCoverRequest(tripId);
-  }, [tripId]);
+    })
+    useLogbookStore.getState().clearAutoMapCoverRequest(tripId)
+  }, [tripId])
 
   const tryAutoMapCover = useCallback(
     async (options?: { force?: boolean }) => {
-      const currentTrip = useLogbookStore.getState().trips.find((item) => item.id === tripId);
+      const currentTrip = useLogbookStore
+        .getState()
+        .trips.find((item) => item.id === tripId)
       if (currentTrip?.coverPhotoDataUrl && !options?.force) {
-        useLogbookStore.getState().clearAutoMapCoverRequest(tripId);
-        return true;
+        useLogbookStore.getState().clearAutoMapCoverRequest(tripId)
+        return true
       }
       if (!options?.force && autoMapCoverAttemptedRef.current === tripId) {
-        return false;
+        return false
       }
 
       try {
-        await saveMapAsCover();
-        autoMapCoverAttemptedRef.current = tripId;
-        return true;
+        await saveMapAsCover()
+        autoMapCoverAttemptedRef.current = tripId
+        return true
       } catch {
-        return false;
+        return false
       }
     },
     [saveMapAsCover, tripId],
-  );
+  )
 
   const handleInitialMapViewportSettled = useCallback(() => {
-    const wantsCover = useLogbookStore.getState().autoMapCoverTripIds.includes(tripId);
-    void tryAutoMapCover({ force: wantsCover });
-  }, [tryAutoMapCover, tripId]);
+    const wantsCover = useLogbookStore
+      .getState()
+      .autoMapCoverTripIds.includes(tripId)
+    void tryAutoMapCover({ force: wantsCover })
+  }, [tryAutoMapCover, tripId])
 
-  const wantsAutoMapCover = store.autoMapCoverTripIds.includes(tripId);
-  const hasPositionTrack = tripTracks.some((track) => track.kind === "position");
-  const tripIsActive = trip?.status === "IN_PROGRESS" || trip?.status === "PLANNED";
+  const wantsAutoMapCover = store.autoMapCoverTripIds.includes(tripId)
+  const hasPositionTrack = tripTracks.some((track) => track.kind === 'position')
+  const tripIsActive =
+    trip?.status === 'IN_PROGRESS' || trip?.status === 'PLANNED'
   const autoMapCoverDelays = useMemo(
     () => (wantsAutoMapCover ? [0, 800, 1500, 3000, 5000, 8000] : [0]),
     [wantsAutoMapCover],
-  );
+  )
 
   useEffect(() => {
-    if (!wantsAutoMapCover) return;
+    if (!wantsAutoMapCover) return
     if (positionSampleCount > 0) {
-      autoMapCoverAttemptedRef.current = null;
+      autoMapCoverAttemptedRef.current = null
     }
-  }, [positionSampleCount, wantsAutoMapCover, tripId]);
+  }, [positionSampleCount, wantsAutoMapCover, tripId])
 
   useEffect(() => {
-    if (!trip) return;
-    if (trip.coverPhotoDataUrl && !wantsAutoMapCover) return;
-    if (tripIsActive && !wantsAutoMapCover) return;
-    if (!hasPositionTrack && !wantsAutoMapCover) return;
-    if (wantsAutoMapCover && positionSampleCount === 0) return;
+    if (!trip) return
+    if (trip.coverPhotoDataUrl && !wantsAutoMapCover) return
+    if (tripIsActive && !wantsAutoMapCover) return
+    if (!hasPositionTrack && !wantsAutoMapCover) return
+    if (wantsAutoMapCover && positionSampleCount === 0) return
 
     const timers = autoMapCoverDelays.map((delay) =>
       window.setTimeout(() => {
-        void tryAutoMapCover({ force: wantsAutoMapCover });
+        void tryAutoMapCover({ force: wantsAutoMapCover })
       }, delay),
-    );
+    )
 
     return () => {
-      timers.forEach((timer) => window.clearTimeout(timer));
-    };
+      timers.forEach((timer) => window.clearTimeout(timer))
+    }
   }, [
     trip,
     tripIsActive,
@@ -313,154 +334,174 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
     trip?.status,
     positionSampleCount,
     autoMapCoverDelays,
-  ]);
+  ])
 
   useEffect(() => {
-    autoMapCoverAttemptedRef.current = null;
-  }, [tripId]);
+    autoMapCoverAttemptedRef.current = null
+  }, [tripId])
 
   useEffect(() => {
-    if (trip?.status === "COMPLETED") {
-      autoMapCoverAttemptedRef.current = null;
+    if (trip?.status === 'COMPLETED') {
+      autoMapCoverAttemptedRef.current = null
     }
-  }, [trip?.status, tripId]);
+  }, [trip?.status, tripId])
 
   const startWaypointPick = useCallback(() => {
-    setEditingWaypointEntryId(null);
-    setWaypointDraftName("");
-    setWaypointMapPhase("add");
-  }, []);
+    setEditingWaypointEntryId(null)
+    setWaypointDraftName('')
+    setWaypointMapPhase('add')
+  }, [])
 
   const startWaypointEdit = useCallback(() => {
     const waypoints = tripWaypointEntries(
-      store.entries.filter((entry) => entry.tripId === tripId && !entry.deleted),
-    );
+      store.entries.filter(
+        (entry) => entry.tripId === tripId && !entry.deleted,
+      ),
+    )
     if (waypoints.length === 0) {
-      toast.message("No waypoints to edit yet");
-      return;
+      toast.message('No waypoints to edit yet')
+      return
     }
-    setEditingWaypointEntryId(null);
-    setWaypointDraftName("");
-    setWaypointMapPhase("edit-select");
-  }, [store.entries, tripId]);
+    setEditingWaypointEntryId(null)
+    setWaypointDraftName('')
+    setWaypointMapPhase('edit-select')
+  }, [store.entries, tripId])
 
   const waypointPick = useMemo<MapWaypointPickConfig | null>(() => {
-    if (waypointMapPhase === "idle") return null;
+    if (waypointMapPhase === 'idle') return null
 
-    if (waypointMapPhase === "add") {
+    if (waypointMapPhase === 'add') {
       return {
-        phase: "add",
+        phase: 'add',
         busy: waypointPickBusy,
         name: waypointDraftName,
         onNameChange: setWaypointDraftName,
         onCancel: () => {
-          setWaypointDraftName("");
-          setWaypointMapPhase("idle");
+          setWaypointDraftName('')
+          setWaypointMapPhase('idle')
         },
         onConfirm: async (position) => {
-          setWaypointPickBusy(true);
+          setWaypointPickBusy(true)
           try {
-            const entry = await useLogbookStore.getState().addTripWaypoint(tripId, {
-              latitude: position.latitude,
-              longitude: position.longitude,
-              name: waypointDraftName,
-            });
+            const entry = await useLogbookStore
+              .getState()
+              .addTripWaypoint(tripId, {
+                latitude: position.latitude,
+                longitude: position.longitude,
+                name: waypointDraftName,
+              })
             if (!entry) {
-              throw new Error("Could not save waypoint");
+              throw new Error('Could not save waypoint')
             }
-            toast.success("Waypoint added");
-            setWaypointDraftName("");
-            setWaypointMapPhase("idle");
+            toast.success('Waypoint added')
+            setWaypointDraftName('')
+            setWaypointMapPhase('idle')
           } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Could not save waypoint");
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : 'Could not save waypoint',
+            )
           } finally {
-            setWaypointPickBusy(false);
+            setWaypointPickBusy(false)
           }
         },
-      };
+      }
     }
 
-    if (waypointMapPhase === "edit-select") {
+    if (waypointMapPhase === 'edit-select') {
       return {
-        phase: "edit-select",
+        phase: 'edit-select',
         onCancel: () => {
-          setWaypointDraftName("");
-          setWaypointMapPhase("idle");
+          setWaypointDraftName('')
+          setWaypointMapPhase('idle')
         },
         onSelectEntry: (entryId) => {
-          const entry = store.entries.find((item) => item.id === entryId);
-          setWaypointDraftName(entry ? tripWaypointNameFromEntry(entry) : "");
-          setEditingWaypointEntryId(entryId);
-          setWaypointMapPhase("edit-center");
+          const entry = store.entries.find((item) => item.id === entryId)
+          setWaypointDraftName(entry ? tripWaypointNameFromEntry(entry) : '')
+          setEditingWaypointEntryId(entryId)
+          setWaypointMapPhase('edit-center')
         },
-      };
+      }
     }
 
-    if (waypointMapPhase === "edit-center" && editingWaypointEntryId) {
+    if (waypointMapPhase === 'edit-center' && editingWaypointEntryId) {
       return {
-        phase: "edit-center",
+        phase: 'edit-center',
         editingEntryId: editingWaypointEntryId,
         onCancel: () => {
-          setEditingWaypointEntryId(null);
-          setWaypointDraftName("");
-          setWaypointMapPhase("edit-select");
+          setEditingWaypointEntryId(null)
+          setWaypointDraftName('')
+          setWaypointMapPhase('edit-select')
         },
         onCentered: () => {
-          setWaypointMapPhase("edit-pick");
+          setWaypointMapPhase('edit-pick')
         },
-      };
+      }
     }
 
-    if (waypointMapPhase === "edit-pick" && editingWaypointEntryId) {
+    if (waypointMapPhase === 'edit-pick' && editingWaypointEntryId) {
       return {
-        phase: "edit-pick",
+        phase: 'edit-pick',
         editingEntryId: editingWaypointEntryId,
         busy: waypointPickBusy,
         name: waypointDraftName,
         onNameChange: setWaypointDraftName,
         onCancel: () => {
-          setEditingWaypointEntryId(null);
-          setWaypointDraftName("");
-          setWaypointMapPhase("edit-select");
+          setEditingWaypointEntryId(null)
+          setWaypointDraftName('')
+          setWaypointMapPhase('edit-select')
         },
         onConfirm: async (position) => {
-          setWaypointPickBusy(true);
+          setWaypointPickBusy(true)
           try {
-            const current = store.entries.find((item) => item.id === editingWaypointEntryId);
-            await useLogbookStore.getState().updateEntry(editingWaypointEntryId, {
-              latitude: position.latitude,
-              longitude: position.longitude,
-              data: withTripWaypointName(current?.data, waypointDraftName),
-            });
-            toast.success("Waypoint updated");
-            setEditingWaypointEntryId(null);
-            setWaypointDraftName("");
-            setWaypointMapPhase("edit-select");
+            const current = store.entries.find(
+              (item) => item.id === editingWaypointEntryId,
+            )
+            await useLogbookStore
+              .getState()
+              .updateEntry(editingWaypointEntryId, {
+                latitude: position.latitude,
+                longitude: position.longitude,
+                data: withTripWaypointName(current?.data, waypointDraftName),
+              })
+            toast.success('Waypoint updated')
+            setEditingWaypointEntryId(null)
+            setWaypointDraftName('')
+            setWaypointMapPhase('edit-select')
           } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Could not update waypoint");
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : 'Could not update waypoint',
+            )
           } finally {
-            setWaypointPickBusy(false);
+            setWaypointPickBusy(false)
           }
         },
         onDelete: async () => {
-          if (!window.confirm("Delete this waypoint?")) return;
-          setWaypointPickBusy(true);
+          if (!window.confirm('Delete this waypoint?')) return
+          setWaypointPickBusy(true)
           try {
-            await useLogbookStore.getState().deleteEntry(editingWaypointEntryId);
-            toast.success("Waypoint deleted");
-            setEditingWaypointEntryId(null);
-            setWaypointDraftName("");
-            setWaypointMapPhase("edit-select");
+            await useLogbookStore.getState().deleteEntry(editingWaypointEntryId)
+            toast.success('Waypoint deleted')
+            setEditingWaypointEntryId(null)
+            setWaypointDraftName('')
+            setWaypointMapPhase('edit-select')
           } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Could not delete waypoint");
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : 'Could not delete waypoint',
+            )
           } finally {
-            setWaypointPickBusy(false);
+            setWaypointPickBusy(false)
           }
         },
-      };
+      }
     }
 
-    return null;
+    return null
   }, [
     editingWaypointEntryId,
     tripId,
@@ -468,9 +509,10 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
     waypointMapPhase,
     waypointPickBusy,
     waypointDraftName,
-  ]);
+  ])
 
-  const waypointMapInteractionActive = isWaypointMapInteractionActive(waypointPick);
+  const waypointMapInteractionActive =
+    isWaypointMapInteractionActive(waypointPick)
 
   if (!store.booted) {
     return (
@@ -478,43 +520,55 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
         <DevComponentLabel name="TripDetailPage" />
         <p className="text-sm text-[var(--sea-ink-soft)]">Loading trip…</p>
       </main>
-    );
+    )
   }
 
   if (!trip) {
     return (
       <main className="page-wrap px-3 py-8 sm:px-4">
         <DevComponentLabel name="TripDetailPage" />
-        <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand)] no-underline">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand)] no-underline"
+        >
           Back to trips
         </Link>
-        <p className="mt-6 text-sm text-[var(--sea-ink-soft)]">Trip not found.</p>
+        <p className="mt-6 text-sm text-[var(--sea-ink-soft)]">
+          Trip not found.
+        </p>
       </main>
-    );
+    )
   }
 
-  const cover = tripDetailCoverDisplay(trip);
-  const displayName = tripDisplayName(trip);
+  const cover = tripDetailCoverDisplay(trip)
+  const displayName = tripDisplayName(trip)
   const showMapCoverOption =
-    trip.status === "IN_PROGRESS" ||
-    trip.status === "PLANNED" ||
-    trip.status === "COMPLETED";
+    trip.status === 'IN_PROGRESS' ||
+    trip.status === 'PLANNED' ||
+    trip.status === 'COMPLETED'
 
   const handleUseCurrentMapCover = async () => {
-    setCoverEditOpen(false);
-    setBusy(true);
+    setCoverEditOpen(false)
+    setBusy(true)
     try {
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      await saveMapAsCover();
-      toast.success("Trip cover updated from map");
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      )
+      await saveMapAsCover()
+      toast.success('Trip cover updated from map')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to capture map cover");
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to capture map cover',
+      )
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
-  };
+  }
 
-  const handleSaveTripDetails = async (input: { title: string; subtitle: string }) => {
+  const handleSaveTripDetails = async (input: {
+    title: string
+    subtitle: string
+  }) => {
     setBusy(true)
     try {
       await store.updateTrip(trip.id, {
@@ -523,141 +577,160 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
       })
       toast.success('Trip details updated')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update trip details')
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to update trip details',
+      )
     } finally {
       setBusy(false)
     }
   }
 
   const handlePhotoPick = async (file: File | undefined) => {
-    if (!file || !file.type.startsWith("image/")) return;
-    setBusy(true);
+    if (!file || !file.type.startsWith('image/')) return
+    setBusy(true)
     try {
-      const coverPhotoDataUrl = await readImageFile(file);
-      await store.updateTrip(trip.id, { coverKind: "photo", coverPhotoDataUrl });
-      toast.success("Trip photo updated");
-      setCoverEditOpen(false);
+      const coverPhotoDataUrl = await readImageFile(file)
+      await store.updateTrip(trip.id, { coverKind: 'photo', coverPhotoDataUrl })
+      toast.success('Trip photo updated')
+      setCoverEditOpen(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to upload photo");
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to upload photo',
+      )
     } finally {
-      setBusy(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setBusy(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
-  };
+  }
 
   const handleChooseMapCover = async () => {
-    setBusy(true);
+    setBusy(true)
     try {
-      await store.updateTrip(trip.id, { coverKind: "map" });
-      toast.success("Trip cover set to map");
-      setCoverEditOpen(false);
+      await store.updateTrip(trip.id, { coverKind: 'map' })
+      toast.success('Trip cover set to map')
+      setCoverEditOpen(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update cover");
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update cover',
+      )
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
-  };
+  }
 
   const handleRemoveCover = async () => {
-    setBusy(true);
+    setBusy(true)
     try {
-      await store.updateTrip(trip.id, { coverKind: null, coverPhotoDataUrl: null });
-      toast.success("Trip cover removed");
-      setCoverEditOpen(false);
+      await store.updateTrip(trip.id, {
+        coverKind: null,
+        coverPhotoDataUrl: null,
+      })
+      toast.success('Trip cover removed')
+      setCoverEditOpen(false)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to remove cover");
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to remove cover',
+      )
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
-  };
+  }
 
   const handleChoosePhotoCover = () => {
-    fileInputRef.current?.click();
-  };
+    fileInputRef.current?.click()
+  }
 
   const handleMediaFilePick = async (files: FileList | null) => {
-    if (!files?.length || !trip) return;
-    setUploadingMedia(true);
+    if (!files?.length || !trip) return
+    setUploadingMedia(true)
     try {
       const result = await uploadTripMediaFiles(
         store,
         trip.id,
         Array.from(files),
-      );
+      )
       if (result.saved > 0) {
-        toast.success(tripMediaUploadToastMessage(result));
+        toast.success(tripMediaUploadToastMessage(result))
       } else {
-        toast.error(tripMediaUploadToastMessage(result));
+        toast.error(tripMediaUploadToastMessage(result))
       }
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to upload media",
-      );
+        error instanceof Error ? error.message : 'Failed to upload media',
+      )
     } finally {
-      setUploadingMedia(false);
-      if (mediaFileInputRef.current) mediaFileInputRef.current.value = "";
+      setUploadingMedia(false)
+      if (mediaFileInputRef.current) mediaFileInputRef.current.value = ''
     }
-  };
+  }
 
   const handleStartTrip = async () => {
-    setBusy(true);
+    setBusy(true)
     try {
-      await store.addEntry({ tripId: trip.id, type: "START_TRIP" });
-      const current = useLogbookStore.getState().trips.find((item) => item.id === trip.id);
-      if (current?.status === "IN_PROGRESS") {
-        useAppOptionsStore.getState().setRecordingTripId(trip.id);
+      await store.addEntry({ tripId: trip.id, type: 'START_TRIP' })
+      const current = useLogbookStore
+        .getState()
+        .trips.find((item) => item.id === trip.id)
+      if (current?.status === 'IN_PROGRESS') {
+        useAppOptionsStore.getState().setRecordingTripId(trip.id)
       }
-      toast.success("Trip started");
+      toast.success('Trip started')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to start trip");
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to start trip',
+      )
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
-  };
+  }
 
   const handleEndTrip = async () => {
-    setBusy(true);
+    setBusy(true)
     try {
-      await store.addEntry({ tripId: trip.id, type: "END_TRIP" });
-      toast.success("Trip completed");
+      await store.addEntry({ tripId: trip.id, type: 'END_TRIP' })
+      toast.success('Trip completed')
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
-  };
+  }
 
   const handleDeleteTrip = async () => {
-    setBusy(true);
+    setBusy(true)
     try {
-      await store.deleteTrip(trip.id);
-      toast.success("Trip deleted");
-      void navigate({ to: "/" });
+      await store.deleteTrip(trip.id)
+      toast.success('Trip deleted')
+      void navigate({ to: '/' })
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete trip");
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to delete trip',
+      )
     } finally {
-      setBusy(false);
-      setDeleteConfirmOpen(false);
+      setBusy(false)
+      setDeleteConfirmOpen(false)
     }
-  };
+  }
 
   const handleStartReplay = async (name: string) => {
-    if (trip.status !== "COMPLETED") return;
+    if (trip.status !== 'COMPLETED') return
     if (inProgressTrip) {
-      toast.error("End the current trip before starting a replay");
-      return;
+      toast.error('End the current trip before starting a replay')
+      return
     }
 
-    setBusy(true);
+    setBusy(true)
     try {
       const sourceEntries = store.entries.filter(
         (entry) => entry.tripId === trip.id && !entry.deleted,
-      );
-      const startPosition = replayPositionAt(trip, sourceEntries, 0);
+      )
+      const startPosition = replayPositionAt(trip, sourceEntries, 0)
       if (!startPosition) {
-        throw new Error("The source trip has no recorded position to replay.");
+        throw new Error('The source trip has no recorded position to replay.')
       }
-      setDevPositionOverride(startPosition);
+      setDevPositionOverride(startPosition)
 
-      const targetStartedAt = new Date().toISOString();
+      const targetStartedAt = new Date().toISOString()
       const targetTrip = await useLogbookStore.getState().startTrip({
         boatName: trip.boatName,
         boatId: trip.boatId,
@@ -667,66 +740,66 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
         skipper: trip.skipper ?? undefined,
         skipperKey: trip.skipperKey,
         crewMemberIds: trip.crewMemberIds ?? undefined,
-      });
-      if (!targetTrip) throw new Error("Could not create the replay trip.");
+      })
+      if (!targetTrip) throw new Error('Could not create the replay trip.')
 
       await useLogbookStore.getState().updateTrip(targetTrip.id, {
         title: name,
-        coverKind: "map",
-      });
+        coverKind: 'map',
+      })
 
       const sourceStartEntry = replaySourceEntries(sourceEntries, trip.id).find(
-        (entry) => entry.type === "START_TRIP",
-      );
+        (entry) => entry.type === 'START_TRIP',
+      )
       await useLogbookStore.getState().addEntry({
         tripId: targetTrip.id,
-        type: "START_TRIP",
+        type: 'START_TRIP',
         timestamp: targetStartedAt,
         ...startPosition,
         notes: DEV_TRIP_REPLAY_ENTRY_NOTE,
         data: {
           autoGenerated: true,
           source: DEV_TRIP_REPLAY_SOURCE,
-          detection: "instrument",
+          detection: 'instrument',
           replaySourceTripId: trip.id,
           replaySourceEntryId: sourceStartEntry?.id ?? `start:${trip.id}`,
         },
-      });
+      })
 
-      const options = useAppOptionsStore.getState();
+      const options = useAppOptionsStore.getState()
       if (options.devTimeTravelEnabled) {
-        options.setDevLogEntryDraftTimeIso(targetStartedAt);
+        options.setDevLogEntryDraftTimeIso(targetStartedAt)
       }
       options.setDevTripReplay({
         sourceTripId: trip.id,
         targetTripId: targetTrip.id,
         targetStartedAt,
         realStartedAt: new Date().toISOString(),
-      });
-      options.setRecordingTripId(targetTrip.id);
-      useLogbookStore.getState().selectTrip(targetTrip.id);
-      setReplayOpen(false);
-      toast.success("Trip replay started");
+      })
+      options.setRecordingTripId(targetTrip.id)
+      useLogbookStore.getState().selectTrip(targetTrip.id)
+      setReplayOpen(false)
+      toast.success('Trip replay started')
       void navigate({
-        to: "/trips/$tripId",
+        to: '/trips/$tripId',
         params: { tripId: targetTrip.id },
-      });
+      })
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to start trip replay",
-      );
+        error instanceof Error ? error.message : 'Failed to start trip replay',
+      )
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
-  };
+  }
 
   const openEntry = (entryId: string) => {
-    setSelectedEntryId(entryId);
-  };
+    setSelectedEntryId(entryId)
+  }
 
   const handleCrewChange = async (ids: string[]) => {
-    await store.updateTrip(trip.id, { crewMemberIds: ids });
-  };
+    await store.updateTrip(trip.id, { crewMemberIds: ids })
+  }
 
   return (
     <>
@@ -753,105 +826,136 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
           selectedEntryId={selectedEntryId}
           onEntrySelect={openEntry}
           completedTripPanel={completedTripPanel}
-          onCompletedTripPanelChange={trip.status === "COMPLETED" ? setCompletedTripPanel : undefined}
+          onCompletedTripPanelChange={
+            trip.status === 'COMPLETED' ? setCompletedTripPanel : undefined
+          }
           onEditCoverClick={() => setCoverEditOpen(true)}
           uploadMediaInputId={mediaFileInputId}
           uploadingMedia={uploadingMedia}
           onInitialMapViewportSettled={handleInitialMapViewportSettled}
           onLogEntryClick={
-            trip.status === "IN_PROGRESS" ? () => setCreateEntryOpen(true) : undefined
+            trip.status === 'IN_PROGRESS'
+              ? () => setCreateEntryOpen(true)
+              : undefined
           }
           onAddWaypointClick={() => startWaypointPick()}
           onEditWaypointsClick={() => startWaypointEdit()}
           waypointPick={waypointPick ?? undefined}
           onReplayTestClick={
-            trip.status === "COMPLETED" && devMode && isDevModeAvailable()
+            trip.status === 'COMPLETED' && devMode && isDevModeAvailable()
               ? () => setReplayOpen(true)
               : undefined
           }
         />
 
-        {trip.status !== "COMPLETED" && !waypointMapInteractionActive ? <TripDetailBottomSheet
-          leadingAction={
-            trip.status === "IN_PROGRESS" ? (
-              <TripRecordButton
-                tripId={trip.id}
-                logEntryDisabled={busy}
-                onLogEntryClick={() => setCreateEntryOpen(true)}
-              />
-            ) : null
-          }
-        >
-          {trip.status === "PLANNED" ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void handleStartTrip()}
-              className="flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-[var(--btn-bg)] px-4 py-4 text-base font-bold text-[var(--btn-text)] shadow-sm transition hover:-translate-y-px disabled:opacity-60"
-            >
-              <Sailboat className="size-5" />
-              Start trip
-            </button>
-          ) : null}
+        {trip.status !== 'COMPLETED' && !waypointMapInteractionActive ? (
+          <TripDetailBottomSheet
+            leadingAction={
+              trip.status === 'IN_PROGRESS' ? (
+                <TripRecordButton
+                  tripId={trip.id}
+                  logEntryDisabled={busy}
+                  onLogEntryClick={() => setCreateEntryOpen(true)}
+                />
+              ) : null
+            }
+          >
+            {trip.status === 'PLANNED' ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void handleStartTrip()}
+                className="flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-[var(--btn-bg)] px-4 py-4 text-base font-bold text-[var(--btn-text)] shadow-sm transition hover:-translate-y-px disabled:opacity-60"
+              >
+                <Sailboat className="size-5" />
+                Start trip
+              </button>
+            ) : null}
 
-          <TripLegSection
-            tripId={trip.id}
-            tripStatus={trip.status}
-            onOpenEntry={openEntry}
-            mediaByEntry={mediaByEntry}
-          />
+            <TripLegSection
+              tripId={trip.id}
+              tripStatus={trip.status}
+              onOpenEntry={openEntry}
+              mediaByEntry={mediaByEntry}
+            />
 
-          <NativeRecordingSettings tripInProgress={trip.status === "IN_PROGRESS"} />
+            <NativeRecordingSettings
+              tripInProgress={trip.status === 'IN_PROGRESS'}
+            />
 
-          <div className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] p-4 sm:p-5">
-            <p className="m-0 text-sm text-[var(--sea-ink-soft)]">Boat: {trip.boatName}</p>
+            <div className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] p-4 sm:p-5">
+              <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
+                Boat: {trip.boatName}
+              </p>
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {trip.status !== "PLANNED" ? (
-                <MetaLine label="Started" value={formatDateTime(trip.startedAt)} />
-              ) : (
-                <MetaLine label="Created" value={formatDateTime(trip.createdAt)} />
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {trip.status !== 'PLANNED' ? (
+                  <MetaLine
+                    label="Started"
+                    value={formatDateTime(trip.startedAt)}
+                  />
+                ) : (
+                  <MetaLine
+                    label="Created"
+                    value={formatDateTime(trip.createdAt)}
+                  />
+                )}
+                <MetaLine
+                  label="Status"
+                  value={trip.status.replace('_', ' ')}
+                />
+                {trip.status !== 'PLANNED' && (
+                  <>
+                    <MetaLine
+                      label="Position"
+                      value={formatPosition(
+                        trip.startLatitude,
+                        trip.startLongitude,
+                      )}
+                    />
+                    <MetaLine
+                      label="Country"
+                      value={trip.startCountry ?? 'Unknown'}
+                    />
+                  </>
+                )}
+                {trip.skipper && (
+                  <MetaLine label="Skipper" value={trip.skipper} icon={User} />
+                )}
+              </div>
+
+              {trip.status === 'IN_PROGRESS' && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void handleEndTrip()}
+                    className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] disabled:opacity-60"
+                  >
+                    <Check className="size-4" />
+                    End trip
+                  </button>
+                </div>
               )}
-              <MetaLine label="Status" value={trip.status.replace("_", " ")} />
-              {trip.status !== "PLANNED" && (
-                <>
-                  <MetaLine label="Position" value={formatPosition(trip.startLatitude, trip.startLongitude)} />
-                  <MetaLine label="Country" value={trip.startCountry ?? "Unknown"} />
-                </>
-              )}
-              {trip.skipper && <MetaLine label="Skipper" value={trip.skipper} icon={User} />}
             </div>
 
-            {trip.status === "IN_PROGRESS" && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void handleEndTrip()}
-                  className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] disabled:opacity-60"
-                >
-                  <Check className="size-4" />
-                  End trip
-                </button>
-              </div>
-            )}
+            <div className="border-t border-[var(--line)] pt-4">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setDeleteConfirmOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:text-red-800 disabled:opacity-60 dark:text-red-300"
+              >
+                <Trash2 className="size-4" />
+                Delete trip
+              </button>
+            </div>
+          </TripDetailBottomSheet>
+        ) : null}
 
-          </div>
-
-          <div className="border-t border-[var(--line)] pt-4">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setDeleteConfirmOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:text-red-800 disabled:opacity-60 dark:text-red-300"
-            >
-              <Trash2 className="size-4" />
-              Delete trip
-            </button>
-          </div>
-        </TripDetailBottomSheet> : null}
-
-        {trip.status === "COMPLETED" && completedTripPanel === "log" && !waypointMapInteractionActive ? (
+        {trip.status === 'COMPLETED' &&
+        completedTripPanel === 'log' &&
+        !waypointMapInteractionActive ? (
           <TripDetailBottomSheet>
             <TripLegSection
               tripId={trip.id}
@@ -861,13 +965,32 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
             />
 
             <div className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] p-4 sm:p-5">
-              <p className="m-0 text-sm text-[var(--sea-ink-soft)]">Boat: {trip.boatName}</p>
+              <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
+                Boat: {trip.boatName}
+              </p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <MetaLine label="Started" value={formatDateTime(trip.startedAt)} />
-                <MetaLine label="Status" value={trip.status.replace("_", " ")} />
-                <MetaLine label="Position" value={formatPosition(trip.startLatitude, trip.startLongitude)} />
-                <MetaLine label="Country" value={trip.startCountry ?? "Unknown"} />
-                {trip.skipper ? <MetaLine label="Skipper" value={trip.skipper} icon={User} /> : null}
+                <MetaLine
+                  label="Started"
+                  value={formatDateTime(trip.startedAt)}
+                />
+                <MetaLine
+                  label="Status"
+                  value={trip.status.replace('_', ' ')}
+                />
+                <MetaLine
+                  label="Position"
+                  value={formatPosition(
+                    trip.startLatitude,
+                    trip.startLongitude,
+                  )}
+                />
+                <MetaLine
+                  label="Country"
+                  value={trip.startCountry ?? 'Unknown'}
+                />
+                {trip.skipper ? (
+                  <MetaLine label="Skipper" value={trip.skipper} icon={User} />
+                ) : null}
               </div>
             </div>
 
@@ -948,9 +1071,9 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
         busy={busy}
         unavailableReason={
           inProgressTrip
-            ? "End the current trip before starting a replay."
+            ? 'End the current trip before starting a replay.'
             : devTripReplay
-              ? "Another trip replay is already running."
+              ? 'Another trip replay is already running.'
               : null
         }
         onClose={() => setReplayOpen(false)}
@@ -961,15 +1084,20 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
         <Modal
           title="Delete trip?"
           onClose={() => {
-            if (!busy) setDeleteConfirmOpen(false);
+            if (!busy) setDeleteConfirmOpen(false)
           }}
           layer="overlay"
           devComponentName="TripDetailPageDeleteModal"
         >
           <div className="space-y-4">
             <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">
-              Delete <span className="font-semibold text-[var(--sea-ink)]">{displayName}</span>
-              {tripEntries.length > 0 ? ` and all ${tripEntries.length} log ${tripEntries.length === 1 ? "entry" : "entries"}` : ""}
+              Delete{' '}
+              <span className="font-semibold text-[var(--sea-ink)]">
+                {displayName}
+              </span>
+              {tripEntries.length > 0
+                ? ` and all ${tripEntries.length} log ${tripEntries.length === 1 ? 'entry' : 'entries'}`
+                : ''}
               ? This cannot be undone.
             </p>
             <div className="flex flex-wrap gap-2">
@@ -980,7 +1108,7 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
                 className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
               >
                 <Trash2 className="size-4" />
-                {busy ? "Deleting…" : "Delete trip"}
+                {busy ? 'Deleting…' : 'Delete trip'}
               </button>
               <button
                 type="button"
@@ -995,17 +1123,27 @@ export function TripDetailPage({ tripId, startFromLiveActivity = false }: TripDe
         </Modal>
       )}
     </>
-  );
+  )
 }
 
-function MetaLine({ label, value, icon: Icon }: { label: string; value: string; icon?: typeof User }) {
+function MetaLine({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string
+  value: string
+  icon?: typeof User
+}) {
   return (
     <div className="rounded-2xl border border-[var(--panel-border)] bg-[var(--surface-strong)] px-3 py-2.5">
-      <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--sea-ink-soft)]">{label}</p>
+      <p className="m-0 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--sea-ink-soft)]">
+        {label}
+      </p>
       <p className="m-0 mt-1 flex items-center gap-1.5 text-sm font-medium text-[var(--sea-ink)]">
         {Icon && <Icon className="size-3.5 shrink-0" />}
         {value}
       </p>
     </div>
-  );
+  )
 }

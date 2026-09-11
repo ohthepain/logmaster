@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  canTransitionClaimStatus,
-  computeBankBalance,
-} from './org-accounting'
+import { canTransitionClaimStatus, computeBankBalance } from './org-accounting'
 
 describe('computeBankBalance', () => {
   it('returns opening balance when there are no transactions', () => {

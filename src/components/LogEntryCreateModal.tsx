@@ -1,16 +1,20 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowLeft, Camera, Check, LocateFixed, Map, Mic, PenLine } from 'lucide-react'
+import {
+  ArrowLeft,
+  Camera,
+  Check,
+  LocateFixed,
+  Map,
+  Mic,
+  PenLine,
+} from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { LogEntryContentStack  } from './LogEntryContentStack'
-import type {EntryContentBlock} from './LogEntryContentStack';
+import { LogEntryContentStack } from './LogEntryContentStack'
+import type { EntryContentBlock } from './LogEntryContentStack'
 import { LogEntryPositionMap } from './LogEntryPositionMap'
 import { Modal } from './Modal'
-import {
-  entryIcon,
-  entryTitle,
-  visibleLogEntryTypes,
-} from '../domain/logbook'
+import { entryIcon, entryTitle, visibleLogEntryTypes } from '../domain/logbook'
 import type { LogEntryType } from '../domain/logbook'
 import {
   DEV_FALLBACK_POSITION,
@@ -83,8 +87,12 @@ export function LogEntryCreateModal({
   const [draftPhotoOrder, setDraftPhotoOrder] = useState<number | null>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [voiceRecordingUrl, setVoiceRecordingUrl] = useState<string | null>(null)
-  const [voiceRecordingBlob, setVoiceRecordingBlob] = useState<Blob | null>(null)
+  const [voiceRecordingUrl, setVoiceRecordingUrl] = useState<string | null>(
+    null,
+  )
+  const [voiceRecordingBlob, setVoiceRecordingBlob] = useState<Blob | null>(
+    null,
+  )
   const [isRecordingVoice, setIsRecordingVoice] = useState(false)
   const noteInputRef = useRef<HTMLTextAreaElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -106,8 +114,7 @@ export function LogEntryCreateModal({
   const setDevLogEntryDraftTimeIso = useAppOptionsStore(
     (state) => state.setDevLogEntryDraftTimeIso,
   )
-  const showTimeTravel =
-    devMode && devTimeTravelEnabled && isDevModeAvailable()
+  const showTimeTravel = devMode && devTimeTravelEnabled && isDevModeAvailable()
   const showPhotoMetadataAction = devMode && isDevModeAvailable()
   const [metadataBusyKey, setMetadataBusyKey] = useState<string | null>(null)
 
@@ -115,8 +122,7 @@ export function LogEntryCreateModal({
     () => ({
       media: [],
       noteOrder: noteEditing || draftNote.trim() ? noteOrder : null,
-      voiceOrder:
-        isRecordingVoice || voiceRecordingUrl ? voiceOrder : null,
+      voiceOrder: isRecordingVoice || voiceRecordingUrl ? voiceOrder : null,
       draftPhotoOrder: photoPreview ? draftPhotoOrder : null,
     }),
     [
@@ -333,7 +339,11 @@ export function LogEntryCreateModal({
       if (mediaOnlyFlow) {
         await uploadPhotoVideo(trimmedNote || undefined)
         await store.syncNow({ skipBootstrap: true })
-        toast.success(hasPhoto && photoFile?.type.startsWith('video/') ? 'Video saved' : 'Photo saved')
+        toast.success(
+          hasPhoto && photoFile?.type.startsWith('video/')
+            ? 'Video saved'
+            : 'Photo saved',
+        )
         if (showTimeTravel) {
           setDevLogEntryDraftTimeIso(advanceIso(entryTimestampIso, HOUR_MS))
         }
@@ -425,7 +435,12 @@ export function LogEntryCreateModal({
 
   if (step === 'pick-type') {
     return (
-      <Modal title="Log entry" onClose={onClose} showKicker={false} devComponentName="LogEntryCreateModal">
+      <Modal
+        title="Log entry"
+        onClose={onClose}
+        showKicker={false}
+        devComponentName="LogEntryCreateModal"
+      >
         <div className="space-y-4">
           {timeTravelNotice}
           {entryTypes.length === 0 ? (
@@ -707,7 +722,10 @@ function AttachmentIconButton({
           : 'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)] hover:border-[var(--line)] hover:text-[var(--sea-ink)]',
       )}
     >
-      <Icon className={cn('size-5', recording && 'animate-pulse')} strokeWidth={2.1} />
+      <Icon
+        className={cn('size-5', recording && 'animate-pulse')}
+        strokeWidth={2.1}
+      />
     </button>
   )
 }

@@ -1,62 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Bell } from 'lucide-react'
 import { toast } from 'sonner'
 import type { NotificationItem } from '../domain/notifications'
-import {
-  fetchNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
-} from '../lib/notifications-api'
 import { cn } from '../lib/cn'
 import { useSession } from '../lib/auth-client'
-
-const POLL_MS = 60_000
+import { useNotificationInbox } from '../hooks/use-notification-inbox'
 
 type NotificationInboxProps = {
   mapOverlay?: boolean
 }
 
-export function NotificationInbox({ mapOverlay = false }: NotificationInboxProps) {
-  const session = useSession()
-  const user = session.data?.user
+export function NotificationInbox({
+  mapOverlay = false,
+}: NotificationInboxProps) {
+  const userId = useSession().data?.user?.id
+  const { items, unreadCount, loading, markItemRead, markAllRead } =
+    useNotificationInbox(userId)
   const [open, setOpen] = useState(false)
-  const [items, setItems] = useState<NotificationItem[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [loading, setLoading] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
-
-  const load = useCallback(async () => {
-    if (!user) {
-      setItems([])
-      setUnreadCount(0)
-      return
-    }
-    setLoading(true)
-    try {
-      const data = await fetchNotifications(30)
-      setItems(data.notifications)
-      setUnreadCount(data.unreadCount)
-    } catch {
-      // ignore polling errors
-    } finally {
-      setLoading(false)
-    }
-  }, [user])
-
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  useEffect(() => {
-    if (!user) return
-    const interval = window.setInterval(() => void load(), POLL_MS)
-    const onFocus = () => void load()
-    window.addEventListener('focus', onFocus)
-    return () => {
-      window.clearInterval(interval)
-      window.removeEventListener('focus', onFocus)
-    }
-  }, [load, user])
 
   useEffect(() => {
     if (!open) return
@@ -69,40 +30,31 @@ export function NotificationInbox({ mapOverlay = false }: NotificationInboxProps
     return () => window.removeEventListener('pointerdown', onPointerDown)
   }, [open])
 
-  if (!user) return null
+  if (!userId) return null
 
   const handleOpenItem = async (item: NotificationItem) => {
     try {
       if (!item.readAt) {
-        await markNotificationRead(item.id)
-        setItems((current) =>
-          current.map((row) =>
-            row.id === item.id ? { ...row, readAt: new Date().toISOString() } : row,
-          ),
-        )
-        setUnreadCount((count) => Math.max(0, count - 1))
+        await markItemRead(item.id)
       }
       setOpen(false)
       if (item.linkUrl) {
         window.location.assign(item.linkUrl)
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open notification')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to open notification',
+      )
     }
   }
 
   const handleMarkAllRead = async () => {
     try {
-      await markAllNotificationsRead()
-      setItems((current) =>
-        current.map((row) => ({
-          ...row,
-          readAt: row.readAt ?? new Date().toISOString(),
-        })),
-      )
-      setUnreadCount(0)
+      await markAllRead()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to mark all read')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to mark all read',
+      )
     }
   }
 
@@ -151,11 +103,14 @@ export function NotificationInbox({ mapOverlay = false }: NotificationInboxProps
           </div>
           <div className="max-h-96 overflow-y-auto">
             {loading && items.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-[var(--sea-ink-soft)]">Loading…</p>
+              <p className="px-4 py-6 text-sm text-[var(--sea-ink-soft)]">
+                Loading…
+              </p>
             ) : null}
             {!loading && items.length === 0 ? (
               <p className="px-4 py-6 text-sm text-[var(--sea-ink-soft)]">
-                No notifications yet. Use the bell on boat or org tabs to subscribe.
+                No notifications yet. Use the bell on boat or org tabs to
+                subscribe.
               </p>
             ) : null}
             <ul className="m-0 list-none p-0">
@@ -170,7 +125,9 @@ export function NotificationInbox({ mapOverlay = false }: NotificationInboxProps
                     )}
                   >
                     <p className="m-0 text-sm font-semibold">{item.title}</p>
-                    <p className="mt-1 mb-0 text-sm text-[var(--sea-ink-soft)]">{item.body}</p>
+                    <p className="mt-1 mb-0 text-sm text-[var(--sea-ink-soft)]">
+                      {item.body}
+                    </p>
                   </button>
                 </li>
               ))}

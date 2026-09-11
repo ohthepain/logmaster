@@ -1,6 +1,7 @@
 import type { Context } from 'hono'
 import type { ServerEnv } from './hono-env'
-import { logServerEvent, type LogOutcome } from './server-log'
+import { logServerEvent } from './server-log'
+import type { LogOutcome } from './server-log'
 
 type ServerEventFields = {
   action: string

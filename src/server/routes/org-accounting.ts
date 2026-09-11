@@ -1,11 +1,12 @@
 import { Hono } from 'hono'
 import {
   canTransitionClaimStatus,
-  computeBankBalance
-  
-  
+  computeBankBalance,
 } from '../../domain/org-accounting'
-import type {ExpenseClaimStatus, TransactionType} from '../../domain/org-accounting';
+import type {
+  ExpenseClaimStatus,
+  TransactionType,
+} from '../../domain/org-accounting'
 import { prisma } from '../db'
 import { canAccess } from '../permissions'
 import { canAccessOrgResource } from '../contact-utils'
@@ -38,11 +39,7 @@ function decimalToString(value: unknown): string {
   return String(value)
 }
 
-function serializeUserRef(user: {
-  id: string
-  name: string
-  email: string
-}) {
+function serializeUserRef(user: { id: string; name: string; email: string }) {
   return { id: user.id, name: user.name, email: user.email }
 }
 
@@ -314,7 +311,8 @@ orgAccountingRoutes.patch('/:orgId/bank-accounts/:accountId', async (c) => {
     data.name = name
   }
   if (body.currency !== undefined) data.currency = body.currency.trim() || 'EUR'
-  if (body.openingBalance !== undefined) data.openingBalance = body.openingBalance
+  if (body.openingBalance !== undefined)
+    data.openingBalance = body.openingBalance
   if (body.openingBalanceAt !== undefined) {
     data.openingBalanceAt = body.openingBalanceAt
       ? new Date(body.openingBalanceAt)
@@ -512,14 +510,23 @@ orgAccountingRoutes.patch('/:orgId/expense-claims/:claimId', async (c) => {
     const isOwner = existing.claimantUserId === userId
     const canManage = await requireOrgAccess(userId, orgId, 'manage')
 
-    if (body.status === 'approved' || body.status === 'rejected' || body.status === 'paid') {
+    if (
+      body.status === 'approved' ||
+      body.status === 'rejected' ||
+      body.status === 'paid'
+    ) {
       if (!canManage) return forbidden()
     } else if (body.status === 'submitted' || body.status === 'draft') {
       if (!isOwner && !canManage) return forbidden()
     }
 
     if (!canTransitionClaimStatus(existing.status, body.status)) {
-      return c.json({ error: `Cannot transition from ${existing.status} to ${body.status}` }, 400)
+      return c.json(
+        {
+          error: `Cannot transition from ${existing.status} to ${body.status}`,
+        },
+        400,
+      )
     }
     if (existing.status === 'paid') {
       return c.json({ error: 'Paid claims cannot be modified' }, 400)

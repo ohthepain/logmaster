@@ -1,12 +1,14 @@
-import { createFileRoute, Link, useLocation, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  Link,
+  useLocation,
+  useNavigate,
+} from '@tanstack/react-router'
 import { Map as MapIcon, MapPin, Sailboat } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AddButton } from '../../../components/AddButton'
-import {
-  TripImportButton
-  
-} from '../../../components/TripImportButton'
-import type {TripImportButtonHandle} from '../../../components/TripImportButton';
+import { TripImportButton } from '../../../components/TripImportButton'
+import type { TripImportButtonHandle } from '../../../components/TripImportButton'
 import { GpxUrlImportButton } from '../../../components/GpxUrlImportButton'
 import { StartTripLauncher } from '../../../components/StartTripLauncher'
 import { TripActionsMenu } from '../../../components/TripActionsMenu'
@@ -87,7 +89,10 @@ function TripsPage() {
 
   const openStartTrip = () => {
     if (!session.data?.user) {
-      void navigate({ to: '/sign-in', search: { redirect: '/trips?startTrip=1' } })
+      void navigate({
+        to: '/sign-in',
+        search: { redirect: '/trips?startTrip=1' },
+      })
       return
     }
     setStartTripOpen(true)
@@ -115,7 +120,11 @@ function TripsPage() {
             onImported={handleImportedTrip}
             onRouteImported={handleImportedRoute}
           />
-          <AddButton onClick={openStartTrip} aria-label="New trip" tooltip="New trip" />
+          <AddButton
+            onClick={openStartTrip}
+            aria-label="New trip"
+            tooltip="New trip"
+          />
         </div>
       </div>
 
@@ -185,7 +194,11 @@ function TripCard({
           : 'border-[var(--panel-border)] bg-[var(--panel)]',
       )}
     >
-      <button type="button" onClick={onSelect} className="block w-full text-left">
+      <button
+        type="button"
+        onClick={onSelect}
+        className="block w-full text-left"
+      >
         <div className="relative aspect-[16/10] overflow-hidden bg-[var(--chip-bg)]">
           {coverPhoto ? (
             <img

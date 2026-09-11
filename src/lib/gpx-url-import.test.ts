@@ -8,8 +8,12 @@ import {
 
 describe('gpx-url-import', () => {
   it('derives a file name from the URL path', () => {
-    expect(gpxFileNameFromUrl('https://example.com/tracks/day-sail.gpx')).toBe('day-sail.gpx')
-    expect(gpxFileNameFromUrl('https://example.com/tracks/day-sail')).toBe('day-sail.gpx')
+    expect(gpxFileNameFromUrl('https://example.com/tracks/day-sail.gpx')).toBe(
+      'day-sail.gpx',
+    )
+    expect(gpxFileNameFromUrl('https://example.com/tracks/day-sail')).toBe(
+      'day-sail.gpx',
+    )
     expect(gpxFileNameFromUrl('not-a-url')).toBe('imported.gpx')
   })
 
@@ -57,8 +61,8 @@ describe('gpx-url-import', () => {
   })
 
   it('rejects local URLs', () => {
-    expect(() => resolveGpxImportDownloadUrl('http://127.0.0.1/track.gpx')).toThrow(
-      /not allowed/,
-    )
+    expect(() =>
+      resolveGpxImportDownloadUrl('http://127.0.0.1/track.gpx'),
+    ).toThrow(/not allowed/)
   })
 })

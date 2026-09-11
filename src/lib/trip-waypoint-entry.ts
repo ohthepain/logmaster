@@ -1,6 +1,8 @@
 import type { LogEntry, LogEntryType } from '../domain/logbook'
 
-export function isTripWaypointEntry(data: Record<string, unknown> | null | undefined) {
+export function isTripWaypointEntry(
+  data: Record<string, unknown> | null | undefined,
+) {
   return (
     data?.waypoint === true ||
     data?.gpxWaypoint === true ||
@@ -77,7 +79,11 @@ export function withTripWaypointName(
   data: Record<string, unknown> | null | undefined,
   name: string | null | undefined,
 ): Record<string, unknown> {
-  const next: Record<string, unknown> = { ...(data ?? {}), waypoint: true, source: 'manual' }
+  const next: Record<string, unknown> = {
+    ...(data ?? {}),
+    waypoint: true,
+    source: 'manual',
+  }
   const trimmed = name?.trim() || ''
   if (trimmed) {
     next.place = {

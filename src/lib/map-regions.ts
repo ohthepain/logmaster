@@ -169,11 +169,23 @@ export const MAP_REGIONS: MapRegionDefinition[] = [
     bbox: EUROPE_MAP_BBOX,
     layers: {
       'geonames-cities': { available: true },
-      'osm-marinas': { available: false, reason: 'Use United Kingdom for now.' },
-      'osm-harbours': { available: false, reason: 'Use United Kingdom for now.' },
-      'osm-anchorage': { available: false, reason: 'Use United Kingdom for now.' },
+      'osm-marinas': {
+        available: false,
+        reason: 'Use United Kingdom for now.',
+      },
+      'osm-harbours': {
+        available: false,
+        reason: 'Use United Kingdom for now.',
+      },
+      'osm-anchorage': {
+        available: false,
+        reason: 'Use United Kingdom for now.',
+      },
       'osm-places': { available: false, reason: 'Use United Kingdom for now.' },
-      'osm-seamarks': { available: false, reason: 'Use United Kingdom for now.' },
+      'osm-seamarks': {
+        available: false,
+        reason: 'Use United Kingdom for now.',
+      },
     },
   }),
   buildRegion({
@@ -226,15 +238,20 @@ export function formatMapBbox(bbox: MapBbox): string {
   return `${bbox.west},${bbox.south},${bbox.east},${bbox.north}`
 }
 
-export function mapRegionLabel(regionId: MapRegionId | string | undefined): string {
-  if (!regionId || !isMapRegionId(regionId)) return String(regionId ?? 'unknown')
+export function mapRegionLabel(
+  regionId: MapRegionId | string | undefined,
+): string {
+  if (!regionId || !isMapRegionId(regionId))
+    return String(regionId ?? 'unknown')
   return getMapRegion(regionId).label
 }
 
 export function availableLayersForRegion(
   region: MapRegionDefinition,
 ): MapBuildLayerDefinition[] {
-  return MAP_LAYERS.filter((layer) => region.layers[layer.id]?.available === true)
+  return MAP_LAYERS.filter(
+    (layer) => region.layers[layer.id]?.available === true,
+  )
 }
 
 export function defaultLayersForRegion(

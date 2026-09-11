@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { decodeTripTrack } from '../domain/trip-track'
-import { getTripTrackRecorder, resetTripTrackRecorder } from './trip-track-recorder'
+import {
+  getTripTrackRecorder,
+  resetTripTrackRecorder,
+} from './trip-track-recorder'
 
 describe('trip track recorder', () => {
   it('seals a chunk when max samples is reached', () => {
@@ -8,7 +11,8 @@ describe('trip track recorder', () => {
     const recorder = getTripTrackRecorder()
     const baseMs = Date.parse('2026-08-01T10:00:00.000Z')
 
-    const sealedDuringAppend: ReturnType<typeof recorder.appendPositionSample> = []
+    const sealedDuringAppend: ReturnType<typeof recorder.appendPositionSample> =
+      []
     for (let index = 0; index < 5_000; index += 1) {
       sealedDuringAppend.push(
         ...recorder.appendPositionSample(

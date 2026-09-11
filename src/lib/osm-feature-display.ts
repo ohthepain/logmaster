@@ -42,8 +42,8 @@ export function parseOsmFeatureTags(raw: unknown): Record<string, string> {
       const parsed = JSON.parse(raw) as unknown
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         return Object.fromEntries(
-          Object.entries(parsed as Record<string, unknown>).flatMap(([key, value]) =>
-            typeof value === 'string' ? [[key, value]] : [],
+          Object.entries(parsed as Record<string, unknown>).flatMap(
+            ([key, value]) => (typeof value === 'string' ? [[key, value]] : []),
           ),
         )
       }
@@ -101,7 +101,9 @@ export function osmLightColourNames(tags: Record<string, string>): string[] {
   return [...new Set(names)]
 }
 
-export function formatOsmDepthLabel(tags: Record<string, string>): string | null {
+export function formatOsmDepthLabel(
+  tags: Record<string, string>,
+): string | null {
   const raw =
     tags.depth?.trim() ||
     tags['seamark:depth']?.trim() ||
@@ -278,11 +280,16 @@ export function formatLightCharacteristicFromBase(
 }
 
 /** Chart characteristics for a light feature (one entry per sector when sectored). */
-export function formatLightCharacteristics(tags: Record<string, string>): string[] {
+export function formatLightCharacteristics(
+  tags: Record<string, string>,
+): string[] {
   if (tags['seamark:light:1:character']) {
     const sectors: string[] = []
     for (let index = 1; index <= 8; index += 1) {
-      const sector = formatLightCharacteristicFromBase(tags, `seamark:light:${index}`)
+      const sector = formatLightCharacteristicFromBase(
+        tags,
+        `seamark:light:${index}`,
+      )
       if (sector) sectors.push(sector)
     }
     return sectors
@@ -381,9 +388,13 @@ function lightPopupRows(tags: Record<string, string>): PopupRow[] {
   return rows
 }
 
-function hazardPopupRows(kind: string | null, tags: Record<string, string>): PopupRow[] {
+function hazardPopupRows(
+  kind: string | null,
+  tags: Record<string, string>,
+): PopupRow[] {
   const rows: PopupRow[] = []
-  const typeLabel = formatSeamarkType(tags) ?? (kind ? humanizeToken(kind) : null)
+  const typeLabel =
+    formatSeamarkType(tags) ?? (kind ? humanizeToken(kind) : null)
   if (typeLabel) rows.push({ label: 'Type', value: typeLabel })
 
   if (kind === 'wreck' || tags.historic === 'wreck') {
@@ -491,13 +502,26 @@ function popupRowsForFeature(input: MapFeaturePopupInput): PopupRow[] {
   if (layerId === 'osm-seamarks-lights' || kind === 'light') {
     return lightPopupRows(tags)
   }
-  if (layerId === 'osm-seamarks-other' || kind === 'wreck' || kind === 'restricted' || kind === 'notice') {
+  if (
+    layerId === 'osm-seamarks-other' ||
+    kind === 'wreck' ||
+    kind === 'restricted' ||
+    kind === 'notice'
+  ) {
     return hazardPopupRows(kind, tags)
   }
-  if (layerId === 'osm-seamarks-buoys' || kind === 'buoy' || kind === 'beacon') {
+  if (
+    layerId === 'osm-seamarks-buoys' ||
+    kind === 'buoy' ||
+    kind === 'beacon'
+  ) {
     return buoyPopupRows(tags)
   }
-  if (layerId === 'osm-marinas' || layerId === 'osm-harbours' || layerId === 'osm-anchorage') {
+  if (
+    layerId === 'osm-marinas' ||
+    layerId === 'osm-harbours' ||
+    layerId === 'osm-anchorage'
+  ) {
     return mooringPopupRows(tags)
   }
   if (

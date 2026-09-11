@@ -40,7 +40,9 @@ export const BOAT_ICONS: BoatIconOption[] = BOAT_ICON_IDS.map((id) => ({
   src: `/boats/boat_${id}.png`,
 }))
 
-export function isBoatIconId(value: string | null | undefined): value is BoatIconId {
+export function isBoatIconId(
+  value: string | null | undefined,
+): value is BoatIconId {
   return BOAT_ICON_IDS.includes(value as BoatIconId)
 }
 
@@ -74,7 +76,8 @@ export async function loadBoatIconDataUrl(
       if (typeof reader.result === 'string') resolve(reader.result)
       else reject(new Error('Could not read boat icon'))
     }
-    reader.onerror = () => reject(reader.error ?? new Error('Could not read boat icon'))
+    reader.onerror = () =>
+      reject(reader.error ?? new Error('Could not read boat icon'))
     reader.readAsDataURL(blob)
   })
   dataUrlCache.set(src, dataUrl)

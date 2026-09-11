@@ -1,5 +1,8 @@
 import type { Job } from 'pg-boss'
-import { fireNotification, notifyAdminJobFinished } from '../notifications/events'
+import {
+  fireNotification,
+  notifyAdminJobFinished,
+} from '../notifications/events'
 
 type BatchHandler<T> = (jobs: Job<T>[]) => Promise<unknown>
 

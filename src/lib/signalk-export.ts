@@ -20,11 +20,12 @@ import {
   collectWaypointsFromEntries,
   dedupeLogEntryExports,
   dedupeWaypointExports,
-  exportableLogEntries
-  
-  
+  exportableLogEntries,
 } from './signalk-log-entries'
-import type {SignalKLogEntryExport, SignalKWaypointExport} from './signalk-log-entries';
+import type {
+  SignalKLogEntryExport,
+  SignalKWaypointExport,
+} from './signalk-log-entries'
 import { isOpenPositionTrack } from './trip-track-recorder'
 
 const KNOTS_TO_MS = 0.514444
@@ -126,7 +127,9 @@ export function collectPositionSamplesForExport(
   tracks: TripTrack[],
 ): SignalKPositionSampleExport[] {
   const positionTracks = positionTracksForTrip(tripId, tracks)
-  const sealedTracks = positionTracks.filter((track) => !isOpenPositionTrack(track))
+  const sealedTracks = positionTracks.filter(
+    (track) => !isOpenPositionTrack(track),
+  )
   const tracksToExport = sealedTracks.length > 0 ? sealedTracks : positionTracks
   const samples: SignalKPositionSampleExport[] = []
 
@@ -150,7 +153,9 @@ export function collectPositionSamplesForExport(
   )
 }
 
-function positionDelta(sample: PositionTrackSample | SignalKPositionSampleExport): SignalKDelta {
+function positionDelta(
+  sample: PositionTrackSample | SignalKPositionSampleExport,
+): SignalKDelta {
   return {
     context: 'vessels.self',
     updates: [
@@ -181,7 +186,11 @@ export function buildTripSignalKDeltas(
     entries.filter((entry) => entry.tripId === trip.id),
   )
 
-  if (tripTracks.length === 0 && tripEntries.length === 0 && tripWaypoints.length === 0) {
+  if (
+    tripTracks.length === 0 &&
+    tripEntries.length === 0 &&
+    tripWaypoints.length === 0
+  ) {
     throw new Error('This trip has no track data or log entries to export.')
   }
 
@@ -198,14 +207,22 @@ export function buildTripSignalKDeltas(
       case 'sog':
         for (const sample of samples as ScalarTrackSample[]) {
           deltas.push(
-            scalarDelta(primaryPath('sog'), sample, (value) => value * KNOTS_TO_MS),
+            scalarDelta(
+              primaryPath('sog'),
+              sample,
+              (value) => value * KNOTS_TO_MS,
+            ),
           )
         }
         break
       case 'stw':
         for (const sample of samples as ScalarTrackSample[]) {
           deltas.push(
-            scalarDelta(primaryPath('stw'), sample, (value) => value * KNOTS_TO_MS),
+            scalarDelta(
+              primaryPath('stw'),
+              sample,
+              (value) => value * KNOTS_TO_MS,
+            ),
           )
         }
         break
@@ -245,7 +262,11 @@ export function buildTripSignalKDeltas(
     }
   }
 
-  if (deltas.length === 0 && tripEntries.length === 0 && tripWaypoints.length === 0) {
+  if (
+    deltas.length === 0 &&
+    tripEntries.length === 0 &&
+    tripWaypoints.length === 0
+  ) {
     throw new Error('This trip has no track data or log entries to export.')
   }
 
@@ -269,7 +290,9 @@ export function buildTripSignalKExport(
     exportableLogEntries(entries.filter((entry) => entry.tripId === trip.id)),
   )
   const tripWaypoints = dedupeWaypointExports(
-    collectWaypointsFromEntries(entries.filter((entry) => entry.tripId === trip.id)),
+    collectWaypointsFromEntries(
+      entries.filter((entry) => entry.tripId === trip.id),
+    ),
   )
   const positionTrack = collectPositionSamplesForExport(trip.id, tracks)
   const deltas = buildTripSignalKDeltas(trip, tracks, entries)

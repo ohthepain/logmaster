@@ -7,8 +7,9 @@ import { LocalNotifications } from '@capacitor/local-notifications'
 import { registerPlugin } from '@capacitor/core'
 import { supportsBackgroundGps } from '../platform'
 
-const BackgroundGeolocation =
-  registerPlugin<BackgroundGeolocationPlugin>('BackgroundGeolocation')
+const BackgroundGeolocation = registerPlugin<BackgroundGeolocationPlugin>(
+  'BackgroundGeolocation',
+)
 
 export type BackgroundPosition = {
   latitude: number
@@ -116,7 +117,9 @@ function handleWatcherError(error: CallbackError | undefined) {
   activeOptions.onError(error.message ?? 'Background location failed.')
 }
 
-export async function startBackgroundTracker(options: BackgroundTrackerOptions) {
+export async function startBackgroundTracker(
+  options: BackgroundTrackerOptions,
+) {
   if (!supportsBackgroundGps()) {
     throw new Error('Background GPS is only available in the native app.')
   }

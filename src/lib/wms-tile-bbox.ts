@@ -9,7 +9,11 @@ export type WebMercatorBbox = {
 }
 
 /** XYZ tile bounds in EPSG:3857 meters (MapLibre/OSM scheme). */
-export function webMercatorBboxForTile(z: number, x: number, y: number): WebMercatorBbox {
+export function webMercatorBboxForTile(
+  z: number,
+  x: number,
+  y: number,
+): WebMercatorBbox {
   const n = 2 ** z
   const tileSpan = (WEB_MERCATOR_HALF_WORLD * 2) / n
   const minX = -WEB_MERCATOR_HALF_WORLD + x * tileSpan
@@ -70,7 +74,10 @@ export function buildWmsGetMapUrl(
   url.searchParams.set('LAYERS', params.layers)
   url.searchParams.set('STYLES', '')
   url.searchParams.set('FORMAT', params.format ?? 'image/png')
-  url.searchParams.set('TRANSPARENT', params.transparent === false ? 'false' : 'true')
+  url.searchParams.set(
+    'TRANSPARENT',
+    params.transparent === false ? 'false' : 'true',
+  )
   url.searchParams.set('SRS', params.srs ?? 'EPSG:3857')
   url.searchParams.set('WIDTH', String(params.width ?? 256))
   url.searchParams.set('HEIGHT', String(params.height ?? 256))

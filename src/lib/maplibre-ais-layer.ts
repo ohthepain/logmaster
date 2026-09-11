@@ -45,9 +45,13 @@ export function ensureAisVesselMapIcons(map: maplibregl.Map) {
   for (const category of AIS_VESSEL_CATEGORY_ORDER) {
     const iconId = aisVesselIconId(category)
     if (map.hasImage(iconId)) continue
-    map.addImage(iconId, createAisTriangleImageData(AIS_VESSEL_CATEGORY_COLORS[category]), {
-      pixelRatio: 2,
-    })
+    map.addImage(
+      iconId,
+      createAisTriangleImageData(AIS_VESSEL_CATEGORY_COLORS[category]),
+      {
+        pixelRatio: 2,
+      },
+    )
   }
 }
 
@@ -101,12 +105,7 @@ export function installAisMapLayer(map: maplibregl.Map) {
           18,
           1.55,
         ],
-        'icon-rotate': [
-          'coalesce',
-          ['get', 'heading'],
-          ['get', 'cog'],
-          0,
-        ],
+        'icon-rotate': ['coalesce', ['get', 'heading'], ['get', 'cog'], 0],
         'icon-rotation-alignment': 'map',
         'icon-allow-overlap': true,
         'icon-ignore-placement': true,
@@ -127,7 +126,10 @@ export function installAisMapLayer(map: maplibregl.Map) {
   }
 }
 
-export function setAisMapLayerVisibility(map: maplibregl.Map, visible: boolean) {
+export function setAisMapLayerVisibility(
+  map: maplibregl.Map,
+  visible: boolean,
+) {
   if (!map.getLayer(AIS_VESSELS_LAYER_ID)) return
   map.setLayoutProperty(
     AIS_VESSELS_LAYER_ID,
@@ -282,14 +284,18 @@ export function formatAisVesselPopupHtml(
     popupRow('MMSI', escapeHtml(vessel.mmsi)),
     vessel.imo ? popupRow('IMO', escapeHtml(vessel.imo)) : '',
     vessel.callSign ? popupRow('Call sign', escapeHtml(vessel.callSign)) : '',
-    vessel.shipTypeLabel ? popupRow('AIS type', escapeHtml(vessel.shipTypeLabel)) : '',
+    vessel.shipTypeLabel
+      ? popupRow('AIS type', escapeHtml(vessel.shipTypeLabel))
+      : '',
     vessel.navigationalStatusLabel
       ? popupRow('Status', escapeHtml(vessel.navigationalStatusLabel))
       : '',
     popupRow('SOG', escapeHtml(formatKnots(vessel.sog))),
     popupRow('COG', escapeHtml(formatDegrees(vessel.cog))),
     popupRow('Heading', escapeHtml(formatDegrees(vessel.heading))),
-    vessel.destination ? popupRow('Destination', escapeHtml(vessel.destination)) : '',
+    vessel.destination
+      ? popupRow('Destination', escapeHtml(vessel.destination))
+      : '',
     vessel.lengthMeters || vessel.widthMeters
       ? popupRow(
           'Size',
@@ -347,10 +353,10 @@ export function bindAisMapLayerPopups(
     })[0]
     if (!feature?.properties) return
     onSelect(
-      aisVesselPopupFromFeatureProperties(
-        feature.properties,
-        [event.lngLat.lng, event.lngLat.lat],
-      ),
+      aisVesselPopupFromFeatureProperties(feature.properties, [
+        event.lngLat.lng,
+        event.lngLat.lat,
+      ]),
     )
   }
 

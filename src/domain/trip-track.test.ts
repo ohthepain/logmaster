@@ -8,10 +8,9 @@ import {
   encodePositionTrackSamples,
   encodeScalarTrackSamples,
   encodeWindTrackSamples,
-  encodingForTrackKind
-  
+  encodingForTrackKind,
 } from './trip-track'
-import type {PositionTrackSample} from './trip-track';
+import type { PositionTrackSample } from './trip-track'
 
 const POSITION_SAMPLE: PositionTrackSample[] = [
   {

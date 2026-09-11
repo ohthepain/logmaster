@@ -112,17 +112,19 @@ function PrivacyPage() {
               <ul className="m-0 list-disc space-y-2 pl-5">
                 <li>provide, maintain, and improve the Service;</li>
                 <li>authenticate you and sync your logbook across devices;</li>
-                <li>store and display your trips, entries, boats, and media;</li>
+                <li>
+                  store and display your trips, entries, boats, and media;
+                </li>
                 <li>
                   send transactional emails (for example, sign-in links,
                   verification, and password reset messages);
                 </li>
-                <li>protect the Service, investigate abuse, and comply with law;</li>
+                <li>
+                  protect the Service, investigate abuse, and comply with law;
+                </li>
                 <li>understand usage and fix errors.</li>
               </ul>
-              <p className="m-0">
-                We do not sell your personal information.
-              </p>
+              <p className="m-0">We do not sell your personal information.</p>
             </>
           ),
         },
@@ -187,9 +189,13 @@ function PrivacyPage() {
           title: '7. Your choices and rights',
           content: (
             <>
-              <p className="m-0">Depending on where you live, you may have the right to:</p>
+              <p className="m-0">
+                Depending on where you live, you may have the right to:
+              </p>
               <ul className="m-0 list-disc space-y-2 pl-5">
-                <li>access, correct, or delete personal information we hold;</li>
+                <li>
+                  access, correct, or delete personal information we hold;
+                </li>
                 <li>object to or restrict certain processing;</li>
                 <li>withdraw consent where processing is consent-based;</li>
                 <li>lodge a complaint with a supervisory authority.</li>

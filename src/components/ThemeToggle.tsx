@@ -84,7 +84,10 @@ export default function ThemeToggle({
       role="group"
       aria-label="Color scheme"
     >
-      <DevComponentLabel name="ThemeToggle" className="absolute -top-5 left-0" />
+      <DevComponentLabel
+        name="ThemeToggle"
+        className="absolute -top-5 left-0"
+      />
       {OPTIONS.map(({ mode: optionMode, label, icon: Icon }) => {
         const selected = mode === optionMode
         return (
@@ -99,7 +102,8 @@ export default function ThemeToggle({
                 ? cn(
                     'text-white/70 hover:bg-white/10 hover:text-white',
                     'focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
-                    selected && 'bg-white/20 text-white shadow-sm ring-1 ring-white/30',
+                    selected &&
+                      'bg-white/20 text-white shadow-sm ring-1 ring-white/30',
                   )
                 : cn(
                     'text-[var(--sea-ink-soft)]',

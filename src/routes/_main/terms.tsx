@@ -86,9 +86,9 @@ function TermsPage() {
           content: (
             <>
               <p className="m-0">
-                You retain ownership of the log entries, notes, photos, and other
-                content you submit (&ldquo;User Content&rdquo;). You grant us a
-                limited license to host, store, process, and display User
+                You retain ownership of the log entries, notes, photos, and
+                other content you submit (&ldquo;User Content&rdquo;). You grant
+                us a limited license to host, store, process, and display User
                 Content only as needed to operate and improve the Service,
                 including syncing it across your devices when you are signed in.
               </p>
@@ -107,7 +107,9 @@ function TermsPage() {
             <>
               <p className="m-0">You agree not to:</p>
               <ul className="m-0 list-disc space-y-2 pl-5">
-                <li>use the Service for unlawful, harmful, or abusive purposes;</li>
+                <li>
+                  use the Service for unlawful, harmful, or abusive purposes;
+                </li>
                 <li>
                   attempt to access accounts or systems without authorization;
                 </li>
@@ -208,9 +210,9 @@ function TermsPage() {
               DAMAGES, OR ANY LOSS OF DATA, PROFITS, GOODWILL, OR VESSEL
               OPERATIONS, ARISING FROM OR RELATED TO YOUR USE OF THE SERVICE.
               OUR TOTAL LIABILITY FOR ANY CLAIM ARISING OUT OF THESE TERMS OR
-              THE SERVICE WILL NOT EXCEED THE GREATER OF (A) THE AMOUNT YOU
-              PAID US FOR THE SERVICE IN THE TWELVE MONTHS BEFORE THE CLAIM OR
-              (B) USD $100, EXCEPT WHERE LIABILITY CANNOT BE LIMITED BY LAW.
+              THE SERVICE WILL NOT EXCEED THE GREATER OF (A) THE AMOUNT YOU PAID
+              US FOR THE SERVICE IN THE TWELVE MONTHS BEFORE THE CLAIM OR (B)
+              USD $100, EXCEPT WHERE LIABILITY CANNOT BE LIMITED BY LAW.
             </p>
           ),
         },

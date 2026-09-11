@@ -2,21 +2,16 @@ import 'dotenv/config'
 import { pathToFileURL } from 'node:url'
 import { gzipSync } from 'node:zlib'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
-import {
-  CANADA_MARINA_BBOX,
-  NORTH_AMERICA_MARINA_BBOX
-  
-} from './bboxes'
-import type {MarinaBbox} from './bboxes';
+import { CANADA_MARINA_BBOX, NORTH_AMERICA_MARINA_BBOX } from './bboxes'
+import type { MarinaBbox } from './bboxes'
 import { gridCellsForBbox } from './grid'
 import { fetchMarinasForCells, formatMarinaCellLogLine } from './overpass'
+import { marinaFeatureCollection, mergeMarinaFeatures } from './schema'
+import type { MarinaFeature } from './schema'
 import {
-  marinaFeatureCollection,
-  mergeMarinaFeatures
-  
-} from './schema'
-import type {MarinaFeature} from './schema';
-import { degreeTilesForFeature, parseDegreeTilePrefix } from '../geo-features/tile'
+  degreeTilesForFeature,
+  parseDegreeTilePrefix,
+} from '../geo-features/tile'
 import type { DegreeTile } from '../geo-features/tile'
 
 type TileAccumulator = {
@@ -230,9 +225,7 @@ export async function buildMarinas(
     }),
   )
 
-  log(
-    `[marinas] fetch complete · ${marinas.length.toLocaleString()} marinas`,
-  )
+  log(`[marinas] fetch complete · ${marinas.length.toLocaleString()} marinas`)
   await options.onLogFlush?.()
 
   const tiles = new Map<string, TileAccumulator>()

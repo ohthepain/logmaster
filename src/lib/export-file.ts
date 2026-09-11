@@ -34,7 +34,9 @@ function toBlobPart(bytes: Uint8Array): BlobPart {
 }
 
 function bytesToBlob(bytes: Uint8Array, mimeType: string): Blob {
-  return new Blob([toBlobPart(bytes)], { type: mimeType || 'application/octet-stream' })
+  return new Blob([toBlobPart(bytes)], {
+    type: mimeType || 'application/octet-stream',
+  })
 }
 
 function downloadBlob(fileName: string, blob: Blob): boolean {
@@ -66,7 +68,9 @@ export function downloadBytes(
   mimeType: string,
 ): boolean {
   assertNonEmptyBytes(bytes, fileName)
-  const blob = new Blob([toBlobPart(bytes)], { type: mimeType || 'application/octet-stream' })
+  const blob = new Blob([toBlobPart(bytes)], {
+    type: mimeType || 'application/octet-stream',
+  })
   if (blob.size <= 0) {
     throw new Error(`Cannot download empty file (${fileName})`)
   }
@@ -233,7 +237,8 @@ export async function saveTextExport(
     const reader = new FileReader()
     const dataUrl = await new Promise<string>((resolve, reject) => {
       reader.onload = () => resolve(String(reader.result ?? ''))
-      reader.onerror = () => reject(reader.error ?? new Error('Could not read file'))
+      reader.onerror = () =>
+        reject(reader.error ?? new Error('Could not read file'))
       reader.readAsDataURL(file)
     })
     await Share.share({
@@ -285,7 +290,8 @@ export async function saveOrShareFile(
     const reader = new FileReader()
     const dataUrl = await new Promise<string>((resolve, reject) => {
       reader.onload = () => resolve(String(reader.result ?? ''))
-      reader.onerror = () => reject(reader.error ?? new Error('Could not read file'))
+      reader.onerror = () =>
+        reject(reader.error ?? new Error('Could not read file'))
       reader.readAsDataURL(file)
     })
     await Share.share({
@@ -315,7 +321,10 @@ export async function saveOrShareFile(
   return downloadBlob(file.name, blob)
 }
 
-export function sanitizeExportFileName(name: string, extension: string): string {
+export function sanitizeExportFileName(
+  name: string,
+  extension: string,
+): string {
   const base =
     name
       .trim()

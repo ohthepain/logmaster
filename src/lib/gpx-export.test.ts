@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { encodePositionTrackSamples  } from '../domain/trip-track'
-import type {TripTrack} from '../domain/trip-track';
+import { encodePositionTrackSamples } from '../domain/trip-track'
+import type { TripTrack } from '../domain/trip-track'
 import { buildTripGpx, positionSamplesForTripExport } from './gpx-export'
 import { parseGpx } from './gpx-import'
 

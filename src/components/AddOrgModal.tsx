@@ -38,14 +38,20 @@ export function AddOrgModal({ open, onClose, onCreated }: AddOrgModalProps) {
       onCreated?.(org)
       onClose()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create organization')
+      toast.error(
+        e instanceof Error ? e.message : 'Failed to create organization',
+      )
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Modal title="Add organization" onClose={handleClose} devComponentName="AddOrgModal">
+    <Modal
+      title="Add organization"
+      onClose={handleClose}
+      devComponentName="AddOrgModal"
+    >
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">

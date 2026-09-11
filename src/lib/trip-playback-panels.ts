@@ -16,7 +16,12 @@ import {
   isInstrumentTrack,
   tripTracksForTrip,
 } from '../domain/trip-track'
-import { gpxFieldMeta, gpxFieldMetaForTrackKind, isGpxImportScalarTrackKind, parseGpxTrackKind } from './gpx-field-meta'
+import {
+  gpxFieldMeta,
+  gpxFieldMetaForTrackKind,
+  isGpxImportScalarTrackKind,
+  parseGpxTrackKind,
+} from './gpx-field-meta'
 import type { TripPlaybackRange } from './trip-playback'
 import { tripTrackSamplesForTrip } from './trip-track-playback'
 
@@ -92,7 +97,9 @@ export function deriveSogFromPositionSamples(
   return derived
 }
 
-function scalarSamplesToGraphPoints(samples: ScalarTrackSample[]): PlaybackGraphPoint[] {
+function scalarSamplesToGraphPoints(
+  samples: ScalarTrackSample[],
+): PlaybackGraphPoint[] {
   return samples.flatMap((sample) => {
     const timeMs = validDateMs(sample.time)
     if (timeMs == null || !Number.isFinite(sample.value)) return []
@@ -100,7 +107,9 @@ function scalarSamplesToGraphPoints(samples: ScalarTrackSample[]): PlaybackGraph
   })
 }
 
-function angleSamplesToGraphPoints(samples: AngleTrackSample[]): PlaybackGraphPoint[] {
+function angleSamplesToGraphPoints(
+  samples: AngleTrackSample[],
+): PlaybackGraphPoint[] {
   return samples.flatMap((sample) => {
     const timeMs = validDateMs(sample.time)
     if (timeMs == null || !Number.isFinite(sample.degrees)) return []
@@ -108,7 +117,9 @@ function angleSamplesToGraphPoints(samples: AngleTrackSample[]): PlaybackGraphPo
   })
 }
 
-function windSamplesToGraphPoints(samples: WindTrackSample[]): PlaybackGraphPoint[] {
+function windSamplesToGraphPoints(
+  samples: WindTrackSample[],
+): PlaybackGraphPoint[] {
   return samples.flatMap((sample) => {
     const timeMs = validDateMs(sample.time)
     if (timeMs == null || !Number.isFinite(sample.speedKnots)) return []
@@ -130,14 +141,18 @@ export function playbackPanelGraphPoints(
   }
 
   if (isGpxImportScalarTrackKind(panelId)) {
-    const track = tripTracksForTrip(tripId, tracks).find((item) => item.kind === panelId)
+    const track = tripTracksForTrip(tripId, tracks).find(
+      (item) => item.kind === panelId,
+    )
     if (!track || track.encoding !== 'scalar-delta-v1') return []
     return scalarSamplesToGraphPoints(
       decodeScalarTrackSamples(track.payload as ScalarTrackDeltaV1),
     )
   }
 
-  const track = instrumentTracksForTrip(tripId, tracks).find((item) => item.kind === panelId)
+  const track = instrumentTracksForTrip(tripId, tracks).find(
+    (item) => item.kind === panelId,
+  )
   if (!track || !isInstrumentTrack(track)) return []
 
   const samples = decodeInstrumentTrack(track)
@@ -186,7 +201,9 @@ export function filterPlaybackGraphPointsForWindow(
   const padMs = windowRange.durationMs * 0.02
   const startMs = windowRange.startMs - padMs
   const endMs = windowRange.endMs + padMs
-  return points.filter((point) => point.timeMs >= startMs && point.timeMs <= endMs)
+  return points.filter(
+    (point) => point.timeMs >= startMs && point.timeMs <= endMs,
+  )
 }
 
 export function availablePlaybackPanels(
@@ -225,7 +242,9 @@ export function availablePlaybackPanels(
   for (const track of tripTracksForTrip(tripId, tracks)) {
     if (!isGpxImportScalarTrackKind(track.kind)) continue
     if (track.encoding !== 'scalar-delta-v1') continue
-    const samples = decodeScalarTrackSamples(track.payload as ScalarTrackDeltaV1)
+    const samples = decodeScalarTrackSamples(
+      track.payload as ScalarTrackDeltaV1,
+    )
     if (samples.length < 2) continue
     const meta = gpxFieldMetaForTrackKind(track.kind)
     if (!meta) continue
@@ -239,7 +258,9 @@ export function availablePlaybackPanels(
   const hasInstrumentSog = instrumentTracksForTrip(tripId, tracks).some(
     (track) => track.kind === 'sog' && decodeInstrumentTrack(track).length > 0,
   )
-  const derivedSog = deriveSogFromPositionSamples(tripTrackSamplesForTrip(tripId, tracks))
+  const derivedSog = deriveSogFromPositionSamples(
+    tripTrackSamplesForTrip(tripId, tracks),
+  )
   if (!hasInstrumentSog && derivedSog.length > 1) {
     options.push({
       id: 'sog-derived',
@@ -270,7 +291,6 @@ function panelShortLabel(kind: InstrumentTrackKind): string {
   }
 }
 
-
 export type PlaybackGraphSeries = {
   id: PlaybackPanelId
   label: string
@@ -300,7 +320,9 @@ export function isGraphPlaybackPanel(panelId: PlaybackPanelId): boolean {
   return !isTimelineRowPanel(panelId)
 }
 
-export function playbackGraphScaleGroup(panelId: PlaybackPanelId): PlaybackGraphScaleGroup {
+export function playbackGraphScaleGroup(
+  panelId: PlaybackPanelId,
+): PlaybackGraphScaleGroup {
   const gpxFieldKey = parseGpxTrackKind(panelId)
   if (gpxFieldKey) return gpxFieldMeta(gpxFieldKey).scaleGroup
   if (panelId === 'water-temperature') return 'temperature-c'
@@ -318,7 +340,9 @@ export function playbackGraphSeriesForPanel(
   const points = playbackPanelGraphPoints(panelId, tripId, tracks)
   if (points.length === 0) return null
 
-  const option = availablePlaybackPanels(tripId, tracks, []).find((item) => item.id === panelId)
+  const option = availablePlaybackPanels(tripId, tracks, []).find(
+    (item) => item.id === panelId,
+  )
   const label = option?.label ?? panelId
   const shortLabel = option?.shortLabel ?? panelId
 
@@ -347,9 +371,18 @@ export function buildPlaybackGraphSeries(
 
 export type PlaybackViewState = Record<PlaybackPanelId, boolean>
 
-export function defaultPlaybackViewState(options: PlaybackPanelOption[]): PlaybackViewState {
-  const state = Object.fromEntries(options.map((option) => [option.id, false])) as PlaybackViewState
-  const preferredGraph: PlaybackPanelId[] = ['sog', 'sog-derived', 'stw', 'wind']
+export function defaultPlaybackViewState(
+  options: PlaybackPanelOption[],
+): PlaybackViewState {
+  const state = Object.fromEntries(
+    options.map((option) => [option.id, false]),
+  ) as PlaybackViewState
+  const preferredGraph: PlaybackPanelId[] = [
+    'sog',
+    'sog-derived',
+    'stw',
+    'wind',
+  ]
   for (const id of preferredGraph) {
     if (options.some((option) => option.id === id)) {
       state[id] = true
@@ -387,11 +420,15 @@ export function sanitizePlaybackViewState(
   return next
 }
 
-export function enabledPlaybackPanelIds(state: PlaybackViewState): PlaybackPanelId[] {
+export function enabledPlaybackPanelIds(
+  state: PlaybackViewState,
+): PlaybackPanelId[] {
   return (Object.keys(state) as PlaybackPanelId[]).filter((id) => state[id])
 }
 
-export function enabledGraphPlaybackPanelIds(state: PlaybackViewState): PlaybackPanelId[] {
+export function enabledGraphPlaybackPanelIds(
+  state: PlaybackViewState,
+): PlaybackPanelId[] {
   return enabledPlaybackPanelIds(state).filter(isGraphPlaybackPanel)
 }
 
@@ -411,7 +448,10 @@ export function playbackPanelUnit(panelId: PlaybackPanelId): string {
   return ''
 }
 
-export function formatPlaybackPanelValue(panelId: PlaybackPanelId, value: number): string {
+export function formatPlaybackPanelValue(
+  panelId: PlaybackPanelId,
+  value: number,
+): string {
   const gpxMeta = gpxFieldMetaForTrackKind(panelId)
   if (gpxMeta) return gpxMeta.formatValue(value)
   if (panelId === 'heading' || panelId === 'cog') {
@@ -428,7 +468,9 @@ export function windDirectionAt(
   tracks: TripTrack[],
   timeMs: number,
 ): number | null {
-  const track = instrumentTracksForTrip(tripId, tracks).find((item) => item.kind === 'wind')
+  const track = instrumentTracksForTrip(tripId, tracks).find(
+    (item) => item.kind === 'wind',
+  )
   if (!track) return null
   const samples = decodeInstrumentTrack(track) as WindTrackSample[]
   let result: WindTrackSample | null = null

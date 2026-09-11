@@ -41,7 +41,11 @@ openseamapBathymetryRoutes.get('/relief/:z/:x/:y', async (c) => {
   const x = parseTileParam(c.req.param('x') ?? '')
   const y = parseTileParam(c.req.param('y') ?? '')
 
-  if (!Number.isInteger(z) || z < RELIEF_CONFIG.minZoom || z > RELIEF_CONFIG.maxZoom) {
+  if (
+    !Number.isInteger(z) ||
+    z < RELIEF_CONFIG.minZoom ||
+    z > RELIEF_CONFIG.maxZoom
+  ) {
     return c.body(null, 204)
   }
   const n = 2 ** z

@@ -1,4 +1,8 @@
-import { fireNotification, notifyBoatSection, notifyOrgSection } from '../notifications/events'
+import {
+  fireNotification,
+  notifyBoatSection,
+  notifyOrgSection,
+} from '../notifications/events'
 
 export function fireBoatPhotosNotification(
   userId: string,

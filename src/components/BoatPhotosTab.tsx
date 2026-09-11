@@ -59,9 +59,7 @@ export function BoatPhotosTab({
       onBoatChange({
         ...boat,
         photos: boat.photos.map((photo) =>
-          photo.id === updated.id
-            ? updated
-            : { ...photo, isDefault: false },
+          photo.id === updated.id ? updated : { ...photo, isDefault: false },
         ),
       })
       setActivePhoto(updated)
