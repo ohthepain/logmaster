@@ -1,4 +1,6 @@
 import { Hono } from 'hono'
+import type { ServerEnv } from '../lib/hono-env'
+import { logServerEventFromContext } from '../lib/server-log-context'
 import { prisma } from '../db'
 import {
   deleteTripsFromLogbook,
@@ -241,7 +243,7 @@ async function assertCanEditTrip(
   }
 }
 
-export const logbookRoutes = new Hono()
+export const logbookRoutes = new Hono<ServerEnv>()
 
 logbookRoutes.get('/bootstrap', async (c) => {
   const userId = await requireUserId(c)
@@ -328,6 +330,13 @@ logbookRoutes.post('/sync', async (c) => {
           id: tripId,
         })
         if (!allowed) {
+          logServerEventFromContext(c, {
+            action: 'logbook.sync',
+            outcome: 'forbidden',
+            resourceType: 'trip',
+            resourceId: tripId,
+            errorCode: 'forbidden',
+          })
           return c.json({ error: `Forbidden: cannot delete trip ${tripId}` }, 403)
         }
       }
@@ -345,6 +354,12 @@ logbookRoutes.post('/sync', async (c) => {
           id: row.logEntry.tripId,
         })
         if (!allowed) {
+          logServerEventFromContext(c, {
+            action: 'logbook.sync',
+            outcome: 'forbidden',
+            resourceType: 'media',
+            errorCode: 'forbidden',
+          })
           return c.json({ error: 'Forbidden: cannot delete media' }, 403)
         }
       }
@@ -510,6 +525,18 @@ logbookRoutes.post('/sync', async (c) => {
       getDeletedTripIds(),
     ])
 
+    logServerEventFromContext(c, {
+      action: 'logbook.sync',
+      outcome: 'success',
+      tripsUpserted: tripsToUpsert.length,
+      legsUpserted: legsToUpsert.length,
+      logEntriesUpserted: entriesToUpsert.length,
+      tripTracksUpserted: tracksToUpsert.length,
+      mediaUpserted: mediaToUpsert.length,
+      tripsDeleted: deletedTripIds.length,
+      mediaDeleted: deletedMediaIds.length,
+    })
+
     return c.json({
       trips: savedTrips,
       legs: savedLegs,
@@ -521,10 +548,15 @@ logbookRoutes.post('/sync', async (c) => {
       deletedTripIds: savedDeletedTripIds,
     })
   } catch (error) {
-    console.error('[logbook/sync]', error)
     const message =
       error instanceof Error ? error.message : 'Failed to sync logbook'
     const status = message.startsWith('Forbidden') ? 403 : 500
+    logServerEventFromContext(c, {
+      action: 'logbook.sync',
+      outcome: status === 403 ? 'forbidden' : 'error',
+      errorCode: status === 403 ? 'forbidden' : 'internal_error',
+      level: 'error',
+    })
     return c.json({ error: message }, status)
   }
 })

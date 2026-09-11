@@ -1,0 +1,55 @@
+---
+description: Structured server logging for ops, support, and debugging
+alwaysApply: true
+---
+
+# Structured server logging
+
+Goals: **operations visibility**, **customer support**, and **debugging** — not DB replay, not product analytics (use a separate event pipeline for analytics).
+
+Sink: **JSON lines to stdout** → ECS `awslogs` → CloudWatch. No separate log server required unless query volume outgrows CloudWatch.
+
+## Policy (one sentence)
+
+**Log every API request lightly; log mutations, auth changes, permission denials, and integration failures with domain ids and outcome — never secrets or user-generated content bodies.**
+
+## Layer 1 — every HTTP request (middleware)
+
+One structured line per request in Hono middleware (`src/server/`):
+
+- `requestId` — generate UUID or honor incoming `X-Request-Id`
+- `method`, `path` — prefer route template over raw URL when available
+- `status`, `durationMs`
+- `userId` when authenticated (id only, not email)
+- On 4xx/5xx: stable `errorCode` or error name; avoid full stack in production info logs
+
+Include **reads** (403/404, slow sync GETs). Support issues are often auth/visibility, not failed writes.
+
+## Layer 2 — mutations and side effects
+
+Add domain context on writes and external effects (DB, S3, SES, push, pg-boss jobs):
+
+- `action` — stable snake or dot name, e.g. `logbook.sync`, `org.member.remove`, `boat.photo.upload`
+- `resourceType` / `resourceId` — `tripId`, `boatId`, `orgId`, `logEntryId`, etc.
+- `outcome` — `success` | `conflict` | `forbidden` | `validation_failed` | `error`
+- **Counts** when useful (`entriesUpserted`, `entriesDeleted`) — not full payloads
+
+Broader than “only DB”: include S3, email, notifications, background jobs.
+
+## Standard fields (support playbook)
+
+Correlate lines with: `requestId`, `userId`, `action`, `resourceType`, `resourceId`, `status` / `httpStatus`, `durationMs`, `errorCode`.
+
+Support flow: user + time → filter by `userId` → find `requestId` → trace related lines.
+
+## Never log
+
+- Passwords, session cookies, OAuth codes, API keys
+- Full request/response bodies for logbook content (notes, tracks, media metadata at volume)
+- Unredacted email in high-volume info logs (use `userId`)
+
+## Implementation notes
+
+- Prefer a small shared helper (e.g. `logServerEvent()`) plus request middleware; match existing server patterns in neighbouring files.
+- Use `console.log(JSON.stringify({ ... }))` or a thin logger wrapper — keep dependencies minimal unless the project adopts one later.
+- Client/offline-first: server logs only what the API sees; do not assume server logs capture pre-sync client edits.

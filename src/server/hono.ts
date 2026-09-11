@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import type { ServerEnv } from './lib/hono-env'
+import { requestLogMiddleware } from './middleware/request-log'
 import {
   auth,
   getGoogleWebClientId,
@@ -40,7 +42,7 @@ import { isAisStreamConfigured } from './ais/aisstream-client'
 
 const corsOrigins = getTrustedOrigins()
 
-export const app = new Hono({ strict: false }).basePath('/api')
+export const app = new Hono<ServerEnv>({ strict: false }).basePath('/api')
 
 app.use(
   '*',
@@ -56,6 +58,8 @@ app.use(
     credentials: true,
   }),
 )
+
+app.use('*', requestLogMiddleware)
 
 app.on(['GET', 'POST'], '/auth/*', (c) => auth.handler(c.req.raw))
 
