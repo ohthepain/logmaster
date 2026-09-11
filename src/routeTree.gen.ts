@@ -25,6 +25,7 @@ import { Route as MainCrewIndexRouteImport } from './routes/_main/crew/index'
 import { Route as MainBoatsIndexRouteImport } from './routes/_main/boats/index'
 import { Route as MainAdminIndexRouteImport } from './routes/_main/admin/index'
 import { Route as MainTripsTripIdRouteImport } from './routes/_main/trips/$tripId'
+import { Route as MainSettingsNotificationsRouteImport } from './routes/_main/settings/notifications'
 import { Route as MainRoutesRouteIdRouteImport } from './routes/_main/routes/$routeId'
 import { Route as MainResetPasswordTokenRouteImport } from './routes/_main/reset-password/$token'
 import { Route as MainPlacesPhotosRouteImport } from './routes/_main/places/photos'
@@ -134,6 +135,12 @@ const MainTripsTripIdRoute = MainTripsTripIdRouteImport.update({
   path: '/trips/$tripId',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainSettingsNotificationsRoute =
+  MainSettingsNotificationsRouteImport.update({
+    id: '/settings/notifications',
+    path: '/settings/notifications',
+    getParentRoute: () => MainRouteRoute,
+  } as any)
 const MainRoutesRouteIdRoute = MainRoutesRouteIdRouteImport.update({
   id: '/routes/$routeId',
   path: '/routes/$routeId',
@@ -309,6 +316,7 @@ export interface FileRoutesByFullPath {
   '/places/photos': typeof MainPlacesPhotosRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/routes/$routeId': typeof MainRoutesRouteIdRoute
+  '/settings/notifications': typeof MainSettingsNotificationsRoute
   '/trips/$tripId': typeof MainTripsTripIdRouteWithChildren
   '/admin/': typeof MainAdminIndexRoute
   '/boats/': typeof MainBoatsIndexRoute
@@ -353,6 +361,7 @@ export interface FileRoutesByTo {
   '/places/photos': typeof MainPlacesPhotosRoute
   '/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/routes/$routeId': typeof MainRoutesRouteIdRoute
+  '/settings/notifications': typeof MainSettingsNotificationsRoute
   '/admin': typeof MainAdminIndexRoute
   '/boats': typeof MainBoatsIndexRoute
   '/crew': typeof MainCrewIndexRoute
@@ -400,6 +409,7 @@ export interface FileRoutesById {
   '/_main/places/photos': typeof MainPlacesPhotosRoute
   '/_main/reset-password/$token': typeof MainResetPasswordTokenRoute
   '/_main/routes/$routeId': typeof MainRoutesRouteIdRoute
+  '/_main/settings/notifications': typeof MainSettingsNotificationsRoute
   '/_main/trips/$tripId': typeof MainTripsTripIdRouteWithChildren
   '/_main/admin/': typeof MainAdminIndexRoute
   '/_main/boats/': typeof MainBoatsIndexRoute
@@ -448,6 +458,7 @@ export interface FileRouteTypes {
     | '/places/photos'
     | '/reset-password/$token'
     | '/routes/$routeId'
+    | '/settings/notifications'
     | '/trips/$tripId'
     | '/admin/'
     | '/boats/'
@@ -492,6 +503,7 @@ export interface FileRouteTypes {
     | '/places/photos'
     | '/reset-password/$token'
     | '/routes/$routeId'
+    | '/settings/notifications'
     | '/admin'
     | '/boats'
     | '/crew'
@@ -538,6 +550,7 @@ export interface FileRouteTypes {
     | '/_main/places/photos'
     | '/_main/reset-password/$token'
     | '/_main/routes/$routeId'
+    | '/_main/settings/notifications'
     | '/_main/trips/$tripId'
     | '/_main/admin/'
     | '/_main/boats/'
@@ -679,6 +692,13 @@ declare module '@tanstack/react-router' {
       path: '/trips/$tripId'
       fullPath: '/trips/$tripId'
       preLoaderRoute: typeof MainTripsTripIdRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
+    '/_main/settings/notifications': {
+      id: '/_main/settings/notifications'
+      path: '/settings/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof MainSettingsNotificationsRouteImport
       parentRoute: typeof MainRouteRoute
     }
     '/_main/routes/$routeId': {
@@ -955,6 +975,7 @@ interface MainRouteRouteChildren {
   MainPlacesPhotosRoute: typeof MainPlacesPhotosRoute
   MainResetPasswordTokenRoute: typeof MainResetPasswordTokenRoute
   MainRoutesRouteIdRoute: typeof MainRoutesRouteIdRoute
+  MainSettingsNotificationsRoute: typeof MainSettingsNotificationsRoute
   MainTripsTripIdRoute: typeof MainTripsTripIdRouteWithChildren
   MainAdminIndexRoute: typeof MainAdminIndexRoute
   MainBoatsIndexRoute: typeof MainBoatsIndexRoute
@@ -993,6 +1014,7 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainPlacesPhotosRoute: MainPlacesPhotosRoute,
   MainResetPasswordTokenRoute: MainResetPasswordTokenRoute,
   MainRoutesRouteIdRoute: MainRoutesRouteIdRoute,
+  MainSettingsNotificationsRoute: MainSettingsNotificationsRoute,
   MainTripsTripIdRoute: MainTripsTripIdRouteWithChildren,
   MainAdminIndexRoute: MainAdminIndexRoute,
   MainBoatsIndexRoute: MainBoatsIndexRoute,

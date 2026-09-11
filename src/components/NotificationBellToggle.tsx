@@ -4,7 +4,12 @@ import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 import type { NotificationTopic } from '../domain/notifications'
 import { NOTIFICATION_TOPIC_LABELS } from '../domain/notifications'
+import { preferencePathForSubscription } from '../domain/notification-preferences'
 import { upsertNotificationSubscription } from '../lib/notifications-api'
+import {
+  getNotificationPreferenceNodeCached,
+  invalidateNotificationPreferencePath,
+} from '../lib/notification-preferences-cache'
 import {
   getNotificationSubscriptionsCached,
   invalidateNotificationSubscriptions,
@@ -29,6 +34,7 @@ export function NotificationBellToggle({
   const [enabled, setEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [blockedByLabel, setBlockedByLabel] = useState<string | null>(null)
 
   const scope = useMemo(
     () => ({
@@ -39,6 +45,16 @@ export function NotificationBellToggle({
     [boatId, orgId, topic],
   )
 
+  const preferencePath = useMemo(
+    () =>
+      preferencePathForSubscription({
+        topic,
+        boatId: boatId ?? null,
+        orgId: orgId ?? null,
+      }),
+    [topic, boatId, orgId],
+  )
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -47,12 +63,21 @@ export function NotificationBellToggle({
         (subscription) => subscription.topic === topic,
       )
       setEnabled(Boolean(match?.enabled))
+      if (preferencePath) {
+        const node = await getNotificationPreferenceNodeCached(preferencePath)
+        setBlockedByLabel(
+          node.effective ? null : (node.blockedByLabel ?? node.blockedBy),
+        )
+      } else {
+        setBlockedByLabel(null)
+      }
     } catch {
       setEnabled(false)
+      setBlockedByLabel(null)
     } finally {
       setLoading(false)
     }
-  }, [scope, topic])
+  }, [scope, topic, preferencePath])
 
   useEffect(() => {
     void load()
@@ -76,6 +101,19 @@ export function NotificationBellToggle({
       })
       invalidateNotificationSubscriptions(scope)
       setEnabled(next)
+      if (next && preferencePath) {
+        invalidateNotificationPreferencePath(preferencePath)
+        const node = await getNotificationPreferenceNodeCached(preferencePath)
+        setBlockedByLabel(
+          node.effective ? null : (node.blockedByLabel ?? node.blockedBy),
+        )
+        if (!node.effective && node.blockedByLabel) {
+          toast.warning(
+            `Subscribed, but muted by “${node.blockedByLabel}” until you unmute it in notification settings.`,
+          )
+          return
+        }
+      }
       toast.success(next ? 'Notifications enabled' : 'Notifications disabled')
     } catch (error) {
       toast.error(
@@ -91,22 +129,33 @@ export function NotificationBellToggle({
   const Icon = enabled ? BellRing : Bell
 
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={enabled}
-      aria-label={tooltip}
-      title={tooltip}
-      disabled={loading || busy}
-      onClick={() => void toggle()}
-      className={cn(
-        'inline-flex size-9 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60',
-        enabled && 'border-[var(--brand)]/40 text-[var(--brand)]',
-        className,
-      )}
-    >
-      <Icon className="size-4" aria-hidden />
-    </button>
+    <span className={cn('inline-flex flex-col items-center gap-0.5', className)}>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label={tooltip}
+        title={
+          blockedByLabel
+            ? `${tooltip}. Blocked by ${blockedByLabel}.`
+            : tooltip
+        }
+        disabled={loading || busy}
+        onClick={() => void toggle()}
+        className={cn(
+          'inline-flex size-9 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60',
+          enabled && 'border-[var(--brand)]/40 text-[var(--brand)]',
+          enabled && blockedByLabel && 'opacity-70',
+        )}
+      >
+        <Icon className="size-4" aria-hidden />
+      </button>
+      {blockedByLabel ? (
+        <span className="max-w-24 truncate text-[10px] leading-tight text-amber-700 dark:text-amber-300">
+          Muted by {blockedByLabel}
+        </span>
+      ) : null}
+    </span>
   )
 }
 

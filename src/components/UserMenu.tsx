@@ -35,6 +35,7 @@ import { useIsAdmin } from '../lib/use-admin'
 import { useLogbookStore } from '../stores/logbook'
 import { DevComponentLabel } from './DevComponentLabel'
 import { useFtue } from './FtueGate'
+import { NotificationControlMenuRow } from './NotificationControlMenuRow'
 import { ProfileModal } from './ProfileModal'
 
 export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
@@ -103,7 +104,10 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
 
   useEffect(() => {
     if (!open) return
-    void useLogbookStore.getState().load()
+    const logbook = useLogbookStore.getState()
+    if (!logbook.booted) {
+      void logbook.load()
+    }
     if (!user) return
 
     let cancelled = false
@@ -230,6 +234,13 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                         </div>
                       </div>
                     </MenuCard>
+
+                    {user ? (
+                      <NotificationControlMenuRow
+                        active={open}
+                        onNavigate={closeMenu}
+                      />
+                    ) : null}
 
                     <MenuCard
                       ariaLabel={

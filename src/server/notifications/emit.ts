@@ -7,6 +7,10 @@ import {
 } from './audience'
 import { prisma } from '../db'
 import { enqueueNotificationDeliveries } from './deliver'
+import {
+  filterUsersNotBlockedByMutes,
+  pathsForActivityEvent,
+} from './preference-gate'
 
 const db = prisma as any
 
@@ -51,8 +55,23 @@ export async function emitActivityEvent(
     const eligibleUserIds = await resolveEligibleUserIds(input)
     if (eligibleUserIds.length === 0) return
 
-    const recipientIds = eligibleUserIds.filter(
+    let recipientIds = eligibleUserIds.filter(
       (id) => id !== input.actorUserId,
+    )
+    if (recipientIds.length === 0) return
+
+    const preferenceChain = pathsForActivityEvent({
+      topic: input.topic,
+      boatId: input.boatId,
+      orgId: input.orgId,
+      tripId:
+        input.metadata && typeof input.metadata.tripId === 'string'
+          ? input.metadata.tripId
+          : null,
+    })
+    recipientIds = await filterUsersNotBlockedByMutes(
+      recipientIds,
+      preferenceChain,
     )
     if (recipientIds.length === 0) return
 

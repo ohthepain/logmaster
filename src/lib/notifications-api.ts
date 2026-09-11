@@ -1,4 +1,8 @@
 import type {
+  NotificationPreferenceNode,
+  NotificationPreferenceTreeResources,
+} from '../domain/notification-preferences'
+import type {
   NotificationChannelDefaults,
   NotificationItem,
   NotificationSubscription,
@@ -120,6 +124,63 @@ export async function unregisterPushDevice(input: {
 }): Promise<void> {
   await api('/api/notifications/devices', {
     method: 'DELETE',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function fetchNotificationPreferences(args: {
+  boatId?: string
+  orgId?: string
+  includeJob?: boolean
+} = {}): Promise<NotificationPreferenceNode[]> {
+  const params = new URLSearchParams()
+  if (args.boatId) params.set('boatId', args.boatId)
+  if (args.orgId) params.set('orgId', args.orgId)
+  if (args.includeJob === false) params.set('includeJob', '0')
+  const data = await api<{ nodes: NotificationPreferenceNode[] }>(
+    `/api/notifications/preferences?${params.toString()}`,
+  )
+  return data.nodes
+}
+
+export async function fetchNotificationPreferencesTree(args: {
+  tripIds?: string[]
+  includeJob?: boolean
+} = {}): Promise<{
+  nodes: NotificationPreferenceNode[]
+  resources: NotificationPreferenceTreeResources
+}> {
+  const params = new URLSearchParams({ tree: '1' })
+  if (args.tripIds?.length) {
+    params.set('tripIds', args.tripIds.join(','))
+  }
+  if (args.includeJob === false) params.set('includeJob', '0')
+  return api(`/api/notifications/preferences?${params.toString()}`)
+}
+
+export async function fetchNotificationPreferenceNode(
+  path: string,
+): Promise<NotificationPreferenceNode> {
+  const params = new URLSearchParams({ path })
+  const data = await api<{ node: NotificationPreferenceNode }>(
+    `/api/notifications/preferences?${params.toString()}`,
+  )
+  return data.node
+}
+
+export async function updateNotificationPreferenceMute(input: {
+  path: string
+  muted: boolean
+}): Promise<{
+  path: string
+  muted: boolean
+  effective: boolean
+  blockedBy: string | null
+  blockedByLabel: string | null
+  node: NotificationPreferenceNode
+}> {
+  return api('/api/notifications/preferences', {
+    method: 'PUT',
     body: JSON.stringify(input),
   })
 }

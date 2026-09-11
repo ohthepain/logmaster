@@ -12,6 +12,12 @@ import {
   upsertSubscription,
 } from '../notifications/subscriptions'
 import { getWebPushPublicKey } from '../notifications/push'
+import {
+  getNotificationPreferenceNode,
+  listNotificationPreferenceNodes,
+  listNotificationPreferenceTree,
+  setNotificationPreferenceMute,
+} from '../notifications/preferences'
 
 const db = prisma as any
 
@@ -42,6 +48,75 @@ function serializeNotification(row: Record<string, unknown>) {
     createdAt: (row.createdAt as Date).toISOString(),
   }
 }
+
+notificationsRoutes.get('/preferences', async (c) => {
+  const userId = await requireUserId(c)
+  if (!userId) return unauthorized()
+
+  const boatId = c.req.query('boatId') || null
+  const orgId = c.req.query('orgId') || null
+  const path = c.req.query('path') || null
+
+  try {
+    if (path) {
+      const node = await getNotificationPreferenceNode(userId, path)
+      return c.json({ node })
+    }
+    if (c.req.query('tree') === '1') {
+      const tripIdsRaw = c.req.query('tripIds')?.trim()
+      const tripIds = tripIdsRaw
+        ? tripIdsRaw.split(',').map((id) => id.trim()).filter(Boolean)
+        : []
+      const tree = await listNotificationPreferenceTree(userId, {
+        tripIds,
+        includeJob: c.req.query('includeJob') !== '0',
+      })
+      return c.json(tree)
+    }
+    const nodes = await listNotificationPreferenceNodes(userId, {
+      boatId,
+      orgId,
+      includeJob: c.req.query('includeJob') !== '0',
+    })
+    return c.json({ nodes })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Forbidden'
+    return c.json({ error: message }, message === 'Forbidden' ? 403 : 500)
+  }
+})
+
+notificationsRoutes.put('/preferences', async (c) => {
+  const userId = await requireUserId(c)
+  if (!userId) return unauthorized()
+
+  const body = (await c.req.json().catch(() => ({}))) as {
+    path?: string
+    muted?: boolean
+  }
+
+  if (!body.path || typeof body.muted !== 'boolean') {
+    return c.json({ error: 'path and muted are required' }, 400)
+  }
+
+  try {
+    const node = await setNotificationPreferenceMute(
+      userId,
+      body.path,
+      body.muted,
+    )
+    return c.json({
+      path: node.path,
+      muted: node.muted,
+      effective: node.effective,
+      blockedBy: node.blockedBy,
+      blockedByLabel: node.blockedByLabel,
+      node,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Forbidden'
+    return c.json({ error: message }, message === 'Forbidden' ? 403 : 500)
+  }
+})
 
 notificationsRoutes.get('/', async (c) => {
   const userId = await requireUserId(c)
