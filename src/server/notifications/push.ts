@@ -1,6 +1,7 @@
 import webpush from 'web-push'
 import { prisma } from '../db'
 import { sendApnsMessage } from './apns'
+import { logServerEvent } from '../lib/server-log'
 
 const db = prisma as any
 
@@ -101,7 +102,17 @@ export async function sendPushToUser(args: {
   const devices = await db.pushDevice.findMany({
     where: { userId: args.userId },
   })
-  if (devices.length === 0) return
+  if (devices.length === 0) {
+    logServerEvent({
+      action: 'notification.push',
+      resourceType: 'notification',
+      resourceId: args.notificationId,
+      userId: args.userId,
+      outcome: 'error',
+      errorCode: 'no_push_device',
+    })
+    return
+  }
 
   const linkUrl = absoluteLinkUrl(args.linkUrl)
   const payload = JSON.stringify({
@@ -135,7 +146,33 @@ export async function sendPushToUser(args: {
           notificationId: args.notificationId,
         })
         if (result === 'invalid-token') {
+          logServerEvent({
+            action: 'notification.push',
+            resourceType: 'push_device',
+            resourceId: device.id,
+            userId: args.userId,
+            outcome: 'error',
+            errorCode: 'invalid_apns_token',
+          })
           await db.pushDevice.delete({ where: { id: device.id } })
+        } else if (result === 'skipped') {
+          logServerEvent({
+            action: 'notification.push',
+            resourceType: 'push_device',
+            resourceId: device.id,
+            userId: args.userId,
+            outcome: 'error',
+            errorCode: 'apns_not_configured',
+          })
+        } else if (result === 'failed') {
+          logServerEvent({
+            action: 'notification.push',
+            resourceType: 'push_device',
+            resourceId: device.id,
+            userId: args.userId,
+            outcome: 'error',
+            errorCode: 'apns_send_failed',
+          })
         }
       } else if (device.platform === 'android') {
         const ok = await sendFcmMessage({

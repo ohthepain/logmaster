@@ -103,6 +103,8 @@ export async function sendApnsMessage(args: {
 
   const notification = new apn.Notification()
   notification.topic = config.bundleId
+  notification.pushType = 'alert'
+  notification.priority = 10
   notification.alert = {
     title: args.title,
     body: args.body,

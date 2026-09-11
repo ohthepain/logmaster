@@ -13,6 +13,23 @@ async function registerNativePush(): Promise<void> {
   const { PushNotifications } = await import('@capacitor/push-notifications')
   const platform = getNativePlatform()
 
+  await PushNotifications.removeAllListeners()
+
+  const tokenRegistered = new Promise<void>((resolve, reject) => {
+    void PushNotifications.addListener('registration', (token) => {
+      void registerPushDevice({
+        platform: platform === 'ios' ? 'ios' : 'android',
+        token: token.value,
+      })
+        .then(() => resolve())
+        .catch(reject)
+    })
+
+    void PushNotifications.addListener('registrationError', (error) => {
+      reject(new Error(error.error))
+    })
+  })
+
   PushNotifications.addListener('pushNotificationReceived', (notification) => {
     toast.message(notification.title ?? 'Notification', {
       description: notification.body,
@@ -32,21 +49,7 @@ async function registerNativePush(): Promise<void> {
   }
 
   await PushNotifications.register()
-
-  await new Promise<void>((resolve, reject) => {
-    void PushNotifications.addListener('registration', (token) => {
-      void registerPushDevice({
-        platform: platform === 'ios' ? 'ios' : 'android',
-        token: token.value,
-      })
-        .then(() => resolve())
-        .catch(reject)
-    })
-
-    void PushNotifications.addListener('registrationError', (error) => {
-      reject(new Error(error.error))
-    })
-  })
+  await tokenRegistered
 }
 
 async function registerWebPush(): Promise<void> {
