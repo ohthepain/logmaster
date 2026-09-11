@@ -5,7 +5,7 @@ import {
   Link2,
   MoreHorizontal,
 } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { toast } from 'sonner'
 import type {
@@ -30,6 +30,7 @@ import type { BoatDocumentViewerPayload } from '../lib/boat-document-open'
 import { cn } from '../lib/cn'
 import { BoatDocumentCategoryField } from './BoatDocumentCategoryField'
 import { Modal } from './Modal'
+import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 
 type BoatDocumentActionsMenuProps = {
   boatId: string
@@ -69,24 +70,6 @@ export function BoatDocumentActionsMenu({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const menuId = useId()
   const isLink = boatDocument.currentVersion.kind === 'link'
-
-  useEffect(() => {
-    if (!open) return
-    const onDoc = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDoc)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
 
   const openUpdate = () => {
     setCategoryDraft(boatDocument.categoryId)
@@ -249,6 +232,7 @@ export function BoatDocumentActionsMenu({
   return (
     <>
       <div className="relative" ref={rootRef}>
+        {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
         <button
           type="button"
           disabled={busy}
@@ -274,7 +258,8 @@ export function BoatDocumentActionsMenu({
             role="menu"
             aria-label="Document actions"
             className={cn(
-              'absolute right-0 top-full z-20 mt-1 min-w-[11rem] rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-lg',
+              'absolute right-0 top-full mt-1 min-w-[11rem] rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-lg',
+              POPUP_MENU_Z_CLASS,
               'ring-1 ring-[var(--line)]/60',
             )}
             onClick={(event) => event.stopPropagation()}

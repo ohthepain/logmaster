@@ -1,5 +1,5 @@
 import { Layers } from 'lucide-react'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import {
   MAP_DATA_LAYERS,
@@ -11,6 +11,7 @@ import type {
 } from '../lib/map-data-layers'
 import { MAP_LOG_ENTRY_LAYER_TOGGLES } from '../lib/map-log-entry-layers'
 import type { MapLogEntryLayerToggles } from '../lib/map-log-entry-layers'
+import { PopupOutsideDismiss } from './PopupOutsideDismiss'
 import { MapControlButton } from './SailingMapControlStack'
 import { useLogbookStore } from '../stores/logbook'
 
@@ -108,22 +109,6 @@ export function SailingMapLayerPanel({
       window.removeEventListener('resize', updatePosition)
       window.removeEventListener('scroll', updatePosition, true)
     }
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-    const close = (event: MouseEvent) => {
-      const target = event.target as Node
-      if (
-        rootRef.current?.contains(target) ||
-        panelRef.current?.contains(target)
-      ) {
-        return
-      }
-      setOpen(false)
-    }
-    document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
   }, [open])
 
   const dataGroups = useMemo(() => {
@@ -266,6 +251,7 @@ export function SailingMapLayerPanel({
         <Layers className="size-4" strokeWidth={2.25} />
       </MapControlButton>
 
+      {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
       {open && typeof document !== 'undefined'
         ? createPortal(panelContent, document.body)
         : null}

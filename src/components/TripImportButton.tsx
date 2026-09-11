@@ -1,6 +1,5 @@
 import {
   forwardRef,
-  useEffect,
   useId,
   useImperativeHandle,
   useRef,
@@ -20,6 +19,7 @@ import {
 import { SignalKImportError } from '../lib/signalk-import'
 import { useLogbookStore } from '../stores/logbook'
 import { useRoutesStore } from '../stores/routes'
+import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 
 export type TripImportButtonHandle = {
   open: () => void
@@ -64,24 +64,6 @@ export const TripImportButton = forwardRef<
   )
   const [importing, setImporting] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-
-  useEffect(() => {
-    if (!menuOpen) return
-    const onDoc = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setMenuOpen(false)
-      }
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDoc)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [menuOpen])
 
   const finishImport = (trip: {
     id: string
@@ -264,6 +246,9 @@ export const TripImportButton = forwardRef<
 
   return (
     <div className={cn('relative', className)} ref={rootRef}>
+      {menuOpen ? (
+        <PopupOutsideDismiss onDismiss={() => setMenuOpen(false)} />
+      ) : null}
       <input
         ref={gpxFileInputRef}
         type="file"
@@ -314,7 +299,8 @@ export const TripImportButton = forwardRef<
           role="menu"
           aria-label="Import trip"
           className={cn(
-            'absolute right-0 top-full z-30 mt-1 min-w-[11rem] rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-lg',
+            'absolute right-0 top-full mt-1 min-w-[11rem] rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-lg',
+            POPUP_MENU_Z_CLASS,
             'ring-1 ring-[var(--line)]/60',
           )}
         >

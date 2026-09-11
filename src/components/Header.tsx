@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { cn } from '../lib/cn'
 import DevModeToggle from './DevModeToggle'
 import { DevComponentLabel } from './DevComponentLabel'
@@ -47,6 +47,9 @@ export function AppHeaderBrand({
 }
 
 export default function Header({ mapOverlay = false }: HeaderProps) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const hideBrand = mapOverlay || pathname === '/' || pathname === '/map'
+
   return (
     <header
       data-app-header
@@ -59,8 +62,13 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
         name="Header"
         className="absolute left-3 top-1 z-10 sm:left-4"
       />
-      <div className="page-wrap ios-map-touch-target flex min-h-16 items-center justify-between gap-3 px-3 py-2 sm:px-4">
-        <AppHeaderBrand mapOverlay={mapOverlay} />
+      <div
+        className={cn(
+          'page-wrap ios-map-touch-target flex min-h-16 items-center gap-3 px-3 py-2 sm:px-4',
+          hideBrand ? 'justify-end' : 'justify-between',
+        )}
+      >
+        {hideBrand ? null : <AppHeaderBrand mapOverlay={mapOverlay} />}
         <div className="flex items-center justify-end gap-2">
           <DevModeToggle mapOverlay={mapOverlay} />
           {!mapOverlay ? <ThemeToggle /> : null}

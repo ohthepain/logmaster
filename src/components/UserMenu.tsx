@@ -177,7 +177,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
             <div
               data-blocking-overlay
               className="ios-map-touch-target fixed inset-0 z-[100] bg-[var(--surface-strong)] [--chip-bg:#f3f3f3] [--link-bg-hover:#f5f5f5] [--panel-border:rgba(0,0,0,0.08)] [--sea-ink:#111111] [--sea-ink-soft:#6b6b6b] [--surface-strong:#ffffff] sm:flex sm:items-center sm:justify-center sm:bg-[var(--overlay)] sm:p-5 sm:backdrop-blur-sm"
-              onMouseDown={(event) => {
+              onPointerDown={(event) => {
                 if (event.target === event.currentTarget) closeMenu()
               }}
             >

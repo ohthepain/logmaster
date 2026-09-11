@@ -1,0 +1,18 @@
+---
+description: Popup menus dismiss when the user taps or clicks outside them
+alwaysApply: true
+---
+
+# Popup menus — tap outside to close
+
+Every popup, dropdown, and overflow menu **must close when the user taps or clicks outside it**. Escape should close it too.
+
+This includes map chrome. A `mousedown` listener on `document` is not enough: native MapKit / MapLibre often never delivers that event. Use `PopupOutsideDismiss` from `src/components/PopupOutsideDismiss.tsx` while the menu is open (`data-blocking-overlay` so iOS map touch reaches the WebView).
+
+```tsx
+{open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
+```
+
+Keep the menu surface at `z-[90]` or higher (`POPUP_MENU_Z_CLASS`) so it stays above the dismiss layer (`z-[80]`).
+
+Do **not** treat in-page accordions, full-screen flows with an explicit close control, or modal dialogs that already have a backdrop as this pattern — but if it is a floating menu, tap-outside must close it.

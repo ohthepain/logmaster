@@ -18,6 +18,7 @@ import type {
   PlaybackViewState,
 } from '../lib/trip-playback-panels'
 import { TripPlaybackMultiGraph } from './TripPlaybackMultiGraph'
+import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 
 type TripPlaybackInstrumentGraphProps = {
   tripId: string
@@ -71,19 +72,11 @@ export function TripPlaybackViewSelector({
   const rootRef = useRef<HTMLDivElement>(null)
   const enabledCount = countEnabledPlaybackViews(viewState)
 
-  useEffect(() => {
-    if (!open) return
-    const close = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
-  }, [open])
-
   if (options.length === 0) return null
 
   return (
     <div ref={rootRef} className="relative justify-self-end">
+      {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
       <button
         type="button"
         data-playback-control
@@ -101,7 +94,10 @@ export function TripPlaybackViewSelector({
         <div
           role="group"
           aria-label="Timeline tracks"
-          className="absolute bottom-full right-0 z-40 mb-2 min-w-[13rem] overflow-hidden rounded-xl border border-white/15 bg-black/90 p-2 shadow-xl backdrop-blur-md"
+          className={cn(
+            'absolute bottom-full right-0 mb-2 min-w-[13rem] overflow-hidden rounded-xl border border-white/15 bg-black/90 p-2 shadow-xl backdrop-blur-md',
+            POPUP_MENU_Z_CLASS,
+          )}
         >
           <p className="m-0 px-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">
             Show on timeline

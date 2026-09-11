@@ -9,6 +9,7 @@ import { useLogbookStore } from '../stores/logbook'
 import { tripDisplayName } from '../lib/trip-display'
 import { AppIconButtonTooltip } from './AppIconButtonTooltip'
 import { Modal } from './Modal'
+import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 import { RouteSourceCopyModal, RouteTripCopyModal } from './RouteCopyModals'
 
 type RouteActionsMenuProps = {
@@ -45,24 +46,6 @@ export function RouteActionsMenu({
   useEffect(() => {
     onOpenChange?.(open)
   }, [open, onOpenChange])
-
-  useEffect(() => {
-    if (!open) return
-    const onDoc = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDoc)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
 
   const runAction = async (action: () => Promise<void>) => {
     setBusy(true)
@@ -141,6 +124,7 @@ export function RouteActionsMenu({
   return (
     <>
       <div className={cn('relative', className)} ref={rootRef}>
+        {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
         <AppIconButtonTooltip label={tooltip} side="bottom">
           <button
             type="button"
@@ -169,7 +153,8 @@ export function RouteActionsMenu({
             role="menu"
             aria-label="Route actions"
             className={cn(
-              'absolute right-0 top-full z-20 mt-1 min-w-[11rem] rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-lg',
+              'absolute right-0 top-full mt-1 min-w-[11rem] rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-lg',
+              POPUP_MENU_Z_CLASS,
               'ring-1 ring-[var(--line)]/60',
             )}
             onClick={(event) => event.stopPropagation()}

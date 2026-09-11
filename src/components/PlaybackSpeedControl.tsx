@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { cn } from '../lib/cn'
-import { requestIosMapTouchSync } from '../lib/native/ios-map-touch-passthrough'
+import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 
 export const PLAYBACK_SPEEDS = [0.25, 0.5, 1, 2, 5, 10, 25, 100] as const
 export type PlaybackSpeed = (typeof PLAYBACK_SPEEDS)[number]
@@ -43,25 +43,18 @@ export function PlaybackSpeedControl({
   const rootRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<SpeedDragState | null>(null)
 
-  useEffect(() => {
-    if (!menuOpen) return
-    requestIosMapTouchSync()
-    const close = (event: PointerEvent) => {
-      if (rootRef.current?.contains(event.target as Node)) return
-      setMenuOpen(false)
-    }
-    document.addEventListener('pointerdown', close)
-    return () => document.removeEventListener('pointerdown', close)
-  }, [menuOpen])
-
   return (
     <div ref={rootRef} className="relative shrink-0">
+      {menuOpen ? (
+        <PopupOutsideDismiss onDismiss={() => setMenuOpen(false)} />
+      ) : null}
       {menuOpen ? (
         <div
           role="listbox"
           aria-label="Playback speed"
           className={cn(
-            'ios-map-touch-target absolute right-0 z-50 flex min-w-[4.5rem] flex-col overflow-hidden rounded-xl border border-white/25 bg-black/80 py-1 shadow-xl backdrop-blur-md',
+            'ios-map-touch-target absolute right-0 flex min-w-[4.5rem] flex-col overflow-hidden rounded-xl border border-white/25 bg-black/80 py-1 shadow-xl backdrop-blur-md',
+            POPUP_MENU_Z_CLASS,
             menuPlacement === 'below' ? 'top-full mt-2' : 'bottom-full mb-2',
           )}
           data-map-touch-zone

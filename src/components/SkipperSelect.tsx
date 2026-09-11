@@ -1,9 +1,10 @@
 import { Check, ChevronDown } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { CrewAvatar } from './CrewAvatar'
 import type { TripPersonOption } from '../lib/trip-people'
 import { cn } from '../lib/cn'
 import { DevComponentLabel } from './DevComponentLabel'
+import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 
 type SkipperSelectProps = {
   value: string
@@ -22,30 +23,14 @@ export function SkipperSelect({
   const selected =
     options.find((option) => option.key === value) ?? options.at(0) ?? null
 
-  useEffect(() => {
-    if (!open) return
-    const onDoc = (event: MouseEvent) => {
-      if (rootRef.current?.contains(event.target as Node)) return
-      setOpen(false)
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc, true)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDoc, true)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
-
   const selectOption = (key: string) => {
     onChange(key)
     setOpen(false)
   }
 
   return (
-    <div ref={rootRef} className={cn('relative', open && 'z-30')}>
+    <div ref={rootRef} className={cn('relative', open && POPUP_MENU_Z_CLASS)}>
+      {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
       <DevComponentLabel
         name="SkipperSelect"
         className="absolute -top-5 left-0"
@@ -91,7 +76,10 @@ export function SkipperSelect({
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-2 max-h-64 w-full overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--surface-strong)] p-1 shadow-lg"
+          className={cn(
+            'absolute mt-2 max-h-64 w-full overflow-auto rounded-2xl border border-[var(--line)] bg-[var(--surface-strong)] p-1 shadow-lg',
+            POPUP_MENU_Z_CLASS,
+          )}
         >
           {options.map((option) => {
             const active = option.key === value

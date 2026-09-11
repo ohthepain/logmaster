@@ -1,6 +1,7 @@
 import { Pencil } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { cn } from '../lib/cn'
+import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 
 type LogEntryPhotoMenuProps = {
   onDelete: () => void
@@ -20,24 +21,6 @@ export function LogEntryPhotoMenu({
   const rootRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
 
-  useEffect(() => {
-    if (!open) return
-    const onDoc = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDoc)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
-
   const runAction = async (action: () => void | Promise<void>) => {
     setBusy(true)
     try {
@@ -52,6 +35,7 @@ export function LogEntryPhotoMenu({
 
   return (
     <div className={cn('absolute right-2 top-2', className)} ref={rootRef}>
+      {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
       <button
         type="button"
         aria-haspopup="menu"
@@ -70,7 +54,10 @@ export function LogEntryPhotoMenu({
           id={menuId}
           role="menu"
           aria-label="Photo options"
-          className="absolute right-0 top-full z-20 mt-1 min-w-[10.5rem] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-xl"
+          className={cn(
+            'absolute right-0 top-full mt-1 min-w-[10.5rem] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-xl',
+            POPUP_MENU_Z_CLASS,
+          )}
         >
           {onSetMetadata ? (
             <button

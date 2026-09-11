@@ -1,10 +1,11 @@
 import { Link } from '@tanstack/react-router'
 import { ChevronDown } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useState } from 'react'
 import { cn } from '../lib/cn'
 import { isDevModeAvailable } from '../lib/dev-mode'
 import { useAppOptionsStore } from '../stores/app-options'
 import { DevComponentLabel } from './DevComponentLabel'
+import { PopupOutsideDismiss } from './PopupOutsideDismiss'
 import { TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS } from '../lib/trip-map-overlay'
 
 export default function DevModeToggle({
@@ -15,31 +16,12 @@ export default function DevModeToggle({
   const devMode = useAppOptionsStore((state) => state.devMode)
   const setDevMode = useAppOptionsStore((state) => state.setDevMode)
   const [open, setOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
-
-  useEffect(() => {
-    if (!open) return
-    const onDoc = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDoc)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
 
   if (!isDevModeAvailable()) return null
 
   return (
-    <div className="relative" ref={rootRef}>
+    <div className="relative">
       <DevComponentLabel
         name="DevModeToggle"
         className="absolute -top-5 left-0"
@@ -81,6 +63,7 @@ export default function DevModeToggle({
         />
       </button>
 
+      {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
       {open ? (
         <div
           id={menuId}

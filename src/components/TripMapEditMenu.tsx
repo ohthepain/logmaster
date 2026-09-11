@@ -1,8 +1,8 @@
 import { useNavigate } from '@tanstack/react-router'
 import { Pencil } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useState } from 'react'
+import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 import { cn } from '../lib/cn'
-import { requestIosMapTouchSync } from '../lib/native/ios-map-touch-passthrough'
 
 type TripMapEditMenuProps = {
   tripId: string
@@ -25,27 +25,8 @@ export function TripMapEditMenu({
 }: TripMapEditMenuProps) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
   const busy = disabled || uploading
-
-  useEffect(() => {
-    if (!open) return
-    requestIosMapTouchSync()
-    const close = (event: PointerEvent) => {
-      if (rootRef.current?.contains(event.target as Node)) return
-      setOpen(false)
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('pointerdown', close)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('pointerdown', close)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
 
   const runAction = (action: () => void) => {
     action()
@@ -54,10 +35,10 @@ export function TripMapEditMenu({
 
   return (
     <div
-      ref={rootRef}
       className="pointer-events-auto relative"
       data-map-touch-zone
     >
+      {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
       <button
         type="button"
         data-map-touch-zone
@@ -85,7 +66,10 @@ export function TripMapEditMenu({
           role="menu"
           aria-label="Trip edit options"
           data-map-touch-zone
-          className="ios-map-touch-target pointer-events-auto absolute left-full top-0 z-50 ml-2 min-w-[12.5rem] overflow-hidden rounded-xl border border-white/25 bg-black/80 py-1 shadow-xl backdrop-blur-md"
+          className={cn(
+            'ios-map-touch-target pointer-events-auto absolute left-full top-0 ml-2 min-w-[12.5rem] overflow-hidden rounded-xl border border-white/25 bg-black/80 py-1 shadow-xl backdrop-blur-md',
+            POPUP_MENU_Z_CLASS,
+          )}
         >
           <label
             htmlFor={busy ? undefined : uploadInputId}

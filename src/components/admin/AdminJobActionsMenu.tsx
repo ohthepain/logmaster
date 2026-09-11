@@ -1,5 +1,5 @@
 import { MoreHorizontal } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { cancelAdminJob, rerunAdminJob } from '../../lib/admin-api'
 import {
@@ -8,6 +8,7 @@ import {
   canRerunAdminJob,
 } from '../../lib/admin-jobs'
 import { cn } from '../../lib/cn'
+import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from '../PopupOutsideDismiss'
 
 type AdminJobActionsMenuProps = {
   jobId: string
@@ -26,24 +27,6 @@ export function AdminJobActionsMenu({
   const [busy, setBusy] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
-
-  useEffect(() => {
-    if (!open) return
-    const onDoc = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDoc)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
 
   const runAction = async (action: () => Promise<void>) => {
     setBusy(true)
@@ -98,6 +81,7 @@ export function AdminJobActionsMenu({
 
   return (
     <div className="relative" ref={rootRef}>
+      {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
       <button
         type="button"
         disabled={busy}
@@ -120,7 +104,8 @@ export function AdminJobActionsMenu({
           role="menu"
           aria-label="Job actions"
           className={cn(
-            'absolute right-0 top-full z-20 mt-1 min-w-[10.5rem] rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-lg',
+            'absolute right-0 top-full mt-1 min-w-[10.5rem] rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-lg',
+            POPUP_MENU_Z_CLASS,
             'ring-1 ring-[var(--line)]/60',
           )}
         >
