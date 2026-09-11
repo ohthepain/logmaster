@@ -11,6 +11,7 @@ import {
   filterUsersNotBlockedByMutes,
   pathsForActivityEvent,
 } from './preference-gate'
+import { logServerEvent } from '../lib/server-log'
 
 const db = prisma as any
 
@@ -44,19 +45,47 @@ async function resolveEligibleUserIds(
   return []
 }
 
+function emitResource(input: ActivityEventInput) {
+  if (input.boatId) {
+    return { resourceType: 'boat', resourceId: input.boatId }
+  }
+  if (input.orgId) {
+    return { resourceType: 'org', resourceId: input.orgId }
+  }
+  return { resourceType: 'notification', resourceId: input.topic }
+}
+
 export async function emitActivityEvent(
   input: ActivityEventInput,
 ): Promise<void> {
+  const resource = emitResource(input)
   try {
     const scopeKey = subscriptionScopeKey({
       boatId: input.boatId,
       orgId: input.orgId,
     })
     const eligibleUserIds = await resolveEligibleUserIds(input)
-    if (eligibleUserIds.length === 0) return
+    if (eligibleUserIds.length === 0) {
+      logServerEvent({
+        action: 'notification.emit',
+        ...resource,
+        outcome: 'error',
+        errorCode: 'no_audience',
+      })
+      return
+    }
 
     let recipientIds = eligibleUserIds.filter((id) => id !== input.actorUserId)
-    if (recipientIds.length === 0) return
+    if (recipientIds.length === 0) {
+      logServerEvent({
+        action: 'notification.emit',
+        ...resource,
+        userId: input.actorUserId,
+        outcome: 'error',
+        errorCode: 'actor_only',
+      })
+      return
+    }
 
     const preferenceChain = pathsForActivityEvent({
       topic: input.topic,
@@ -71,7 +100,15 @@ export async function emitActivityEvent(
       recipientIds,
       preferenceChain,
     )
-    if (recipientIds.length === 0) return
+    if (recipientIds.length === 0) {
+      logServerEvent({
+        action: 'notification.emit',
+        ...resource,
+        outcome: 'error',
+        errorCode: 'muted',
+      })
+      return
+    }
 
     const subscriptions = await db.notificationSubscription.findMany({
       where: {
@@ -90,7 +127,15 @@ export async function emitActivityEvent(
     const subscribedUserIds = new Set(
       subscriptions.map((sub: { userId: string }) => sub.userId),
     )
-    if (subscribedUserIds.size === 0) return
+    if (subscribedUserIds.size === 0) {
+      logServerEvent({
+        action: 'notification.emit',
+        ...resource,
+        outcome: 'error',
+        errorCode: 'not_subscribed',
+      })
+      return
+    }
 
     const subscriptionByUser = new Map<
       string,
@@ -141,7 +186,19 @@ export async function emitActivityEvent(
         },
       ),
     )
+    logServerEvent({
+      action: 'notification.emit',
+      ...resource,
+      userId: input.actorUserId,
+      outcome: 'success',
+    })
   } catch (error) {
+    logServerEvent({
+      action: 'notification.emit',
+      ...resource,
+      outcome: 'error',
+      errorCode: 'emit_failed',
+    })
     console.error('[notifications] emitActivityEvent failed', error)
   }
 }

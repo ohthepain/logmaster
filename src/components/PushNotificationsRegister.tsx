@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { isNativePlatform, getNativePlatform } from '../lib/platform'
@@ -9,7 +10,13 @@ import {
   subscribeWebPush,
 } from '../lib/notifications-api'
 
+const APNS_TOKEN_TIMEOUT_MS = 20_000
+
 async function registerNativePush(): Promise<void> {
+  if (!Capacitor.isPluginAvailable('PushNotifications')) {
+    throw new Error('PushNotifications plugin is not available')
+  }
+
   const { PushNotifications } = await import('@capacitor/push-notifications')
   const platform = getNativePlatform()
 
@@ -49,7 +56,19 @@ async function registerNativePush(): Promise<void> {
   }
 
   await PushNotifications.register()
-  await tokenRegistered
+
+  let timeoutId = 0
+  const timedOut = new Promise<void>((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      reject(new Error('APNs token timeout'))
+    }, APNS_TOKEN_TIMEOUT_MS)
+  })
+
+  try {
+    await Promise.race([tokenRegistered, timedOut])
+  } finally {
+    window.clearTimeout(timeoutId)
+  }
 }
 
 async function registerWebPush(): Promise<void> {

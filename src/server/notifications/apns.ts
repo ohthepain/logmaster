@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import apn from '@parse/node-apn'
+import { logServerEvent } from '../lib/server-log'
 
 type ApnsConfig = {
   key: string | Buffer
@@ -99,7 +100,16 @@ export async function sendApnsMessage(args: {
 }): Promise<'sent' | 'invalid-token' | 'skipped' | 'failed'> {
   const apnsProvider = getApnsProvider()
   const config = getApnsConfig()
-  if (!apnsProvider || !config) return 'skipped'
+  if (!apnsProvider || !config) {
+    logServerEvent({
+      action: 'notification.apns',
+      resourceType: 'notification',
+      resourceId: args.notificationId,
+      outcome: 'error',
+      errorCode: 'apns_not_configured',
+    })
+    return 'skipped'
+  }
 
   const notification = new apn.Notification()
   notification.topic = config.bundleId
@@ -118,7 +128,14 @@ export async function sendApnsMessage(args: {
   const result = await apnsProvider.send(notification, args.token)
 
   if (result.failed.length > 0) {
-    const reason = result.failed[0]?.response?.reason
+    const reason = result.failed[0]?.response?.reason ?? 'unknown'
+    logServerEvent({
+      action: 'notification.apns',
+      resourceType: 'notification',
+      resourceId: args.notificationId,
+      outcome: 'error',
+      errorCode: reason,
+    })
     if (reason && INVALID_APNS_REASONS.has(reason)) {
       return 'invalid-token'
     }
@@ -126,6 +143,12 @@ export async function sendApnsMessage(args: {
     return 'failed'
   }
 
+  logServerEvent({
+    action: 'notification.apns',
+    resourceType: 'notification',
+    resourceId: args.notificationId,
+    outcome: 'success',
+  })
   return 'sent'
 }
 
