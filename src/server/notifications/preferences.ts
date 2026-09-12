@@ -4,11 +4,12 @@ import {
   enrichPreferencePathLabel,
   listPathsForPreferencesQuery,
   listPathsForPreferencesTree,
-  preferencePathLabel
-  
-  
+  preferencePathLabel,
 } from '../../domain/notification-preferences'
-import type {NotificationPreferenceNode, NotificationPreferenceTreeResources} from '../../domain/notification-preferences';
+import type {
+  NotificationPreferenceNode,
+  NotificationPreferenceTreeResources,
+} from '../../domain/notification-preferences'
 import { isAdminEmail } from '../admin-auth'
 import { boatAccessFilter, canAccess } from '../permissions/access'
 import { getUserConsortiumIds } from '../permissions/consortium'

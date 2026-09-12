@@ -163,7 +163,9 @@ export function AssetDocumentDropTargets({
           hint="Drop or choose a photo"
           inputRef={photoInputRef}
           accept="image/*"
-          icon={<Image className="size-5 text-[var(--sea-ink-soft)]" aria-hidden />}
+          icon={
+            <Image className="size-5 text-[var(--sea-ink-soft)]" aria-hidden />
+          }
           dragOver={dragOver === 'photo'}
           uploading={uploading}
           onDragEnter={(event) => {
@@ -290,7 +292,9 @@ function DocumentDropTarget({
           uploading && 'cursor-not-allowed opacity-60',
         )}
       >
-        {icon ?? <FileUp className="size-5 text-[var(--sea-ink-soft)]" aria-hidden />}
+        {icon ?? (
+          <FileUp className="size-5 text-[var(--sea-ink-soft)]" aria-hidden />
+        )}
         <span className="text-sm font-semibold text-[var(--sea-ink)]">
           {uploading ? 'Uploading…' : label}
         </span>

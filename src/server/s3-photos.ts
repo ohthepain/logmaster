@@ -195,7 +195,12 @@ export function contentTypeForStoredDocument(
   if (mime && mime !== 'application/octet-stream') return mime
   if (fallback && fallback !== 'application/octet-stream') return fallback
   const ext = extensionForDocumentMime(mime ?? '', fileName ?? undefined)
-  return DOCUMENT_EXT_CONTENT_TYPES[ext] ?? mime ?? fallback ?? 'application/octet-stream'
+  return (
+    DOCUMENT_EXT_CONTENT_TYPES[ext] ??
+    mime ??
+    fallback ??
+    'application/octet-stream'
+  )
 }
 
 export function inlineContentDisposition(fileName: string): string {

@@ -6,9 +6,9 @@ import {
 
 describe('contentTypeForStoredDocument', () => {
   it('keeps an explicit document mime type', () => {
-    expect(
-      contentTypeForStoredDocument('application/pdf', 'scan.bin'),
-    ).toBe('application/pdf')
+    expect(contentTypeForStoredDocument('application/pdf', 'scan.bin')).toBe(
+      'application/pdf',
+    )
   })
 
   it('infers pdf from the file name when the stored mime is generic', () => {

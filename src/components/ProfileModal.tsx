@@ -232,7 +232,8 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
             </Link>
           </div>
           <p className="mt-1 mb-3 text-xs leading-5 text-[var(--sea-ink-soft)]">
-            Used for email and push when a topic has no per-boat or per-org override. Topics are on by default.
+            Used for email and push when a topic has no per-boat or per-org
+            override. Topics are on by default.
           </p>
           <label className="mb-2 flex items-center gap-2 text-sm text-[var(--sea-ink)]">
             <input

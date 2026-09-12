@@ -101,9 +101,7 @@ export function NotificationControlMenuRow({
         disabled={loading && !tree}
         onToggle={toggleGlobalMute}
         className="mr-1"
-        label={
-          paused ? 'Resume all notifications' : 'Pause all notifications'
-        }
+        label={paused ? 'Resume all notifications' : 'Pause all notifications'}
       />
       <button
         type="button"

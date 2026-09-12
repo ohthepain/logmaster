@@ -155,8 +155,8 @@ function BoatAssetDetailPage() {
           </h2>
           {asset.documents.length === 0 && !uploading ? (
             <p className="mb-3 text-sm text-[var(--sea-ink-soft)]">
-              No documents yet. Upload a receipt or photo, add a file, or paste a
-              link below.
+              No documents yet. Upload a receipt or photo, add a file, or paste
+              a link below.
             </p>
           ) : null}
           <AssetDocumentsSection

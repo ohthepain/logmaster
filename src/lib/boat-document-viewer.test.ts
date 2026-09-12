@@ -53,8 +53,8 @@ describe('downloadFileNameForBoatDocument', () => {
     const document = uploadDocument('', 'application/pdf')
     document.title = 'Faktura 95748'
     document.currentVersion.fileName = null
-    expect(downloadFileNameForBoatDocument(boatDocumentOpenTarget(document))).toBe(
-      'Faktura_95748.pdf',
-    )
+    expect(
+      downloadFileNameForBoatDocument(boatDocumentOpenTarget(document)),
+    ).toBe('Faktura_95748.pdf')
   })
 })

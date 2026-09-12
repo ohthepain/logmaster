@@ -38,14 +38,14 @@ export function NotificationPreferenceBell({
       }
       disabled={disabled || busy}
       onClick={() => onToggle(node.path, enabled)}
-        className={cn(
-          'inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-[var(--chip-bg)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60',
-          enabled
-            ? 'border-emerald-600/40 text-emerald-600 dark:border-emerald-400/40 dark:text-emerald-400'
-            : 'border-[var(--brand)]/40 text-[var(--brand)]',
-          enabled && !node.effective && 'opacity-70',
-          className,
-        )}
+      className={cn(
+        'inline-flex size-9 shrink-0 items-center justify-center rounded-full border bg-[var(--chip-bg)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60',
+        enabled
+          ? 'border-emerald-600/40 text-emerald-600 dark:border-emerald-400/40 dark:text-emerald-400'
+          : 'border-[var(--brand)]/40 text-[var(--brand)]',
+        enabled && !node.effective && 'opacity-70',
+        className,
+      )}
     >
       <Icon className="size-4" aria-hidden />
     </button>
