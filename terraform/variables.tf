@@ -140,6 +140,12 @@ variable "aisstream_api_key_parameter_name" {
   default     = "/logmaster/account/aisstream-api-key"
 }
 
+variable "openai_api_key_parameter_name" {
+  type        = string
+  description = "SSM Parameter Store name for shared OpenAI API key."
+  default     = "/logmaster/account/openai-api-key"
+}
+
 variable "apns_key_parameter_name" {
   type        = string
   description = "SSM Parameter Store name for shared Apple APNS .p8 key (plain string file contents). Leave empty if not using a shared account parameter."

@@ -28,6 +28,9 @@ fi
 if aws ssm get-parameter --name "${PREFIX}/AISSTREAM_API_KEY" --region "${AWS_REGION:-eu-central-1}" >/dev/null 2>&1; then
   import_param aws_ssm_parameter.aisstream_api_key "${PREFIX}/AISSTREAM_API_KEY"
 fi
+if aws ssm get-parameter --name "${PREFIX}/OPENAI_API_KEY" --region "${AWS_REGION:-eu-central-1}" >/dev/null 2>&1; then
+  import_param aws_ssm_parameter.openai_api_key "${PREFIX}/OPENAI_API_KEY"
+fi
 if aws ssm get-parameter --name "${PREFIX}/APNS_KEY" --region "${AWS_REGION:-eu-central-1}" >/dev/null 2>&1; then
   import_param aws_ssm_parameter.apns_key "${PREFIX}/APNS_KEY"
   import_param aws_ssm_parameter.apns_key_id "${PREFIX}/APNS_KEY_ID"

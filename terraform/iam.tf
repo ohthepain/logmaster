@@ -39,6 +39,7 @@ resource "aws_iam_role_policy" "ecs_execution_ssm" {
           aws_ssm_parameter.ses_from_email.arn,
           aws_ssm_parameter.maptiler_api_key.arn,
           aws_ssm_parameter.aisstream_api_key.arn,
+          aws_ssm_parameter.openai_api_key.arn,
           aws_ssm_parameter.apns_key.arn,
           aws_ssm_parameter.apns_key_id.arn,
           aws_ssm_parameter.apns_team_id.arn,

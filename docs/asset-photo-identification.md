@@ -9,7 +9,9 @@ failed database transaction removes the staged photo from S3.
 All model use goes through TanStack AI in `src/server/asset-intelligence.ts`.
 The OpenAI adapter uses `gpt-5-mini` for vision and web research. Configure
 `OPENAI_API_KEY` on the server, alongside the existing database and photo bucket
-configuration. Never expose this key through a `VITE_` environment variable.
+configuration. For deployed environments, store the key in SSM and run
+`./scripts/set-openai-secrets.sh staging` (see `terraform/README.md`). Never
+expose this key through a `VITE_` environment variable.
 The integration follows TanStack's [multimodal content](https://tanstack.com/ai/latest/docs/advanced/multimodal-content)
 and [structured output with tools](https://tanstack.com/ai/latest/docs/structured-outputs/with-tools) APIs.
 
