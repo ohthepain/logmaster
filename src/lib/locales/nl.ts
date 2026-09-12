@@ -111,7 +111,8 @@ const catalog: TranslationCatalog = {
   tracks: 'Tracks',
   timelineTracks: 'Tijdlijntracks',
   showOnTimeline: 'Op de tijdlijn tonen',
-  noGraphDataForSelectedTracks: 'Geen grafiekgegevens voor de geselecteerde tracks.',
+  noGraphDataForSelectedTracks:
+    'Geen grafiekgegevens voor de geselecteerde tracks.',
   logEntries: 'Logboekitems',
   media: 'Media',
   logShort: 'Log',

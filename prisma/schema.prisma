@@ -680,6 +680,7 @@ model BoatDocument {
   assetLinks    BoatAssetDocument[]
   purchaseLinks BoatPurchaseDocument[]
   workLinks     AssetWorkDocument[]
+  downloadSuggestions AssetSuggestedDownload[]
 
   @@index([boatId, categoryId, sortOrder])
   @@map("boat_document")
@@ -955,6 +956,8 @@ model BoatAsset {
   boatId           String
   name             String
   description      String?
+  modelNumber      String?
+  category         String?
   ownership        AssetOwnership
   ownedByUserId    String?
   onLoanFromUserId String?
@@ -969,9 +972,43 @@ model BoatAsset {
   purchaseLines  BoatPurchaseLine[]
   workRecords    AssetWork[]
   documentLinks  BoatAssetDocument[]
+  suggestedDownloads AssetSuggestedDownload[]
+  connectionsFrom AssetConnection[] @relation("ConnectionFrom")
+  connectionsTo AssetConnection[] @relation("ConnectionTo")
 
   @@index([boatId, sortOrder])
   @@map("boat_asset")
+}
+
+model AssetSuggestedDownload {
+  id         String @id @default(cuid())
+  assetId    String
+  asset      BoatAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  title      String
+  url        String
+  purpose    DocumentPurpose
+  reason     String
+  documentId String?
+  document   BoatDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@unique([assetId, url])
+  @@map("asset_suggested_download")
+}
+
+model AssetConnection {
+  id           String @id @default(cuid())
+  fromAssetId  String
+  toAssetId    String
+  fromAsset    BoatAsset @relation("ConnectionFrom", fields: [fromAssetId], references: [id], onDelete: Cascade)
+  toAsset      BoatAsset @relation("ConnectionTo", fields: [toAssetId], references: [id], onDelete: Cascade)
+  reason       String
+  confirmedBy  String
+  confirmedAt  DateTime @default(now())
+
+  @@unique([fromAssetId, toAssetId])
+  @@index([toAssetId])
+  @@map("asset_connection")
 }
 
 model BoatPurchase {

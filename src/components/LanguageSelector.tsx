@@ -9,7 +9,8 @@ export function LanguageSelector({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const listId = useId()
-  const selected = languages.find((item) => item.code === language) ?? languages[0]
+  const selected =
+    languages.find((item) => item.code === language) ?? languages[0]
   const languageOptions = [...languages].sort((left, right) =>
     left.nativeName.localeCompare(right.nativeName, 'en'),
   )

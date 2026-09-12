@@ -201,7 +201,8 @@ const catalog: TranslationCatalog = {
   addLabel: '라벨 추가',
   editLabel: '라벨 수정',
   addOrganization: '조직 추가',
-  noDocumentsYet: '아직 문서가 없습니다. 파일을 업로드하거나 링크를 추가하세요.',
+  noDocumentsYet:
+    '아직 문서가 없습니다. 파일을 업로드하거나 링크를 추가하세요.',
   noPhotosYet: '아직 사진이 없습니다. 추가하면 여기에 표시됩니다.',
   noAssetsYet: '아직 자산 기록이 없습니다.',
   noMembersYet: '아직 멤버가 없습니다.',
@@ -212,8 +213,7 @@ const catalog: TranslationCatalog = {
   noBoatsYet: '아직 보트가 없습니다',
   noBoatsYetDescription: '이름과 사진으로 첫 보트를 추가하세요.',
   noOrganizationsYet: '아직 조직이 없습니다',
-  noOrganizationsYetDescription:
-    '조직을 만들어 보트, 문서, 멤버를 공유하세요.',
+  noOrganizationsYetDescription: '조직을 만들어 보트, 문서, 멤버를 공유하세요.',
   numberOfShares: '지분 수',
   updateCount: '개수 업데이트',
   shareCountOnBoatOne: '이 보트의 지분 {count}개',

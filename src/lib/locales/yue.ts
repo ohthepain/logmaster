@@ -81,7 +81,8 @@ const catalog: TranslationCatalog = {
   routeOptions: '航線選項',
   routeOptionsFor: '{name} 的航線選項',
   newTrip: '新航程',
-  importTripOrRoute: '匯入航程或航線（按住 Shift 再撳可選擇 OpenCPN 匯出資料夾）',
+  importTripOrRoute:
+    '匯入航程或航線（按住 Shift 再撳可選擇 OpenCPN 匯出資料夾）',
   importGpxFromUrl: '由網址匯入 GPX',
   zoomIn: '放大',
   zoomOut: '縮小',
@@ -158,7 +159,8 @@ const catalog: TranslationCatalog = {
   signInToManageOrgs: '登入後即可查看同管理你嘅組織。',
   signInToManageBoats: '登入後即可建立同管理你嘅船隻。',
   noTripsYet: '未有航程',
-  noTripsYetDescription: '開始一次航行，或者匯入 GPX 或 Signal K 軌跡，建立你第一次航程。',
+  noTripsYetDescription:
+    '開始一次航行，或者匯入 GPX 或 Signal K 軌跡，建立你第一次航程。',
   importTrack: '匯入軌跡',
   routeMap: '航線地圖',
   plannedRoute: '計劃航線',
@@ -201,7 +203,8 @@ const catalog: TranslationCatalog = {
   noPhotosYet: '未有相片。新增一張即可喺呢度顯示。',
   noAssetsYet: '未有資產紀錄。',
   noMembersYet: '未有成員。',
-  noContactsYet: '未有聯絡人。可以加入唔需要完整成員資格嘅人，例如技工或供應商。',
+  noContactsYet:
+    '未有聯絡人。可以加入唔需要完整成員資格嘅人，例如技工或供應商。',
   noOwnersAssigned: '未指定擁有人',
   noBoatsInOrg: '呢個組織未有船隻。',
   noBoatsYet: '未有船隻',

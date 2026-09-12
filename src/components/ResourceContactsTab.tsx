@@ -3,10 +3,7 @@ import { Mail, Plus, Sailboat, Trash2 } from 'lucide-react'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import {
-  BOAT_CONTACT_AREAS,
-  ORG_CONTACT_AREAS,
-} from '../domain/contact'
+import { BOAT_CONTACT_AREAS, ORG_CONTACT_AREAS } from '../domain/contact'
 import type {
   BoatContactGroup,
   ContactResourceArea,
@@ -25,9 +22,7 @@ function ContactGrantBadges({ grants }: { grants: ContactResourceArea[] }) {
     grants.length === 0
       ? t('addressBookOnly')
       : grants.map((grant) => translateContactArea(grant, t)).join(', ')
-  return (
-    <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">{text}</p>
-  )
+  return <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">{text}</p>
 }
 
 function ContactListItem({

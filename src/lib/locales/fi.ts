@@ -158,7 +158,8 @@ const catalog: TranslationCatalog = {
   loadingBoat: 'Ladataan venettä…',
   loadingBoats: 'Ladataan veneitä…',
   loadingOrganizations: 'Ladataan organisaatioita…',
-  signInToManageOrgs: 'Kirjaudu sisään nähdäksesi ja hallitaksesi organisaatioitasi.',
+  signInToManageOrgs:
+    'Kirjaudu sisään nähdäksesi ja hallitaksesi organisaatioitasi.',
   signInToManageBoats: 'Kirjaudu sisään luodaksesi ja hallitaksesi veneitäsi.',
   noTripsYet: 'Ei vielä matkoja',
   noTripsYetDescription:

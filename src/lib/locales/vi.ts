@@ -201,8 +201,7 @@ const catalog: TranslationCatalog = {
   addLabel: 'Thêm nhãn',
   editLabel: 'Sửa nhãn',
   addOrganization: 'Thêm tổ chức',
-  noDocumentsYet:
-    'Chưa có tài liệu. Tải tệp hoặc thêm liên kết để bắt đầu.',
+  noDocumentsYet: 'Chưa có tài liệu. Tải tệp hoặc thêm liên kết để bắt đầu.',
   noPhotosYet: 'Chưa có ảnh. Thêm một ảnh để hiện ở đây.',
   noAssetsYet: 'Chưa ghi nhận tài sản.',
   noMembersYet: 'Chưa có thành viên.',

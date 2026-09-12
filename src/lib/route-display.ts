@@ -50,9 +50,10 @@ export function formatRouteListWaypointCount(
   count: number,
   labels?: { one: string; other: string },
 ): string {
-  const template = count === 1
-    ? (labels?.one ?? '{count} waypoint')
-    : (labels?.other ?? '{count} waypoints')
+  const template =
+    count === 1
+      ? (labels?.one ?? '{count} waypoint')
+      : (labels?.other ?? '{count} waypoints')
   return template.replaceAll('{count}', String(count))
 }
 

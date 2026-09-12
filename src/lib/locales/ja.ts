@@ -201,7 +201,8 @@ const catalog: TranslationCatalog = {
   addLabel: 'ラベルを追加',
   editLabel: 'ラベルを編集',
   addOrganization: '組織を追加',
-  noDocumentsYet: 'まだ書類がありません。ファイルをアップロードするか、リンクを追加してください。',
+  noDocumentsYet:
+    'まだ書類がありません。ファイルをアップロードするか、リンクを追加してください。',
   noPhotosYet: 'まだ写真がありません。追加するとここに表示されます。',
   noAssetsYet: 'まだ資産の記録がありません。',
   noMembersYet: 'まだメンバーがいません。',

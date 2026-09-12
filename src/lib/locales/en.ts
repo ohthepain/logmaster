@@ -201,7 +201,8 @@ const catalog: TranslationCatalog = {
   addLabel: 'Add label',
   editLabel: 'Edit label',
   addOrganization: 'Add organization',
-  noDocumentsYet: 'No documents yet. Upload a file or add a link to get started.',
+  noDocumentsYet:
+    'No documents yet. Upload a file or add a link to get started.',
   noPhotosYet: 'No photos yet. Add one to show it here.',
   noAssetsYet: 'No assets recorded yet.',
   noMembersYet: 'No members yet.',
@@ -222,7 +223,8 @@ const catalog: TranslationCatalog = {
   moveShareUp: 'Move share up',
   moveShareDown: 'Move share down',
   orgBankBalance: 'Org bank balance',
-  noOrgBankAccount: 'No org bank account yet — add one on the org Accounting tab.',
+  noOrgBankAccount:
+    'No org bank account yet — add one on the org Accounting tab.',
   attachBoatToOrgForAccounting:
     'Attach this boat to an org for reimbursement claims and bank tracking.',
   purchases: 'Purchases',

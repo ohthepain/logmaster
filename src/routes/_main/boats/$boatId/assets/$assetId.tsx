@@ -3,6 +3,7 @@ import { ArrowLeft, Pencil, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { AssetDocumentsSection } from '../../../../../components/AssetDocumentsSection'
+import { AssetSuggestionsSection } from '../../../../../components/AssetSuggestionsSection'
 import type {
   AssetWork,
   BoatAssetDetail,
@@ -136,6 +137,10 @@ function BoatAssetDetailPage() {
             <span className="rounded-full bg-[var(--chip-bg)] px-2.5 py-0.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
               {asset.ownerLabel}
             </span>
+            <span className="text-sm text-[var(--sea-ink-soft)]">
+              {asset.category ?? 'Uncategorized'}
+              {asset.modelNumber ? ` · ${asset.modelNumber}` : ''}
+            </span>
             {asset.installedAt ? (
               <span className="text-sm text-[var(--sea-ink-soft)]">
                 Installed {new Date(asset.installedAt).toLocaleDateString()}
@@ -150,6 +155,7 @@ function BoatAssetDetailPage() {
         </header>
 
         <section className="mb-8">
+          <AssetSuggestionsSection asset={asset} onChange={load} />
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--sea-ink-soft)]">
             Documents
           </h2>

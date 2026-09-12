@@ -86,16 +86,22 @@ export function formatTripListDuration(
 
   if (days >= 14) {
     const weeks = Math.round(days / 7)
-    return formatCountLabel(weeks, labels?.week ?? {
-      one: '{count} week',
-      other: '{count} weeks',
-    })
+    return formatCountLabel(
+      weeks,
+      labels?.week ?? {
+        one: '{count} week',
+        other: '{count} weeks',
+      },
+    )
   }
   if (days >= 1) {
-    return formatCountLabel(days, labels?.day ?? {
-      one: '{count} day',
-      other: '{count} days',
-    })
+    return formatCountLabel(
+      days,
+      labels?.day ?? {
+        one: '{count} day',
+        other: '{count} days',
+      },
+    )
   }
   if (hours >= 1) {
     return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`

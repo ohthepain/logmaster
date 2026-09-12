@@ -111,7 +111,8 @@ const catalog: TranslationCatalog = {
   tracks: 'Tracks',
   timelineTracks: 'Tracks da linha do tempo',
   showOnTimeline: 'Mostrar na linha do tempo',
-  noGraphDataForSelectedTracks: 'Sem dados de gráfico para os tracks selecionados.',
+  noGraphDataForSelectedTracks:
+    'Sem dados de gráfico para os tracks selecionados.',
   logEntries: 'Entradas do diário',
   media: 'Media',
   logShort: 'Diário',

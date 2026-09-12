@@ -238,7 +238,9 @@ export function ResourceMembersTab({
       ) : null}
 
       {members.length === 0 && pendingInvites.length === 0 ? (
-        <p className="text-sm text-[var(--sea-ink-soft)]">{t('noMembersYet')}</p>
+        <p className="text-sm text-[var(--sea-ink-soft)]">
+          {t('noMembersYet')}
+        </p>
       ) : (
         <ul className="m-0 list-none space-y-2 p-0">
           {members.map((member) => {

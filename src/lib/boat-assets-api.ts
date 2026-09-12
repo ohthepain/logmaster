@@ -9,6 +9,12 @@ import type {
   DocumentPurpose,
 } from '../domain/boat-assets'
 import { apiUrl } from './app-origin'
+import type {
+  AssetCategory,
+  AssetConnectionSuggestion,
+  AssetIdentification,
+  AssetResearch,
+} from '../domain/asset-intelligence'
 import {
   createBoatDocumentUpload,
   createBoatDocumentLink,
@@ -24,7 +30,9 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     credentials: 'include',
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      ...(init?.body instanceof FormData
+        ? {}
+        : { 'Content-Type': 'application/json' }),
       ...init?.headers,
     },
   })
@@ -61,15 +69,23 @@ export async function createBoatAsset(
   input: {
     name: string
     description?: string | null
+    modelNumber?: string | null
+    category?: AssetCategory | null
+    suggestedDownloads?: AssetResearch['downloads']
+    confirmedConnections?: AssetConnectionSuggestion[]
     ownership: AssetOwnership
     ownedByUserId?: string | null
     onLoanFromUserId?: string | null
     installedAt?: string | null
   },
+  photo?: File,
 ): Promise<BoatAsset> {
+  const form = new FormData()
+  form.append('data', JSON.stringify(input))
+  if (photo) form.append('photo', photo)
   const data = await api<{ asset: BoatAsset }>(`/api/boats/${boatId}/assets`, {
     method: 'POST',
-    body: JSON.stringify(input),
+    body: photo ? form : JSON.stringify(input),
   })
   return data.asset
 }
@@ -80,6 +96,8 @@ export async function updateBoatAsset(
   input: Partial<{
     name: string
     description: string | null
+    modelNumber: string | null
+    category: AssetCategory | null
     ownership: AssetOwnership
     ownedByUserId: string | null
     onLoanFromUserId: string | null
@@ -91,6 +109,65 @@ export async function updateBoatAsset(
     { method: 'PATCH', body: JSON.stringify(input) },
   )
   return data.asset
+}
+
+export async function identifyAssetPhoto(
+  boatId: string,
+  photo: File,
+  signal?: AbortSignal,
+): Promise<AssetIdentification> {
+  const form = new FormData()
+  form.append('photo', photo)
+  const data = await api<{ identification: AssetIdentification }>(
+    `/api/boats/${boatId}/assets/identify`,
+    { method: 'POST', body: form, signal },
+  )
+  return data.identification
+}
+
+export async function researchNewAsset(
+  boatId: string,
+  input: { name: string; description: string; modelNumber: string | null },
+  signal?: AbortSignal,
+): Promise<AssetResearch> {
+  const data = await api<{ research: AssetResearch }>(
+    `/api/boats/${boatId}/assets/research`,
+    { method: 'POST', body: JSON.stringify(input), signal },
+  )
+  return data.research
+}
+
+export async function downloadAssetSuggestion(
+  boatId: string,
+  assetId: string,
+  suggestionId: string,
+) {
+  return api<{ documentId: string }>(
+    `/api/boats/${boatId}/assets/${assetId}/suggestions/${suggestionId}/download`,
+    { method: 'POST' },
+  )
+}
+
+export async function dismissAssetSuggestion(
+  boatId: string,
+  assetId: string,
+  suggestionId: string,
+) {
+  return api(
+    `/api/boats/${boatId}/assets/${assetId}/suggestions/${suggestionId}`,
+    { method: 'DELETE' },
+  )
+}
+
+export async function removeAssetConnection(
+  boatId: string,
+  assetId: string,
+  connectionId: string,
+) {
+  return api(
+    `/api/boats/${boatId}/assets/${assetId}/connections/${connectionId}`,
+    { method: 'DELETE' },
+  )
 }
 
 export async function deleteBoatAsset(

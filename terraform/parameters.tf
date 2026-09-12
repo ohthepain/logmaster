@@ -40,6 +40,12 @@ locals {
     local.account_aisstream_api_key_value != "" ? local.account_aisstream_api_key_value : " "
   )
 
+  ssm_openai_api_key_initial = (
+    trimspace(try(local.legacy_app_json["OPENAI_API_KEY"], "")) != "" ?
+    local.legacy_app_json["OPENAI_API_KEY"] :
+    local.account_openai_api_key_value != "" ? local.account_openai_api_key_value : " "
+  )
+
   ssm_apns_key_initial = (
     trimspace(try(local.legacy_app_json["APNS_KEY"], "")) != "" ?
     local.legacy_app_json["APNS_KEY"] :
@@ -90,6 +96,11 @@ data "aws_ssm_parameter" "account_aisstream_api_key" {
   name  = var.aisstream_api_key_parameter_name
 }
 
+data "aws_ssm_parameter" "account_openai_api_key" {
+  count = var.openai_api_key_parameter_name != "" ? 1 : 0
+  name  = var.openai_api_key_parameter_name
+}
+
 data "aws_ssm_parameter" "account_apns_key" {
   count = !var.bootstrap_from_legacy_secrets_manager && var.apns_key_parameter_name != "" ? 1 : 0
   name  = var.apns_key_parameter_name
@@ -100,6 +111,7 @@ locals {
   account_google_client_secret_value = try(data.aws_ssm_parameter.account_google_client_secret[0].value, "")
   account_maptiler_api_key_value     = try(data.aws_ssm_parameter.account_maptiler_api_key[0].value, "")
   account_aisstream_api_key_value    = try(data.aws_ssm_parameter.account_aisstream_api_key[0].value, "")
+  account_openai_api_key_value       = try(data.aws_ssm_parameter.account_openai_api_key[0].value, "")
   account_apns_key_value             = try(data.aws_ssm_parameter.account_apns_key[0].value, "")
 }
 
@@ -199,6 +211,20 @@ resource "aws_ssm_parameter" "aisstream_api_key" {
 
   tags = {
     Name = "${local.name_prefix}-aisstream-api-key"
+  }
+}
+
+resource "aws_ssm_parameter" "openai_api_key" {
+  name  = "${local.ssm_env_prefix}/OPENAI_API_KEY"
+  type  = "SecureString"
+  value = local.ssm_openai_api_key_initial
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+
+  tags = {
+    Name = "${local.name_prefix}-openai-api-key"
   }
 }
 

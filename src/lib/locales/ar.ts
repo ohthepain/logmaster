@@ -82,8 +82,7 @@ const catalog: TranslationCatalog = {
   routeOptions: 'خيارات المسار',
   routeOptionsFor: 'خيارات المسار {name}',
   newTrip: 'رحلة جديدة',
-  importTripOrRoute:
-    'استيراد رحلة أو مسار (Shift+نقرة لمجلد تصدير OpenCPN)',
+  importTripOrRoute: 'استيراد رحلة أو مسار (Shift+نقرة لمجلد تصدير OpenCPN)',
   importGpxFromUrl: 'استيراد GPX من رابط',
   zoomIn: 'تكبير',
   zoomOut: 'تصغير',
@@ -116,8 +115,7 @@ const catalog: TranslationCatalog = {
   media: 'الوسائط',
   logShort: 'السجل',
   timeZoom: 'تكبير الوقت {value}×',
-  plannedRouteOverlayHint:
-    'اعرض مسارًا مخططًا فوق خريطة الرحلة دون تغيير السجل.',
+  plannedRouteOverlayHint: 'اعرض مسارًا مخططًا فوق خريطة الرحلة دون تغيير السجل.',
   hideOverlay: 'إخفاء الطبقة',
   hideTripInfo: 'إخفاء معلومات الرحلة',
   showTripInfo: 'إظهار معلومات الرحلة',
@@ -201,8 +199,7 @@ const catalog: TranslationCatalog = {
   addLabel: 'إضافة تسمية',
   editLabel: 'تعديل التسمية',
   addOrganization: 'إضافة منظمة',
-  noDocumentsYet:
-    'لا توجد مستندات بعد. ارفع ملفًا أو أضف رابطًا للبدء.',
+  noDocumentsYet: 'لا توجد مستندات بعد. ارفع ملفًا أو أضف رابطًا للبدء.',
   noPhotosYet: 'لا توجد صور بعد. أضف صورة لعرضها هنا.',
   noAssetsYet: 'لا توجد أصول مسجّلة بعد.',
   noMembersYet: 'لا يوجد أعضاء بعد.',

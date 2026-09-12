@@ -64,7 +64,8 @@ const catalog: TranslationCatalog = {
   openNotificationSettings: 'Benachrichtigungen öffnen',
   allNotificationsPaused: 'Alle Benachrichtigungen pausiert',
   allNotificationsResumed: 'Alle Benachrichtigungen fortgesetzt',
-  failedToUpdateNotifications: 'Benachrichtigungen konnten nicht aktualisiert werden',
+  failedToUpdateNotifications:
+    'Benachrichtigungen konnten nicht aktualisiert werden',
   tripCountOne: '{count} Törn',
   tripCountOther: '{count} Törns',
   boatCountOne: '{count} Boot',
@@ -111,7 +112,8 @@ const catalog: TranslationCatalog = {
   tracks: 'Tracks',
   timelineTracks: 'Zeitachsen-Tracks',
   showOnTimeline: 'Auf der Zeitachse anzeigen',
-  noGraphDataForSelectedTracks: 'Keine Grafikdaten für die ausgewählten Tracks.',
+  noGraphDataForSelectedTracks:
+    'Keine Grafikdaten für die ausgewählten Tracks.',
   logEntries: 'Logbucheinträge',
   media: 'Medien',
   logShort: 'Log',
@@ -158,8 +160,10 @@ const catalog: TranslationCatalog = {
   loadingBoat: 'Boot wird geladen…',
   loadingBoats: 'Boote werden geladen…',
   loadingOrganizations: 'Organisationen werden geladen…',
-  signInToManageOrgs: 'Melde dich an, um deine Organisationen zu sehen und zu verwalten.',
-  signInToManageBoats: 'Melde dich an, um deine Boote zu erstellen und zu verwalten.',
+  signInToManageOrgs:
+    'Melde dich an, um deine Organisationen zu sehen und zu verwalten.',
+  signInToManageBoats:
+    'Melde dich an, um deine Boote zu erstellen und zu verwalten.',
   noTripsYet: 'Noch keine Törns',
   noTripsYetDescription:
     'Starte eine Segelsession oder importiere einen GPX- oder Signal-K-Track, um deinen ersten Törn zu erstellen.',

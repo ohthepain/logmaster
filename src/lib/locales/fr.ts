@@ -212,7 +212,8 @@ const catalog: TranslationCatalog = {
   noOwnersAssigned: 'Aucun propriétaire attribué',
   noBoatsInOrg: 'Pas encore de bateaux dans cette organisation.',
   noBoatsYet: 'Pas encore de bateaux',
-  noBoatsYetDescription: 'Ajoutez votre premier bateau avec un nom et des photos.',
+  noBoatsYetDescription:
+    'Ajoutez votre premier bateau avec un nom et des photos.',
   noOrganizationsYet: "Pas encore d'organisations",
   noOrganizationsYetDescription:
     'Créez une organisation pour partager bateaux, documents et membres.',

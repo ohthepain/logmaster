@@ -111,7 +111,8 @@ const catalog: TranslationCatalog = {
   tracks: 'Ίχνη',
   timelineTracks: 'Ίχνη χρονολογίου',
   showOnTimeline: 'Εμφάνιση στο χρονολόγιο',
-  noGraphDataForSelectedTracks: 'Δεν υπάρχουν δεδομένα γραφήματος για τα επιλεγμένα ίχνη.',
+  noGraphDataForSelectedTracks:
+    'Δεν υπάρχουν δεδομένα γραφήματος για τα επιλεγμένα ίχνη.',
   logEntries: 'Καταχωρίσεις ημερολογίου',
   media: 'Πολυμέσα',
   logShort: 'Ημερ.',
@@ -158,8 +159,10 @@ const catalog: TranslationCatalog = {
   loadingBoat: 'Φόρτωση σκάφους…',
   loadingBoats: 'Φόρτωση σκαφών…',
   loadingOrganizations: 'Φόρτωση οργανισμών…',
-  signInToManageOrgs: 'Συνδέσου για να δεις και να διαχειριστείς τους οργανισμούς σου.',
-  signInToManageBoats: 'Συνδέσου για να δημιουργήσεις και να διαχειριστείς τα σκάφη σου.',
+  signInToManageOrgs:
+    'Συνδέσου για να δεις και να διαχειριστείς τους οργανισμούς σου.',
+  signInToManageBoats:
+    'Συνδέσου για να δημιουργήσεις και να διαχειριστείς τα σκάφη σου.',
   noTripsYet: 'Δεν υπάρχουν ακόμη ταξίδια',
   noTripsYetDescription:
     'Ξεκίνα μια ιστιοπλοϊκή συνεδρία ή εισήγαγε ένα ίχνος GPX ή Signal K για να δημιουργήσεις το πρώτο σου ταξίδι.',
@@ -203,7 +206,8 @@ const catalog: TranslationCatalog = {
   addOrganization: 'Προσθήκη οργανισμού',
   noDocumentsYet:
     'Δεν υπάρχουν ακόμη έγγραφα. Μεταφόρτωσε ένα αρχείο ή πρόσθεσε έναν σύνδεσμο για να ξεκινήσεις.',
-  noPhotosYet: 'Δεν υπάρχουν ακόμη φωτογραφίες. Πρόσθεσε μία για να εμφανιστεί εδώ.',
+  noPhotosYet:
+    'Δεν υπάρχουν ακόμη φωτογραφίες. Πρόσθεσε μία για να εμφανιστεί εδώ.',
   noAssetsYet: 'Δεν έχει καταγραφεί ακόμη εξοπλισμός.',
   noMembersYet: 'Δεν υπάρχουν ακόμη μέλη.',
   noContactsYet:
@@ -211,7 +215,8 @@ const catalog: TranslationCatalog = {
   noOwnersAssigned: 'Δεν έχουν οριστεί ιδιοκτήτες',
   noBoatsInOrg: 'Δεν υπάρχουν ακόμη σκάφη σε αυτόν τον οργανισμό.',
   noBoatsYet: 'Δεν υπάρχουν ακόμη σκάφη',
-  noBoatsYetDescription: 'Πρόσθεσε το πρώτο σου σκάφος με όνομα και φωτογραφίες.',
+  noBoatsYetDescription:
+    'Πρόσθεσε το πρώτο σου σκάφος με όνομα και φωτογραφίες.',
   noOrganizationsYet: 'Δεν υπάρχουν ακόμη οργανισμοί',
   noOrganizationsYetDescription:
     'Δημιούργησε έναν οργανισμό για να μοιράζεσαι σκάφη, έγγραφα και μέλη.',

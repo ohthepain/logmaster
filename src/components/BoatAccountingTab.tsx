@@ -90,7 +90,9 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
       {orgId ? (
         accounting.bankAccounts.length > 0 ? (
           <section>
-            <h2 className="brand-title m-0 mb-3 text-xl">{t('orgBankBalance')}</h2>
+            <h2 className="brand-title m-0 mb-3 text-xl">
+              {t('orgBankBalance')}
+            </h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {accounting.bankAccounts.map((account) => (
                 <div
@@ -198,7 +200,9 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
       {orgId ? (
         <>
           <section>
-            <h2 className="brand-title m-0 mb-3 text-xl">{t('expenseClaims')}</h2>
+            <h2 className="brand-title m-0 mb-3 text-xl">
+              {t('expenseClaims')}
+            </h2>
             {accounting.expenseClaims.length === 0 ? (
               <p className="text-sm text-[var(--sea-ink-soft)]">
                 {t('noExpenseClaims')}
@@ -224,7 +228,9 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
           </section>
 
           <section>
-            <h2 className="brand-title m-0 mb-3 text-xl">{t('transactions')}</h2>
+            <h2 className="brand-title m-0 mb-3 text-xl">
+              {t('transactions')}
+            </h2>
             {accounting.transactions.length === 0 ? (
               <p className="text-sm text-[var(--sea-ink-soft)]">
                 {t('noTransactionsOnBoat')}

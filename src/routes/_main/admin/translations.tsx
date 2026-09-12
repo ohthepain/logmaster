@@ -108,10 +108,10 @@ function TranslationAdminPage() {
                   left.nativeName.localeCompare(right.nativeName, 'en'),
                 )
                 .map(({ code, flag, nativeName }) => (
-                <option key={code} value={code}>
-                  {flag} {nativeName}
-                </option>
-              ))}
+                  <option key={code} value={code}>
+                    {flag} {nativeName}
+                  </option>
+                ))}
             </select>
           </label>
           <label className="flex min-w-64 flex-1 flex-col gap-1 text-sm font-medium text-[var(--sea-ink)]">

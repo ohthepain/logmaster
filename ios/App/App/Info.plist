@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+  <key>NSCameraUsageDescription</key>
+  <string>Take photos to identify boat assets and attach them to your records.</string>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>Choose photos to identify boat assets and attach them to your records.</string>
+  <key>NSPhotoLibraryAddUsageDescription</key>
+  <string>Save photos of your boat assets to your photo library.</string>
 	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>

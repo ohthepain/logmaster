@@ -2,7 +2,7 @@ resource "aws_ecs_cluster" "main" {
   name = "${local.name_prefix}-cluster"
 
   setting {
-    name  = "containerInsights"
+    name = "containerInsights"
     # value = local.is_prod ? "enabled" : "disabled"
     value = "disabled"
   }
@@ -84,6 +84,10 @@ resource "aws_ecs_task_definition" "app" {
         {
           name      = "AISSTREAM_API_KEY"
           valueFrom = aws_ssm_parameter.aisstream_api_key.arn
+        },
+        {
+          name      = "OPENAI_API_KEY"
+          valueFrom = aws_ssm_parameter.openai_api_key.arn
         },
         {
           name      = "APNS_KEY"

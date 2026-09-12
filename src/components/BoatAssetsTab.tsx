@@ -1,9 +1,12 @@
 import { Link } from '@tanstack/react-router'
 import { Plus, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
 import { toast } from 'sonner'
 import { AssetDocumentsSection } from './AssetDocumentsSection'
+import { AddAssetModal } from './AddAssetModal'
+import { AssetSuggestionsSection } from './AssetSuggestionsSection'
+import { ASSET_CATEGORIES } from '../domain/asset-intelligence'
+import type { AssetCategory } from '../domain/asset-intelligence'
 import type {
   AssetOwnership,
   AssetWork,
@@ -15,7 +18,6 @@ import { ASSET_WORK_TYPE_LABELS } from '../domain/boat-assets'
 import type { ResourceMember } from '../domain/member-invite'
 import {
   createAssetWork,
-  createBoatAsset,
   deleteBoatAsset,
   fetchAssetWork,
   fetchBoatAssets,
@@ -68,6 +70,12 @@ export function BoatAssetsTab({
     {},
   )
   const [busy, setBusy] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState('All')
+  const visibleAssets = assets.filter(
+    (asset) =>
+      categoryFilter === 'All' ||
+      (asset.category ?? 'Uncategorized') === categoryFilter,
+  )
 
   const load = useCallback(
     async (opts?: { background?: boolean }) => {
@@ -204,13 +212,46 @@ export function BoatAssetsTab({
         }
       />
 
-      {assets.length === 0 ? (
+      <div
+        role="group"
+        aria-label="Filter assets by category"
+        className="mb-4 flex gap-2 overflow-x-auto pb-2"
+      >
+        {['All', ...ASSET_CATEGORIES, 'Uncategorized'].map((category) => (
+          <button
+            key={category}
+            type="button"
+            aria-pressed={categoryFilter === category}
+            onClick={() => setCategoryFilter(category)}
+            className={cn(
+              'shrink-0 rounded-full border border-[var(--chip-line)] px-3 py-2 text-xs font-semibold',
+              categoryFilter === category
+                ? 'bg-[var(--btn-bg)] text-[var(--btn-text)]'
+                : 'bg-[var(--chip-bg)]',
+            )}
+          >
+            {category} (
+            {
+              assets.filter(
+                (asset) =>
+                  category === 'All' ||
+                  (asset.category ?? 'Uncategorized') === category,
+              ).length
+            }
+            )
+          </button>
+        ))}
+      </div>
+
+      {visibleAssets.length === 0 ? (
         <p className="text-sm text-[var(--sea-ink-soft)]">
-          {t('noAssetsYet')}
+          {assets.length
+            ? 'No assets in this category.'
+            : 'No assets recorded yet.'}
         </p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
-          {assets.map((asset) => {
+          {visibleAssets.map((asset) => {
             const expanded = expandedId === asset.id
             const workRecords = workByAsset[asset.id] ?? []
             return (
@@ -237,6 +278,10 @@ export function BoatAssetsTab({
                     <div className="mt-1 flex flex-wrap gap-2">
                       <span className="rounded-full bg-[var(--chip-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
                         {asset.ownerLabel}
+                      </span>
+                      <span className="text-xs text-[var(--sea-ink-soft)]">
+                        {asset.category ?? 'Uncategorized'}
+                        {asset.modelNumber ? ` · ${asset.modelNumber}` : ''}
                       </span>
                       {asset.installedAt ? (
                         <span className="text-xs text-[var(--sea-ink-soft)]">
@@ -301,6 +346,10 @@ export function BoatAssetsTab({
                     </div>
 
                     <div className="mt-4">
+                      <AssetSuggestionsSection
+                        asset={asset}
+                        onChange={() => load({ background: true })}
+                      />
                       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                         <p className="m-0 text-xs font-semibold uppercase tracking-wide text-[var(--sea-ink-soft)]">
                           Documents
@@ -373,7 +422,25 @@ export function BoatAssetsTab({
         </ul>
       )}
 
-      {assetModal.mode !== 'closed' ? (
+      {assetModal.mode === 'create' && (
+        <AddAssetModal
+          boatId={boatId}
+          boatName={boatName}
+          orgName={orgName}
+          members={members}
+          assets={assets}
+          onClose={() => setAssetModal({ mode: 'closed' })}
+          onCreated={(asset) => {
+            setAssets((current) => [...current, asset])
+            setCategoryFilter('All')
+            setExpandedId(asset.id)
+            setAssetModal({ mode: 'closed' })
+            toast.success('Asset added')
+            void load({ background: true })
+          }}
+        />
+      )}
+      {assetModal.mode === 'edit' ? (
         <AssetModal
           boatId={boatId}
           boatName={boatName}
@@ -397,16 +464,6 @@ export function BoatAssetsTab({
                   ),
                 )
                 toast.success('Asset updated')
-              } else {
-                const created = await createBoatAsset(boatId, {
-                  name: input.name!,
-                  description: input.description,
-                  ownership: input.ownership!,
-                  ownedByUserId: input.ownedByUserId,
-                  installedAt: input.installedAt,
-                })
-                setAssets((current) => [...current, created])
-                toast.success('Asset added')
               }
               setAssetModal({ mode: 'closed' })
             } catch (e) {
@@ -475,6 +532,8 @@ function AssetModal({
   onSave: (input: {
     name?: string
     description?: string | null
+    modelNumber?: string | null
+    category?: AssetCategory | null
     ownership?: AssetOwnership
     ownedByUserId?: string | null
     installedAt?: string | null
@@ -482,6 +541,10 @@ function AssetModal({
 }) {
   const [name, setName] = useState(initial?.name ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
+  const [modelNumber, setModelNumber] = useState(initial?.modelNumber ?? '')
+  const [category, setCategory] = useState<AssetCategory | ''>(
+    initial?.category ?? '',
+  )
   const [ownership, setOwnership] = useState<AssetOwnership>(
     initial?.ownership ?? 'BOAT',
   )
@@ -497,6 +560,8 @@ function AssetModal({
     void onSave({
       name: name.trim(),
       description: description.trim() || null,
+      modelNumber: modelNumber.trim() || null,
+      category: category || null,
       ownership,
       ownedByUserId: ownership === 'USER' ? ownedByUserId || null : null,
       installedAt: installedAt ? `${installedAt}T12:00:00.000Z` : null,
@@ -523,6 +588,28 @@ function AssetModal({
             rows={2}
             className="rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2"
           />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-semibold">Model number</span>
+          <input
+            value={modelNumber}
+            maxLength={200}
+            onChange={(e) => setModelNumber(e.target.value)}
+            className="rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-semibold">Category</span>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as AssetCategory | '')}
+            className="rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2"
+          >
+            <option value="">Uncategorized</option>
+            {ASSET_CATEGORIES.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold">Ownership</span>

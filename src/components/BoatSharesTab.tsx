@@ -204,9 +204,12 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
         </div>
       ) : (
         <p className="mb-4 text-sm text-[var(--sea-ink-soft)]">
-          {t(shareCount === 1 ? 'shareCountOnBoatOne' : 'shareCountOnBoatOther', {
-            count: shareCount,
-          })}
+          {t(
+            shareCount === 1 ? 'shareCountOnBoatOne' : 'shareCountOnBoatOther',
+            {
+              count: shareCount,
+            },
+          )}
         </p>
       )}
 

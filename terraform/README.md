@@ -158,12 +158,13 @@ Terraform creates per-environment **SecureString** parameters under `/logmaster/
 | `/logmaster/{env}/AWS_SES_FROM_EMAIL` | `AWS_SES_FROM_EMAIL` |
 | `/logmaster/{env}/MAPTILER_API_KEY` | `MAPTILER_API_KEY` |
 | `/logmaster/{env}/AISSTREAM_API_KEY` | `AISSTREAM_API_KEY` |
+| `/logmaster/{env}/OPENAI_API_KEY` | `OPENAI_API_KEY` |
 | `/logmaster/{env}/APNS_KEY` | `APNS_KEY` |
 | `/logmaster/{env}/APNS_KEY_ID` | `APNS_KEY_ID` |
 | `/logmaster/{env}/APNS_TEAM_ID` | `APNS_TEAM_ID` |
 | `/logmaster/{env}/APNS_BUNDLE_ID` | `APNS_BUNDLE_ID` |
 
-Shared keys (MapTiler, AISStream, Google OAuth, APNS `.p8`) live under `/logmaster/account/*`. Terraform can bootstrap new environments from those account parameters (`*_parameter_name` in tfvars). Do **not** put secret values in tfvars — only parameter **names**.
+Shared keys (MapTiler, AISStream, OpenAI, Google OAuth, APNS `.p8`) live under `/logmaster/account/*`. Terraform can bootstrap new environments from those account parameters (`*_parameter_name` in tfvars). Do **not** put secret values in tfvars — only parameter **names**.
 
 **Cutover from Secrets Manager:** run `./scripts/migrate-secrets-manager-to-ssm.sh {env}` before `terraform apply`, then set `bootstrap_from_legacy_secrets_manager = false` in tfvars after both environments are migrated. See [MIGRATION.md](./MIGRATION.md#ssm-parameter-store-cutover).
 
@@ -175,6 +176,8 @@ Shared keys (MapTiler, AISStream, Google OAuth, APNS `.p8`) live under `/logmast
 **Map tiles on deploy:** ECS reads `MAPTILER_API_KEY` from SSM. If it is empty, `/api/map-style-vector` and `/api/map-tiles/...` return **503**. Either ensure `/logmaster/account/maptiler-api-key` exists and set `maptiler_api_key_parameter_name` in tfvars, or run `./scripts/set-maptiler-secrets.sh production`.
 
 **AIS live layer on deploy:** ECS reads `AISSTREAM_API_KEY` from SSM. If it is empty, `/api/ais/vessels` returns **503**. Either ensure `/logmaster/account/aisstream-api-key` exists and set `aisstream_api_key_parameter_name` in tfvars, or run `./scripts/set-aisstream-secrets.sh staging`.
+
+**Asset identification on deploy:** ECS reads `OPENAI_API_KEY` from SSM. If it is empty, asset photo identification and web research are skipped. Either ensure `/logmaster/account/openai-api-key` exists and set `openai_api_key_parameter_name` in tfvars, or run `./scripts/set-openai-secrets.sh staging`.
 
 **iOS push (APNS) on deploy:** ECS reads `APNS_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_BUNDLE_ID` from SSM, and `APNS_PRODUCTION` from the task environment (defaults to `true` in production, `false` in staging). If `APNS_KEY` is empty, native iOS push is skipped. Either store the `.p8` in `/logmaster/account/apns-key` with tfvars `apns_key_parameter_name`, or run `./scripts/set-apns-secrets.sh production`.
 
