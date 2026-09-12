@@ -18,6 +18,7 @@ import {
   updateNotificationDefaults,
 } from '../lib/notifications-api'
 import { enablePushOnDevice } from './PushNotificationsRegister'
+import { useTranslation } from '../lib/i18n'
 
 type ProfileModalProps = {
   open: boolean
@@ -26,6 +27,7 @@ type ProfileModalProps = {
 }
 
 export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
+  const { t } = useTranslation()
   const session = useSession()
   const user = session.data?.user
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -133,7 +135,7 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
 
   return (
     <Modal
-      title="Profile"
+      title={t('profile')}
       onClose={handleClose}
       devComponentName="ProfileModal"
     >

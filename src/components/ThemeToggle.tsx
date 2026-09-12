@@ -3,14 +3,9 @@ import { useEffect, useState } from 'react'
 import { cn } from '../lib/cn'
 import { DevComponentLabel } from './DevComponentLabel'
 import { TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS } from '../lib/trip-map-overlay'
+import { useTranslation } from '../lib/i18n'
 
 type ThemeMode = 'light' | 'dark' | 'auto'
-
-const OPTIONS: { mode: ThemeMode; label: string; icon: typeof Sun }[] = [
-  { mode: 'light', label: 'Light', icon: Sun },
-  { mode: 'dark', label: 'Dark', icon: Moon },
-  { mode: 'auto', label: 'System (match device)', icon: Monitor },
-]
 
 function getInitialMode(): ThemeMode {
   if (typeof window === 'undefined') {
@@ -47,6 +42,12 @@ export default function ThemeToggle({
   mapOverlay?: boolean
 }) {
   const [mode, setMode] = useState<ThemeMode>('auto')
+  const { t } = useTranslation()
+  const options: { mode: ThemeMode; label: string; icon: typeof Sun }[] = [
+    { mode: 'light', label: t('light'), icon: Sun },
+    { mode: 'dark', label: t('dark'), icon: Moon },
+    { mode: 'auto', label: t('systemTheme'), icon: Monitor },
+  ]
 
   useEffect(() => {
     const initial = getInitialMode()
@@ -82,13 +83,13 @@ export default function ThemeToggle({
         className,
       )}
       role="group"
-      aria-label="Color scheme"
+      aria-label={t('colorScheme')}
     >
       <DevComponentLabel
         name="ThemeToggle"
         className="absolute -top-5 left-0"
       />
-      {OPTIONS.map(({ mode: optionMode, label, icon: Icon }) => {
+      {options.map(({ mode: optionMode, label, icon: Icon }) => {
         const selected = mode === optionMode
         return (
           <button

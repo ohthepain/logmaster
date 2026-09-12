@@ -74,13 +74,20 @@ function PrivacyPage() {
                 before it syncs to our servers.
               </p>
               <p className="m-0 font-medium text-[var(--sea-ink)]">
-                Device and usage information
+                Device and operational information
               </p>
               <p className="m-0">
-                We may collect technical information such as browser type, app
-                version, IP address, and session identifiers for security,
-                debugging, and service operation. Session records may include IP
-                address and user agent when you are signed in.
+                We do not use analytics services, advertising pixels, cookies
+                for tracking, or other tools that follow you across the Service
+                or the web. We do not build marketing profiles or measure
+                product usage for advertising.
+              </p>
+              <p className="m-0">
+                When you are signed in, session records may include technical
+                details such as IP address and user agent so we can keep your
+                account secure and operate the Service. Server request logs may
+                include similar operational metadata for security, debugging,
+                and support. We do not use this information to track you.
               </p>
             </>
           ),
@@ -122,9 +129,12 @@ function PrivacyPage() {
                 <li>
                   protect the Service, investigate abuse, and comply with law;
                 </li>
-                <li>understand usage and fix errors.</li>
+                <li>diagnose errors and keep the Service secure.</li>
               </ul>
-              <p className="m-0">We do not sell your personal information.</p>
+              <p className="m-0">
+                We do not sell your personal information, and we do not track
+                users for analytics or advertising.
+              </p>
             </>
           ),
         },

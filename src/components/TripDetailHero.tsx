@@ -1,4 +1,5 @@
-import { Map, Route as RouteIcon, RotateCw, Sailboat } from 'lucide-react'
+import { Map, Route as RouteIcon, RotateCw, Sailboat, X } from 'lucide-react'
+import { useNavigate } from '@tanstack/react-router'
 import {
   forwardRef,
   useCallback,
@@ -87,6 +88,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
     }: TripDetailHeroProps,
     ref,
   ) {
+    const navigate = useNavigate()
     const isActiveTrip =
       trip.status === 'IN_PROGRESS' || trip.status === 'PLANNED'
     const isPlayback = trip.status === 'COMPLETED'
@@ -475,6 +477,16 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
         <div className="pointer-events-none absolute inset-x-0 top-16 z-40 flex flex-col items-start gap-2 px-3 sm:px-4">
           {!waypointMapInteractionActive ? (
             <div className="pointer-events-auto flex justify-start gap-2">
+              {isPlayback ? (
+                <TripMapChromeButton
+                  label="Close replay and return to map"
+                  onClick={() => void navigate({ to: '/map' })}
+                  disabled={busy}
+                  tooltipSide="bottom"
+                >
+                  <X className="size-4" strokeWidth={2.25} />
+                </TripMapChromeButton>
+              ) : null}
               <TripMapEditMenu
                 tripId={trip.id}
                 disabled={busy}

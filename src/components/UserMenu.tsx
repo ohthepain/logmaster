@@ -3,12 +3,14 @@ import {
   Building2,
   ChevronRight,
   CircleUser,
+  FileText,
   LoaderCircle,
   LogIn,
   LogOut,
   Plus,
   RotateCcw,
   Sailboat,
+  Shield,
   ShieldCheck,
   User,
   X,
@@ -37,6 +39,9 @@ import { DevComponentLabel } from './DevComponentLabel'
 import { useFtue } from './FtueGate'
 import { NotificationControlMenuRow } from './NotificationControlMenuRow'
 import { ProfileModal } from './ProfileModal'
+import { LanguageSelector } from './LanguageSelector'
+import { useTranslation } from '../lib/i18n'
+import type { Language } from '../lib/i18n'
 
 export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
   const session = useSession()
@@ -45,6 +50,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
   const trips = useLogbookStore((state) => state.trips)
   const { resetTutorial } = useFtue()
   const { isAdmin } = useIsAdmin()
+  const { language, t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [photoVersion, setPhotoVersion] = useState(0)
@@ -150,7 +156,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                 ),
           )}
           aria-label={
-            user ? `Profile: ${user.name || user.email}` : 'Profile menu'
+            user ? `${t('profile')}: ${user.name || user.email}` : t('profileMenu')
           }
           aria-haspopup="dialog"
           aria-expanded={open}
@@ -193,13 +199,13 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     id={`${menuId}-title`}
                     className="m-0 text-[2rem] font-extrabold tracking-[-0.035em] text-[var(--sea-ink)]"
                   >
-                    Profile
+                    {t('profile')}
                   </h2>
                   <button
                     type="button"
                     onClick={closeMenu}
                     className="inline-flex size-11 items-center justify-center rounded-full bg-[var(--chip-bg)] text-[var(--sea-ink)] outline-none hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20"
-                    aria-label="Close profile menu"
+                    aria-label={t('closeProfileMenu')}
                     autoFocus
                   >
                     <X className="size-5" aria-hidden />
@@ -221,14 +227,14 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                         />
                         <div className="min-w-0 flex-1">
                           <p className="m-0 truncate text-2xl font-extrabold tracking-[-0.025em] text-[var(--sea-ink)]">
-                            {user?.name || (user ? user.email : 'Sign in')}
+                            {user?.name || (user ? user.email : t('signIn'))}
                           </p>
                           <p className="m-0 mt-2 text-sm font-medium text-[var(--sea-ink-soft)]">
                             {trips.length}{' '}
-                            {trips.length === 1 ? 'trip' : 'trips'}
+                            {language === 'sv' ? 'resor' : trips.length === 1 ? 'trip' : 'trips'}
                           </p>
                           <p className="m-0 mt-3 inline-flex items-center gap-1 text-xs font-bold text-[var(--sea-ink)]">
-                            {user ? 'Edit profile' : 'Open your account'}
+                            {user ? t('editProfile') : t('openYourAccount')}
                             <ChevronRight className="size-3.5" aria-hidden />
                           </p>
                         </div>
@@ -244,12 +250,12 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
 
                     <MenuCard
                       ariaLabel={
-                        trips.length ? 'Manage trips' : 'Open map to add a trip'
+                        trips.length ? t('manageTrips') : t('openMapToAddTrip')
                       }
                       addAction={
                         trips.length
                           ? {
-                              label: 'Add trip',
+                              label: t('addTrip'),
                               onClick: () =>
                                 navigateFromMenu(() => {
                                   void navigate({
@@ -269,8 +275,8 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                       }
                     >
                       <CollectionCardContent
-                        title="Trips"
-                        detail={collectionDetail(trips.length, 'trip')}
+                        title={t('trips')}
+                        detail={collectionDetail(trips.length, language, 'trip', 'resa')}
                         loading={false}
                         empty={trips.length === 0}
                       >
@@ -288,11 +294,11 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     </MenuCard>
 
                     <MenuCard
-                      ariaLabel={boats.length ? 'Manage boats' : 'Add a boat'}
+                      ariaLabel={boats.length ? t('manageBoats') : t('addABoat')}
                       addAction={
                         boats.length
                           ? {
-                              label: 'Add boat',
+                              label: t('addBoat'),
                               onClick: () =>
                                 navigateFromMenu(() => {
                                   void navigate({
@@ -313,8 +319,8 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                       }
                     >
                       <CollectionCardContent
-                        title="Boats"
-                        detail={collectionDetail(boats.length, 'boat')}
+                        title={t('boats')}
+                        detail={collectionDetail(boats.length, language, 'boat', 'båt')}
                         loading={loadingCollections}
                         empty={boats.length === 0}
                       >
@@ -337,12 +343,12 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
 
                     <MenuCard
                       ariaLabel={
-                        crew?.members.length ? 'Manage crew' : 'Add crew'
+                        crew?.members.length ? t('manageCrew') : t('addCrew')
                       }
                       addAction={
                         crew?.members.length
                           ? {
-                              label: 'Add crew member',
+                              label: t('addCrewMember'),
                               onClick: () =>
                                 navigateFromMenu(() => {
                                   void navigate({
@@ -365,10 +371,12 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                       }
                     >
                       <CollectionCardContent
-                        title="Crew"
+                        title={t('crew')}
                         detail={collectionDetail(
                           crew?.members.length ?? 0,
+                          language,
                           'member',
+                          'medlem',
                         )}
                         loading={loadingCollections}
                         empty={!crew?.members.length}
@@ -378,14 +386,14 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     </MenuCard>
 
                     <MenuCard
-                      ariaLabel="Connections, coming soon"
+                      ariaLabel={`${t('connections')}, ${t('comingSoon').toLowerCase()}`}
                       onClick={() =>
-                        toast.message('Connections are coming soon')
+                        toast.message(t('connectionsComingSoon'))
                       }
                     >
                       <CollectionCardContent
-                        title="Connections"
-                        detail="Coming soon"
+                        title={t('connections')}
+                        detail={t('comingSoon')}
                         empty
                         loading={false}
                       />
@@ -393,13 +401,13 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                   </div>
 
                   <nav
-                    aria-label="Account options"
+                    aria-label={t('accountOptions')}
                     className="mt-7 border-t border-[var(--line)] pt-2"
                   >
                     {user ? (
                       <TextMenuButton
                         icon={<Building2 className="size-5" />}
-                        label="Orgs"
+                        label={t('orgs')}
                         onClick={() =>
                           navigateFromMenu(() => void navigate({ to: '/orgs' }))
                         }
@@ -408,7 +416,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     {isAdmin ? (
                       <TextMenuButton
                         icon={<ShieldCheck className="size-5" />}
-                        label="Admin"
+                        label={t('admin')}
                         onClick={() =>
                           navigateFromMenu(
                             () => void navigate({ to: '/admin' }),
@@ -418,18 +426,34 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     ) : null}
                     <TextMenuButton
                       icon={<RotateCcw className="size-5" />}
-                      label="Reset tutorial"
+                      label={t('resetTutorial')}
                       onClick={() => {
                         setOpen(false)
                         void resetTutorial().then(() =>
-                          toast.message('Tutorial reset'),
+                          toast.message(t('tutorialReset')),
                         )
                       }}
+                    />
+                    <TextMenuButton
+                      icon={<FileText className="size-5" />}
+                      label={t('termsOfService')}
+                      onClick={() =>
+                        navigateFromMenu(() => void navigate({ to: '/terms' }))
+                      }
+                    />
+                    <TextMenuButton
+                      icon={<Shield className="size-5" />}
+                      label={t('privacyPolicy')}
+                      onClick={() =>
+                        navigateFromMenu(
+                          () => void navigate({ to: '/privacy' }),
+                        )
+                      }
                     />
                     {user ? (
                       <TextMenuButton
                         icon={<LogOut className="size-5" />}
-                        label="Sign out"
+                        label={t('signOut')}
                         showChevron={false}
                         onClick={() => {
                           setOpen(false)
@@ -439,11 +463,15 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     ) : (
                       <TextMenuButton
                         icon={<LogIn className="size-5" />}
-                        label="Sign in"
+                        label={t('signIn')}
                         onClick={openProfile}
                       />
                     )}
                   </nav>
+
+                  <div className="mt-3 px-2 py-2">
+                    <LanguageSelector />
+                  </div>
 
                   <p className="m-0 mt-5 text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--sea-ink-soft)]">
                     {buildFooter}
@@ -522,6 +550,7 @@ function CollectionCardContent({
   empty: boolean
   children?: ReactNode
 }) {
+  const { t } = useTranslation()
   return (
     <div className="flex size-full flex-col p-4 sm:p-5">
       <div className="flex min-h-0 flex-1 items-center justify-center">
@@ -542,7 +571,7 @@ function CollectionCardContent({
           {title}
         </p>
         <p className="m-0 mt-0.5 truncate text-[11px] font-medium text-[var(--sea-ink-soft)] sm:text-xs">
-          {loading ? 'Loading…' : detail}
+          {loading ? t('loading') : detail}
         </p>
       </div>
     </div>
@@ -697,6 +726,12 @@ function TextMenuButton({
   )
 }
 
-function collectionDetail(count: number, singular: string): string {
-  return `${count} ${count === 1 ? singular : `${singular}s`}`
+function collectionDetail(
+  count: number,
+  language: Language,
+  englishSingular: string,
+  swedishSingular: string,
+): string {
+  if (language === 'sv') return `${count} ${swedishSingular}${count === 1 ? '' : 'ar'}`
+  return `${count} ${count === 1 ? englishSingular : `${englishSingular}s`}`
 }

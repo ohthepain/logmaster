@@ -1,5 +1,5 @@
 /** Public legal pages — stable URLs for app store listings and in-app links. */
-export const LEGAL_LAST_UPDATED = 'July 9, 2026'
+export const LEGAL_LAST_UPDATED = 'September 12, 2026'
 
 export const LEGAL_CONTACT_EMAIL = 'privacy@logmaster.live'
 
