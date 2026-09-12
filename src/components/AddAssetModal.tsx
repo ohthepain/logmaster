@@ -9,11 +9,14 @@ import type { AssetOwnership, BoatAsset } from '../domain/boat-assets'
 import type { ResourceMember } from '../domain/member-invite'
 import {
   createBoatAsset,
+  fetchAssetResearchJob,
   identifyAssetPhoto,
-  researchNewAsset,
+  startAssetResearchJob,
   updateBoatAsset,
   uploadAndLinkAssetDocument,
 } from '../lib/boat-assets-api'
+import { useTranslation } from '../lib/i18n'
+import { AssetLinkTitle, AssetLinkTypeTag } from './AssetLinkRowParts'
 
 export type ListedBoatAsset = Pick<
   BoatAsset,
@@ -78,10 +81,10 @@ export function AddAssetModal({
   onUpdated: (asset: BoatAsset) => void
   onOpenExisting: (asset: ListedBoatAsset) => void
 }) {
+  const { t } = useTranslation()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [modelNumber, setModelNumber] = useState('')
-  const [modelReviewed, setModelReviewed] = useState(true)
   const [category, setCategory] = useState<AssetCategory | ''>('')
   const [ownership, setOwnership] = useState<AssetOwnership>('BOAT')
   const [ownedByUserId, setOwnedByUserId] = useState('')
@@ -89,25 +92,33 @@ export function AddAssetModal({
   const [photo, setPhoto] = useState<File>()
   const [preview, setPreview] = useState('')
   const [status, setStatus] = useState<
-    'idle' | 'camera' | 'identifying' | 'researching' | 'saving'
+    'idle' | 'camera' | 'identifying' | 'saving'
   >('idle')
   const [notice, setNotice] = useState('')
   const [research, setResearch] = useState<AssetResearch | null>(null)
+  const [researchJobId, setResearchJobId] = useState<string | null>(null)
+  const [researchJobActive, setResearchJobActive] = useState(false)
   const [confirmed, setConfirmed] = useState<string[]>([])
   const [existingMatch, setExistingMatch] = useState<ListedBoatAsset | null>(
     null,
   )
   const input = useRef<HTMLInputElement>(null)
   const request = useRef<AbortController | null>(null)
-  const researchRequest = useRef<AbortController | null>(null)
+  const researchPoll = useRef<AbortController | null>(null)
   const blocking =
     status === 'camera' || status === 'identifying' || status === 'saving'
 
-  function rememberMatch(nextName: string, nextModel: string | null) {
+  function syncExistingMatch(identity?: {
+    name?: string
+    modelNumber?: string | null
+  }) {
     setExistingMatch(
       findExistingBoatAsset(assets, {
-        name: nextName,
-        modelNumber: nextModel,
+        name: identity?.name ?? name,
+        modelNumber:
+          identity?.modelNumber !== undefined
+            ? identity.modelNumber
+            : modelNumber.trim() || null,
       }),
     )
   }
@@ -115,10 +126,64 @@ export function AddAssetModal({
   useEffect(
     () => () => {
       request.current?.abort()
-      researchRequest.current?.abort()
+      researchPoll.current?.abort()
     },
     [],
   )
+
+  useEffect(() => {
+    if (!researchJobId) return
+    const activeJobId: string = researchJobId
+    let cancelled = false
+    researchPoll.current?.abort()
+    const controller = new AbortController()
+    researchPoll.current = controller
+
+    async function poll() {
+      try {
+        const job = await fetchAssetResearchJob(
+          boatId,
+          activeJobId,
+          controller.signal,
+        )
+        if (controller.signal.aborted || cancelled) return
+        if (job.status === 'completed' && job.result) {
+          setResearch(job.result)
+          if (job.result.category) setCategory(job.result.category)
+          setResearchJobActive(false)
+          if (
+            !job.result.downloads.length &&
+            !job.result.connections.length
+          ) {
+            setNotice(t('addAssetNoResearchResults'))
+          }
+        } else if (job.status === 'failed') {
+          setResearchJobActive(false)
+          setNotice(
+            job.error ?? t('addAssetSuggestionsUnavailable'),
+          )
+        } else {
+          setResearchJobActive(true)
+        }
+      } catch (error) {
+        if (controller.signal.aborted || cancelled) return
+        setResearchJobActive(false)
+        setNotice(
+          error instanceof Error
+            ? error.message
+            : t('addAssetSuggestionsUnavailable'),
+        )
+      }
+    }
+
+    void poll()
+    const interval = window.setInterval(() => void poll(), 2000)
+    return () => {
+      cancelled = true
+      controller.abort()
+      window.clearInterval(interval)
+    }
+  }, [boatId, researchJobId, t])
   useEffect(() => {
     if (!photo) {
       setPreview('')
@@ -130,49 +195,63 @@ export function AddAssetModal({
   }, [photo])
 
   function invalidateResearch() {
-    researchRequest.current?.abort()
-    researchRequest.current = null
+    researchPoll.current?.abort()
+    researchPoll.current = null
     setResearch(null)
+    setResearchJobId(null)
+    setResearchJobActive(false)
     setConfirmed([])
-    setStatus((current) => (current === 'researching' ? 'idle' : current))
   }
 
-  async function identify(file: File) {
+  function attachPhoto(file: File) {
     if (!file.size || file.size > 15 * 1024 * 1024) {
-      setNotice('Choose a photo smaller than 15 MB.')
+      setNotice(t('addAssetPhotoTooLarge'))
+      return
+    }
+    request.current?.abort()
+    setPhoto(file)
+    setExistingMatch(null)
+    invalidateResearch()
+    setNotice('')
+  }
+
+  async function autoIdentify() {
+    if (!photo) return
+    if (!photo.size || photo.size > 15 * 1024 * 1024) {
+      setNotice(t('addAssetPhotoTooLarge'))
       return
     }
     request.current?.abort()
     const controller = new AbortController()
     request.current = controller
-    setPhoto(file)
-    setModelNumber('')
-    setModelReviewed(false)
     setExistingMatch(null)
     invalidateResearch()
     setNotice('')
     setStatus('identifying')
     try {
-      const result = await identifyAssetPhoto(boatId, file, controller.signal)
+      const result = await identifyAssetPhoto(boatId, photo, controller.signal)
       if (controller.signal.aborted) return
       setName(result.name)
       setDescription(result.description)
       setModelNumber(result.modelNumber ?? '')
       setCategory(result.category ?? '')
-      rememberMatch(result.name, result.modelNumber)
+      syncExistingMatch({
+        name: result.name,
+        modelNumber: result.modelNumber,
+      })
       setNotice(
         result.confidence === 'low'
-          ? 'The photo could not be identified confidently. Describe the asset and confirm a model number, or choose “No model number”.'
+          ? t('addAssetIdentifyLowConfidence')
           : result.modelNumber
-            ? 'Check the model number against the label before confirming.'
-            : 'No model number was found. Describe the asset, or enter a model number if you know it.',
+            ? t('addAssetIdentifyCheckModel')
+            : t('addAssetIdentifyNoModelFound'),
       )
     } catch (error) {
       if (!controller.signal.aborted)
         setNotice(
           error instanceof Error
             ? error.message
-            : 'Identification failed. Enter the details manually; your photo will still be attached.',
+            : t('addAssetIdentifyFailedFallback'),
         )
     } finally {
       if (!controller.signal.aborted) setStatus('idle')
@@ -198,76 +277,43 @@ export function AddAssetModal({
       if (result.webPath) {
         const response = await fetch(result.webPath)
         const blob = await response.blob()
-        await identify(
+        attachPhoto(
           new File([blob], 'asset-photo.jpg', {
             type: blob.type || 'image/jpeg',
           }),
         )
+        setStatus('idle')
       } else setStatus('idle')
     } catch (error) {
       setStatus('idle')
       if (!/cancel/i.test(String(error)))
         setNotice(
-          'Camera unavailable. Check camera permissions or choose an existing photo.',
+          t('addAssetCameraUnavailable'),
         )
     }
   }
 
-  function confirmModel(model: string | null) {
-    setModelNumber(model ?? '')
-    setModelReviewed(true)
-    invalidateResearch()
-    const match = findExistingBoatAsset(assets, {
-      name,
-      modelNumber: model,
-    })
-    setExistingMatch(match)
-    if (match) return
-    setNotice('')
-  }
-
-  async function findSuggestions(model: string | null) {
+  async function findSuggestions(model: string) {
     if (!(name.trim() || description.trim())) {
-      setNotice(
-        'Enter a name or description, then tap Find documents. You can also save without documents.',
-      )
+      setNotice(t('addAssetEnterNameForResearch'))
       return
     }
-    researchRequest.current?.abort()
-    const controller = new AbortController()
-    researchRequest.current = controller
-    setResearch(null)
-    setConfirmed([])
-    setStatus('researching')
+    invalidateResearch()
     setNotice('')
     try {
-      const result = await researchNewAsset(
-        boatId,
-        {
-          name: name.trim() || description.trim().slice(0, 200),
-          description,
-          modelNumber: model,
-        },
-        controller.signal,
-      )
-      if (controller.signal.aborted) return
-      setResearch(result)
-      if (result.category) setCategory(result.category)
-      if (!result.downloads.length && !result.connections.length)
-        setNotice(
-          'No relevant documents or likely connections were found. You can still add this asset.',
-        )
+      const { jobId } = await startAssetResearchJob(boatId, {
+        name: name.trim() || description.trim().slice(0, 200),
+        description,
+        modelNumber: model,
+      })
+      setResearchJobId(jobId)
+      setResearchJobActive(true)
     } catch (error) {
-      if (!controller.signal.aborted)
-        setNotice(
-          error instanceof Error
-            ? error.message
-            : 'Suggestions are unavailable. You can still save the asset.',
-        )
-    } finally {
-      if (!controller.signal.aborted) {
-        setStatus((current) => (current === 'researching' ? 'idle' : current))
-      }
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : t('addAssetSuggestionsUnavailable'),
+      )
     }
   }
 
@@ -310,7 +356,7 @@ export function AddAssetModal({
       setNotice(
         error instanceof Error
           ? error.message
-          : 'Could not update the existing asset. Please retry.',
+          : t('addAssetUpdateExistingFailed'),
       )
       setStatus('idle')
     }
@@ -318,34 +364,34 @@ export function AddAssetModal({
 
   const statusLabel =
     status === 'identifying'
-      ? 'Identifying the device and reading its label…'
+      ? t('addAssetStatusIdentifying')
       : status === 'saving'
-          ? existingMatch
-            ? 'Updating the existing asset…'
-            : 'Saving asset and photo…'
-          : status === 'camera'
-            ? 'Opening camera…'
-            : null
+        ? existingMatch
+          ? t('addAssetStatusUpdating')
+          : t('addAssetStatusSaving')
+        : status === 'camera'
+          ? t('addAssetStatusOpeningCamera')
+          : null
 
   return (
     <Modal
-      title="Add asset"
+      title={t('addAsset')}
+      showKicker={false}
+      devComponentName="AddAssetModal"
       closeOnOutside={false}
       onClose={() => {
         if (status !== 'saving') {
           request.current?.abort()
-          researchRequest.current?.abort()
           onClose()
         }
       }}
     >
       <form
         className="space-y-4"
-        aria-busy={blocking || status === 'researching'}
+        aria-busy={blocking}
         onSubmit={(event) => {
           event.preventDefault()
-          if (blocking || existingMatch || !modelReviewed) return
-          researchRequest.current?.abort()
+          if (blocking || existingMatch) return
           setStatus('saving')
           void createBoatAsset(
             boatId,
@@ -363,6 +409,7 @@ export function AddAssetModal({
                 research?.connections.filter((item) =>
                   confirmed.includes(item.assetId),
                 ) ?? [],
+              researchJobId: researchJobId ?? undefined,
             },
             photo,
           )
@@ -371,7 +418,7 @@ export function AddAssetModal({
               setNotice(
                 error instanceof Error
                   ? error.message
-                  : 'Could not save asset. Please retry.',
+                  : t('addAssetSaveFailed'),
               )
               setStatus('idle')
             })
@@ -394,17 +441,14 @@ export function AddAssetModal({
             role="status"
             className="space-y-3 rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] p-4"
           >
-            <p className="m-0 font-semibold">
-              This equipment is already on the boat.
-            </p>
+            <p className="m-0 font-semibold">{t('addAssetExistingOnBoat')}</p>
             <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
               {existingMatch.name}
               {existingMatch.modelNumber
                 ? ` · ${existingMatch.modelNumber}`
                 : ''}
-              {existingMatch.category ? ` · ${existingMatch.category}` : ''}.
-              Open the existing record, overwrite it with these details, merge
-              the new information, or close.
+              {existingMatch.category ? ` · ${existingMatch.category}` : ''}.{' '}
+              {t('addAssetExistingOnBoatHelp')}
             </p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -412,24 +456,24 @@ export function AddAssetModal({
                 className="rounded-full bg-[var(--btn-bg)] px-3 py-2 text-sm font-semibold text-[var(--btn-text)]"
                 onClick={() => onOpenExisting(existingMatch)}
               >
-                Open
+                {t('open')}
               </button>
               <button
                 type="button"
                 className={buttonClass}
                 onClick={() => void applyExisting('overwrite')}
               >
-                Overwrite
+                {t('overwrite')}
               </button>
               <button
                 type="button"
                 className={buttonClass}
                 onClick={() => void applyExisting('merge')}
               >
-                Merge
+                {t('merge')}
               </button>
               <button type="button" className={buttonClass} onClick={onClose}>
-                Close
+                {t('close')}
               </button>
             </div>
           </div>
@@ -445,7 +489,9 @@ export function AddAssetModal({
               className={`${buttonClass} inline-flex items-center gap-2`}
             >
               <CameraIcon className="size-5" />
-              {Capacitor.isNativePlatform() ? 'Take a photo' : 'Select photo'}
+              {Capacitor.isNativePlatform()
+                ? t('addAssetTakePhoto')
+                : t('addAssetSelectPhoto')}
             </button>
             {Capacitor.isNativePlatform() && (
               <button
@@ -453,7 +499,7 @@ export function AddAssetModal({
                 className={`${buttonClass} ml-2`}
                 onClick={() => input.current?.click()}
               >
-                Choose photo
+                {t('addAssetChoosePhoto')}
               </button>
             )}
             <input
@@ -461,63 +507,61 @@ export function AddAssetModal({
               type="file"
               accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
               className="hidden"
-              aria-label="Asset photo"
+              aria-label={t('addAssetPhotoAriaLabel')}
               onChange={(event) => {
                 const file = event.target.files?.[0]
                 event.target.value = ''
-                if (file) void identify(file)
+                if (file) attachPhoto(file)
               }}
             />
-            <p className="mb-0 text-xs text-[var(--sea-ink-soft)]">
-              Include the device label for the best model match. AI will review
-              the photo; you confirm the details.
-            </p>
             {preview && (
               <div className="mt-3 space-y-2">
                 <img
                   src={preview}
-                  alt="New asset"
+                  alt={t('addAssetPhotoAlt')}
                   className="max-h-48 w-full rounded-xl object-contain"
                 />
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    className={buttonClass}
-                    onClick={() => photo && void identify(photo)}
+                    disabled={status === 'identifying'}
+                    className={`${buttonClass} inline-flex items-center gap-2`}
+                    onClick={() => void autoIdentify()}
                   >
-                    Retry identification
+                    <Sparkles className="size-4" />
+                    {t('addAssetAutoIdentify')}
                   </button>
                   <button
                     type="button"
                     className={buttonClass}
                     onClick={() => {
                       setPhoto(undefined)
-                      setModelReviewed(true)
                       invalidateResearch()
                     }}
                   >
-                    Remove photo
+                    {t('addAssetRemovePhoto')}
                   </button>
                 </div>
               </div>
             )}
           </div>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">Name</span>
+            <span className="font-semibold">{t('labelName')}</span>
             <input
               className={fieldClass}
               value={name}
               maxLength={200}
               required={!description.trim()}
               onChange={(e) => {
-                setName(e.target.value)
-                setExistingMatch(null)
+                const next = e.target.value
+                setName(next)
                 invalidateResearch()
+                syncExistingMatch({ name: next })
               }}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">Description</span>
+            <span className="font-semibold">{t('labelDescription')}</span>
             <textarea
               className={fieldClass}
               rows={2}
@@ -530,47 +574,22 @@ export function AddAssetModal({
               }}
             />
           </label>
-          <div className="space-y-2">
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-semibold">Model number</span>
-              <input
-                className={fieldClass}
-                value={modelNumber}
-                maxLength={200}
-                onChange={(e) => {
-                  setModelNumber(e.target.value)
-                  setModelReviewed(false)
-                  setExistingMatch(null)
-                  invalidateResearch()
-                }}
-              />
-            </label>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={!modelNumber.trim()}
-                className={buttonClass}
-                onClick={() => confirmModel(modelNumber.trim())}
-              >
-                Confirm model number
-              </button>
-              <button
-                type="button"
-                className={buttonClass}
-                onClick={() => confirmModel(null)}
-              >
-                No model number
-              </button>
-            </div>
-            {!modelReviewed && (
-              <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
-                Confirm the model number or select “No model number” before
-                saving.
-              </p>
-            )}
-          </div>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">Category</span>
+            <span className="font-semibold">{t('labelModelNumber')}</span>
+            <input
+              className={fieldClass}
+              value={modelNumber}
+              maxLength={200}
+              onChange={(e) => {
+                const next = e.target.value
+                setModelNumber(next)
+                invalidateResearch()
+                syncExistingMatch({ modelNumber: next.trim() || null })
+              }}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-semibold">{t('labelCategory')}</span>
             <select
               className={fieldClass}
               value={category}
@@ -578,73 +597,71 @@ export function AddAssetModal({
                 setCategory(e.target.value as AssetCategory | '')
               }
             >
-              <option value="">Uncategorized</option>
+              <option value="">{t('uncategorized')}</option>
               {ASSET_CATEGORIES.map((item) => (
                 <option key={item}>{item}</option>
               ))}
             </select>
           </label>
-          {modelReviewed && !existingMatch ? (
+          {modelNumber.trim() && !existingMatch ? (
             <button
               type="button"
-              disabled={status === 'researching'}
+              disabled={researchJobActive}
               className={`${buttonClass} inline-flex items-center gap-2`}
-              onClick={() => void findSuggestions(modelNumber.trim() || null)}
+              onClick={() => void findSuggestions(modelNumber.trim())}
             >
               <Sparkles className="size-4" />
-              Find documents
+              {t('findDocuments')}
             </button>
           ) : null}
-          {status === 'researching' ? (
+          {researchJobActive ? (
             <p
               role="status"
-              className="flex items-center gap-3 rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-3 text-sm font-medium"
+              className="flex items-center gap-2 text-sm text-[var(--sea-ink-soft)]"
             >
               <LoaderCircle
-                className="size-5 shrink-0 animate-spin"
+                className="size-4 shrink-0 animate-spin"
                 aria-hidden
               />
-              Searching for documents and possible connections. You can save
-              now, or wait.
+              {t('addAssetResearchingBackground')}
             </p>
           ) : null}
           {research && (
             <div className="space-y-4">
               {!!research.downloads.length && (
                 <div>
-                  <h4 className="m-0 font-semibold">Suggested downloads</h4>
-                  <p className="text-xs text-[var(--sea-ink-soft)]">
-                    These will be saved with the asset. Tap Download on the
-                    asset to attach a document.
-                  </p>
-                  <ul className="list-none space-y-2 p-0">
+                  <h4 className="m-0 font-semibold">{t('assetLinks')}</h4>
+                  <ul className="mt-2 list-none space-y-2 p-0">
                     {research.downloads.map((item) => (
                       <li
                         key={item.url}
-                        className="flex items-start justify-between gap-2 rounded-xl border border-[var(--line)] p-3 text-sm"
+                        className="flex items-center gap-2 rounded-xl border border-[var(--line)] p-3 text-sm"
                       >
-                        <div>
-                          <a
-                            href={item.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-semibold underline"
-                          >
-                            {item.title}
-                          </a>
-                          <p className="mb-0 text-xs">{item.reason}</p>
-                        </div>
+                        <AssetLinkTypeTag url={item.url} />
+                        <AssetLinkTitle url={item.url} title={item.title} />
                         <button
                           type="button"
-                          aria-label={`Dismiss ${item.title}`}
-                          onClick={() =>
+                          className="shrink-0 rounded-full border border-[var(--chip-line)] p-2"
+                          aria-label={t('dismissSuggestion', {
+                            title: item.title,
+                          })}
+                          onClick={() => {
+                            if (
+                              !window.confirm(
+                                t('removeAssetLinkConfirm', {
+                                  title: item.title,
+                                }),
+                              )
+                            ) {
+                              return
+                            }
                             setResearch({
                               ...research,
                               downloads: research.downloads.filter(
                                 (other) => other.url !== item.url,
                               ),
                             })
-                          }
+                          }}
                         >
                           <Trash2 className="size-4" />
                         </button>
@@ -655,9 +672,11 @@ export function AddAssetModal({
               )}
               {!!research.connections.length && (
                 <div>
-                  <h4 className="m-0 font-semibold">Possible connections</h4>
+                  <h4 className="m-0 font-semibold">
+                    {t('possibleConnections')}
+                  </h4>
                   <p className="text-xs text-[var(--sea-ink-soft)]">
-                    Select only connections you can confirm on your boat.
+                    {t('possibleConnectionsHint')}
                   </p>
                   {research.connections.map((item) => (
                     <label
@@ -678,7 +697,7 @@ export function AddAssetModal({
                       <span>
                         <strong>
                           {assets.find((asset) => asset.id === item.assetId)
-                            ?.name ?? 'Existing asset'}
+                            ?.name ?? t('existingAsset')}
                         </strong>
                         <br />
                         {item.reason}
@@ -690,27 +709,27 @@ export function AddAssetModal({
             </div>
           )}
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">Ownership</span>
+            <span className="font-semibold">{t('labelOwnership')}</span>
             <select
               className={fieldClass}
               value={ownership}
               onChange={(e) => setOwnership(e.target.value as AssetOwnership)}
             >
               <option value="BOAT">{boatName}</option>
-              <option value="ORG">{orgName ?? 'Org'}</option>
-              <option value="USER">User</option>
-              <option value="EXTERNAL">External</option>
+              <option value="ORG">{orgName ?? t('ownershipOrg')}</option>
+              <option value="USER">{t('ownershipUser')}</option>
+              <option value="EXTERNAL">{t('ownershipExternal')}</option>
             </select>
           </label>
           {ownership === 'USER' && (
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-semibold">Owned by</span>
+              <span className="font-semibold">{t('labelOwnedBy')}</span>
               <select
                 className={fieldClass}
                 value={ownedByUserId}
                 onChange={(e) => setOwnedByUserId(e.target.value)}
               >
-                <option value="">Select member</option>
+                <option value="">{t('selectMember')}</option>
                 {members.map((member) => (
                   <option key={member.userId} value={member.userId}>
                     {member.user.name}
@@ -720,7 +739,7 @@ export function AddAssetModal({
             </label>
           )}
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">Installed date</span>
+            <span className="font-semibold">{t('labelInstalledDate')}</span>
             <input
               type="date"
               className={fieldClass}
@@ -737,10 +756,10 @@ export function AddAssetModal({
         {existingMatch ? null : (
           <button
             type="submit"
-            disabled={blocking || !modelReviewed}
+            disabled={blocking}
             className="w-full rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-50"
           >
-            {status === 'saving' ? 'Saving…' : 'Add asset'}
+            {status === 'saving' ? t('saving') : t('addAsset')}
           </button>
         )}
       </form>

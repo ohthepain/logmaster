@@ -1,12 +1,14 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Pencil, Wrench } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   AssetEditModal,
   AssetWorkModal,
 } from '../../../../../components/AssetEditorModals'
+import { AssetCoverPhoto } from '../../../../../components/AssetCoverPhoto'
 import { AssetDocumentsSection } from '../../../../../components/AssetDocumentsSection'
+import { AssetResearchConnectionsSection } from '../../../../../components/AssetResearchConnectionsSection'
 import { AssetSuggestionsSection } from '../../../../../components/AssetSuggestionsSection'
 import type {
   AssetWork,
@@ -20,10 +22,12 @@ import {
   createAssetWork,
   deleteBoatAsset,
   fetchBoatAsset,
+  fetchBoatAssets,
   updateBoatAsset,
   uploadAndLinkAssetDocument,
 } from '../../../../../lib/boat-assets-api'
 import { fetchBoat, fetchBoatMembers } from '../../../../../lib/boats-api'
+import { useTranslation } from '../../../../../lib/i18n'
 
 export const Route = createFileRoute('/_main/boats/$boatId/assets/$assetId')({
   component: BoatAssetDetailPage,
@@ -32,7 +36,12 @@ export const Route = createFileRoute('/_main/boats/$boatId/assets/$assetId')({
 function BoatAssetDetailPage() {
   const { boatId, assetId } = Route.useParams()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [asset, setAsset] = useState<BoatAssetDetail | null>(null)
+  const [peerAssets, setPeerAssets] = useState<
+    Array<{ id: string; name: string }>
+  >([])
+  const researchStatusRef = useRef<string | null>(null)
   const [boatName, setBoatName] = useState<string | null>(null)
   const [orgName, setOrgName] = useState<string | null>(null)
   const [members, setMembers] = useState<ResourceMember[]>([])
@@ -43,12 +52,23 @@ function BoatAssetDetailPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [workOpen, setWorkOpen] = useState(false)
 
+  const externalUrlByDocumentId = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const item of asset?.suggestedDownloads ?? []) {
+      if (item.documentId) map.set(item.documentId, item.url)
+    }
+    return map
+  }, [asset?.suggestedDownloads])
+
   const load = useCallback(async (opts?: { background?: boolean }) => {
     if (!opts?.background) setLoading(true)
     setError(null)
     try {
       const data = await fetchBoatAsset(boatId, assetId)
-      setAsset(data.asset)
+      setAsset({
+        ...data.asset,
+        researchJob: data.asset.researchJob ?? null,
+      })
       setBoatName(data.boat.name)
       const extras = await Promise.allSettled([
         fetchBoat(boatId),
@@ -71,6 +91,41 @@ function BoatAssetDetailPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    void fetchBoatAssets(boatId).then((items) =>
+      setPeerAssets(items.map((item) => ({ id: item.id, name: item.name }))),
+    )
+  }, [boatId])
+
+  useEffect(() => {
+    const status = asset?.researchJob?.status ?? null
+    const prev = researchStatusRef.current
+    if (
+      prev &&
+      (prev === 'pending' || prev === 'active') &&
+      status === 'completed'
+    ) {
+      toast.success(t('assetResearchComplete'))
+    }
+    if (
+      prev &&
+      (prev === 'pending' || prev === 'active') &&
+      status === 'failed'
+    ) {
+      toast.error(asset?.researchJob?.error ?? t('assetResearchFailed'))
+    }
+    researchStatusRef.current = status
+  }, [asset?.researchJob?.status, asset?.researchJob?.error, t])
+
+  useEffect(() => {
+    const job = asset?.researchJob
+    if (!job || (job.status !== 'pending' && job.status !== 'active')) return
+    const interval = window.setInterval(() => {
+      void load({ background: true })
+    }, 3000)
+    return () => window.clearInterval(interval)
+  }, [asset?.researchJob?.status, load])
 
   const handleUpload = async (file: File, purpose: DocumentPurpose) => {
     setUploading(true)
@@ -156,74 +211,105 @@ function BoatAssetDetailPage() {
           {boatName ?? 'Boat'} · Assets
         </Link>
 
-        <header className="mb-6">
-          <h1 className="brand-title m-0 text-2xl">{asset.name}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-[var(--chip-bg)] px-2.5 py-0.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
-              {asset.ownerLabel}
-            </span>
-            <span className="text-sm text-[var(--sea-ink-soft)]">
-              {asset.category ?? 'Uncategorized'}
-              {asset.modelNumber ? ` · ${asset.modelNumber}` : ''}
-            </span>
-            {asset.installedAt ? (
-              <span className="text-sm text-[var(--sea-ink-soft)]">
-                Installed {new Date(asset.installedAt).toLocaleDateString()}
+        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <h1 className="brand-title m-0 text-2xl">{asset.name}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-[var(--chip-bg)] px-2.5 py-0.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
+                {asset.ownerLabel}
               </span>
+              <span className="text-sm text-[var(--sea-ink-soft)]">
+                {asset.category ?? 'Uncategorized'}
+                {asset.modelNumber ? ` · ${asset.modelNumber}` : ''}
+              </span>
+              {asset.installedAt ? (
+                <span className="text-sm text-[var(--sea-ink-soft)]">
+                  Installed {new Date(asset.installedAt).toLocaleDateString()}
+                </span>
+              ) : null}
+            </div>
+            {asset.description ? (
+              <p className="mt-3 text-sm text-[var(--sea-ink-soft)]">
+                {asset.description}
+              </p>
             ) : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold"
+              >
+                <Pencil className="size-3" />
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => setWorkOpen(true)}
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold"
+              >
+                <Wrench className="h-3 w-3" />
+                Add work
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!confirm(`Remove ${asset.name}?`)) return
+                  void (async () => {
+                    try {
+                      await deleteBoatAsset(boatId, asset.id)
+                      toast.success('Asset removed')
+                      void navigate({
+                        to: '/boats/$boatId',
+                        params: { boatId },
+                        search: { tab: 'assets' },
+                      })
+                    } catch (e) {
+                      toast.error(
+                        e instanceof Error
+                          ? e.message
+                          : 'Failed to remove asset',
+                      )
+                    }
+                  })()
+                }}
+                className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600"
+              >
+                Delete
+              </button>
+            </div>
           </div>
-          {asset.description ? (
-            <p className="mt-3 text-sm text-[var(--sea-ink-soft)]">
-              {asset.description}
-            </p>
-          ) : null}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setEditOpen(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold"
-            >
-              <Pencil className="size-3" />
-              Edit
-            </button>
-            <button
-              type="button"
-              onClick={() => setWorkOpen(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold"
-            >
-              <Wrench className="h-3 w-3" />
-              Add work
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (!confirm(`Remove ${asset.name}?`)) return
-                void (async () => {
-                  try {
-                    await deleteBoatAsset(boatId, asset.id)
-                    toast.success('Asset removed')
-                    void navigate({
-                      to: '/boats/$boatId',
-                      params: { boatId },
-                      search: { tab: 'assets' },
-                    })
-                  } catch (e) {
-                    toast.error(
-                      e instanceof Error
-                        ? e.message
-                        : 'Failed to remove asset',
-                    )
-                  }
-                })()
-              }}
-              className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600"
-            >
-              Delete
-            </button>
-          </div>
+          <AssetCoverPhoto
+            cover={asset.coverPhoto}
+            alt={`${asset.name} photo`}
+            variant="detail"
+            className="sm:mt-1"
+          />
         </header>
 
+        {asset.researchJob?.status === 'pending' ||
+        asset.researchJob?.status === 'active' ? (
+          <p
+            role="status"
+            className="mb-6 flex items-center gap-2 rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-3 text-sm"
+          >
+            <span className="size-4 animate-spin rounded-full border-2 border-[var(--sea-ink-soft)] border-t-transparent" />
+            {t('assetResearchInProgress')}
+          </p>
+        ) : null}
+
         <section className="mb-8">
+          {asset.researchJob?.connectionSuggestions?.length ? (
+            <div className="mb-6">
+              <AssetResearchConnectionsSection
+                boatId={boatId}
+                assetId={assetId}
+                researchJobId={asset.researchJob.id}
+                suggestions={asset.researchJob.connectionSuggestions}
+                assets={peerAssets}
+                onChange={() => load({ background: true })}
+              />
+            </div>
+          ) : null}
           <AssetSuggestionsSection
             asset={asset}
             onChange={() => load({ background: true })}
@@ -241,6 +327,7 @@ function BoatAssetDetailPage() {
             boatId={boatId}
             assetId={assetId}
             documents={asset.documents}
+            externalUrlByDocumentId={externalUrlByDocumentId}
             uploading={uploading}
             onUpload={handleUpload}
             onAddLink={handleAddLink}

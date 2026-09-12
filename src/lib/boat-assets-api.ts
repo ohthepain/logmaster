@@ -77,6 +77,7 @@ export async function createBoatAsset(
     ownedByUserId?: string | null
     onLoanFromUserId?: string | null
     installedAt?: string | null
+    researchJobId?: string
   },
   photo?: File,
 ): Promise<BoatAsset> {
@@ -144,6 +145,51 @@ export async function researchNewAsset(
     { method: 'POST', body: JSON.stringify(input), signal },
   )
   return data.research
+}
+
+export type AssetResearchJobPoll = {
+  id: string
+  status: 'pending' | 'active' | 'completed' | 'failed'
+  error: string | null
+  result?: AssetResearch
+  connectionSuggestions?: AssetResearch['connections']
+}
+
+export async function startAssetResearchJob(
+  boatId: string,
+  input: { name: string; description: string; modelNumber: string | null },
+): Promise<{ jobId: string }> {
+  const data = await api<{ jobId: string }>(
+    `/api/boats/${boatId}/assets/research/jobs`,
+    { method: 'POST', body: JSON.stringify(input) },
+  )
+  return data
+}
+
+export async function fetchAssetResearchJob(
+  boatId: string,
+  jobId: string,
+  signal?: AbortSignal,
+): Promise<AssetResearchJobPoll> {
+  const data = await api<{ job: AssetResearchJobPoll }>(
+    `/api/boats/${boatId}/assets/research/jobs/${jobId}`,
+    { signal },
+  )
+  return data.job
+}
+
+export async function confirmAssetResearchConnections(
+  boatId: string,
+  assetId: string,
+  input: {
+    connections: AssetConnectionSuggestion[]
+    researchJobId?: string
+  },
+) {
+  return api<{ ok: true }>(
+    `/api/boats/${boatId}/assets/${assetId}/research/connections`,
+    { method: 'POST', body: JSON.stringify(input) },
+  )
 }
 
 export async function downloadAssetSuggestion(

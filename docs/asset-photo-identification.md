@@ -15,10 +15,12 @@ expose this key through a `VITE_` environment variable.
 The integration follows TanStack's [multimodal content](https://tanstack.com/ai/latest/docs/advanced/multimodal-content)
 and [structured output with tools](https://tanstack.com/ai/latest/docs/structured-outputs/with-tools) APIs.
 
-The user must confirm or correct a detected model number, or select **No model
-number**. Research works from a description even without a model. Identification
-and research failures allow manual entry with the photo preserved. Editing the
-identity during creation discards old research results and confirmations.
+Photo identification is optional (**Auto-identify**). The user enters a model
+number manually when needed. **Find documents** requires a model number and runs
+as a background job on the server; saving the asset links the job so suggestions
+can appear on the asset page after the modal is closed. Identification and
+research failures allow manual entry with the photo preserved. Editing the
+identity during creation discards in-modal research results and confirmations.
 
 Suggestions remain on the saved asset until downloaded or dismissed. Download
 and attach stores actual PDF or JPEG/PNG/WebP bytes, not a link. Downloads only

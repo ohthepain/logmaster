@@ -47,4 +47,5 @@ export const createAssetSchema = z.object({
   installedAt: z.iso.datetime().nullable().optional(),
   suggestedDownloads: z.array(downloadSchema).max(8).default([]),
   confirmedConnections: z.array(connectionSchema).max(20).default([]),
+  researchJobId: z.string().min(1).max(200).optional(),
 })

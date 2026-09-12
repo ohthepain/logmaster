@@ -93,6 +93,7 @@ model User {
   boatContacts          BoatContact[]
   ownedBoatAssets       BoatAsset[]        @relation("BoatAssetOwner")
   loanedBoatAssets      BoatAsset[]        @relation("BoatAssetLoanFrom")
+  assetResearchJobs     AssetResearchJob[]
   expenseClaims         ExpenseClaim[]     @relation("ExpenseClaimClaimant")
   orgTransactions       OrgTransaction[]   @relation("OrgTransactionCounterparty")
   createdOrgTransactions OrgTransaction[]  @relation("OrgTransactionCreator")
@@ -593,6 +594,7 @@ model Boat {
   contacts           BoatContact[]
   memberInvites      MemberInvite[]
   assets             BoatAsset[]
+  assetResearchJobs  AssetResearchJob[]
   purchases          BoatPurchase[]
   assetWork          AssetWork[]
   orgTransactions    OrgTransaction[]
@@ -975,9 +977,40 @@ model BoatAsset {
   suggestedDownloads AssetSuggestedDownload[]
   connectionsFrom AssetConnection[] @relation("ConnectionFrom")
   connectionsTo AssetConnection[] @relation("ConnectionTo")
+  researchJobs AssetResearchJob[]
 
   @@index([boatId, sortOrder])
   @@map("boat_asset")
+}
+
+enum AssetResearchJobStatus {
+  pending
+  active
+  completed
+  failed
+}
+
+model AssetResearchJob {
+  id                String                 @id @default(cuid())
+  boatId            String
+  assetId           String?
+  requestedByUserId String
+  status            AssetResearchJobStatus @default(pending)
+  input             Json
+  result            Json?
+  error             String?
+  connectionsReviewedAt DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  completedAt       DateTime?
+
+  boat      Boat       @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  asset     BoatAsset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  requestedBy User     @relation(fields: [requestedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([boatId, createdAt])
+  @@index([assetId])
+  @@map("asset_research_job")
 }
 
 model AssetSuggestedDownload {

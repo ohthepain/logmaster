@@ -3,6 +3,7 @@ import { ChevronRight, Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { AddAssetModal } from './AddAssetModal'
+import { AssetCoverPhoto } from './AssetCoverPhoto'
 import { ASSET_CATEGORIES } from '../domain/asset-intelligence'
 import type { BoatAsset } from '../domain/boat-assets'
 import type { ResourceMember } from '../domain/member-invite'
@@ -147,9 +148,14 @@ export function BoatAssetsTab({
               <Link
                 to="/boats/$boatId/assets/$assetId"
                 params={{ boatId, assetId: asset.id }}
-                className="flex items-start justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4 text-left no-underline"
+                className="flex items-center gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4 text-left no-underline"
               >
-                <div>
+                <AssetCoverPhoto
+                  cover={asset.coverPhoto}
+                  alt=""
+                  variant="list"
+                />
+                <div className="min-w-0 flex-1">
                   <p className="m-0 font-semibold text-[var(--sea-ink)]">
                     {asset.name}
                   </p>
@@ -175,7 +181,7 @@ export function BoatAssetsTab({
                   ) : null}
                 </div>
                 <ChevronRight
-                  className="mt-1 size-5 shrink-0 text-[var(--sea-ink-soft)]"
+                  className="size-5 shrink-0 text-[var(--sea-ink-soft)]"
                   aria-hidden
                 />
               </Link>

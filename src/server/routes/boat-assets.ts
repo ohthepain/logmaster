@@ -1,6 +1,13 @@
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { categorySchema, createAssetSchema } from '../asset-intelligence-schema'
+import { pickAssetCoverPhoto } from '../asset-cover-photo'
+import {
+  ensureResearchAppliedToAsset,
+  findLatestResearchJobForAsset,
+  linkAssetResearchJobToAsset,
+  serializeResearchJobForClient,
+} from '../asset-research-jobs'
 import { createAssetWithAttachments } from '../asset-storage'
 import type { AssetDownloadSuggestion } from '../../domain/asset-intelligence'
 import type {
@@ -106,6 +113,7 @@ function serializeLinkedDocumentDetail(document: {
   id: string
   title: string
   purpose: string | null
+  createdAt: Date
   versions: Array<{
     id: string
     documentId: string
@@ -158,7 +166,9 @@ function serializeAsset(asset: {
   ownedByUser?: { id: string; name: string; email: string } | null
   onLoanFromUser?: { id: string; name: string; email: string } | null
   documentLinks?: Array<{
-    document: Parameters<typeof serializeLinkedDocumentDetail>[0]
+    document: Parameters<typeof serializeLinkedDocumentDetail>[0] & {
+      createdAt: Date
+    }
   }>
   purchaseLines?: Array<{ id: string }>
   workRecords?: Array<{ id: string }>
@@ -199,6 +209,7 @@ function serializeAsset(asset: {
     documents: (asset.documentLinks ?? []).map((link) =>
       serializeLinkedDocumentDetail(link.document),
     ),
+    coverPhoto: pickAssetCoverPhoto(asset.documentLinks ?? []),
     purchaseLineIds: (asset.purchaseLines ?? []).map((line) => line.id),
     workRecordCount: asset.workRecords?.length ?? 0,
   }
@@ -468,16 +479,30 @@ boatAssetsRoutes.get('/:boatId/assets/:assetId', async (c) => {
     },
   })
 
-  const serialized = serializeAsset(asset)
+  const researchJobRow = await findLatestResearchJobForAsset(assetId)
+  let assetRow = asset
+  if (researchJobRow?.status === 'completed') {
+    await ensureResearchAppliedToAsset(researchJobRow.id)
+    const refreshed = await db.boatAsset.findFirst({
+      where: { id: assetId, boatId },
+      include: assetDetailInclude,
+    })
+    if (refreshed) assetRow = refreshed
+  }
+  const researchJob = researchJobRow
+    ? serializeResearchJobForClient(researchJobRow)
+    : null
+  const serialized = serializeAsset(assetRow)
   return c.json({
     asset: {
       ...serialized,
-      documents: (asset.documentLinks ?? []).map(
+      documents: (assetRow.documentLinks ?? []).map(
         (link: {
           document: Parameters<typeof serializeLinkedDocumentDetail>[0]
         }) => serializeLinkedDocumentDetail(link.document),
       ),
       workRecords: workRecords.map(serializeWork),
+      researchJob,
     },
     boat: { id: asset.boat.id, name: asset.boat.name },
   })
@@ -513,13 +538,23 @@ boatAssetsRoutes.post(
         400,
       )
     let assetId: string
+    const { researchJobId, ...createInput } = input.data
     try {
       assetId = await createAssetWithAttachments(
         boatId,
         userId,
-        input.data,
+        createInput,
         photo,
       )
+      if (researchJobId) {
+        await linkAssetResearchJobToAsset(
+          researchJobId,
+          boatId,
+          assetId,
+          userId,
+        )
+        await ensureResearchAppliedToAsset(researchJobId)
+      }
     } catch (error) {
       console.error('[assets] create failed', error)
       return c.json(

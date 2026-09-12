@@ -3,8 +3,22 @@ import type { ExpenseClaim, OrgTransaction } from './org-accounting'
 import type {
   AssetCategory,
   AssetConnection,
+  AssetConnectionSuggestion,
   AssetDownloadSuggestion,
 } from './asset-intelligence'
+
+export type AssetResearchJobStatus =
+  | 'pending'
+  | 'active'
+  | 'completed'
+  | 'failed'
+
+export type AssetResearchJobSummary = {
+  id: string
+  status: AssetResearchJobStatus
+  error: string | null
+  connectionSuggestions?: AssetConnectionSuggestion[]
+}
 
 export type AssetOwnership = 'BOAT' | 'ORG' | 'USER' | 'EXTERNAL'
 
@@ -34,12 +48,18 @@ export type LinkedBoatDocumentDetail = LinkedBoatDocumentRef & {
   currentVersion: BoatDocumentVersion
 }
 
+export type AssetCoverPhoto = {
+  documentId: string
+  contentUrl: string
+} | null
+
 export type BoatAssetDetail = Omit<
   BoatAsset,
   'documents' | 'workRecordCount'
 > & {
   documents: LinkedBoatDocumentDetail[]
   workRecords: AssetWork[]
+  researchJob: AssetResearchJobSummary | null
 }
 
 export type BoatAsset = {
@@ -62,6 +82,7 @@ export type BoatAsset = {
   ownedByUser: BoatAssetUserRef | null
   onLoanFromUser: BoatAssetUserRef | null
   documents: LinkedBoatDocumentDetail[]
+  coverPhoto: AssetCoverPhoto
   purchaseLineIds: string[]
   workRecordCount: number
 }

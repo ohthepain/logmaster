@@ -7,11 +7,13 @@ import {
   waitFor,
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AddAssetModal } from './AddAssetModal'
+import { I18nProvider } from '../lib/i18n'
+import { AddAssetModal, type ListedBoatAsset } from './AddAssetModal'
 
 const mocks = vi.hoisted(() => ({
   identify: vi.fn(),
-  research: vi.fn(),
+  startResearchJob: vi.fn(),
+  fetchResearchJob: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
   upload: vi.fn(),
@@ -21,7 +23,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../lib/boat-assets-api', () => ({
   createBoatAsset: mocks.create,
   identifyAssetPhoto: mocks.identify,
-  researchNewAsset: mocks.research,
+  startAssetResearchJob: mocks.startResearchJob,
+  fetchAssetResearchJob: mocks.fetchResearchJob,
   updateBoatAsset: mocks.update,
   uploadAndLinkAssetDocument: mocks.upload,
 }))
@@ -71,11 +74,23 @@ const props = {
       modelNumber: null,
       category: null,
     },
-  ],
+  ] satisfies ListedBoatAsset[],
   onClose: vi.fn(),
   onCreated: vi.fn(),
   onUpdated: vi.fn(),
   onOpenExisting: vi.fn(),
+}
+
+function renderModal(
+  overrides: Partial<Omit<typeof props, 'assets'>> & {
+    assets?: ListedBoatAsset[]
+  } = {},
+) {
+  return render(
+    <I18nProvider>
+      <AddAssetModal {...props} {...overrides} />
+    </I18nProvider>,
+  )
 }
 
 beforeEach(() => {
@@ -90,17 +105,23 @@ beforeEach(() => {
     confidence: 'high',
     category: 'Plumbing',
   })
-  mocks.research.mockResolvedValue({
-    category: 'Plumbing',
-    downloads: [
-      {
-        title: 'Installation guide',
-        url: 'https://example.com/guide.pdf',
-        purpose: 'manual',
-        reason: 'Matches pump',
-      },
-    ],
-    connections: [{ assetId: 'tank', reason: 'Water supplied by tank' }],
+  mocks.startResearchJob.mockResolvedValue({ jobId: 'job-1' })
+  mocks.fetchResearchJob.mockResolvedValue({
+    id: 'job-1',
+    status: 'completed',
+    error: null,
+    result: {
+      category: 'Plumbing',
+      downloads: [
+        {
+          title: 'Installation guide',
+          url: 'https://example.com/guide.pdf',
+          purpose: 'manual',
+          reason: 'Matches pump',
+        },
+      ],
+      connections: [{ assetId: 'tank', reason: 'Water supplied by tank' }],
+    },
   })
   mocks.create.mockResolvedValue({ id: 'created' })
   mocks.update.mockResolvedValue({ id: 'pump', name: 'Water pump' })
@@ -115,6 +136,8 @@ async function selectPhoto() {
   fireEvent.change(screen.getByLabelText('Asset photo'), {
     target: { files: [photo] },
   })
+  expect(mocks.identify).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Auto-identify' }))
   await waitFor(() =>
     expect(screen.getByLabelText<HTMLInputElement>('Model number').value).toBe(
       'P123',
@@ -123,19 +146,12 @@ async function selectPhoto() {
 }
 
 describe('photo asset review', () => {
-  it('requires model confirmation, leaves connections unchecked, and retains the photo', async () => {
-    render(<AddAssetModal {...props} />)
+  it('leaves connections unchecked after Find documents and retains the photo', async () => {
+    renderModal()
     await selectPhoto()
-    expect(
-      screen.getByRole<HTMLButtonElement>('button', { name: 'Add asset' })
-        .disabled,
-    ).toBe(true)
-    expect(mocks.research).not.toHaveBeenCalled()
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Confirm model number' }),
-    )
-    expect(mocks.research).not.toHaveBeenCalled()
+    expect(mocks.startResearchJob).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
+    await waitFor(() => expect(mocks.startResearchJob).toHaveBeenCalled())
     await screen.findByText('Water tank')
     const checkbox = screen.getByRole<HTMLInputElement>('checkbox')
     expect(checkbox.checked).toBe(false)
@@ -149,18 +165,16 @@ describe('photo asset review', () => {
           confirmedConnections: [
             { assetId: 'tank', reason: 'Water supplied by tank' },
           ],
+          researchJobId: 'job-1',
         }),
         photo,
       ),
     )
   })
   it('does not search until Find documents is tapped, and can save without it', async () => {
-    render(<AddAssetModal {...props} />)
+    renderModal()
     await selectPhoto()
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Confirm model number' }),
-    )
-    expect(mocks.research).not.toHaveBeenCalled()
+    expect(mocks.startResearchJob).not.toHaveBeenCalled()
     const add = screen.getByRole<HTMLButtonElement>('button', {
       name: 'Add asset',
     })
@@ -178,18 +192,16 @@ describe('photo asset review', () => {
       ),
     )
   })
-  it('uses no model number for research and saving when the user rejects the match', async () => {
-    render(<AddAssetModal {...props} />)
+  it('hides Find documents without a model number and saves with a blank model', async () => {
+    renderModal()
     await selectPhoto()
-    fireEvent.click(screen.getByRole('button', { name: 'No model number' }))
-    expect(mocks.research).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
-    await screen.findByText('Water tank')
-    expect(mocks.research).toHaveBeenCalledWith(
-      'boat',
-      expect.objectContaining({ modelNumber: null }),
-      expect.any(AbortSignal),
-    )
+    fireEvent.change(screen.getByLabelText('Model number'), {
+      target: { value: '' },
+    })
+    expect(
+      screen.queryByRole('button', { name: 'Find documents' }),
+    ).toBeNull()
+    expect(mocks.startResearchJob).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
     await waitFor(() =>
       expect(mocks.create).toHaveBeenCalledWith(
@@ -203,11 +215,8 @@ describe('photo asset review', () => {
     )
   })
   it('discards stale suggestions and confirmations when identity changes', async () => {
-    render(<AddAssetModal {...props} />)
+    renderModal()
     await selectPhoto()
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Confirm model number' }),
-    )
     fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
     await screen.findByText('Water tank')
     fireEvent.click(screen.getByRole('checkbox'))
@@ -227,20 +236,38 @@ describe('photo asset review', () => {
       ),
     )
   })
-  it('can save a manual description and photo after identification and research fail', async () => {
-    mocks.identify.mockRejectedValue(new Error('AI unavailable'))
-    mocks.research.mockRejectedValue(new Error('Search unavailable'))
-    render(<AddAssetModal {...props} />)
+  it('can save without auto-identify when the user enters details manually', async () => {
+    renderModal()
     fireEvent.change(screen.getByLabelText('Asset photo'), {
       target: { files: [photo] },
     })
+    expect(mocks.identify).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Red pump in bilge' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
+    await waitFor(() =>
+      expect(mocks.create).toHaveBeenCalledWith(
+        'boat',
+        expect.objectContaining({
+          name: 'Red pump in bilge',
+          modelNumber: null,
+        }),
+        photo,
+      ),
+    )
+  })
+  it('can save a manual description and photo after identification and research fail', async () => {
+    mocks.identify.mockRejectedValue(new Error('AI unavailable'))
+    renderModal()
+    fireEvent.change(screen.getByLabelText('Asset photo'), {
+      target: { files: [photo] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Auto-identify' }))
     await screen.findByText('AI unavailable')
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Red pump in bilge' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'No model number' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
-    await screen.findByText('Search unavailable')
     fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
     await waitFor(() =>
       expect(mocks.create).toHaveBeenCalledWith(
@@ -254,7 +281,7 @@ describe('photo asset review', () => {
     )
   })
   it('does not close when the backdrop is tapped', () => {
-    render(<AddAssetModal {...props} />)
+    renderModal()
     fireEvent.click(screen.getByRole('button', { name: 'backdrop' }))
     expect(props.onClose).not.toHaveBeenCalled()
   })
@@ -266,10 +293,11 @@ describe('photo asset review', () => {
         finish = resolve
       }),
     )
-    render(<AddAssetModal {...props} />)
+    renderModal()
     fireEvent.change(screen.getByLabelText('Asset photo'), {
       target: { files: [photo] },
     })
+    fireEvent.click(screen.getByRole('button', { name: 'Auto-identify' }))
     expect(
       await screen.findByText(
         'Identifying the device and reading its label…',
@@ -290,21 +318,18 @@ describe('photo asset review', () => {
   })
 
   it('offers open, overwrite, merge, or close when the equipment is already listed', async () => {
-    render(
-      <AddAssetModal
-        {...props}
-        assets={[
-          ...props.assets,
-          {
-            id: 'pump',
-            name: 'Old pump',
-            description: 'Needs service',
-            modelNumber: 'P123',
-            category: 'Plumbing',
-          },
-        ]}
-      />,
-    )
+    renderModal({
+      assets: [
+        ...props.assets,
+        {
+          id: 'pump',
+          name: 'Old pump',
+          description: 'Needs service',
+          modelNumber: 'P123',
+          category: 'Plumbing',
+        },
+      ],
+    })
     await selectPhoto()
     expect(
       screen.getByText('This equipment is already on the boat.'),
@@ -317,21 +342,18 @@ describe('photo asset review', () => {
   })
 
   it('overwrites the existing asset and attaches the photo', async () => {
-    render(
-      <AddAssetModal
-        {...props}
-        assets={[
-          ...props.assets,
-          {
-            id: 'pump',
-            name: 'Old pump',
-            description: 'Needs service',
-            modelNumber: 'P123',
-            category: 'Plumbing',
-          },
-        ]}
-      />,
-    )
+    renderModal({
+      assets: [
+        ...props.assets,
+        {
+          id: 'pump',
+          name: 'Old pump',
+          description: 'Needs service',
+          modelNumber: 'P123',
+          category: 'Plumbing',
+        },
+      ],
+    })
     await selectPhoto()
     fireEvent.click(screen.getByRole('button', { name: 'Overwrite' }))
     await waitFor(() =>
@@ -351,21 +373,18 @@ describe('photo asset review', () => {
   })
 
   it('merges new details into the existing asset', async () => {
-    render(
-      <AddAssetModal
-        {...props}
-        assets={[
-          ...props.assets,
-          {
-            id: 'pump',
-            name: 'Old pump',
-            description: 'Needs service',
-            modelNumber: 'P123',
-            category: 'Plumbing',
-          },
-        ]}
-      />,
-    )
+    renderModal({
+      assets: [
+        ...props.assets,
+        {
+          id: 'pump',
+          name: 'Old pump',
+          description: 'Needs service',
+          modelNumber: 'P123',
+          category: 'Plumbing',
+        },
+      ],
+    })
     await selectPhoto()
     fireEvent.click(screen.getByRole('button', { name: 'Merge' }))
     await waitFor(() =>
@@ -383,21 +402,18 @@ describe('photo asset review', () => {
   })
 
   it('closes the add flow from the already-listed prompt', async () => {
-    render(
-      <AddAssetModal
-        {...props}
-        assets={[
-          ...props.assets,
-          {
-            id: 'pump',
-            name: 'Old pump',
-            description: null,
-            modelNumber: 'P123',
-            category: null,
-          },
-        ]}
-      />,
-    )
+    renderModal({
+      assets: [
+        ...props.assets,
+        {
+          id: 'pump',
+          name: 'Old pump',
+          description: null,
+          modelNumber: 'P123',
+          category: null,
+        },
+      ],
+    })
     await selectPhoto()
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(props.onClose).toHaveBeenCalled()
@@ -413,9 +429,12 @@ describe('photo asset review', () => {
         blob: async () => new Blob(['photo'], { type: 'image/jpeg' }),
       }),
     )
-    render(<AddAssetModal {...props} />)
+    renderModal()
     fireEvent.click(screen.getByRole('button', { name: 'Take a photo' }))
-    await waitFor(() => expect(mocks.identify).toHaveBeenCalled())
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Auto-identify' })).toBeTruthy(),
+    )
+    expect(mocks.identify).not.toHaveBeenCalled()
     expect(mocks.camera).toHaveBeenCalledWith(
       expect.objectContaining({ source: 'CAMERA', saveToGallery: false }),
     )

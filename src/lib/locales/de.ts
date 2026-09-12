@@ -184,6 +184,7 @@ const catalog: TranslationCatalog = {
   inviteLink: 'Einladungslink',
   resendInvite: 'Einladung erneut senden',
   copyLink: 'Link kopieren',
+  assetLinkCopied: 'Link copied',
   refresh: 'Aktualisieren',
   remove: 'Entfernen',
   cancel: 'Abbrechen',
@@ -198,6 +199,87 @@ const catalog: TranslationCatalog = {
   addContact: 'Kontakt hinzufügen',
   addPhotos: 'Fotos hinzufügen',
   addAsset: 'Inventar hinzufügen',
+  addAssetPhotoTooLarge: 'Wähle ein Foto kleiner als 15 MB.',
+  addAssetIdentifyLowConfidence:
+    'Das Foto konnte nicht sicher erkannt werden. Beschreibe das Inventar und bestätige eine Modellnummer oder wähle „Keine Modellnummer“.',
+  addAssetIdentifyCheckModel:
+    'Prüfe die Modellnummer am Typenschild, bevor du bestätigst.',
+  addAssetIdentifyNoModelFound:
+    'Keine Modellnummer gefunden. Beschreibe das Inventar oder gib eine Modellnummer ein, falls bekannt.',
+  addAssetIdentifyFailedFallback:
+    'Erkennung fehlgeschlagen. Trage die Angaben manuell ein; dein Foto wird trotzdem angehängt.',
+  addAssetCameraUnavailable:
+    'Kamera nicht verfügbar. Prüfe die Berechtigungen oder wähle ein vorhandenes Foto.',
+  addAssetEnterNameForResearch:
+    'Gib einen Namen oder eine Beschreibung ein und tippe dann auf Dokumente finden. Du kannst auch ohne Dokumente speichern.',
+  addAssetNoResearchResults:
+    'Keine passenden Dokumente oder wahrscheinlichen Verbindungen gefunden. Du kannst das Inventar trotzdem hinzufügen.',
+  addAssetSuggestionsUnavailable:
+    'Vorschläge sind nicht verfügbar. Du kannst das Inventar trotzdem speichern.',
+  addAssetUpdateExistingFailed:
+    'Vorhandenes Inventar konnte nicht aktualisiert werden. Bitte erneut versuchen.',
+  addAssetSaveFailed:
+    'Inventar konnte nicht gespeichert werden. Bitte erneut versuchen.',
+  addAssetStatusIdentifying:
+    'Gerät wird erkannt und Typenschild gelesen…',
+  addAssetStatusSaving: 'Inventar und Foto werden gespeichert…',
+  addAssetStatusUpdating: 'Vorhandenes Inventar wird aktualisiert…',
+  addAssetStatusOpeningCamera: 'Kamera wird geöffnet…',
+  addAssetExistingOnBoat: 'Dieses Inventar ist bereits auf dem Boot.',
+  addAssetExistingOnBoatHelp:
+    'Öffne den vorhandenen Eintrag, überschreibe ihn mit diesen Angaben, führe neue Informationen zusammen oder schließe.',
+  open: 'Öffnen',
+  overwrite: 'Überschreiben',
+  merge: 'Zusammenführen',
+  close: 'Schließen',
+  addAssetTakePhoto: 'Foto aufnehmen',
+  addAssetSelectPhoto: 'Foto auswählen',
+  addAssetChoosePhoto: 'Foto wählen',
+  addAssetPhotoAriaLabel: 'Inventarfoto',  addAssetAutoIdentify: 'Auto-Erkennung',
+  addAssetPhotoAlt: 'Neues Inventar',
+  addAssetRetryIdentification: 'Erkennung wiederholen',
+  addAssetRemovePhoto: 'Foto entfernen',
+  labelName: 'Name',
+  labelDescription: 'Beschreibung',
+  labelModelNumber: 'Modellnummer',
+  confirmModelNumber: 'Modellnummer bestätigen',
+  noModelNumber: 'Keine Modellnummer',
+  addAssetConfirmModelBeforeSave:
+    'Bestätige die Modellnummer oder wähle „Keine Modellnummer“, bevor du speicherst.',
+  labelCategory: 'Kategorie',
+  uncategorized: 'Ohne Kategorie',
+  findDocuments: 'Dokumente finden',
+  addAssetResearching:
+    'Suche nach Dokumenten und möglichen Verbindungen. Du kannst jetzt speichern oder warten.',
+  addAssetResearchingBackground:
+    'Searching for documents in the background. You can keep editing or save now.',
+  assetResearchInProgress: 'Still searching for documents…',
+  assetResearchComplete: 'Document suggestions are ready.',
+  assetResearchFailed: 'Document search failed.',
+  confirmSelectedConnections: 'Confirm selected connections',
+  assetResearchConnectionsSaved: 'Connections saved.',
+  suggestedDownloads: 'Vorgeschlagene Downloads',
+  suggestedDownloadsHint:
+    'Diese werden mit dem Inventar gespeichert. Tippe auf dem Inventar auf Download, um ein Dokument anzuhängen.',
+  assetLinks: 'Links',
+  downloadAndAttach: 'Download & attach',
+  attached: 'Attached',
+  working: 'Working…',
+  removeAssetLink: 'Remove link',
+  removeAssetLinkConfirm: 'Remove “{title}” from this asset?',
+  removeAssetConnectionConfirm: 'Remove the connection to {name}?',
+  possibleConnections: 'Mögliche Verbindungen',
+  possibleConnectionsHint:
+    'Wähle nur Verbindungen, die du auf deinem Boot bestätigen kannst.',
+  existingAsset: 'Vorhandenes Inventar',
+  dismissSuggestion: '{title} verwerfen',
+  labelOwnership: 'Eigentum',
+  ownershipUser: 'Benutzer',
+  ownershipExternal: 'Extern',
+  ownershipOrg: 'Org',
+  labelOwnedBy: 'Im Besitz von',
+  selectMember: 'Mitglied wählen',
+  labelInstalledDate: 'Installationsdatum',
   addAccount: 'Konto hinzufügen',
   addTransaction: 'Buchung hinzufügen',
   addPurchase: 'Einkauf hinzufügen',

@@ -7,6 +7,7 @@ import {
 } from './boat-document-viewer'
 import type { BoatDocumentViewKind } from './boat-document-viewer'
 import { apiUrl } from './app-origin'
+import { openExternalUrl } from './open-external-url'
 import { isNativePlatform } from './platform'
 
 export type BoatDocumentOpenTarget = {
@@ -115,7 +116,7 @@ export async function downloadBoatDocument(
 ): Promise<void> {
   if (target.kind === 'link') {
     if (!target.url) throw new Error('Document is unavailable')
-    window.open(target.url, '_blank', 'noopener,noreferrer')
+    await openExternalUrl(target.url)
     return
   }
 
@@ -141,11 +142,11 @@ export async function openBoatDocumentExternal(
   target: BoatDocumentOpenTarget,
 ): Promise<void> {
   if (target.kind === 'link' && target.url) {
-    window.open(target.url, '_blank', 'noopener,noreferrer')
+    await openExternalUrl(target.url)
     return
   }
   if (target.contentUrl) {
-    window.open(apiUrl(target.contentUrl), '_blank', 'noopener,noreferrer')
+    await openExternalUrl(apiUrl(target.contentUrl))
     return
   }
   throw new Error('Document is unavailable')
@@ -159,6 +160,10 @@ export async function openBoatDocument(
   target: BoatDocumentOpenTarget,
   options: OpenBoatDocumentOptions = {},
 ): Promise<void> {
+  if (target.kind === 'link' && target.url) {
+    await openExternalUrl(target.url)
+    return
+  }
   const viewKind = getBoatDocumentViewKind(target)
   if (viewKind && target.contentUrl) {
     if (isNativePlatform()) {

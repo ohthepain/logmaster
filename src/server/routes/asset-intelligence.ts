@@ -8,8 +8,18 @@ import {
   normalizeAssetPhoto,
   researchAsset,
 } from '../asset-intelligence'
-import { researchInputSchema } from '../asset-intelligence-schema'
+import {
+  connectionSchema,
+  researchInputSchema,
+} from '../asset-intelligence-schema'
+import {
+  confirmAssetResearchConnections,
+  createAndEnqueueAssetResearchJob,
+  loadBoatResearchContext,
+  serializeResearchJobForClient,
+} from '../asset-research-jobs'
 import { attachSuggestedDownload } from '../asset-storage'
+import { z } from 'zod'
 
 export const assetIntelligenceRoutes = new Hono<{
   Variables: { userId: string }
@@ -66,30 +76,12 @@ assetIntelligenceRoutes.post('/:boatId/assets/research', async (c) => {
     return c.json(
       {
         error:
-          'Enter an asset name or description and confirm the model number, or choose no model number.',
+          'Enter an asset name or description and a model number to search.',
       },
       400,
     )
   const boatId = c.req.param('boatId')
-  const [assets, connections] = await Promise.all([
-    prisma.boatAsset.findMany({
-      where: { boatId },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        modelNumber: true,
-        category: true,
-      },
-      orderBy: { createdAt: 'asc' },
-      take: 500,
-    }),
-    prisma.assetConnection.findMany({
-      where: { fromAsset: { boatId }, toAsset: { boatId } },
-      select: { fromAssetId: true, toAssetId: true, reason: true },
-      take: 1000,
-    }),
-  ])
+  const { assets, connections } = await loadBoatResearchContext(boatId)
   try {
     return c.json({
       research: await researchAsset(input.data, assets, connections),
@@ -104,6 +96,94 @@ assetIntelligenceRoutes.post('/:boatId/assets/research', async (c) => {
     )
   }
 })
+
+assetIntelligenceRoutes.post('/:boatId/assets/research/jobs', async (c) => {
+  const input = researchInputSchema.safeParse(
+    await c.req.json().catch(() => null),
+  )
+  if (!input.success)
+    return c.json(
+      {
+        error:
+          input.error.issues[0]?.message ??
+          'Enter an asset name or description and a model number to search.',
+      },
+      400,
+    )
+  try {
+    const job = await createAndEnqueueAssetResearchJob(
+      c.req.param('boatId'),
+      c.get('userId'),
+      input.data,
+    )
+    return c.json({ jobId: job.id }, 202)
+  } catch (error) {
+    return c.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Could not start document search.',
+      },
+      400,
+    )
+  }
+})
+
+assetIntelligenceRoutes.get(
+  '/:boatId/assets/research/jobs/:jobId',
+  async (c) => {
+    const { boatId, jobId } = c.req.param()
+    const job = await prisma.assetResearchJob.findFirst({
+      where: { id: jobId, boatId, requestedByUserId: c.get('userId') },
+    })
+    if (!job) return c.json({ error: 'Document search job not found.' }, 404)
+    const summary = serializeResearchJobForClient(job)
+    const result =
+      job.status === 'completed' ? (job.result as object | null) : undefined
+    return c.json({ job: { ...summary, result } })
+  },
+)
+
+assetIntelligenceRoutes.post(
+  '/:boatId/assets/:assetId/research/connections',
+  async (c) => {
+    const { boatId, assetId } = c.req.param()
+    const body = z
+      .object({
+        connections: z.array(connectionSchema).max(20),
+        researchJobId: z.string().min(1).max(200).optional(),
+      })
+      .safeParse(await c.req.json().catch(() => null))
+    if (!body.success)
+      return c.json({ error: 'Invalid connection selection.' }, 400)
+    const asset = await prisma.boatAsset.findFirst({
+      where: { id: assetId, boatId },
+      select: { id: true },
+    })
+    if (!asset) return c.json({ error: 'Asset not found' }, 404)
+    try {
+      await confirmAssetResearchConnections(
+        boatId,
+        assetId,
+        c.get('userId'),
+        body.data.connections,
+        body.data.researchJobId,
+      )
+      return c.json({ ok: true })
+    } catch (error) {
+      return c.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Could not save connections.',
+        },
+        400,
+      )
+    }
+  },
+)
 
 assetIntelligenceRoutes.post(
   '/:boatId/assets/:assetId/suggestions/:suggestionId/download',

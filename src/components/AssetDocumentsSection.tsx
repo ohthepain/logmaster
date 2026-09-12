@@ -23,6 +23,7 @@ import {
 } from '../lib/boat-documents-api'
 import { documentTitleFromUrl } from '../lib/document-title'
 import { cn } from '../lib/cn'
+import { openExternalUrl } from '../lib/open-external-url'
 import { BoatDocumentKindIcon } from './BoatDocumentActionsMenu'
 import { BoatDocumentViewerModal } from './BoatDocumentViewerModal'
 import { DocumentPurposeBadge } from './DocumentPurposeField'
@@ -33,6 +34,8 @@ type AssetDocumentsSectionProps = {
   boatId: string
   assetId: string
   documents: LinkedBoatDocumentRef[] | LinkedBoatDocumentDetail[]
+  /** Original manufacturer/source URL for attached research suggestions. */
+  externalUrlByDocumentId?: ReadonlyMap<string, string>
   uploading: boolean
   onUpload: (file: File, purpose: DocumentPurpose) => void | Promise<void>
   onAddLink: (input: {
@@ -54,6 +57,7 @@ export function AssetDocumentsSection({
   boatId,
   assetId,
   documents,
+  externalUrlByDocumentId,
   uploading,
   onUpload,
   onAddLink,
@@ -72,6 +76,7 @@ export function AssetDocumentsSection({
             <AssetDocumentListItem
               key={doc.id}
               document={doc}
+              externalSourceUrl={externalUrlByDocumentId?.get(doc.id)}
               onOpenViewer={setDocumentViewer}
               onChanged={refreshDocuments}
             />
@@ -475,25 +480,39 @@ function AddAssetLinkModal({
 
 function AssetDocumentListItem({
   document,
+  externalSourceUrl,
   onOpenViewer,
   onChanged,
 }: {
   document: LinkedBoatDocumentRef | LinkedBoatDocumentDetail
+  externalSourceUrl?: string
   onOpenViewer: (payload: BoatDocumentViewerPayload) => void
   onChanged?: () => void
 }) {
   const version = isDocumentDetail(document) ? document.currentVersion : null
   const isLink = version?.kind === 'link'
-  const subtitle = version
-    ? isLink
-      ? (version.url ?? 'Web link')
-      : (version.fileName ?? 'Uploaded file')
-    : document.purpose
-      ? DOCUMENT_PURPOSE_LABELS[document.purpose]
-      : 'Document'
+  const linkUrl =
+    externalSourceUrl ??
+    (version?.kind === 'link' ? version.url : null) ??
+    null
+  const subtitle = linkUrl
+    ? linkUrl
+    : version
+      ? isLink
+        ? (version.url ?? 'Web link')
+        : (version.fileName ?? 'Uploaded file')
+      : document.purpose
+        ? DOCUMENT_PURPOSE_LABELS[document.purpose]
+        : 'Document'
 
   const handleOpen = () => {
     if (!version) return
+    if (linkUrl) {
+      void openExternalUrl(linkUrl).then((ok) => {
+        if (!ok) toast.error('Could not open link')
+      })
+      return
+    }
     const target = boatDocumentVersionOpenTarget(document.title, version)
     void openBoatDocument(target, { onOpenViewer }).catch((error) => {
       toast.error(
