@@ -134,6 +134,8 @@ describe('photo asset review', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Confirm model number' }),
     )
+    expect(mocks.research).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
     await screen.findByText('Water tank')
     const checkbox = screen.getByRole<HTMLInputElement>('checkbox')
     expect(checkbox.checked).toBe(false)
@@ -152,10 +154,36 @@ describe('photo asset review', () => {
       ),
     )
   })
+  it('does not search until Find documents is tapped, and can save without it', async () => {
+    render(<AddAssetModal {...props} />)
+    await selectPhoto()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Confirm model number' }),
+    )
+    expect(mocks.research).not.toHaveBeenCalled()
+    const add = screen.getByRole<HTMLButtonElement>('button', {
+      name: 'Add asset',
+    })
+    expect(add.disabled).toBe(false)
+    fireEvent.click(add)
+    await waitFor(() =>
+      expect(mocks.create).toHaveBeenCalledWith(
+        'boat',
+        expect.objectContaining({
+          modelNumber: 'P123',
+          suggestedDownloads: [],
+          confirmedConnections: [],
+        }),
+        photo,
+      ),
+    )
+  })
   it('uses no model number for research and saving when the user rejects the match', async () => {
     render(<AddAssetModal {...props} />)
     await selectPhoto()
     fireEvent.click(screen.getByRole('button', { name: 'No model number' }))
+    expect(mocks.research).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
     await screen.findByText('Water tank')
     expect(mocks.research).toHaveBeenCalledWith(
       'boat',
@@ -180,6 +208,7 @@ describe('photo asset review', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Confirm model number' }),
     )
+    fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
     await screen.findByText('Water tank')
     fireEvent.click(screen.getByRole('checkbox'))
     fireEvent.change(screen.getByLabelText('Description'), {
@@ -210,6 +239,7 @@ describe('photo asset review', () => {
       target: { value: 'Red pump in bilge' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'No model number' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
     await screen.findByText('Search unavailable')
     fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
     await waitFor(() =>

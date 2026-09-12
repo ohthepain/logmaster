@@ -70,7 +70,7 @@ export function MapDefaultView() {
           <Link
             to="/trips"
             search={{ startTrip: true }}
-            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-5 py-3 text-base font-bold text-[var(--btn-text)] no-underline shadow-lg transition hover:-translate-y-px"
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-btn-bg px-5 py-3 text-base font-bold text-btn-text no-underline shadow-lg transition hover:-translate-y-px hover:text-btn-text"
           >
             <Sailboat className="size-5" />
             {t('startTrip')}

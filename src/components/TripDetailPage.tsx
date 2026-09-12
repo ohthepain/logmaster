@@ -975,7 +975,7 @@ export function TripDetailPage({
               type="button"
               disabled={busy}
               onClick={() => void handleStartTrip()}
-              className="pointer-events-auto inline-flex items-center justify-center gap-2 rounded-full bg-[var(--btn-bg)] px-5 py-3 text-base font-bold text-[var(--btn-text)] shadow-lg transition hover:-translate-y-px disabled:opacity-60"
+              className="pointer-events-auto inline-flex items-center justify-center gap-2 rounded-full bg-btn-bg px-5 py-3 text-base font-bold text-btn-text shadow-lg transition hover:-translate-y-px disabled:opacity-60"
             >
               <Sailboat className="size-5" />
               {t('startTrip')}

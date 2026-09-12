@@ -6,6 +6,8 @@
 
 @theme {
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --color-btn-bg: var(--btn-bg);
+  --color-btn-text: var(--btn-text);
 }
 
 :root {
@@ -40,6 +42,14 @@
   --active-border: rgba(0, 0, 0, 0.22);
   --hero-a: rgba(0, 0, 0, 0.03);
   --hero-b: rgba(0, 0, 0, 0.02);
+}
+
+/* Tailwind v4 treats text-[var(--x)] as font-size, so filled buttons
+   would inherit --sea-ink and disappear on --btn-bg in light mode. */
+@layer utilities {
+  .text-\[var\(--btn-text\)\] {
+    color: var(--btn-text);
+  }
 }
 
 :root[data-theme="dark"] {
@@ -167,20 +177,22 @@ body.ios-native-map-touch-root [data-blocking-overlay] {
   pointer-events: auto;
 }
 
-a {
-  color: var(--sea-ink);
-  text-decoration-color: rgba(0, 0, 0, 0.35);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
-}
+@layer base {
+  a {
+    color: var(--sea-ink);
+    text-decoration-color: rgba(0, 0, 0, 0.35);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
 
-.dark a,
-:root[data-theme="dark"] a {
-  text-decoration-color: rgba(255, 255, 255, 0.35);
-}
+  .dark a,
+  :root[data-theme="dark"] a {
+    text-decoration-color: rgba(255, 255, 255, 0.35);
+  }
 
-a:hover {
-  color: var(--sea-ink-soft);
+  a:hover {
+    color: var(--sea-ink-soft);
+  }
 }
 
 code {

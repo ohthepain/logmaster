@@ -99,7 +99,9 @@ export function AddAssetModal({
   )
   const input = useRef<HTMLInputElement>(null)
   const request = useRef<AbortController | null>(null)
-  const busy = status !== 'idle'
+  const researchRequest = useRef<AbortController | null>(null)
+  const blocking =
+    status === 'camera' || status === 'identifying' || status === 'saving'
 
   function rememberMatch(nextName: string, nextModel: string | null) {
     setExistingMatch(
@@ -110,7 +112,13 @@ export function AddAssetModal({
     )
   }
 
-  useEffect(() => () => request.current?.abort(), [])
+  useEffect(
+    () => () => {
+      request.current?.abort()
+      researchRequest.current?.abort()
+    },
+    [],
+  )
   useEffect(() => {
     if (!photo) {
       setPreview('')
@@ -122,8 +130,11 @@ export function AddAssetModal({
   }, [photo])
 
   function invalidateResearch() {
+    researchRequest.current?.abort()
+    researchRequest.current = null
     setResearch(null)
     setConfirmed([])
+    setStatus((current) => (current === 'researching' ? 'idle' : current))
   }
 
   async function identify(file: File) {
@@ -202,19 +213,31 @@ export function AddAssetModal({
     }
   }
 
-  async function findSuggestions(model: string | null) {
+  function confirmModel(model: string | null) {
     setModelNumber(model ?? '')
     setModelReviewed(true)
     invalidateResearch()
+    const match = findExistingBoatAsset(assets, {
+      name,
+      modelNumber: model,
+    })
+    setExistingMatch(match)
+    if (match) return
+    setNotice('')
+  }
+
+  async function findSuggestions(model: string | null) {
     if (!(name.trim() || description.trim())) {
       setNotice(
-        'Enter a name or description, then tap Find suggestions. You can also save without suggestions.',
+        'Enter a name or description, then tap Find documents. You can also save without documents.',
       )
       return
     }
-    request.current?.abort()
+    researchRequest.current?.abort()
     const controller = new AbortController()
-    request.current = controller
+    researchRequest.current = controller
+    setResearch(null)
+    setConfirmed([])
     setStatus('researching')
     setNotice('')
     try {
@@ -243,8 +266,7 @@ export function AddAssetModal({
         )
     } finally {
       if (!controller.signal.aborted) {
-        rememberMatch(name, model)
-        setStatus('idle')
+        setStatus((current) => (current === 'researching' ? 'idle' : current))
       }
     }
   }
@@ -297,9 +319,7 @@ export function AddAssetModal({
   const statusLabel =
     status === 'identifying'
       ? 'Identifying the device and reading its label…'
-      : status === 'researching'
-        ? 'Searching for documents and possible connections…'
-        : status === 'saving'
+      : status === 'saving'
           ? existingMatch
             ? 'Updating the existing asset…'
             : 'Saving asset and photo…'
@@ -314,16 +334,18 @@ export function AddAssetModal({
       onClose={() => {
         if (status !== 'saving') {
           request.current?.abort()
+          researchRequest.current?.abort()
           onClose()
         }
       }}
     >
       <form
         className="space-y-4"
-        aria-busy={busy}
+        aria-busy={blocking || status === 'researching'}
         onSubmit={(event) => {
           event.preventDefault()
-          if (busy || existingMatch || !modelReviewed) return
+          if (blocking || existingMatch || !modelReviewed) return
+          researchRequest.current?.abort()
           setStatus('saving')
           void createBoatAsset(
             boatId,
@@ -355,7 +377,7 @@ export function AddAssetModal({
             })
         }}
       >
-        {busy && statusLabel ? (
+        {blocking && statusLabel ? (
           <p
             role="status"
             className="flex items-center gap-3 rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-3 text-sm font-medium"
@@ -367,7 +389,7 @@ export function AddAssetModal({
             {statusLabel}
           </p>
         ) : null}
-        {existingMatch && !busy ? (
+        {existingMatch && status !== 'saving' ? (
           <div
             role="status"
             className="space-y-3 rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] p-4"
@@ -413,7 +435,7 @@ export function AddAssetModal({
           </div>
         ) : null}
         <fieldset
-          disabled={busy}
+          disabled={blocking}
           className="m-0 min-w-0 space-y-4 border-0 p-0 disabled:opacity-70"
         >
           <div className="rounded-2xl border border-[var(--panel-border)] p-4">
@@ -528,14 +550,14 @@ export function AddAssetModal({
                 type="button"
                 disabled={!modelNumber.trim()}
                 className={buttonClass}
-                onClick={() => void findSuggestions(modelNumber.trim())}
+                onClick={() => confirmModel(modelNumber.trim())}
               >
                 Confirm model number
               </button>
               <button
                 type="button"
                 className={buttonClass}
-                onClick={() => void findSuggestions(null)}
+                onClick={() => confirmModel(null)}
               >
                 No model number
               </button>
@@ -562,16 +584,30 @@ export function AddAssetModal({
               ))}
             </select>
           </label>
-          {modelReviewed && (
+          {modelReviewed && !existingMatch ? (
             <button
               type="button"
+              disabled={status === 'researching'}
               className={`${buttonClass} inline-flex items-center gap-2`}
               onClick={() => void findSuggestions(modelNumber.trim() || null)}
             >
               <Sparkles className="size-4" />
-              Find suggestions
+              Find documents
             </button>
-          )}
+          ) : null}
+          {status === 'researching' ? (
+            <p
+              role="status"
+              className="flex items-center gap-3 rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-3 text-sm font-medium"
+            >
+              <LoaderCircle
+                className="size-5 shrink-0 animate-spin"
+                aria-hidden
+              />
+              Searching for documents and possible connections. You can save
+              now, or wait.
+            </p>
+          ) : null}
           {research && (
             <div className="space-y-4">
               {!!research.downloads.length && (
@@ -701,7 +737,7 @@ export function AddAssetModal({
         {existingMatch ? null : (
           <button
             type="submit"
-            disabled={busy || !modelReviewed}
+            disabled={blocking || !modelReviewed}
             className="w-full rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-50"
           >
             {status === 'saving' ? 'Saving…' : 'Add asset'}
