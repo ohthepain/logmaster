@@ -1160,3 +1160,16 @@ model ExpenseClaimDocument {
   @@unique([claimId, documentId])
   @@map("expense_claim_document")
 }
+
+model TranslationOverride {
+  id        String   @id @default(cuid())
+  language  String
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([language, key])
+  @@index([language])
+  @@map("translation_override")
+}

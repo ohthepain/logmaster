@@ -156,7 +156,9 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                 ),
           )}
           aria-label={
-            user ? `${t('profile')}: ${user.name || user.email}` : t('profileMenu')
+            user
+              ? `${t('profile')}: ${user.name || user.email}`
+              : t('profileMenu')
           }
           aria-haspopup="dialog"
           aria-expanded={open}
@@ -231,7 +233,11 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                           </p>
                           <p className="m-0 mt-2 text-sm font-medium text-[var(--sea-ink-soft)]">
                             {trips.length}{' '}
-                            {language === 'sv' ? 'resor' : trips.length === 1 ? 'trip' : 'trips'}
+                            {language === 'sv'
+                              ? 'resor'
+                              : trips.length === 1
+                                ? 'trip'
+                                : 'trips'}
                           </p>
                           <p className="m-0 mt-3 inline-flex items-center gap-1 text-xs font-bold text-[var(--sea-ink)]">
                             {user ? t('editProfile') : t('openYourAccount')}
@@ -276,7 +282,12 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     >
                       <CollectionCardContent
                         title={t('trips')}
-                        detail={collectionDetail(trips.length, language, 'trip', 'resa')}
+                        detail={collectionDetail(
+                          trips.length,
+                          language,
+                          'trip',
+                          'resa',
+                        )}
                         loading={false}
                         empty={trips.length === 0}
                       >
@@ -294,7 +305,9 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     </MenuCard>
 
                     <MenuCard
-                      ariaLabel={boats.length ? t('manageBoats') : t('addABoat')}
+                      ariaLabel={
+                        boats.length ? t('manageBoats') : t('addABoat')
+                      }
                       addAction={
                         boats.length
                           ? {
@@ -320,7 +333,12 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     >
                       <CollectionCardContent
                         title={t('boats')}
-                        detail={collectionDetail(boats.length, language, 'boat', 'båt')}
+                        detail={collectionDetail(
+                          boats.length,
+                          language,
+                          'boat',
+                          'båt',
+                        )}
                         loading={loadingCollections}
                         empty={boats.length === 0}
                       >
@@ -387,9 +405,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
 
                     <MenuCard
                       ariaLabel={`${t('connections')}, ${t('comingSoon').toLowerCase()}`}
-                      onClick={() =>
-                        toast.message(t('connectionsComingSoon'))
-                      }
+                      onClick={() => toast.message(t('connectionsComingSoon'))}
                     >
                       <CollectionCardContent
                         title={t('connections')}
@@ -732,6 +748,7 @@ function collectionDetail(
   englishSingular: string,
   swedishSingular: string,
 ): string {
-  if (language === 'sv') return `${count} ${swedishSingular}${count === 1 ? '' : 'ar'}`
+  if (language === 'sv')
+    return `${count} ${swedishSingular}${count === 1 ? '' : 'ar'}`
   return `${count} ${count === 1 ? englishSingular : `${englishSingular}s`}`
 }

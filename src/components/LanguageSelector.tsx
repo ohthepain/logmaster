@@ -5,7 +5,12 @@ import { cn } from '../lib/cn'
 export function LanguageSelector({ className }: { className?: string }) {
   const { language, setLanguage, t } = useTranslation()
   return (
-    <label className={cn('inline-flex items-center gap-2 text-sm font-medium text-[var(--sea-ink)]', className)}>
+    <label
+      className={cn(
+        'inline-flex items-center gap-2 text-sm font-medium text-[var(--sea-ink)]',
+        className,
+      )}
+    >
       <Languages className="size-4" aria-hidden />
       <span>{t('language')}</span>
       <select

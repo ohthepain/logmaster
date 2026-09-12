@@ -53,6 +53,53 @@ adminRoutes.use('*', async (c, next) => {
   await next()
 })
 
+adminRoutes.get('/translations', async (c) => {
+  const rows = await db.translationOverride.findMany({
+    orderBy: [{ language: 'asc' }, { key: 'asc' }],
+    select: { language: true, key: true, value: true, updatedAt: true },
+  })
+  return c.json({
+    overrides: rows.map(
+      (row: {
+        language: string
+        key: string
+        value: string
+        updatedAt: Date
+      }) => ({ ...row, updatedAt: row.updatedAt.toISOString() }),
+    ),
+  })
+})
+
+adminRoutes.put('/translations/:language/:key', async (c) => {
+  const language = c.req.param('language').trim().toLowerCase()
+  const key = c.req.param('key').trim()
+  const body = (await c.req.json().catch(() => ({}))) as { value?: unknown }
+  const value = typeof body.value === 'string' ? body.value.trim() : ''
+  if (!language || !key || !value) {
+    return c.json(
+      { error: 'language, key, and a non-empty value are required' },
+      400,
+    )
+  }
+
+  const override = await db.translationOverride.upsert({
+    where: { language_key: { language, key } },
+    create: { language, key, value },
+    update: { value },
+    select: { language: true, key: true, value: true, updatedAt: true },
+  })
+  return c.json({
+    override: { ...override, updatedAt: override.updatedAt.toISOString() },
+  })
+})
+
+adminRoutes.delete('/translations/:language/:key', async (c) => {
+  const language = c.req.param('language').trim().toLowerCase()
+  const key = c.req.param('key').trim()
+  await db.translationOverride.deleteMany({ where: { language, key } })
+  return c.json({ ok: true })
+})
+
 function serializeTrip(trip: {
   id: string
   boatName: string

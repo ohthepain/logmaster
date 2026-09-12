@@ -39,7 +39,10 @@ import {
   replaySourceEntries,
 } from '../lib/dev-trip-replay'
 import { isDevModeAvailable } from '../lib/dev-mode'
-import { setDevPositionOverride } from '../lib/device-position'
+import {
+  clearDevPositionOverride,
+  setDevPositionOverride,
+} from '../lib/device-position'
 import { formatDateTime, formatPosition } from '../lib/logbook-format'
 import {
   tripDetailCoverDisplay,
@@ -699,9 +702,18 @@ export function TripDetailPage({
   const handleDeleteTrip = async () => {
     setBusy(true)
     try {
+      const replay = useAppOptionsStore.getState().devTripReplay
+      if (replay?.targetTripId === trip.id) {
+        const options = useAppOptionsStore.getState()
+        options.setDevTripReplay(null)
+        if (options.recordingTripId === trip.id) {
+          options.setRecordingTripId(null)
+        }
+        clearDevPositionOverride()
+      }
       await store.deleteTrip(trip.id)
       toast.success('Trip deleted')
-      void navigate({ to: '/' })
+      void navigate({ to: '/map' })
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Failed to delete trip',
@@ -709,6 +721,27 @@ export function TripDetailPage({
     } finally {
       setBusy(false)
       setDeleteConfirmOpen(false)
+    }
+  }
+
+  const handleCloseReplay = async () => {
+    try {
+      const replay = useAppOptionsStore.getState().devTripReplay
+      if (replay?.targetTripId === trip.id) {
+        const options = useAppOptionsStore.getState()
+        options.setDevTripReplay(null)
+        if (options.recordingTripId === trip.id) {
+          options.setRecordingTripId(null)
+        }
+        clearDevPositionOverride()
+        await store.deleteTrip(trip.id)
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to close trip replay',
+      )
+    } finally {
+      void navigate({ to: '/map' })
     }
   }
 
@@ -846,32 +879,19 @@ export function TripDetailPage({
               ? () => setReplayOpen(true)
               : undefined
           }
+          onCloseReplay={() => void handleCloseReplay()}
         />
 
-        {trip.status !== 'COMPLETED' && !waypointMapInteractionActive ? (
+        {trip.status === 'IN_PROGRESS' && !waypointMapInteractionActive ? (
           <TripDetailBottomSheet
             leadingAction={
-              trip.status === 'IN_PROGRESS' ? (
-                <TripRecordButton
-                  tripId={trip.id}
-                  logEntryDisabled={busy}
-                  onLogEntryClick={() => setCreateEntryOpen(true)}
-                />
-              ) : null
+              <TripRecordButton
+                tripId={trip.id}
+                logEntryDisabled={busy}
+                onLogEntryClick={() => setCreateEntryOpen(true)}
+              />
             }
           >
-            {trip.status === 'PLANNED' ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void handleStartTrip()}
-                className="flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-[var(--btn-bg)] px-4 py-4 text-base font-bold text-[var(--btn-text)] shadow-sm transition hover:-translate-y-px disabled:opacity-60"
-              >
-                <Sailboat className="size-5" />
-                Start trip
-              </button>
-            ) : null}
-
             <TripLegSection
               tripId={trip.id}
               tripStatus={trip.status}
@@ -889,36 +909,25 @@ export function TripDetailPage({
               </p>
 
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                {trip.status !== 'PLANNED' ? (
-                  <MetaLine
-                    label="Started"
-                    value={formatDateTime(trip.startedAt)}
-                  />
-                ) : (
-                  <MetaLine
-                    label="Created"
-                    value={formatDateTime(trip.createdAt)}
-                  />
-                )}
+                <MetaLine
+                  label="Started"
+                  value={formatDateTime(trip.startedAt)}
+                />
                 <MetaLine
                   label="Status"
                   value={trip.status.replace('_', ' ')}
                 />
-                {trip.status !== 'PLANNED' && (
-                  <>
-                    <MetaLine
-                      label="Position"
-                      value={formatPosition(
-                        trip.startLatitude,
-                        trip.startLongitude,
-                      )}
-                    />
-                    <MetaLine
-                      label="Country"
-                      value={trip.startCountry ?? 'Unknown'}
-                    />
-                  </>
-                )}
+                <MetaLine
+                  label="Position"
+                  value={formatPosition(
+                    trip.startLatitude,
+                    trip.startLongitude,
+                  )}
+                />
+                <MetaLine
+                  label="Country"
+                  value={trip.startCountry ?? 'Unknown'}
+                />
                 {trip.skipper && (
                   <MetaLine label="Skipper" value={trip.skipper} icon={User} />
                 )}
@@ -951,6 +960,25 @@ export function TripDetailPage({
               </button>
             </div>
           </TripDetailBottomSheet>
+        ) : null}
+
+        {trip.status === 'PLANNED' && !waypointMapInteractionActive ? (
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3"
+            style={{
+              paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+            }}
+          >
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handleStartTrip()}
+              className="pointer-events-auto inline-flex items-center justify-center gap-2 rounded-full bg-[var(--btn-bg)] px-5 py-3 text-base font-bold text-[var(--btn-text)] shadow-lg transition hover:-translate-y-px disabled:opacity-60"
+            >
+              <Sailboat className="size-5" />
+              Start trip
+            </button>
+          </div>
         ) : null}
 
         {trip.status === 'COMPLETED' &&

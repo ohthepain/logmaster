@@ -47,6 +47,44 @@ export async function deleteAdminTrip(tripId: string): Promise<void> {
   await api(`/api/admin/trips/${tripId}`, { method: 'DELETE' })
 }
 
+export type AdminTranslationOverride = {
+  language: string
+  key: string
+  value: string
+  updatedAt: string
+}
+
+export async function fetchAdminTranslationOverrides(): Promise<
+  AdminTranslationOverride[]
+> {
+  const data = await api<{ overrides: AdminTranslationOverride[] }>(
+    '/api/admin/translations',
+  )
+  return data.overrides
+}
+
+export async function saveAdminTranslation(
+  language: string,
+  key: string,
+  value: string,
+): Promise<AdminTranslationOverride> {
+  const data = await api<{ override: AdminTranslationOverride }>(
+    `/api/admin/translations/${encodeURIComponent(language)}/${encodeURIComponent(key)}`,
+    { method: 'PUT', body: JSON.stringify({ value }) },
+  )
+  return data.override
+}
+
+export async function resetAdminTranslation(
+  language: string,
+  key: string,
+): Promise<void> {
+  await api(
+    `/api/admin/translations/${encodeURIComponent(language)}/${encodeURIComponent(key)}`,
+    { method: 'DELETE' },
+  )
+}
+
 export type AdminOrg = {
   id: string
   name: string

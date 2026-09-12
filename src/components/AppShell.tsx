@@ -22,7 +22,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/crew/invite/') ||
     pathname.startsWith('/invite/') ||
     isTripStoryRoute(pathname)
-  const mapOverlayHeader = isTripDetailImmersiveRoute(pathname)
+  const mapOverlayHeader =
+    pathname === '/' || pathname === '/map' || isTripDetailImmersiveRoute(pathname)
 
   useEffect(() => {
     if (typeof window === 'undefined') return

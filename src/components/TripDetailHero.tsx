@@ -59,6 +59,7 @@ type TripDetailHeroProps = {
   onEditWaypointsClick?: () => void
   waypointPick?: MapWaypointPickConfig
   onReplayTestClick?: () => void
+  onCloseReplay?: () => void | Promise<void>
   onInitialMapViewportSettled?: () => void
 }
 
@@ -84,6 +85,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
       onEditWaypointsClick,
       waypointPick,
       onReplayTestClick,
+      onCloseReplay,
       onInitialMapViewportSettled,
     }: TripDetailHeroProps,
     ref,
@@ -480,7 +482,13 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
               {isPlayback ? (
                 <TripMapChromeButton
                   label="Close replay and return to map"
-                  onClick={() => void navigate({ to: '/map' })}
+                  onClick={() => {
+                    if (onCloseReplay) {
+                      void onCloseReplay()
+                    } else {
+                      void navigate({ to: '/map' })
+                    }
+                  }}
                   disabled={busy}
                   tooltipSide="bottom"
                 >

@@ -1,120 +1,94 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import englishCatalog from './locales/en'
+import { apiUrl } from './app-origin'
 
-/**
- * Keep the English catalog as the source of truth. Adding a language is a
- * type-checked `TranslationCatalog` here and one entry in `translations`.
- */
-const en = {
-  language: 'Language',
-  english: 'English',
-  swedish: 'Swedish',
-  home: 'Home',
-  profile: 'Profile',
-  profileMenu: 'Profile menu',
-  closeProfileMenu: 'Close profile menu',
-  editProfile: 'Edit profile',
-  openYourAccount: 'Open your account',
-  trips: 'Trips',
-  boats: 'Boats',
-  crew: 'Crew',
-  connections: 'Connections',
-  comingSoon: 'Coming soon',
-  addTrip: 'Add trip',
-  addBoat: 'Add boat',
-  addCrewMember: 'Add crew member',
-  manageTrips: 'Manage trips',
-  openMapToAddTrip: 'Open map to add a trip',
-  manageBoats: 'Manage boats',
-  addABoat: 'Add a boat',
-  manageCrew: 'Manage crew',
-  addCrew: 'Add crew',
-  connectionsComingSoon: 'Connections are coming soon',
-  accountOptions: 'Account options',
-  orgs: 'Orgs',
-  admin: 'Admin',
-  resetTutorial: 'Reset tutorial',
-  tutorialReset: 'Tutorial reset',
-  termsOfService: 'Terms of Service',
-  privacyPolicy: 'Privacy Policy',
-  signOut: 'Sign out',
-  signIn: 'Sign in',
-  loading: 'Loading…',
-  light: 'Light',
-  dark: 'Dark',
-  systemTheme: 'System (match device)',
-  colorScheme: 'Color scheme',
-  pageNotFound: 'Page not found',
-  unknownUrl: 'That URL does not match any route. Check the address or return home.',
-  backToLogmaster: 'Back to logmaster',
-} as const
-
-export type TranslationKey = keyof typeof en
+export type TranslationKey =
+  | 'language'
+  | 'english'
+  | 'swedish'
+  | 'home'
+  | 'profile'
+  | 'profileMenu'
+  | 'closeProfileMenu'
+  | 'editProfile'
+  | 'openYourAccount'
+  | 'trips'
+  | 'boats'
+  | 'crew'
+  | 'connections'
+  | 'comingSoon'
+  | 'addTrip'
+  | 'addBoat'
+  | 'addCrewMember'
+  | 'manageTrips'
+  | 'openMapToAddTrip'
+  | 'manageBoats'
+  | 'addABoat'
+  | 'manageCrew'
+  | 'addCrew'
+  | 'connectionsComingSoon'
+  | 'accountOptions'
+  | 'orgs'
+  | 'admin'
+  | 'resetTutorial'
+  | 'tutorialReset'
+  | 'termsOfService'
+  | 'privacyPolicy'
+  | 'signOut'
+  | 'signIn'
+  | 'loading'
+  | 'light'
+  | 'dark'
+  | 'systemTheme'
+  | 'colorScheme'
+  | 'pageNotFound'
+  | 'unknownUrl'
+  | 'backToLogmaster'
 export type TranslationCatalog = Record<TranslationKey, string>
 
-/** Add a locale here after creating its catalog below. */
+/** Register a locale here after adding its lazy-loaded catalog module. */
 export const languages = [
-  { code: 'en', nameKey: 'english' },
-  { code: 'sv', nameKey: 'swedish' },
+  { code: 'en', nameKey: 'english', load: () => import('./locales/en') },
+  { code: 'sv', nameKey: 'swedish', load: () => import('./locales/sv') },
 ] as const
 export type Language = (typeof languages)[number]['code']
 
-const sv: TranslationCatalog = {
-  language: 'Språk',
-  english: 'Engelska',
-  swedish: 'Svenska',
-  home: 'Hem',
-  profile: 'Profil',
-  profileMenu: 'Profilmeny',
-  closeProfileMenu: 'Stäng profilmenyn',
-  editProfile: 'Redigera profil',
-  openYourAccount: 'Öppna ditt konto',
-  trips: 'Resor',
-  boats: 'Båtar',
-  crew: 'Besättning',
-  connections: 'Anslutningar',
-  comingSoon: 'Kommer snart',
-  addTrip: 'Lägg till resa',
-  addBoat: 'Lägg till båt',
-  addCrewMember: 'Lägg till besättningsmedlem',
-  manageTrips: 'Hantera resor',
-  openMapToAddTrip: 'Öppna kartan för att lägga till en resa',
-  manageBoats: 'Hantera båtar',
-  addABoat: 'Lägg till en båt',
-  manageCrew: 'Hantera besättning',
-  addCrew: 'Lägg till besättning',
-  connectionsComingSoon: 'Anslutningar kommer snart',
-  accountOptions: 'Kontoinställningar',
-  orgs: 'Organisationer',
-  admin: 'Administration',
-  resetTutorial: 'Starta om introduktionen',
-  tutorialReset: 'Introduktionen har startats om',
-  termsOfService: 'Användarvillkor',
-  privacyPolicy: 'Integritetspolicy',
-  signOut: 'Logga ut',
-  signIn: 'Logga in',
-  loading: 'Laddar…',
-  light: 'Ljust',
-  dark: 'Mörkt',
-  systemTheme: 'System (följ enheten)',
-  colorScheme: 'Färgschema',
-  pageNotFound: 'Sidan hittades inte',
-  unknownUrl: 'Den här webbadressen matchar ingen sida. Kontrollera adressen eller gå tillbaka till startsidan.',
-  backToLogmaster: 'Tillbaka till logmaster',
-}
-
-export const translations: Record<Language, TranslationCatalog> = { en, sv }
 export const LANGUAGE_STORAGE_KEY = 'language'
 
 function preferredLanguage(): Language {
   if (typeof window === 'undefined') return 'en'
   const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
-  if (stored === 'en' || stored === 'sv') return stored
-  return navigator.language.toLowerCase().startsWith('sv') ? 'sv' : 'en'
+  const storedLanguage = languages.find((item) => item.code === stored)?.code
+  if (storedLanguage) return storedLanguage
+  const browserLanguage = navigator.language.toLowerCase().split('-')[0]
+  return languages.find((item) => item.code === browserLanguage)?.code ?? 'en'
+}
+
+async function loadCatalog(language: Language): Promise<TranslationCatalog> {
+  const entry = languages.find((item) => item.code === language)
+  const module = await (entry?.load() ?? languages[0].load())
+  const base = module.default
+
+  // Overrides are fetched after the lazy module so a temporary API failure
+  // never prevents the app from rendering its built-in copy.
+  try {
+    const response = await fetch(apiUrl(`/api/translations/${language}`), {
+      credentials: 'include',
+      cache: 'no-store',
+    })
+    if (!response.ok) return base
+    const data = (await response.json()) as { translations?: unknown }
+    if (!data.translations || typeof data.translations !== 'object') return base
+    return { ...base, ...(data.translations as Partial<TranslationCatalog>) }
+  } catch {
+    return base
+  }
 }
 
 type I18nContextValue = {
   language: Language
+  loading: boolean
   setLanguage: (language: Language) => void
   t: (key: TranslationKey) => string
 }
@@ -122,21 +96,40 @@ type I18nContextValue = {
 const I18nContext = createContext<I18nContextValue | null>(null)
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  // Start from the server-rendered locale, then read browser preferences after
+  // Start from the server-rendered English catalog, then switch after
   // hydration so locale-dependent labels never cause a hydration mismatch.
   const [language, setLanguageState] = useState<Language>('en')
+  const [catalog, setCatalog] = useState<TranslationCatalog>(englishCatalog)
+  const [loading, setLoading] = useState(false)
+
   useEffect(() => setLanguageState(preferredLanguage()), [])
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    void loadCatalog(language).then((nextCatalog) => {
+      if (cancelled) return
+      setCatalog(nextCatalog)
+      setLoading(false)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [language])
+
   useEffect(() => {
     document.documentElement.lang = language
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
   }, [language])
+
   const value = useMemo<I18nContextValue>(
     () => ({
       language,
+      loading,
       setLanguage: setLanguageState,
-      t: (key) => translations[language][key],
+      t: (key) => catalog[key] ?? englishCatalog[key],
     }),
-    [language],
+    [catalog, language, loading],
   )
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
 }

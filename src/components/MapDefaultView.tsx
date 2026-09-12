@@ -1,9 +1,20 @@
 import { Link, useNavigate } from '@tanstack/react-router'
-import { MapPin, Sailboat } from 'lucide-react'
+import { Sailboat } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 import { DevComponentLabel } from './DevComponentLabel'
+import { TripLogMap } from './TripLogMap'
+import type { Trip } from '../domain/logbook'
 import { resolveMapModeTrip } from '../lib/trip-nav'
 import { useLogbookStore } from '../stores/logbook'
+
+const EMPTY_MAP_TRIP: Trip = {
+  id: 'map-without-trip',
+  boatName: '',
+  startedAt: '1970-01-01T00:00:00.000Z',
+  status: 'PLANNED',
+  createdAt: '1970-01-01T00:00:00.000Z',
+  updatedAt: '1970-01-01T00:00:00.000Z',
+}
 
 export function MapDefaultView() {
   const navigate = useNavigate()
@@ -35,23 +46,32 @@ export function MapDefaultView() {
 
   if (!trip) {
     return (
-      <main className="page-wrap px-3 pb-24 pt-4 sm:px-4 sm:pb-28">
+      <main className="relative h-dvh w-full overflow-hidden">
         <DevComponentLabel name="MapDefaultView" />
-        <div className="mx-auto max-w-lg pt-8 text-center">
-          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] text-[var(--sea-ink)]">
-            <MapPin className="size-6" strokeWidth={1.75} />
-          </div>
-          <h1 className="brand-title m-0 text-[2rem] leading-none">Map</h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-[var(--sea-ink-soft)]">
-            Start a trip to see your track and log entries on the chart.
-          </p>
+        <TripLogMap
+          trip={EMPTY_MAP_TRIP}
+          entries={[]}
+          legs={[]}
+          tracks={[]}
+          mapClassName="h-full w-full"
+          allowFullscreen={false}
+          embedded
+          showCurrentPosition
+          interactive
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3"
+          style={{
+            paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+          }}
+        >
           <Link
             to="/trips"
             search={{ startTrip: true }}
-            className="mt-5 inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] no-underline"
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-5 py-3 text-base font-bold text-[var(--btn-text)] no-underline shadow-lg transition hover:-translate-y-px"
           >
-            <Sailboat className="size-4" />
-            Start a trip
+            <Sailboat className="size-5" />
+            Start trip
           </Link>
         </div>
       </main>
