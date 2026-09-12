@@ -169,3 +169,42 @@ export function extensionForDocumentMime(
   }
   return 'bin'
 }
+
+const DOCUMENT_EXT_CONTENT_TYPES: Record<string, string> = {
+  pdf: 'application/pdf',
+  txt: 'text/plain',
+  csv: 'text/csv',
+  md: 'text/markdown',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+}
+
+export function contentTypeForStoredDocument(
+  mimeType: string | null | undefined,
+  fileName: string | null | undefined,
+  fallback?: string | null,
+): string {
+  const mime = mimeType?.trim()
+  if (mime && mime !== 'application/octet-stream') return mime
+  if (fallback && fallback !== 'application/octet-stream') return fallback
+  const ext = extensionForDocumentMime(mime ?? '', fileName ?? undefined)
+  return DOCUMENT_EXT_CONTENT_TYPES[ext] ?? mime ?? fallback ?? 'application/octet-stream'
+}
+
+export function inlineContentDisposition(fileName: string): string {
+  const safe = fileName.replace(/["\r\n]/g, '').trim() || 'document'
+  const ascii = [...safe]
+    .map((char) => {
+      const code = char.charCodeAt(0)
+      return code >= 32 && code <= 126 ? char : '_'
+    })
+    .join('')
+  return `inline; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(safe)}`
+}

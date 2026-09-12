@@ -52,7 +52,11 @@ function BoatAssetDetailPage() {
       await uploadAndLinkAssetDocument(boatId, assetId, file, purpose)
       await load()
       toast.success(
-        purpose === 'receipt' ? 'Receipt uploaded' : 'Document uploaded',
+        purpose === 'receipt'
+          ? 'Receipt uploaded'
+          : purpose === 'photo'
+            ? 'Photo uploaded'
+            : 'Document uploaded',
       )
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Upload failed')
@@ -151,19 +155,18 @@ function BoatAssetDetailPage() {
           </h2>
           {asset.documents.length === 0 && !uploading ? (
             <p className="mb-3 text-sm text-[var(--sea-ink-soft)]">
-              No documents yet. Upload a receipt, add a file, or paste a link
-              below.
+              No documents yet. Upload a receipt or photo, add a file, or paste a
+              link below.
             </p>
           ) : null}
           <AssetDocumentsSection
             boatId={boatId}
             assetId={assetId}
             documents={asset.documents}
-            showPreviews
             uploading={uploading}
             onUpload={handleUpload}
             onAddLink={handleAddLink}
-            onLinked={() => void load()}
+            onDocumentsChange={() => void load()}
           />
         </section>
 

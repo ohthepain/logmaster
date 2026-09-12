@@ -50,7 +50,7 @@ export function RouteWaypointComposerModal({
       return
     }
 
-    void getCurrentPosition()
+    void getCurrentPosition({ force: true })
       .then((current) => {
         if (current?.latitude != null && current.longitude != null) {
           setPosition({

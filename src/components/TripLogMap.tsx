@@ -419,11 +419,6 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
       if (!showCurrentPosition) return
       return subscribeToDevicePosition((position) => {
         if (position.latitude == null || position.longitude == null) {
-          setCurrentPosition({
-            longitude: DEV_FALLBACK_POSITION.longitude,
-            latitude: DEV_FALLBACK_POSITION.latitude,
-            heading: 0,
-          })
           return
         }
         const nextPosition = {

@@ -192,31 +192,35 @@ export function ResourceMembersTab({
               orgId={notificationOrgId}
             />
           ) : null}
-          {onRefresh ? (
-            <ResourceRefreshButton
-              onRefresh={onRefresh}
-              refreshing={refreshing}
-            />
-          ) : null}
         </div>
-        {canManageMembers ? (
+        {canManageMembers || onRefresh ? (
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={onCreateLink}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
-            >
-              <Link2 className="size-4" />
-              Invite link
-            </button>
-            <button
-              type="button"
-              onClick={onInvite}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
-            >
-              <UserPlus className="size-4" />
-              Invite
-            </button>
+            {canManageMembers ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onCreateLink}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
+                >
+                  <Link2 className="size-4" />
+                  Invite link
+                </button>
+                <button
+                  type="button"
+                  onClick={onInvite}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
+                >
+                  <UserPlus className="size-4" />
+                  Invite
+                </button>
+              </>
+            ) : null}
+            {onRefresh ? (
+              <ResourceRefreshButton
+                onRefresh={onRefresh}
+                refreshing={refreshing}
+              />
+            ) : null}
           </div>
         ) : null}
       </div>

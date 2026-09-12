@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { boatDocumentOpenTarget } from './boat-document-open'
 import {
+  downloadFileNameForBoatDocument,
   extensionForBoatDocumentTarget,
   getBoatDocumentViewKind,
 } from './boat-document-viewer'
@@ -37,5 +38,23 @@ describe('extensionForBoatDocumentTarget', () => {
     )
     expect(extensionForBoatDocumentTarget(target)).toBe('pdf')
     expect(getBoatDocumentViewKind(target)).toBe('pdf')
+  })
+})
+
+describe('downloadFileNameForBoatDocument', () => {
+  it('prefers the stored file name', () => {
+    const target = boatDocumentOpenTarget(
+      uploadDocument('Faktura 95748.pdf', 'application/pdf'),
+    )
+    expect(downloadFileNameForBoatDocument(target)).toBe('Faktura 95748.pdf')
+  })
+
+  it('builds a name from the title when the file name is missing', () => {
+    const document = uploadDocument('', 'application/pdf')
+    document.title = 'Faktura 95748'
+    document.currentVersion.fileName = null
+    expect(downloadFileNameForBoatDocument(boatDocumentOpenTarget(document))).toBe(
+      'Faktura_95748.pdf',
+    )
   })
 })

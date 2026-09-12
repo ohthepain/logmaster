@@ -1,6 +1,6 @@
-import { ExternalLink, FileUp, Link2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import type { DragEvent, RefObject } from 'react'
+import { FileText, FileUp, Image, Link2, MoreHorizontal } from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
+import type { DragEvent, ReactNode, RefObject } from 'react'
 import { toast } from 'sonner'
 import type {
   DocumentPurpose,
@@ -11,27 +11,28 @@ import { DOCUMENT_PURPOSE_LABELS } from '../domain/boat-assets'
 import { linkBoatDocument } from '../lib/boat-assets-api'
 import {
   boatDocumentVersionOpenTarget,
+  downloadBoatDocument,
   openBoatDocument,
 } from '../lib/boat-document-open'
 import type { BoatDocumentViewerPayload } from '../lib/boat-document-open'
-import { getBoatDocumentViewKind } from '../lib/boat-document-viewer'
 import {
+  deleteBoatDocument,
   fetchBoatDocuments,
   fetchLinkDocumentTitle,
+  updateBoatDocumentMetadata,
 } from '../lib/boat-documents-api'
-import { apiUrl } from '../lib/app-origin'
 import { documentTitleFromUrl } from '../lib/document-title'
 import { cn } from '../lib/cn'
 import { BoatDocumentKindIcon } from './BoatDocumentActionsMenu'
 import { BoatDocumentViewerModal } from './BoatDocumentViewerModal'
 import { DocumentPurposeBadge } from './DocumentPurposeField'
 import { Modal } from './Modal'
+import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 
 type AssetDocumentsSectionProps = {
   boatId: string
   assetId: string
   documents: LinkedBoatDocumentRef[] | LinkedBoatDocumentDetail[]
-  showPreviews?: boolean
   uploading: boolean
   onUpload: (file: File, purpose: DocumentPurpose) => void | Promise<void>
   onAddLink: (input: {
@@ -39,6 +40,7 @@ type AssetDocumentsSectionProps = {
     title?: string
     purpose?: DocumentPurpose
   }) => void | Promise<void>
+  onDocumentsChange?: () => void
   onLinked?: () => void
 }
 
@@ -52,39 +54,27 @@ export function AssetDocumentsSection({
   boatId,
   assetId,
   documents,
-  showPreviews = false,
   uploading,
   onUpload,
   onAddLink,
+  onDocumentsChange,
   onLinked,
 }: AssetDocumentsSectionProps) {
   const [documentViewer, setDocumentViewer] =
     useState<BoatDocumentViewerPayload | null>(null)
-
-  const detailDocuments = showPreviews
-    ? (documents.filter(isDocumentDetail) as LinkedBoatDocumentDetail[])
-    : []
+  const refreshDocuments = onDocumentsChange ?? onLinked
 
   return (
     <div>
-      {showPreviews && detailDocuments.length > 0 ? (
-        <AssetDocumentPreviewGrid
-          documents={detailDocuments}
-          onOpenViewer={setDocumentViewer}
-        />
-      ) : null}
-
-      {!showPreviews && documents.length > 0 ? (
-        <ul className="mb-3 m-0 list-none p-0 text-sm">
+      {documents.length > 0 ? (
+        <ul className="mb-4 m-0 list-none space-y-2 p-0">
           {documents.map((doc) => (
-            <li key={doc.id} className="py-1">
-              {doc.title}
-              {doc.purpose ? (
-                <span className="ml-2 text-xs text-[var(--sea-ink-soft)]">
-                  ({DOCUMENT_PURPOSE_LABELS[doc.purpose]})
-                </span>
-              ) : null}
-            </li>
+            <AssetDocumentListItem
+              key={doc.id}
+              document={doc}
+              onOpenViewer={setDocumentViewer}
+              onChanged={refreshDocuments}
+            />
           ))}
         </ul>
       ) : null}
@@ -99,7 +89,7 @@ export function AssetDocumentsSection({
         boatId={boatId}
         assetId={assetId}
         disabled={uploading}
-        onLinked={onLinked}
+        onLinked={refreshDocuments}
       />
 
       {documentViewer ? (
@@ -128,6 +118,7 @@ export function AssetDocumentDropTargets({
   }) => void | Promise<void>
 }) {
   const receiptInputRef = useRef<HTMLInputElement>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const otherInputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState<DocumentPurpose | 'link' | null>(
     null,
@@ -146,7 +137,7 @@ export function AssetDocumentDropTargets({
 
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <DocumentDropTarget
           label="Add Receipt"
           hint="Drop or choose a receipt"
@@ -168,8 +159,30 @@ export function AssetDocumentDropTargets({
           onFileSelect={(file) => void onUpload(file, 'receipt')}
         />
         <DocumentDropTarget
+          label="Add Photo"
+          hint="Drop or choose a photo"
+          inputRef={photoInputRef}
+          accept="image/*"
+          icon={<Image className="size-5 text-[var(--sea-ink-soft)]" aria-hidden />}
+          dragOver={dragOver === 'photo'}
+          uploading={uploading}
+          onDragEnter={(event) => {
+            event.preventDefault()
+            if (!uploading) setDragOver('photo')
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault()
+            if (event.currentTarget.contains(event.relatedTarget as Node))
+              return
+            setDragOver(null)
+          }}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={handleDrop('photo')}
+          onFileSelect={(file) => void onUpload(file, 'photo')}
+        />
+        <DocumentDropTarget
           label="Add Document"
-          hint="Manual, photo, warranty, etc."
+          hint="Manual, warranty, etc."
           inputRef={otherInputRef}
           dragOver={dragOver === 'other'}
           uploading={uploading}
@@ -225,6 +238,8 @@ function DocumentDropTarget({
   label,
   hint,
   inputRef,
+  accept,
+  icon,
   dragOver,
   uploading,
   onDragEnter,
@@ -236,6 +251,8 @@ function DocumentDropTarget({
   label: string
   hint: string
   inputRef: RefObject<HTMLInputElement | null>
+  accept?: string
+  icon?: ReactNode
   dragOver: boolean
   uploading: boolean
   onDragEnter: (event: DragEvent<HTMLButtonElement>) => void
@@ -249,6 +266,7 @@ function DocumentDropTarget({
       <input
         ref={inputRef}
         type="file"
+        accept={accept}
         className="hidden"
         onChange={(event) => {
           const file = event.target.files?.[0]
@@ -272,7 +290,7 @@ function DocumentDropTarget({
           uploading && 'cursor-not-allowed opacity-60',
         )}
       >
-        <FileUp className="size-5 text-[var(--sea-ink-soft)]" />
+        {icon ?? <FileUp className="size-5 text-[var(--sea-ink-soft)]" aria-hidden />}
         <span className="text-sm font-semibold text-[var(--sea-ink)]">
           {uploading ? 'Uploading…' : label}
         </span>
@@ -451,49 +469,28 @@ function AddAssetLinkModal({
   )
 }
 
-function AssetDocumentPreviewGrid({
-  documents,
-  onOpenViewer,
-}: {
-  documents: LinkedBoatDocumentDetail[]
-  onOpenViewer: (payload: BoatDocumentViewerPayload) => void
-}) {
-  return (
-    <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {documents.map((doc) => (
-        <AssetDocumentPreviewCard
-          key={doc.id}
-          document={doc}
-          onOpenViewer={onOpenViewer}
-        />
-      ))}
-    </div>
-  )
-}
-
-function linkHostname(url: string | null): string | null {
-  if (!url) return null
-  try {
-    return new URL(url).hostname.replace(/^www\./, '')
-  } catch {
-    return null
-  }
-}
-
-function AssetDocumentPreviewCard({
+function AssetDocumentListItem({
   document,
   onOpenViewer,
+  onChanged,
 }: {
-  document: LinkedBoatDocumentDetail
+  document: LinkedBoatDocumentRef | LinkedBoatDocumentDetail
   onOpenViewer: (payload: BoatDocumentViewerPayload) => void
+  onChanged?: () => void
 }) {
-  const version = document.currentVersion
-  const target = boatDocumentVersionOpenTarget(document.title, version)
-  const viewKind = getBoatDocumentViewKind(target)
-  const isLink = version.kind === 'link'
-  const linkUrl = version.url
+  const version = isDocumentDetail(document) ? document.currentVersion : null
+  const isLink = version?.kind === 'link'
+  const subtitle = version
+    ? isLink
+      ? (version.url ?? 'Web link')
+      : (version.fileName ?? 'Uploaded file')
+    : document.purpose
+      ? DOCUMENT_PURPOSE_LABELS[document.purpose]
+      : 'Document'
 
   const handleOpen = () => {
+    if (!version) return
+    const target = boatDocumentVersionOpenTarget(document.title, version)
     void openBoatDocument(target, { onOpenViewer }).catch((error) => {
       toast.error(
         error instanceof Error ? error.message : 'Failed to open document',
@@ -502,62 +499,216 @@ function AssetDocumentPreviewCard({
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleOpen}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] text-left transition hover:border-[var(--sea-ink)]/25"
-    >
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--chip-bg)]">
-        {viewKind === 'image' && version.contentUrl ? (
-          <img
-            src={apiUrl(version.contentUrl)}
-            alt=""
-            className="size-full object-cover"
-          />
-        ) : viewKind === 'pdf' && version.contentUrl ? (
-          <iframe
-            title={document.title}
-            src={apiUrl(version.contentUrl)}
-            className="size-full border-0 pointer-events-none"
-          />
-        ) : isLink && linkUrl ? (
-          <div className="flex size-full flex-col">
-            <iframe
-              title={document.title}
-              src={linkUrl}
-              sandbox="allow-scripts allow-same-origin"
-              className="min-h-0 flex-1 border-0 opacity-90"
-            />
-            <div className="flex items-center gap-2 border-t border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-              <Link2 className="size-4 shrink-0 text-[var(--sea-ink-soft)]" />
-              <span className="truncate text-xs text-[var(--sea-ink-soft)]">
-                {linkHostname(linkUrl) ?? linkUrl}
-              </span>
-              <ExternalLink className="ml-auto size-3.5 shrink-0 text-[var(--sea-ink-soft)] opacity-0 transition group-hover:opacity-100" />
-            </div>
-          </div>
-        ) : (
-          <div className="flex size-full flex-col items-center justify-center gap-2 px-4 text-center">
-            <span className="inline-flex size-10 items-center justify-center rounded-xl border border-[var(--chip-line)] bg-[var(--panel)]">
-              <BoatDocumentKindIcon kind={version.kind} className="size-5" />
-            </span>
-            <span className="text-xs text-[var(--sea-ink-soft)]">
-              {isLink ? 'Web link' : (version.fileName ?? 'Document')}
-            </span>
-          </div>
-        )}
-      </div>
-      <div className="px-3 py-2.5">
-        <p className="m-0 truncate text-sm font-semibold text-[var(--sea-ink)]">
-          {document.title} <DocumentPurposeBadge purpose={document.purpose} />
-        </p>
-        {isLink && linkUrl ? (
-          <p className="m-0 mt-0.5 truncate text-xs text-[var(--sea-ink-soft)]">
-            {linkUrl}
+    <li className="flex items-center gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3">
+      <button
+        type="button"
+        onClick={handleOpen}
+        disabled={!version}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left transition hover:opacity-80 disabled:cursor-default disabled:hover:opacity-100"
+      >
+        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)]">
+          {version ? (
+            <BoatDocumentKindIcon kind={version.kind} className="size-4" />
+          ) : (
+            <FileText className="size-4" aria-hidden />
+          )}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="m-0 truncate text-sm font-semibold text-[var(--sea-ink)]">
+            {document.title} <DocumentPurposeBadge purpose={document.purpose} />
           </p>
+          <p className="m-0 truncate text-xs text-[var(--sea-ink-soft)]">
+            {subtitle}
+          </p>
+        </div>
+      </button>
+      <AssetDocumentActionsMenu document={document} onChanged={onChanged} />
+    </li>
+  )
+}
+
+function AssetDocumentActionsMenu({
+  document,
+  onChanged,
+}: {
+  document: LinkedBoatDocumentRef | LinkedBoatDocumentDetail
+  onChanged?: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [renameOpen, setRenameOpen] = useState(false)
+  const [titleDraft, setTitleDraft] = useState(document.title)
+  const menuId = useId()
+  const version = isDocumentDetail(document) ? document.currentVersion : null
+
+  const handleDownload = async () => {
+    setOpen(false)
+    if (!version) {
+      toast.error('Document is unavailable')
+      return
+    }
+    setBusy(true)
+    try {
+      await downloadBoatDocument(
+        boatDocumentVersionOpenTarget(document.title, version),
+      )
+      if (version.kind !== 'link') toast.success('Download started')
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to download document',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleRename = async () => {
+    const title = titleDraft.trim()
+    if (!title) return
+    setBusy(true)
+    try {
+      await updateBoatDocumentMetadata(document.id, { title })
+      setRenameOpen(false)
+      onChanged?.()
+      toast.success('Document renamed')
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to rename document',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Delete "${document.title}"?`)) return
+    setBusy(true)
+    try {
+      await deleteBoatDocument(document.id)
+      setOpen(false)
+      onChanged?.()
+      toast.success('Document deleted')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Delete failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="relative">
+        {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
+        <button
+          type="button"
+          disabled={busy}
+          aria-label={`Document options for ${document.title}`}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={menuId}
+          onClick={(event) => {
+            event.stopPropagation()
+            setOpen((current) => !current)
+          }}
+          className={cn(
+            'flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--chip-line)] bg-[var(--surface)] text-[var(--sea-ink)]',
+            'transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60',
+          )}
+        >
+          <MoreHorizontal className="h-4 w-4" strokeWidth={2} aria-hidden />
+        </button>
+
+        {open ? (
+          <div
+            id={menuId}
+            role="menu"
+            aria-label="Document actions"
+            className={cn(
+              'absolute right-0 top-full mt-1 min-w-[11rem] rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-lg',
+              POPUP_MENU_Z_CLASS,
+              'ring-1 ring-[var(--line)]/60',
+            )}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy || !version}
+              onClick={() => void handleDownload()}
+              className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
+            >
+              Download
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              onClick={() => {
+                setTitleDraft(document.title)
+                setOpen(false)
+                setRenameOpen(true)
+              }}
+              className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
+            >
+              Rename
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              onClick={() => void handleDelete()}
+              className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-700 transition hover:bg-red-500/10 disabled:opacity-60 dark:text-red-300"
+            >
+              Delete
+            </button>
+          </div>
         ) : null}
       </div>
-    </button>
+
+      {renameOpen ? (
+        <Modal
+          title="Rename"
+          showKicker={false}
+          onClose={() => {
+            if (!busy) setRenameOpen(false)
+          }}
+          layer="overlay"
+          devComponentName="AssetDocumentRenameModal"
+        >
+          <div className="space-y-4">
+            <label className="block">
+              <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
+                Title
+              </span>
+              <input
+                value={titleDraft}
+                onChange={(event) => setTitleDraft(event.target.value)}
+                autoFocus
+                className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy || !titleDraft.trim()}
+                onClick={() => void handleRename()}
+                className="rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
+              >
+                {busy ? 'Saving…' : 'Save'}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setRenameOpen(false)}
+                className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] disabled:opacity-60"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
+    </>
   )
 }
 

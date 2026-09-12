@@ -24,6 +24,7 @@ import { documentTitleFromFileName } from '../lib/document-title'
 import {
   boatDocumentOpenTarget,
   boatDocumentVersionOpenTarget,
+  downloadBoatDocument,
   openBoatDocument,
 } from '../lib/boat-document-open'
 import type { BoatDocumentViewerPayload } from '../lib/boat-document-open'
@@ -216,6 +217,23 @@ export function BoatDocumentActionsMenu({
     }
   }
 
+  const handleDownload = async () => {
+    setOpen(false)
+    setBusy(true)
+    try {
+      await downloadBoatDocument(boatDocumentOpenTarget(boatDocument))
+      if (boatDocument.currentVersion.kind !== 'link') {
+        toast.success('Download started')
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to download document',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const openVersion = async (version: BoatDocumentVersion) => {
     try {
       await openBoatDocument(
@@ -277,10 +295,19 @@ export function BoatDocumentActionsMenu({
               type="button"
               role="menuitem"
               disabled={busy}
+              onClick={() => void handleDownload()}
+              className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
+            >
+              Download
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
               onClick={openEditTitle}
               className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
             >
-              Edit title
+              Rename
             </button>
             <button
               type="button"
@@ -476,7 +503,7 @@ export function BoatDocumentActionsMenu({
 
       {editTitleOpen ? (
         <Modal
-          title="Edit title"
+          title="Rename"
           showKicker={false}
           onClose={() => {
             if (!busy) setEditTitleOpen(false)

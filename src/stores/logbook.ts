@@ -344,7 +344,7 @@ async function captureEntryContext(input: NewEntryInput) {
     return { context, entryData }
   }
 
-  const gps = await readDevicePosition()
+  const gps = await readDevicePosition({ force: true })
   if (gps.latitude == null || gps.longitude == null) {
     const entryData = await attachPlaceToEntryData(input.data, null, null)
     return {

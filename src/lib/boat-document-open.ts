@@ -1,6 +1,7 @@
 import type { BoatDocument, BoatDocumentVersion } from '../domain/boat'
 import {
   cacheFileNameForBoatDocument,
+  downloadFileNameForBoatDocument,
   getBoatDocumentViewKind,
   isBoatDocumentViewable,
 } from './boat-document-viewer'
@@ -107,6 +108,33 @@ async function openNativeBoatDocumentViewer(
   })
 
   await FileViewer.openDocumentFromLocalPath({ path: uri })
+}
+
+export async function downloadBoatDocument(
+  target: BoatDocumentOpenTarget,
+): Promise<void> {
+  if (target.kind === 'link') {
+    if (!target.url) throw new Error('Document is unavailable')
+    window.open(target.url, '_blank', 'noopener,noreferrer')
+    return
+  }
+
+  const bytes = await fetchBoatDocumentBytes(target)
+  const blob = new Blob([bytes], {
+    type: target.mimeType || 'application/octet-stream',
+  })
+  const objectUrl = URL.createObjectURL(blob)
+  try {
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = downloadFileNameForBoatDocument(target)
+    link.rel = 'noopener'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
 }
 
 export async function openBoatDocumentExternal(

@@ -35,7 +35,7 @@ export function TripWaypointComposerModal({
       return
     }
 
-    void getCurrentPosition()
+    void getCurrentPosition({ force: true })
       .then((current) => {
         if (current?.latitude != null && current.longitude != null) {
           setPosition({

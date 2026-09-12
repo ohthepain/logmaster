@@ -128,7 +128,7 @@ function serializeAsset(asset: {
   ownedByUser?: { id: string; name: string; email: string } | null
   onLoanFromUser?: { id: string; name: string; email: string } | null
   documentLinks?: Array<{
-    document: { id: string; title: string; purpose: string | null }
+    document: Parameters<typeof serializeLinkedDocumentDetail>[0]
   }>
   purchaseLines?: Array<{ id: string }>
   workRecords?: Array<{ id: string }>
@@ -150,7 +150,7 @@ function serializeAsset(asset: {
     ownedByUser: serializeUserRef(asset.ownedByUser ?? null),
     onLoanFromUser: serializeUserRef(asset.onLoanFromUser ?? null),
     documents: (asset.documentLinks ?? []).map((link) =>
-      serializeLinkedDocument(link.document),
+      serializeLinkedDocumentDetail(link.document),
     ),
     purchaseLineIds: (asset.purchaseLines ?? []).map((line) => line.id),
     workRecordCount: asset.workRecords?.length ?? 0,
@@ -316,7 +316,16 @@ const assetInclude = {
   ownedByUser: { select: { id: true, name: true, email: true } },
   onLoanFromUser: { select: { id: true, name: true, email: true } },
   documentLinks: {
-    include: { document: { select: { id: true, title: true, purpose: true } } },
+    include: {
+      document: {
+        include: {
+          versions: {
+            orderBy: { versionNumber: 'desc' },
+            take: 1,
+          },
+        },
+      },
+    },
   },
   purchaseLines: { select: { id: true } },
   workRecords: { select: { id: true } },

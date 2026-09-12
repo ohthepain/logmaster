@@ -55,6 +55,7 @@ export {
   getBoatDocumentViewKind as getOrgDocumentViewKind,
   isBoatDocumentViewable as isOrgDocumentViewable,
 }
+export { downloadBoatDocument as downloadOrgDocument } from './boat-document-open'
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)

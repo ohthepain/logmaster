@@ -19,6 +19,8 @@ import {
   getPhotoObject,
   photoS3Key,
   boatDocumentS3Key,
+  contentTypeForStoredDocument,
+  inlineContentDisposition,
   uploadPhotoObject,
 } from '../s3-photos'
 import {
@@ -1097,9 +1099,12 @@ boatsRoutes.get('/documents/versions/:versionId/content', async (c) => {
     const fileName = existing.fileName ?? 'document'
     return new Response(Buffer.from(bytes), {
       headers: {
-        'Content-Type':
-          existing.mimeType || object.ContentType || 'application/octet-stream',
-        'Content-Disposition': `inline; filename="${fileName.replace(/"/g, '')}"`,
+        'Content-Type': contentTypeForStoredDocument(
+          existing.mimeType,
+          existing.fileName,
+          object.ContentType,
+        ),
+        'Content-Disposition': inlineContentDisposition(fileName),
         'Cache-Control': 'private, max-age=3600',
       },
     })

@@ -119,7 +119,11 @@ export function BoatAssetsTab({
         await uploadAndLinkAssetDocument(boatId, assetId, file, purpose)
         await refreshAssetDocuments(assetId)
         toast.success(
-          purpose === 'receipt' ? 'Receipt uploaded' : 'Document uploaded',
+          purpose === 'receipt'
+            ? 'Receipt uploaded'
+            : purpose === 'photo'
+              ? 'Photo uploaded'
+              : 'Document uploaded',
         )
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Upload failed')
@@ -322,7 +326,9 @@ export function BoatAssetsTab({
                         onAddLink={(input) =>
                           handleAssetDocumentLink(asset.id, input)
                         }
-                        onLinked={() => void refreshAssetDocuments(asset.id)}
+                        onDocumentsChange={() =>
+                          void refreshAssetDocuments(asset.id)
+                        }
                       />
                     </div>
 

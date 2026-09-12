@@ -12,7 +12,7 @@ type PositionSnapshot = {
 type PositionListener = (position: PositionSnapshot) => void
 
 const CACHE_TTL_MS = 30_000
-const GEO_TIMEOUT_MS = 2_000
+const GEO_TIMEOUT_MS = 10_000
 const listeners = new Set<PositionListener>()
 let cached: PositionSnapshot | null = null
 let cachedAt = 0
@@ -127,28 +127,52 @@ function requestPosition(
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
       (position) => resolve(toPositionSnapshot(position)),
-      () => resolve(null),
+      (error) => {
+        if (import.meta.env.DEV) {
+          console.info(
+            `[logmaster] Geolocation error ${error.code}: ${error.message}`,
+          )
+        }
+        resolve(null)
+      },
       options,
     )
   })
 }
 
-function devFallbackPosition(detail?: string): PositionSnapshot {
-  logDevFallbackOnce(detail)
+function unavailablePosition(): PositionSnapshot {
   return {
-    latitude: 50.7628,
-    longitude: -1.2974,
+    latitude: null,
+    longitude: null,
     accuracy: null,
     heading: null,
     timestamp: freshTimestamp(),
   }
 }
 
+function isResolvedPosition(position: PositionSnapshot) {
+  return position.latitude != null && position.longitude != null
+}
+
+function fallbackOrUnavailable(detail?: string): PositionSnapshot {
+  if (import.meta.env.DEV) {
+    logDevFallbackOnce(detail)
+    return {
+      latitude: 50.7628,
+      longitude: -1.2974,
+      accuracy: null,
+      heading: null,
+      timestamp: freshTimestamp(),
+    }
+  }
+  return unavailablePosition()
+}
+
 export function isLocationAccessEnabled() {
   return locationAccessEnabled
 }
 
-/** Start or stop GPS access. Permission prompts only happen while this is enabled. */
+/** Start or stop the continuous GPS watch. One-shot reads may still request location. */
 export function setLocationAccessEnabled(enabled: boolean) {
   if (locationAccessEnabled === enabled) return
   locationAccessEnabled = enabled
@@ -162,11 +186,7 @@ export function setLocationAccessEnabled(enabled: boolean) {
 }
 
 async function resolveNativeDevicePosition(): Promise<PositionSnapshot | null> {
-  if (
-    !locationAccessEnabled ||
-    typeof window === 'undefined' ||
-    !Capacitor.isNativePlatform()
-  ) {
+  if (typeof window === 'undefined' || !Capacitor.isNativePlatform()) {
     return null
   }
 
@@ -187,7 +207,7 @@ async function resolveNativeDevicePosition(): Promise<PositionSnapshot | null> {
 
     const position = await Geolocation.getCurrentPosition({
       enableHighAccuracy: true,
-      timeout: 10_000,
+      timeout: GEO_TIMEOUT_MS,
     })
 
     const heading = position.coords.heading
@@ -198,7 +218,10 @@ async function resolveNativeDevicePosition(): Promise<PositionSnapshot | null> {
       heading: heading != null && Number.isFinite(heading) ? heading : null,
       timestamp: new Date(position.timestamp).toISOString(),
     }
-  } catch {
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.info('[logmaster] Native geolocation failed', error)
+    }
     return null
   }
 }
@@ -207,21 +230,16 @@ async function resolveDevicePosition(): Promise<PositionSnapshot> {
   const override = devOverrideSnapshot()
   if (override) return override
 
-  if (!locationAccessEnabled) {
-    if (cached) return cloneCached(cached)
-    return devFallbackPosition('recording paused')
-  }
-
   const nativePosition = await resolveNativeDevicePosition()
   if (nativePosition) return nativePosition
 
-  if (typeof navigator === 'undefined') {
-    return devFallbackPosition('not supported')
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    return fallbackOrUnavailable('not supported')
   }
 
   if (typeof window !== 'undefined' && !window.isSecureContext) {
     logInsecureContextOnce()
-    return devFallbackPosition('insecure context')
+    return fallbackOrUnavailable('insecure context')
   }
 
   const [highAccuracy, lowAccuracy] = await Promise.all([
@@ -236,14 +254,14 @@ async function resolveDevicePosition(): Promise<PositionSnapshot> {
       timeout: GEO_TIMEOUT_MS,
     }),
   ])
-  if (highAccuracy?.latitude != null && highAccuracy.longitude != null) {
+  if (highAccuracy && isResolvedPosition(highAccuracy)) {
     return highAccuracy
   }
-  if (lowAccuracy?.latitude != null && lowAccuracy.longitude != null) {
+  if (lowAccuracy && isResolvedPosition(lowAccuracy)) {
     return lowAccuracy
   }
 
-  return devFallbackPosition('permission denied or timed out')
+  return fallbackOrUnavailable('permission denied or timed out')
 }
 
 async function ensureNativeWatch() {
@@ -322,11 +340,6 @@ export async function readDevicePosition(options?: {
   const override = devOverrideSnapshot()
   if (override) return override
 
-  if (!locationAccessEnabled) {
-    if (cached) return cloneCached(cached)
-    return devFallbackPosition('recording paused')
-  }
-
   if (!options?.force && isFresh() && cached) {
     return cloneCached(cached)
   }
@@ -337,7 +350,9 @@ export async function readDevicePosition(options?: {
 
   inflight = resolveDevicePosition()
     .then((position) => {
-      publish(position)
+      if (isResolvedPosition(position)) {
+        publish(position)
+      }
       return position
     })
     .finally(() => {
@@ -354,7 +369,7 @@ export function subscribeToDevicePosition(listener: PositionListener) {
 
   if (cached) {
     listener(cached)
-  } else if (locationAccessEnabled) {
+  } else {
     void readDevicePosition()
   }
 

@@ -4,7 +4,23 @@ import {
   readDevicePosition,
   setDevPositionOverride,
   setLocationAccessEnabled,
+  subscribeToDevicePosition,
 } from './device-position'
+
+function stubGeolocation(
+  getCurrentPosition: (
+    success: PositionCallback,
+    error?: PositionErrorCallback,
+  ) => void,
+) {
+  const geolocation = {
+    getCurrentPosition: vi.fn(getCurrentPosition),
+    watchPosition: vi.fn(),
+    clearWatch: vi.fn(),
+  }
+  vi.stubGlobal('navigator', { geolocation })
+  return geolocation
+}
 
 describe('dev position override', () => {
   afterEach(() => {
@@ -26,14 +42,15 @@ describe('dev position override', () => {
     setDevPositionOverride({ latitude: 51.5, longitude: -0.12 })
     clearDevPositionOverride()
 
-    const geolocation = {
-      getCurrentPosition: vi.fn((_success, error) => {
-        error?.({ code: 1, message: 'denied' })
-      }),
-      watchPosition: vi.fn(),
-      clearWatch: vi.fn(),
-    }
-    vi.stubGlobal('navigator', { geolocation })
+    stubGeolocation((_success, error) => {
+      error?.({
+        code: 1,
+        message: 'denied',
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3,
+      })
+    })
     setLocationAccessEnabled(true)
 
     const position = await readDevicePosition({ force: true })
@@ -50,34 +67,79 @@ describe('location access gate', () => {
     vi.restoreAllMocks()
   })
 
-  it('does not call geolocation while recording is paused', async () => {
-    const geolocation = {
-      getCurrentPosition: vi.fn(),
-      watchPosition: vi.fn(),
-      clearWatch: vi.fn(),
-    }
-    vi.stubGlobal('navigator', { geolocation })
+  it('requests a one-shot position even while recording is paused', async () => {
+    const geolocation = stubGeolocation((success) => {
+      success({
+        coords: {
+          latitude: 51.5,
+          longitude: -0.12,
+          accuracy: 12,
+          heading: null,
+          altitude: null,
+          altitudeAccuracy: null,
+          speed: null,
+        },
+        timestamp: Date.now(),
+      } as GeolocationPosition)
+    })
     setLocationAccessEnabled(false)
 
-    await readDevicePosition({ force: true })
+    const position = await readDevicePosition({ force: true })
 
-    expect(geolocation.getCurrentPosition).not.toHaveBeenCalled()
+    expect(geolocation.getCurrentPosition).toHaveBeenCalled()
     expect(geolocation.watchPosition).not.toHaveBeenCalled()
+    expect(position.latitude).toBe(51.5)
+    expect(position.longitude).toBe(-0.12)
+  })
+
+  it('does not start a GPS watch while recording is paused', () => {
+    const geolocation = stubGeolocation((_success, error) => {
+      error?.({
+        code: 1,
+        message: 'denied',
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3,
+      })
+    })
+    setLocationAccessEnabled(false)
+
+    const unsubscribe = subscribeToDevicePosition(() => {})
+    expect(geolocation.watchPosition).not.toHaveBeenCalled()
+    unsubscribe()
   })
 
   it('requests geolocation after recording starts', async () => {
-    const geolocation = {
-      getCurrentPosition: vi.fn((_success, error) => {
-        error?.({ code: 1, message: 'denied' })
-      }),
-      watchPosition: vi.fn(),
-      clearWatch: vi.fn(),
-    }
-    vi.stubGlobal('navigator', { geolocation })
+    const geolocation = stubGeolocation((_success, error) => {
+      error?.({
+        code: 1,
+        message: 'denied',
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3,
+      })
+    })
     setLocationAccessEnabled(true)
 
     await readDevicePosition({ force: true })
 
     expect(geolocation.getCurrentPosition).toHaveBeenCalled()
+  })
+
+  it('starts a GPS watch after recording starts', () => {
+    const geolocation = stubGeolocation((_success, error) => {
+      error?.({
+        code: 1,
+        message: 'denied',
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3,
+      })
+    })
+    setLocationAccessEnabled(true)
+
+    const unsubscribe = subscribeToDevicePosition(() => {})
+    expect(geolocation.watchPosition).toHaveBeenCalled()
+    unsubscribe()
   })
 })

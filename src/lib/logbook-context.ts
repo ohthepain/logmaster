@@ -104,7 +104,7 @@ export async function captureLogbookContext(positionOverride?: {
     }
   }
 
-  const gps = await getCurrentPosition()
+  const gps = await getCurrentPosition({ force: true })
 
   if (gps.latitude == null || gps.longitude == null) {
     return {

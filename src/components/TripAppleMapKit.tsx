@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { toast } from 'sonner'
 import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import type {
@@ -364,15 +365,23 @@ export const TripAppleMapKit = forwardRef<
       return
     }
     const gps = await getCurrentPosition({ force: true })
+    if (gps.latitude == null || gps.longitude == null) {
+      currentPositionRef.current = fallbackMapCoordinate(trip)
+      previousLivePositionRef.current = null
+      if (!initialFitDoneRef.current) {
+        await syncViewport()
+      }
+      return
+    }
     const nextPosition = {
-      latitude: gps.latitude ?? DEV_FALLBACK_POSITION.latitude,
-      longitude: gps.longitude ?? DEV_FALLBACK_POSITION.longitude,
+      latitude: gps.latitude,
+      longitude: gps.longitude,
       heading: resolveBoatMapHeading(
         gps.heading,
         previousLivePositionRef.current,
         {
-          latitude: gps.latitude ?? DEV_FALLBACK_POSITION.latitude,
-          longitude: gps.longitude ?? DEV_FALLBACK_POSITION.longitude,
+          latitude: gps.latitude,
+          longitude: gps.longitude,
         },
       ),
     }
@@ -634,9 +643,13 @@ export const TripAppleMapKit = forwardRef<
       }
 
       const gps = await getCurrentPosition({ force: true })
+      if (gps.latitude == null || gps.longitude == null) {
+        toast.error('Could not get current location')
+        return
+      }
       currentPositionRef.current = {
-        latitude: gps.latitude ?? DEV_FALLBACK_POSITION.latitude,
-        longitude: gps.longitude ?? DEV_FALLBACK_POSITION.longitude,
+        latitude: gps.latitude,
+        longitude: gps.longitude,
       }
       if (shouldFollowUser) {
         userControlledViewportRef.current = false

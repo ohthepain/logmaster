@@ -6,10 +6,7 @@ import type { EntryContentBlock } from './LogEntryContentStack'
 import { LogEntryPositionMap } from './LogEntryPositionMap'
 import { Modal } from './Modal'
 import { entryTitle } from '../domain/logbook'
-import {
-  DEV_FALLBACK_POSITION,
-  getCurrentPosition,
-} from '../lib/logbook-context'
+import { getCurrentPosition } from '../lib/logbook-context'
 import type { MapLngLat } from '../lib/logbook-map-geo'
 import { cn } from '../lib/cn'
 import {
@@ -335,10 +332,7 @@ export function LogEntryComposerModal({
     positionEditedRef.current = false
     const position = await getCurrentPosition({ force: true })
     if (position.latitude == null || position.longitude == null) {
-      applyDraftPosition({
-        longitude: DEV_FALLBACK_POSITION.longitude,
-        latitude: DEV_FALLBACK_POSITION.latitude,
-      })
+      toast.error('Could not get current location')
       return
     }
     applyDraftPosition({

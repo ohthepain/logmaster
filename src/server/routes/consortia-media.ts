@@ -13,6 +13,8 @@ import {
   extensionForDocumentMime,
   extensionForMime,
   getPhotoObject,
+  contentTypeForStoredDocument,
+  inlineContentDisposition,
   uploadPhotoObject,
 } from '../s3-photos'
 
@@ -910,11 +912,12 @@ consortiaMediaRoutes.get(
       const fileName = existing.fileName ?? 'document'
       return new Response(Buffer.from(bytes), {
         headers: {
-          'Content-Type':
-            existing.mimeType ||
-            object.ContentType ||
-            'application/octet-stream',
-          'Content-Disposition': `inline; filename="${fileName.replace(/"/g, '')}"`,
+          'Content-Type': contentTypeForStoredDocument(
+            existing.mimeType,
+            existing.fileName,
+            object.ContentType,
+          ),
+          'Content-Disposition': inlineContentDisposition(fileName),
           'Cache-Control': 'private, max-age=3600',
         },
       })

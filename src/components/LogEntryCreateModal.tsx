@@ -17,7 +17,6 @@ import { Modal } from './Modal'
 import { entryIcon, entryTitle, visibleLogEntryTypes } from '../domain/logbook'
 import type { LogEntryType } from '../domain/logbook'
 import {
-  DEV_FALLBACK_POSITION,
   getCurrentPosition,
   subscribeToDevicePosition,
 } from '../lib/logbook-context'
@@ -205,10 +204,6 @@ export function LogEntryCreateModal({
     return subscribeToDevicePosition((position) => {
       if (positionEditedRef.current) return
       if (position.latitude == null || position.longitude == null) {
-        applyDraftPosition({
-          longitude: DEV_FALLBACK_POSITION.longitude,
-          latitude: DEV_FALLBACK_POSITION.latitude,
-        })
         return
       }
       applyDraftPosition({

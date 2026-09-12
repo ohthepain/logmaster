@@ -4,16 +4,12 @@ import type {
   NotificationTopic,
   PushDevicePlatform,
 } from '../../domain/notifications'
+import { DEFAULT_NOTIFICATION_CHANNELS } from '../../domain/notifications'
 import { parseScopeKey, subscriptionScopeKey } from './scope'
 import { prisma } from '../db'
 import { canAccess } from '../permissions/access'
 
 const db = prisma as any
-
-const DEFAULT_CHANNELS: NotificationChannelDefaults = {
-  email: true,
-  push: true,
-}
 
 function serializeSubscription(
   row: Record<string, unknown>,
@@ -43,8 +39,8 @@ export async function getUserNotificationDefaults(
   const stored =
     user?.notificationDefaults as NotificationChannelDefaults | null
   return {
-    email: stored?.email ?? DEFAULT_CHANNELS.email,
-    push: stored?.push ?? DEFAULT_CHANNELS.push,
+    email: stored?.email ?? DEFAULT_NOTIFICATION_CHANNELS.email,
+    push: stored?.push ?? DEFAULT_NOTIFICATION_CHANNELS.push,
   }
 }
 

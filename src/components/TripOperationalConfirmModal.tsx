@@ -21,7 +21,7 @@ function useLogLocationLabel(active: boolean): string {
     let cancelled = false
     setLabel('Locating…')
 
-    void getCurrentPosition().then(async (position) => {
+    void getCurrentPosition({ force: true }).then(async (position) => {
       if (cancelled) return
       if (position.latitude == null || position.longitude == null) {
         setLabel('Position unavailable')

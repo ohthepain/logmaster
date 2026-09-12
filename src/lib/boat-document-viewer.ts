@@ -106,3 +106,13 @@ export function cacheFileNameForBoatDocument(
   }
   return `boat-doc-${crypto.randomUUID()}.${ext}`
 }
+
+export function downloadFileNameForBoatDocument(
+  target: BoatDocumentOpenTarget,
+): string {
+  const named = target.fileName?.trim()
+  if (named) return named
+  const ext = extensionForBoatDocumentTarget(target)
+  const base = target.title.trim().replace(/[^\w.-]+/g, '_') || 'document'
+  return `${base}.${ext}`
+}

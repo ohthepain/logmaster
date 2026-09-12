@@ -8,7 +8,6 @@ import {
   ensureNotificationPreferencesReady,
   useNotificationPreferencesStore,
 } from '../stores/notification-preferences'
-import { AllNotificationsPausedBanner } from './AllNotificationsPausedBanner'
 import { NotificationPreferenceBell } from './NotificationPreferenceBell'
 import { cn } from '../lib/cn'
 
@@ -83,47 +82,36 @@ export function NotificationControlMenuRow({
   return (
     <div
       className={cn(
-        'col-span-2 overflow-hidden rounded-[1.75rem] border border-[var(--panel-border)] bg-[var(--chip-bg)]',
+        'col-span-2 flex items-center overflow-hidden rounded-[1.75rem] border border-[var(--panel-border)] bg-[var(--surface-strong)] shadow-[0_10px_30px_rgba(0,0,0,0.09)]',
         className,
       )}
     >
-      {paused ? (
-        <AllNotificationsPausedBanner className="rounded-b-none border-x-0 border-t-0" />
-      ) : null}
-      <div className="flex items-center justify-between gap-3 border-b border-[var(--panel-border)] px-5 py-4">
-        <div className="min-w-0 flex-1">
-          <p className="m-0 text-base font-bold text-[var(--sea-ink)]">
-            Pause all notifications
-          </p>
-          <p className="m-0 mt-0.5 text-xs font-medium text-[var(--sea-ink-soft)]">
-            {paused
-              ? 'Paused until you turn them back on'
-              : 'Notifications can reach you'}
-          </p>
-        </div>
-        <NotificationPreferenceBell
-          node={globalNode}
-          busy={busy}
-          disabled={loading && !tree}
-          onToggle={toggleGlobalMute}
-          label={
-            paused ? 'Resume all notifications' : 'Pause all notifications'
-          }
-        />
-      </div>
       <button
         type="button"
         onClick={openSettings}
-        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left outline-none transition hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20"
+        className="flex min-w-0 flex-1 items-center px-5 py-4 text-left outline-none transition hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20"
       >
         <span className="text-lg font-extrabold tracking-[-0.02em] text-[var(--sea-ink)]">
           Notifications settings
         </span>
-        <ChevronRight
-          className="size-7 shrink-0 text-[var(--sea-ink)]"
-          strokeWidth={2.5}
-          aria-hidden
-        />
+      </button>
+      <NotificationPreferenceBell
+        node={globalNode}
+        busy={busy}
+        disabled={loading && !tree}
+        onToggle={toggleGlobalMute}
+        className="mr-1"
+        label={
+          paused ? 'Resume all notifications' : 'Pause all notifications'
+        }
+      />
+      <button
+        type="button"
+        onClick={openSettings}
+        aria-label="Open notification settings"
+        className="px-4 py-4 text-[var(--sea-ink)] outline-none transition hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20"
+      >
+        <ChevronRight className="size-7" strokeWidth={2.5} aria-hidden />
       </button>
     </div>
   )

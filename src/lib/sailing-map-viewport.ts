@@ -1,5 +1,6 @@
 import type maplibregl from 'maplibre-gl'
-import { DEV_FALLBACK_POSITION, getCurrentPosition } from './logbook-context'
+import { toast } from 'sonner'
+import { getCurrentPosition } from './logbook-context'
 import type { MapLngLat } from './logbook-map-geo'
 
 /** Default zoom when a sailing map first mounts. */
@@ -85,12 +86,15 @@ export async function centerMapOnCurrentLocation(
 ) {
   const minZoom = options?.minZoom ?? SAILING_MAP_LOCATE_ZOOM
   const gps = await getCurrentPosition({ force: true })
-  const latitude = gps.latitude ?? DEV_FALLBACK_POSITION.latitude
-  const longitude = gps.longitude ?? DEV_FALLBACK_POSITION.longitude
+  if (gps.latitude == null || gps.longitude == null) {
+    toast.error('Could not get current location')
+    return false
+  }
 
   map.easeTo({
-    center: [longitude, latitude],
+    center: [gps.longitude, gps.latitude],
     zoom: Math.max(map.getZoom(), minZoom),
     duration: SAILING_MAP_EASE_MS,
   })
+  return true
 }

@@ -1,9 +1,12 @@
-import { Bell, BellRing, RefreshCw } from 'lucide-react'
+import { BellOff, BellRing, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 import type { NotificationTopic } from '../domain/notifications'
-import { NOTIFICATION_TOPIC_LABELS } from '../domain/notifications'
+import {
+  isNotificationTopicEnabled,
+  NOTIFICATION_TOPIC_LABELS,
+} from '../domain/notifications'
 import { preferencePathForSubscription } from '../domain/notification-preferences'
 import { upsertNotificationSubscription } from '../lib/notifications-api'
 import {
@@ -31,7 +34,7 @@ export function NotificationBellToggle({
   className,
   label,
 }: NotificationBellToggleProps) {
-  const [enabled, setEnabled] = useState(false)
+  const [enabled, setEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [blockedByLabel, setBlockedByLabel] = useState<string | null>(null)
@@ -62,7 +65,7 @@ export function NotificationBellToggle({
       const match = subscriptions.find(
         (subscription) => subscription.topic === topic,
       )
-      setEnabled(Boolean(match?.enabled))
+      setEnabled(isNotificationTopicEnabled(match))
       if (preferencePath) {
         const node = await getNotificationPreferenceNodeCached(preferencePath)
         setBlockedByLabel(
@@ -126,7 +129,7 @@ export function NotificationBellToggle({
     }
   }
 
-  const Icon = enabled ? BellRing : Bell
+  const Icon = enabled ? BellRing : BellOff
 
   return (
     <span
@@ -143,8 +146,10 @@ export function NotificationBellToggle({
         disabled={loading || busy}
         onClick={() => void toggle()}
         className={cn(
-          'inline-flex size-9 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60',
-          enabled && 'border-[var(--brand)]/40 text-[var(--brand)]',
+          'inline-flex size-9 items-center justify-center rounded-full border bg-[var(--chip-bg)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60',
+          enabled
+            ? 'border-emerald-600/40 text-emerald-600 dark:border-emerald-400/40 dark:text-emerald-400'
+            : 'border-[var(--brand)]/40 text-[var(--brand)]',
           enabled && blockedByLabel && 'opacity-70',
         )}
       >
@@ -216,15 +221,17 @@ export function ResourceSectionHeader({
         {topic ? (
           <NotificationBellToggle topic={topic} boatId={boatId} orgId={orgId} />
         ) : null}
-        {onRefresh ? (
-          <ResourceRefreshButton
-            onRefresh={onRefresh}
-            refreshing={refreshing}
-          />
-        ) : null}
       </div>
-      {actions ? (
-        <div className="flex items-center gap-2">{actions}</div>
+      {actions || onRefresh ? (
+        <div className="flex items-center gap-2">
+          {actions}
+          {onRefresh ? (
+            <ResourceRefreshButton
+              onRefresh={onRefresh}
+              refreshing={refreshing}
+            />
+          ) : null}
+        </div>
       ) : null}
     </div>
   )

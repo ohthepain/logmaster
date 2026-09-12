@@ -58,7 +58,7 @@ type AppOptions = {
   /** Native app: record GPS in background while a trip is in progress. */
   backgroundTripRecording: boolean
   setBackgroundTripRecording: (enabled: boolean) => void
-  /** Trip currently recording GPS. Location permission is only requested for this trip. */
+  /** Trip currently recording GPS. Continuous location watch is only active for this trip. */
   recordingTripId: string | null
   setRecordingTripId: (tripId: string | null) => void
   /** Minimum minutes between auto-tracked log entries. */

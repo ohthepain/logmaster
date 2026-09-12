@@ -52,7 +52,7 @@ export type BoatAsset = {
   updatedAt: string
   ownedByUser: BoatAssetUserRef | null
   onLoanFromUser: BoatAssetUserRef | null
-  documents: LinkedBoatDocumentRef[]
+  documents: LinkedBoatDocumentDetail[]
   purchaseLineIds: string[]
   workRecordCount: number
 }

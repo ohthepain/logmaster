@@ -84,3 +84,16 @@ export const ORG_NOTIFICATION_TOPICS: NotificationTopic[] = [
   'ORG_CONTACTS',
   'ORG_BOATS',
 ]
+
+export const DEFAULT_NOTIFICATION_CHANNELS: NotificationChannelDefaults = {
+  email: true,
+  push: true,
+}
+
+/** Missing row means opted in; only an explicit enabled:false opts out. */
+export function isNotificationTopicEnabled(
+  subscription: { enabled: boolean } | null | undefined,
+): boolean {
+  if (!subscription) return true
+  return subscription.enabled
+}

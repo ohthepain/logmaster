@@ -1,4 +1,8 @@
 import type { NotificationTopic } from '../../domain/notifications'
+import {
+  DEFAULT_NOTIFICATION_CHANNELS,
+  isNotificationTopicEnabled,
+} from '../../domain/notifications'
 import { subscriptionScopeKey } from './scope'
 import {
   listAdminUserIds,
@@ -112,45 +116,73 @@ export async function emitActivityEvent(
 
     const subscriptions = await db.notificationSubscription.findMany({
       where: {
-        enabled: true,
         topic: input.topic,
         scopeKey,
         userId: { in: recipientIds },
       },
       select: {
         userId: true,
+        enabled: true,
         emailEnabled: true,
         pushEnabled: true,
       },
     })
 
-    const subscribedUserIds = new Set(
-      subscriptions.map((sub: { userId: string }) => sub.userId),
-    )
-    if (subscribedUserIds.size === 0) {
-      logServerEvent({
-        action: 'notification.emit',
-        ...resource,
-        outcome: 'error',
-        errorCode: 'not_subscribed',
-      })
-      return
-    }
-
     const subscriptionByUser = new Map<
       string,
-      { emailEnabled: boolean; pushEnabled: boolean }
+      { enabled: boolean; emailEnabled: boolean; pushEnabled: boolean }
     >(
       subscriptions.map(
         (sub: {
           userId: string
+          enabled: boolean
           emailEnabled: boolean
           pushEnabled: boolean
         }) => [sub.userId, sub],
       ),
     )
 
-    const notifications = [...subscribedUserIds].map((userId) => ({
+    recipientIds = recipientIds.filter((id) =>
+      isNotificationTopicEnabled(subscriptionByUser.get(id)),
+    )
+    if (recipientIds.length === 0) {
+      logServerEvent({
+        action: 'notification.emit',
+        ...resource,
+        outcome: 'error',
+        errorCode: 'opted_out',
+      })
+      return
+    }
+
+    const missingDefaultsFor = recipientIds.filter(
+      (id) => !subscriptionByUser.has(id),
+    )
+    const defaultChannelsByUser = new Map<
+      string,
+      { emailEnabled: boolean; pushEnabled: boolean }
+    >()
+    if (missingDefaultsFor.length > 0) {
+      const users = await db.user.findMany({
+        where: { id: { in: missingDefaultsFor } },
+        select: { id: true, notificationDefaults: true },
+      })
+      for (const user of users as Array<{
+        id: string
+        notificationDefaults: { email?: boolean; push?: boolean } | null
+      }>) {
+        defaultChannelsByUser.set(user.id, {
+          emailEnabled:
+            user.notificationDefaults?.email ??
+            DEFAULT_NOTIFICATION_CHANNELS.email,
+          pushEnabled:
+            user.notificationDefaults?.push ??
+            DEFAULT_NOTIFICATION_CHANNELS.push,
+        })
+      }
+    }
+
+    const notifications = recipientIds.map((userId) => ({
       userId,
       topic: input.topic,
       title: input.title,
@@ -174,14 +206,21 @@ export async function emitActivityEvent(
           linkUrl: string | null
         }) => {
           const sub = subscriptionByUser.get(row.userId)
+          const defaults = defaultChannelsByUser.get(row.userId)
           return {
             notificationId: row.id,
             userId: row.userId,
             title: row.title,
             body: row.body,
             linkUrl: row.linkUrl,
-            emailEnabled: sub?.emailEnabled ?? true,
-            pushEnabled: sub?.pushEnabled ?? true,
+            emailEnabled:
+              sub?.emailEnabled ??
+              defaults?.emailEnabled ??
+              DEFAULT_NOTIFICATION_CHANNELS.email,
+            pushEnabled:
+              sub?.pushEnabled ??
+              defaults?.pushEnabled ??
+              DEFAULT_NOTIFICATION_CHANNELS.push,
           }
         },
       ),

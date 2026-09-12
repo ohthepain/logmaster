@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { BoatDocumentViewKind } from '../lib/boat-document-viewer'
 import { DevComponentLabel } from './DevComponentLabel'
+import { PdfDocumentPages } from './PdfDocumentPages'
 
 type BoatDocumentViewerModalProps = {
   title: string
@@ -20,6 +21,7 @@ export function BoatDocumentViewerModal({
   const [textContent, setTextContent] = useState<string | null>(null)
   const [textError, setTextError] = useState<string | null>(null)
   const [embedUrl, setEmbedUrl] = useState<string | null>(null)
+  const [embedError, setEmbedError] = useState<string | null>(null)
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -61,11 +63,14 @@ export function BoatDocumentViewerModal({
   useEffect(() => {
     if (viewKind !== 'embed') {
       setEmbedUrl(null)
+      setEmbedError(null)
       return
     }
 
     let cancelled = false
     let objectUrl: string | null = null
+    setEmbedUrl(null)
+    setEmbedError(null)
 
     void fetch(contentUrl, { credentials: 'include' })
       .then(async (response) => {
@@ -77,8 +82,12 @@ export function BoatDocumentViewerModal({
         objectUrl = URL.createObjectURL(blob)
         setEmbedUrl(objectUrl)
       })
-      .catch(() => {
-        if (!cancelled) setEmbedUrl(contentUrl)
+      .catch((error) => {
+        if (!cancelled) {
+          setEmbedError(
+            error instanceof Error ? error.message : 'Failed to load document',
+          )
+        }
       })
 
     return () => {
@@ -111,13 +120,39 @@ export function BoatDocumentViewerModal({
         </button>
       </div>
 
-      {viewKind === 'pdf' || viewKind === 'embed' ? (
-        <iframe
-          src={viewKind === 'embed' ? (embedUrl ?? undefined) : contentUrl}
-          title={title}
-          aria-labelledby={titleId}
-          className="min-h-0 w-full flex-1 border-0 bg-white"
-        />
+      {viewKind === 'pdf' ? (
+        <PdfDocumentPages contentUrl={contentUrl} title={title} />
+      ) : null}
+
+      {viewKind === 'embed' ? (
+        <div className="relative min-h-0 flex-1 bg-white">
+          {embedError ? (
+            <div className="flex size-full flex-col items-center justify-center gap-3 p-6 text-center">
+              <p className="m-0 text-sm text-red-700 dark:text-red-300">
+                {embedError}
+              </p>
+              <a
+                href={contentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-semibold text-[var(--sea-ink)] underline"
+              >
+                Open in a new tab
+              </a>
+            </div>
+          ) : embedUrl ? (
+            <iframe
+              src={embedUrl}
+              title={title}
+              aria-labelledby={titleId}
+              className="absolute inset-0 size-full border-0 bg-white"
+            />
+          ) : (
+            <p className="m-0 p-6 text-sm text-[var(--sea-ink-soft)]">
+              Loading…
+            </p>
+          )}
+        </div>
       ) : null}
 
       {viewKind === 'image' ? (
