@@ -23,7 +23,8 @@ export function AssetCoverPhoto({
       className={cn(
         'relative shrink-0 overflow-hidden rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)]',
         variant === 'list' && 'size-12',
-        variant === 'detail' && 'aspect-[4/3] w-full max-w-[11rem] sm:max-w-[12rem]',
+        variant === 'detail' &&
+          'aspect-[4/3] w-full max-w-[11rem] sm:max-w-[12rem]',
         className,
       )}
     >

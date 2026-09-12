@@ -64,11 +64,7 @@ export function AssetSuggestionsSection({
                   }
                   onDownload={() =>
                     void act(item.id, () =>
-                      downloadAssetSuggestion(
-                        asset.boatId,
-                        asset.id,
-                        item.id,
-                      ),
+                      downloadAssetSuggestion(asset.boatId, asset.id, item.id),
                     )
                   }
                   onRemove={() => {

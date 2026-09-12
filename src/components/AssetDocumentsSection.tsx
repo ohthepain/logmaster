@@ -492,9 +492,7 @@ function AssetDocumentListItem({
   const version = isDocumentDetail(document) ? document.currentVersion : null
   const isLink = version?.kind === 'link'
   const linkUrl =
-    externalSourceUrl ??
-    (version?.kind === 'link' ? version.url : null) ??
-    null
+    externalSourceUrl ?? (version?.kind === 'link' ? version.url : null) ?? null
   const subtitle = linkUrl
     ? linkUrl
     : version

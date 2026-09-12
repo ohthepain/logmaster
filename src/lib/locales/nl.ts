@@ -216,8 +216,7 @@ const catalog: TranslationCatalog = {
   addAssetUpdateExistingFailed:
     'Could not update the existing asset. Please retry.',
   addAssetSaveFailed: 'Could not save asset. Please retry.',
-  addAssetStatusIdentifying:
-    'Identifying the device and reading its label…',
+  addAssetStatusIdentifying: 'Identifying the device and reading its label…',
   addAssetStatusSaving: 'Saving asset and photo…',
   addAssetStatusUpdating: 'Updating the existing asset…',
   addAssetStatusOpeningCamera: 'Opening camera…',
@@ -231,7 +230,8 @@ const catalog: TranslationCatalog = {
   addAssetTakePhoto: 'Take a photo',
   addAssetSelectPhoto: 'Select photo',
   addAssetChoosePhoto: 'Choose photo',
-  addAssetPhotoAriaLabel: 'Asset photo',  addAssetAutoIdentify: 'Auto-identify',
+  addAssetPhotoAriaLabel: 'Asset photo',
+  addAssetAutoIdentify: 'Auto-identify',
   addAssetPhotoAlt: 'New asset',
   addAssetRetryIdentification: 'Retry identification',
   addAssetRemovePhoto: 'Remove photo',

@@ -215,8 +215,7 @@ const catalog: TranslationCatalog = {
   addAssetUpdateExistingFailed:
     'Could not update the existing asset. Please retry.',
   addAssetSaveFailed: 'Could not save asset. Please retry.',
-  addAssetStatusIdentifying:
-    'Identifying the device and reading its label…',
+  addAssetStatusIdentifying: 'Identifying the device and reading its label…',
   addAssetStatusSaving: 'Saving asset and photo…',
   addAssetStatusUpdating: 'Updating the existing asset…',
   addAssetStatusOpeningCamera: 'Opening camera…',

@@ -22,13 +22,7 @@ export function AssetLinkTypeTag({ url }: { url: string }) {
   )
 }
 
-export function AssetLinkTitle({
-  url,
-  title,
-}: {
-  url: string
-  title: string
-}) {
+export function AssetLinkTitle({ url, title }: { url: string; title: string }) {
   const href = normalizeExternalUrl(url)
   if (!href) {
     return (

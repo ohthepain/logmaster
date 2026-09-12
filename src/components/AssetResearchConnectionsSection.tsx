@@ -27,9 +27,7 @@ export function AssetResearchConnectionsSection({
 
   return (
     <section className="space-y-3 rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] p-4">
-      <h3 className="m-0 text-sm font-semibold">
-        {t('possibleConnections')}
-      </h3>
+      <h3 className="m-0 text-sm font-semibold">{t('possibleConnections')}</h3>
       <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
         {t('possibleConnectionsHint')}
       </p>
@@ -75,7 +73,9 @@ export function AssetResearchConnectionsSection({
             .then(() => toast.success(t('assetResearchConnectionsSaved')))
             .catch((error) =>
               toast.error(
-                error instanceof Error ? error.message : t('addAssetSaveFailed'),
+                error instanceof Error
+                  ? error.message
+                  : t('addAssetSaveFailed'),
               ),
             )
             .finally(() => setBusy(false))

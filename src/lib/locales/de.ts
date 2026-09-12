@@ -220,8 +220,7 @@ const catalog: TranslationCatalog = {
     'Vorhandenes Inventar konnte nicht aktualisiert werden. Bitte erneut versuchen.',
   addAssetSaveFailed:
     'Inventar konnte nicht gespeichert werden. Bitte erneut versuchen.',
-  addAssetStatusIdentifying:
-    'Gerät wird erkannt und Typenschild gelesen…',
+  addAssetStatusIdentifying: 'Gerät wird erkannt und Typenschild gelesen…',
   addAssetStatusSaving: 'Inventar und Foto werden gespeichert…',
   addAssetStatusUpdating: 'Vorhandenes Inventar wird aktualisiert…',
   addAssetStatusOpeningCamera: 'Kamera wird geöffnet…',
@@ -235,7 +234,8 @@ const catalog: TranslationCatalog = {
   addAssetTakePhoto: 'Foto aufnehmen',
   addAssetSelectPhoto: 'Foto auswählen',
   addAssetChoosePhoto: 'Foto wählen',
-  addAssetPhotoAriaLabel: 'Inventarfoto',  addAssetAutoIdentify: 'Auto-Erkennung',
+  addAssetPhotoAriaLabel: 'Inventarfoto',
+  addAssetAutoIdentify: 'Auto-Erkennung',
   addAssetPhotoAlt: 'Neues Inventar',
   addAssetRetryIdentification: 'Erkennung wiederholen',
   addAssetRemovePhoto: 'Foto entfernen',

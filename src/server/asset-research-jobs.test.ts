@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import {
+  applyResearchResultToAsset,
+  createAndEnqueueAssetResearchJob,
+  ensureResearchAppliedToAsset,
+  linkAssetResearchJobToAsset,
+} from './asset-research-jobs'
+
 const prisma = vi.hoisted(() => ({
   assetResearchJob: {
     create: vi.fn(),
@@ -22,13 +29,6 @@ const boss = vi.hoisted(() => ({
 
 vi.mock('./db', () => ({ prisma }))
 vi.mock('./jobs/boss', () => ({ getBoss: vi.fn(async () => boss) }))
-
-import {
-  applyResearchResultToAsset,
-  createAndEnqueueAssetResearchJob,
-  ensureResearchAppliedToAsset,
-  linkAssetResearchJobToAsset,
-} from './asset-research-jobs'
 
 describe('asset research jobs', () => {
   beforeEach(() => {
@@ -98,7 +98,10 @@ describe('asset research jobs', () => {
         connections: [],
       },
     })
-    prisma.boatAsset.findUnique.mockResolvedValue({ id: 'asset-1', category: null })
+    prisma.boatAsset.findUnique.mockResolvedValue({
+      id: 'asset-1',
+      category: null,
+    })
     await linkAssetResearchJobToAsset('job-1', 'boat', 'asset-1', 'user')
     expect(prisma.assetSuggestedDownload.createMany).toHaveBeenCalled()
   })
@@ -121,7 +124,10 @@ describe('asset research jobs', () => {
         connections: [],
       },
     })
-    prisma.boatAsset.findUnique.mockResolvedValue({ id: 'asset-1', category: null })
+    prisma.boatAsset.findUnique.mockResolvedValue({
+      id: 'asset-1',
+      category: null,
+    })
     await ensureResearchAppliedToAsset('job-1')
     expect(prisma.assetSuggestedDownload.createMany).toHaveBeenCalled()
   })

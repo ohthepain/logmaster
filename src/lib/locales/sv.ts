@@ -215,8 +215,7 @@ const catalog: TranslationCatalog = {
   addAssetUpdateExistingFailed:
     'Kunde inte uppdatera befintlig utrustning. Försök igen.',
   addAssetSaveFailed: 'Kunde inte spara utrustningen. Försök igen.',
-  addAssetStatusIdentifying:
-    'Identifierar enheten och läser etiketten…',
+  addAssetStatusIdentifying: 'Identifierar enheten och läser etiketten…',
   addAssetStatusSaving: 'Sparar utrustning och foto…',
   addAssetStatusUpdating: 'Uppdaterar befintlig utrustning…',
   addAssetStatusOpeningCamera: 'Öppnar kameran…',
@@ -230,7 +229,8 @@ const catalog: TranslationCatalog = {
   addAssetTakePhoto: 'Ta foto',
   addAssetSelectPhoto: 'Välj foto',
   addAssetChoosePhoto: 'Välj foto',
-  addAssetPhotoAriaLabel: 'Foto på utrustning',  addAssetAutoIdentify: 'Auto-identifiera',
+  addAssetPhotoAriaLabel: 'Foto på utrustning',
+  addAssetAutoIdentify: 'Auto-identifiera',
   addAssetPhotoAlt: 'Ny utrustning',
   addAssetRetryIdentification: 'Försök identifiera igen',
   addAssetRemovePhoto: 'Ta bort foto',
@@ -264,8 +264,7 @@ const catalog: TranslationCatalog = {
   removeAssetLinkConfirm: 'Remove “{title}” from this asset?',
   removeAssetConnectionConfirm: 'Remove the connection to {name}?',
   possibleConnections: 'Möjliga kopplingar',
-  possibleConnectionsHint:
-    'Välj bara kopplingar du kan bekräfta på din båt.',
+  possibleConnectionsHint: 'Välj bara kopplingar du kan bekräfta på din båt.',
   existingAsset: 'Befintlig utrustning',
   dismissSuggestion: 'Avvisa {title}',
   labelOwnership: 'Ägande',

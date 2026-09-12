@@ -58,7 +58,7 @@ export async function runAssetResearchJob(
       where: { id: researchJobId },
       data: {
         status: 'completed',
-        result: research as object,
+        result: research,
         error: null,
         completedAt: new Date(),
       },
