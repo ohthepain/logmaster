@@ -63,3 +63,45 @@ describe('asset brand identity', () => {
     })
   })
 })
+
+it('recognizes accented spellings and legacy brand aliases', () => {
+  expect(findAssetBrand('Selden')?.name).toBe('Seldén')
+  expect(findAssetBrand('Seldén')?.name).toBe('Seldén')
+  expect(findAssetBrand('Side-Power')?.name).toBe('Sleipner')
+  expect(findAssetBrand('B and G')?.name).toBe('B&G')
+})
+
+it('prefers a longer manufacturer alias and strips it completely', () => {
+  expect(
+    getAssetIdentity({
+      name: 'Mercury MerCruiser 4.5L Sterndrive',
+      modelNumber: 'Mercury MerCruiser 4.5L',
+    }),
+  ).toMatchObject({
+    brand: 'MerCruiser',
+    modelNumber: '4.5L',
+    title: '4.5L',
+    subtitle: 'Sterndrive',
+  })
+})
+
+it('does not infer brands from common words or override a cleared brand', () => {
+  for (const name of [
+    'Quick release',
+    'Whale watching camera',
+    'Spade anchor',
+  ]) {
+    expect(getAssetIdentity({ name })).toMatchObject({
+      brand: null,
+      title: name,
+    })
+  }
+  expect(
+    getAssetIdentity({
+      name: 'Quick DP2 windlass',
+      brand: 'Quick',
+      modelNumber: 'DP2',
+    }),
+  ).toMatchObject({ brand: 'Quick', title: 'DP2', subtitle: 'windlass' })
+  expect(getAssetIdentity({ name: 'Garmin GPS', brand: '' }).brand).toBeNull()
+})

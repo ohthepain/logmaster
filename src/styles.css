@@ -735,12 +735,26 @@ a {
   color: var(--sea-ink);
 }
 
-/* Keep transparent manufacturer marks legible on dark surfaces. */
+/* Blend away white image backgrounds without adding boxes around the marks. */
+.asset-brand-logo {
+  mix-blend-mode: multiply;
+}
+.asset-brand-logo--white {
+  filter: grayscale(1) invert(1);
+}
 :root[data-theme="dark"] .asset-brand-logo {
-  filter: brightness(0) invert(1);
+  filter: grayscale(1) invert(1);
+  mix-blend-mode: screen;
+}
+:root[data-theme="dark"] .asset-brand-logo--white {
+  filter: grayscale(1);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .asset-brand-logo {
-    filter: brightness(0) invert(1);
+    filter: grayscale(1) invert(1);
+    mix-blend-mode: screen;
+  }
+  :root:not([data-theme="light"]) .asset-brand-logo--white {
+    filter: grayscale(1);
   }
 }
