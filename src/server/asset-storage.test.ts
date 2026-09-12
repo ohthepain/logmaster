@@ -151,3 +151,25 @@ describe('download attachment retries', () => {
     expect(mocks.remove).toHaveBeenCalledWith('photo-key')
   })
 })
+
+it('persists canonical brands with clean model and product names', async () => {
+  await createAssetWithAttachments(
+    'boat',
+    'user',
+    createAssetSchema.parse({
+      name: 'Quark-Elec QK-A026-Plus NMEA 2000 AIS+GPS Receiver',
+      brand: 'Quark Elec',
+      modelNumber: 'Quark-Elec QK-A026-Plus',
+      ownership: 'BOAT',
+    }),
+  )
+  expect(mocks.tx.boatAsset.create).toHaveBeenCalledWith(
+    expect.objectContaining({
+      data: expect.objectContaining({
+        brand: 'Quark-Elec',
+        modelNumber: 'QK-A026-Plus',
+        name: 'NMEA 2000 AIS+GPS Receiver',
+      }),
+    }),
+  )
+})

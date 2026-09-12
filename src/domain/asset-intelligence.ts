@@ -17,6 +17,7 @@ export type AssetCategory = (typeof ASSET_CATEGORIES)[number]
 export type AssetIdentification = {
   name: string
   description: string
+  brand: string | null
   modelNumber: string | null
   confidence: 'high' | 'medium' | 'low'
   category: AssetCategory | null

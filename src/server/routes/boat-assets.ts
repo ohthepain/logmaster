@@ -1,6 +1,11 @@
+import { getAssetIdentity } from '../../domain/asset-brands'
+import {
+  brandSchema,
+  categorySchema,
+  createAssetSchema,
+} from '../asset-intelligence-schema'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
-import { categorySchema, createAssetSchema } from '../asset-intelligence-schema'
 import { pickAssetCoverPhoto } from '../asset-cover-photo'
 import {
   ensureResearchAppliedToAsset,
@@ -142,6 +147,7 @@ function serializeAsset(asset: {
   boatId: string
   name: string
   description: string | null
+  brand: string | null
   modelNumber: string | null
   category: string | null
   suggestedDownloads?: AssetDownloadSuggestion[]
@@ -173,13 +179,15 @@ function serializeAsset(asset: {
   purchaseLines?: Array<{ id: string }>
   workRecords?: Array<{ id: string }>
 }) {
+  const identity = getAssetIdentity(asset)
   const ownerLabel = assetOwnerLabel(asset)
   return {
     id: asset.id,
     boatId: asset.boatId,
     name: asset.name,
     description: asset.description,
-    modelNumber: asset.modelNumber,
+    brand: identity.brand,
+    modelNumber: identity.modelNumber,
     category: asset.category,
     suggestedDownloads: asset.suggestedDownloads ?? [],
     connections: [
@@ -597,6 +605,7 @@ boatAssetsRoutes.patch('/:boatId/assets/:assetId', async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as {
     name?: string
     description?: string | null
+    brand?: string | null
     modelNumber?: string | null
     category?: string | null
     ownership?: string
@@ -606,6 +615,11 @@ boatAssetsRoutes.patch('/:boatId/assets/:assetId', async (c) => {
   }
 
   const data: Record<string, unknown> = {}
+  if (body.brand !== undefined) {
+    const brand = brandSchema.safeParse(body.brand)
+    if (!brand.success) return c.json({ error: 'Invalid brand' }, 400)
+    data.brand = brand.data
+  }
   if (body.category !== undefined) {
     const category = categorySchema.safeParse(body.category)
     if (!category.success)
@@ -627,6 +641,23 @@ boatAssetsRoutes.patch('/:boatId/assets/:assetId', async (c) => {
   }
   if (body.description !== undefined) {
     data.description = body.description?.trim() || null
+  }
+  if (
+    body.brand !== undefined ||
+    body.name !== undefined ||
+    body.modelNumber !== undefined
+  ) {
+    const identity = getAssetIdentity({
+      name: (data.name as string | undefined) ?? existing.name,
+      brand: body.brand !== undefined ? (body.brand ?? '') : existing.brand,
+      modelNumber:
+        body.modelNumber !== undefined
+          ? body.modelNumber
+          : existing.modelNumber,
+    })
+    data.name = identity.productName || identity.modelNumber || existing.name
+    data.brand = identity.brand
+    data.modelNumber = identity.modelNumber
   }
   if (body.ownership !== undefined) {
     if (!isAssetOwnership(body.ownership)) {

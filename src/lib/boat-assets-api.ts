@@ -69,6 +69,7 @@ export async function createBoatAsset(
   input: {
     name: string
     description?: string | null
+    brand?: string | null
     modelNumber?: string | null
     category?: AssetCategory | null
     suggestedDownloads?: AssetResearch['downloads']
@@ -106,6 +107,7 @@ export async function updateBoatAsset(
   input: Partial<{
     name: string
     description: string | null
+    brand: string | null
     modelNumber: string | null
     category: AssetCategory | null
     ownership: AssetOwnership
@@ -137,7 +139,12 @@ export async function identifyAssetPhoto(
 
 export async function researchNewAsset(
   boatId: string,
-  input: { name: string; description: string; modelNumber: string | null },
+  input: {
+    name: string
+    brand?: string | null
+    description: string
+    modelNumber: string | null
+  },
   signal?: AbortSignal,
 ): Promise<AssetResearch> {
   const data = await api<{ research: AssetResearch }>(
@@ -157,7 +164,12 @@ export type AssetResearchJobPoll = {
 
 export async function startAssetResearchJob(
   boatId: string,
-  input: { name: string; description: string; modelNumber: string | null },
+  input: {
+    name: string
+    brand?: string | null
+    description: string
+    modelNumber: string | null
+  },
 ): Promise<{ jobId: string }> {
   const data = await api<{ jobId: string }>(
     `/api/boats/${boatId}/assets/research/jobs`,

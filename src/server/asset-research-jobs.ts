@@ -12,6 +12,7 @@ export async function loadBoatResearchContext(boatId: string) {
       select: {
         id: true,
         name: true,
+        brand: true,
         description: true,
         modelNumber: true,
         category: true,
@@ -81,7 +82,7 @@ export async function createAndEnqueueAssetResearchJob(
     data: {
       boatId,
       requestedByUserId: userId,
-      input: parsed.data as object,
+      input: parsed.data,
       status: 'pending',
     },
   })
@@ -129,19 +130,14 @@ export async function linkAssetResearchJobToAsset(
     fresh.result &&
     fresh.assetId === assetId
   ) {
-    await applyResearchResultToAsset(
-      assetId,
-      fresh.result as AssetResearch,
-    )
+    await applyResearchResultToAsset(assetId, fresh.result as AssetResearch)
   }
 
   return fresh ?? job
 }
 
 /** Idempotent: apply stored research to the linked asset if not already merged. */
-export async function ensureResearchAppliedToAsset(
-  researchJobId: string,
-) {
+export async function ensureResearchAppliedToAsset(researchJobId: string) {
   const job = await prisma.assetResearchJob.findUnique({
     where: { id: researchJobId },
   })
@@ -153,10 +149,7 @@ export async function ensureResearchAppliedToAsset(
   ) {
     return
   }
-  await applyResearchResultToAsset(
-    job.assetId,
-    job.result as AssetResearch,
-  )
+  await applyResearchResultToAsset(job.assetId, job.result as AssetResearch)
 }
 
 export async function confirmAssetResearchConnections(

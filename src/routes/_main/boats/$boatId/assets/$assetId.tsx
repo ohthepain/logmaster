@@ -1,3 +1,5 @@
+import { AssetBrandLogo } from '../../../../../components/AssetBrandLogo'
+import { getAssetIdentity } from '../../../../../domain/asset-brands'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Pencil, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -60,33 +62,36 @@ function BoatAssetDetailPage() {
     return map
   }, [asset?.suggestedDownloads])
 
-  const load = useCallback(async (opts?: { background?: boolean }) => {
-    if (!opts?.background) setLoading(true)
-    setError(null)
-    try {
-      const data = await fetchBoatAsset(boatId, assetId)
-      setAsset({
-        ...data.asset,
-        researchJob: data.asset.researchJob ?? null,
-      })
-      setBoatName(data.boat.name)
-      const extras = await Promise.allSettled([
-        fetchBoat(boatId),
-        fetchBoatMembers(boatId),
-      ])
-      if (extras[0].status === 'fulfilled') {
-        setOrgName(extras[0].value.boat.orgName)
+  const load = useCallback(
+    async (opts?: { background?: boolean }) => {
+      if (!opts?.background) setLoading(true)
+      setError(null)
+      try {
+        const data = await fetchBoatAsset(boatId, assetId)
+        setAsset({
+          ...data.asset,
+          researchJob: data.asset.researchJob ?? null,
+        })
+        setBoatName(data.boat.name)
+        const extras = await Promise.allSettled([
+          fetchBoat(boatId),
+          fetchBoatMembers(boatId),
+        ])
+        if (extras[0].status === 'fulfilled') {
+          setOrgName(extras[0].value.boat.orgName)
+        }
+        if (extras[1].status === 'fulfilled') {
+          setMembers(extras[1].value.members)
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load asset')
+        setAsset(null)
+      } finally {
+        setLoading(false)
       }
-      if (extras[1].status === 'fulfilled') {
-        setMembers(extras[1].value.members)
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load asset')
-      setAsset(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [boatId, assetId])
+    },
+    [boatId, assetId],
+  )
 
   useEffect(() => {
     void load()
@@ -198,6 +203,7 @@ function BoatAssetDetailPage() {
     )
   }
 
+  const identity = getAssetIdentity(asset)
   return (
     <main className="page-wrap px-3 pb-24 pt-4 sm:px-4">
       <div className="mx-auto max-w-4xl">
@@ -213,14 +219,21 @@ function BoatAssetDetailPage() {
 
         <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
-            <h1 className="brand-title m-0 text-2xl">{asset.name}</h1>
+            <AssetBrandLogo brand={identity.brand} />
+            <h1 className="m-0 mt-3 break-words text-2xl font-semibold text-[var(--sea-ink)]">
+              {identity.title}
+            </h1>
+            {identity.subtitle && (
+              <p className="mb-0 mt-1 break-words text-base text-[var(--sea-ink-soft)]">
+                {identity.subtitle}
+              </p>
+            )}
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-[var(--chip-bg)] px-2.5 py-0.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
                 {asset.ownerLabel}
               </span>
               <span className="text-sm text-[var(--sea-ink-soft)]">
                 {asset.category ?? 'Uncategorized'}
-                {asset.modelNumber ? ` · ${asset.modelNumber}` : ''}
               </span>
               {asset.installedAt ? (
                 <span className="text-sm text-[var(--sea-ink-soft)]">
@@ -228,7 +241,7 @@ function BoatAssetDetailPage() {
                 </span>
               ) : null}
             </div>
-            {asset.description ? (
+            {asset.description && asset.description !== identity.productName ? (
               <p className="mt-3 text-sm text-[var(--sea-ink-soft)]">
                 {asset.description}
               </p>
@@ -393,9 +406,7 @@ function BoatAssetDetailPage() {
                 await load({ background: true })
               } catch (e) {
                 toast.error(
-                  e instanceof Error
-                    ? e.message
-                    : 'Failed to add work record',
+                  e instanceof Error ? e.message : 'Failed to add work record',
                 )
               } finally {
                 setBusy(false)

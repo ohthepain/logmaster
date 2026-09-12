@@ -958,6 +958,7 @@ model BoatAsset {
   boatId           String
   name             String
   description      String?
+  brand            String?
   modelNumber      String?
   category         String?
   ownership        AssetOwnership

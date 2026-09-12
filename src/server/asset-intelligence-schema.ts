@@ -4,6 +4,7 @@ import { ASSET_CATEGORIES } from '../domain/asset-intelligence'
 export const categorySchema = z.enum(ASSET_CATEGORIES).nullable()
 export const identificationSchema = z.object({
   name: z.string().max(200),
+  brand: z.string().max(100).nullable(),
   description: z.string().max(2000),
   modelNumber: z.string().max(200).nullable(),
   confidence: z.enum(['high', 'medium', 'low']),
@@ -32,12 +33,15 @@ export const researchSchema = z.object({
   downloads: z.array(downloadSchema).max(8),
   connections: z.array(connectionSchema).max(20),
 })
+export const brandSchema = z.string().trim().max(100).nullable()
 export const researchInputSchema = z.object({
+  brand: brandSchema.optional(),
   name: z.string().trim().min(1).max(200),
   description: z.string().max(2000).default(''),
   modelNumber: z.string().trim().min(1).max(200).nullable(),
 })
 export const createAssetSchema = z.object({
+  brand: brandSchema.optional(),
   name: z.string().trim().min(1).max(200),
   description: z.string().trim().max(2000).nullable().optional(),
   modelNumber: z.string().trim().max(200).nullable().optional(),

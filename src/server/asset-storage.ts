@@ -1,3 +1,4 @@
+import { getAssetIdentity } from '../domain/asset-brands'
 import { randomUUID } from 'node:crypto'
 import type { z } from 'zod'
 import { prisma } from './db'
@@ -16,6 +17,7 @@ export async function createAssetWithAttachments(
   input: z.infer<typeof createAssetSchema>,
   file?: File,
 ) {
+  const identity = getAssetIdentity(input)
   const id = randomUUID()
   const documentId = randomUUID()
   const versionId = randomUUID()
@@ -44,9 +46,10 @@ export async function createAssetWithAttachments(
         data: {
           id,
           boatId,
-          name: input.name,
+          name: identity.productName || identity.modelNumber || input.name,
           description: input.description || null,
-          modelNumber: input.modelNumber || null,
+          brand: identity.brand,
+          modelNumber: identity.modelNumber,
           category: input.category ?? null,
           ownership: input.ownership,
           ownedByUserId:

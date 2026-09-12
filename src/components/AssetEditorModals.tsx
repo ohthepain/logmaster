@@ -1,3 +1,5 @@
+import { AssetBrandField } from './AssetBrandField'
+import { getAssetIdentity } from '../domain/asset-brands'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ASSET_CATEGORIES } from '../domain/asset-intelligence'
@@ -30,6 +32,7 @@ export function AssetEditModal({
   initial: Pick<
     BoatAsset,
     | 'name'
+    | 'brand'
     | 'description'
     | 'modelNumber'
     | 'category'
@@ -42,6 +45,7 @@ export function AssetEditModal({
   onClose: () => void
   onSave: (input: {
     name?: string
+    brand?: string | null
     description?: string | null
     modelNumber?: string | null
     category?: AssetCategory | null
@@ -50,9 +54,11 @@ export function AssetEditModal({
     installedAt?: string | null
   }) => Promise<void>
 }) {
-  const [name, setName] = useState(initial.name)
+  const identity = getAssetIdentity(initial)
+  const [brand, setBrand] = useState(identity.brand ?? '')
+  const [name, setName] = useState(identity.productName)
   const [description, setDescription] = useState(initial.description ?? '')
-  const [modelNumber, setModelNumber] = useState(initial.modelNumber ?? '')
+  const [modelNumber, setModelNumber] = useState(identity.modelNumber ?? '')
   const [category, setCategory] = useState<AssetCategory | ''>(
     initial.category ?? '',
   )
@@ -67,7 +73,8 @@ export function AssetEditModal({
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
     void onSave({
-      name: name.trim(),
+      name: name.trim() || modelNumber.trim(),
+      brand: brand.trim(),
       description: description.trim() || null,
       modelNumber: modelNumber.trim() || null,
       category: category || null,
@@ -80,13 +87,26 @@ export function AssetEditModal({
   return (
     <Modal title="Edit asset" onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <AssetBrandField value={brand} onChange={setBrand} />
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-semibold">Name</span>
+          <span className="sr-only">Model number</span>
+          <input
+            value={modelNumber}
+            placeholder="Model number"
+            maxLength={200}
+            onChange={(e) => setModelNumber(e.target.value)}
+            className="w-full min-w-0 border-0 bg-transparent py-1 text-xl font-semibold outline-none focus:ring-1 focus:ring-[var(--chip-line)]"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="sr-only">Product name</span>
           <input
             value={name}
+            placeholder="Product name"
+            maxLength={200}
             onChange={(e) => setName(e.target.value)}
-            required
-            className="rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2"
+            required={!modelNumber.trim()}
+            className="w-full min-w-0 border-0 bg-transparent py-1 text-lg font-semibold outline-none focus:ring-1 focus:ring-[var(--chip-line)]"
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -95,15 +115,6 @@ export function AssetEditModal({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            className="rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-semibold">Model number</span>
-          <input
-            value={modelNumber}
-            maxLength={200}
-            onChange={(e) => setModelNumber(e.target.value)}
             className="rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2"
           />
         </label>

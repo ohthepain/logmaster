@@ -734,3 +734,13 @@ a {
   line-height: 1.65;
   color: var(--sea-ink);
 }
+
+/* Keep transparent manufacturer marks legible on dark surfaces. */
+:root[data-theme="dark"] .asset-brand-logo {
+  filter: brightness(0) invert(1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .asset-brand-logo {
+    filter: brightness(0) invert(1);
+  }
+}

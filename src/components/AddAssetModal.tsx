@@ -1,6 +1,13 @@
+import { AssetBrandField } from './AssetBrandField'
+import { getAssetIdentity } from '../domain/asset-brands'
 import { Capacitor } from '@capacitor/core'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
-import { Camera as CameraIcon, LoaderCircle, Sparkles, Trash2 } from 'lucide-react'
+import {
+  Camera as CameraIcon,
+  LoaderCircle,
+  Sparkles,
+  Trash2,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Modal } from './Modal'
 import { ASSET_CATEGORIES } from '../domain/asset-intelligence'
@@ -21,29 +28,48 @@ import { AssetLinkTitle, AssetLinkTypeTag } from './AssetLinkRowParts'
 export type ListedBoatAsset = Pick<
   BoatAsset,
   'id' | 'name' | 'description' | 'modelNumber' | 'category'
->
+> & { brand?: string | null }
 
 function normalizeAssetKey(value: string) {
-  return value.trim().toLowerCase().replace(/[\s\-_/]/g, '')
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s\-_/]/g, '')
 }
 
 export function findExistingBoatAsset(
   assets: ListedBoatAsset[],
-  identified: { name: string; modelNumber: string | null },
+  identified: {
+    name: string
+    brand?: string | null
+    modelNumber: string | null
+  },
 ): ListedBoatAsset | null {
-  const model = identified.modelNumber?.trim()
+  const identity = getAssetIdentity(identified)
+  const candidates = assets.filter((asset) => {
+    const existingBrand = getAssetIdentity(asset).brand
+    return (
+      !identity.brand ||
+      !existingBrand ||
+      normalizeAssetKey(identity.brand) === normalizeAssetKey(existingBrand)
+    )
+  })
+  const model = identity.modelNumber
   if (model) {
     const modelKey = normalizeAssetKey(model)
-    const byModel = assets.find(
-      (asset) =>
-        asset.modelNumber && normalizeAssetKey(asset.modelNumber) === modelKey,
-    )
+    const byModel = candidates.find((asset) => {
+      const existingModel = getAssetIdentity(asset).modelNumber
+      return existingModel && normalizeAssetKey(existingModel) === modelKey
+    })
     if (byModel) return byModel
   }
-  const nameKey = normalizeAssetKey(identified.name)
+  const nameKey = normalizeAssetKey(identity.productName)
   if (!nameKey) return null
   return (
-    assets.find((asset) => normalizeAssetKey(asset.name) === nameKey) ?? null
+    candidates.find(
+      (asset) =>
+        normalizeAssetKey(getAssetIdentity(asset).productName) === nameKey,
+    ) ?? null
   )
 }
 
@@ -83,6 +109,7 @@ export function AddAssetModal({
 }) {
   const { t } = useTranslation()
   const [name, setName] = useState('')
+  const [brand, setBrand] = useState('')
   const [description, setDescription] = useState('')
   const [modelNumber, setModelNumber] = useState('')
   const [category, setCategory] = useState<AssetCategory | ''>('')
@@ -109,11 +136,13 @@ export function AddAssetModal({
     status === 'camera' || status === 'identifying' || status === 'saving'
 
   function syncExistingMatch(identity?: {
+    brand?: string | null
     name?: string
     modelNumber?: string | null
   }) {
     setExistingMatch(
       findExistingBoatAsset(assets, {
+        brand: identity?.brand ?? brand,
         name: identity?.name ?? name,
         modelNumber:
           identity?.modelNumber !== undefined
@@ -151,17 +180,12 @@ export function AddAssetModal({
           setResearch(job.result)
           if (job.result.category) setCategory(job.result.category)
           setResearchJobActive(false)
-          if (
-            !job.result.downloads.length &&
-            !job.result.connections.length
-          ) {
+          if (!job.result.downloads.length && !job.result.connections.length) {
             setNotice(t('addAssetNoResearchResults'))
           }
         } else if (job.status === 'failed') {
           setResearchJobActive(false)
-          setNotice(
-            job.error ?? t('addAssetSuggestionsUnavailable'),
-          )
+          setNotice(job.error ?? t('addAssetSuggestionsUnavailable'))
         } else {
           setResearchJobActive(true)
         }
@@ -231,11 +255,14 @@ export function AddAssetModal({
     try {
       const result = await identifyAssetPhoto(boatId, photo, controller.signal)
       if (controller.signal.aborted) return
-      setName(result.name)
+      const identity = getAssetIdentity(result)
+      setBrand(identity.brand ?? '')
+      setName(identity.productName)
       setDescription(result.description)
-      setModelNumber(result.modelNumber ?? '')
+      setModelNumber(identity.modelNumber ?? '')
       setCategory(result.category ?? '')
       syncExistingMatch({
+        brand: identity.brand,
         name: result.name,
         modelNumber: result.modelNumber,
       })
@@ -287,14 +314,14 @@ export function AddAssetModal({
     } catch (error) {
       setStatus('idle')
       if (!/cancel/i.test(String(error)))
-        setNotice(
-          t('addAssetCameraUnavailable'),
-        )
+        setNotice(t('addAssetCameraUnavailable'))
     }
   }
 
   async function findSuggestions(model: string) {
-    if (!(name.trim() || description.trim())) {
+    const identity = getAssetIdentity({ name, brand, modelNumber: model })
+    setModelNumber(identity.modelNumber ?? '')
+    if (!(name.trim() || description.trim() || model)) {
       setNotice(t('addAssetEnterNameForResearch'))
       return
     }
@@ -302,9 +329,11 @@ export function AddAssetModal({
     setNotice('')
     try {
       const { jobId } = await startAssetResearchJob(boatId, {
-        name: name.trim() || description.trim().slice(0, 200),
+        name:
+          name.trim() || description.trim().slice(0, 200) || modelNumber.trim(),
+        brand,
         description,
-        modelNumber: model,
+        modelNumber: identity.modelNumber,
       })
       setResearchJobId(jobId)
       setResearchJobActive(true)
@@ -322,10 +351,15 @@ export function AddAssetModal({
     setStatus('saving')
     setNotice('')
     try {
-      const incomingName = name.trim() || description.trim().slice(0, 200)
+      const incomingName =
+        name.trim() || description.trim().slice(0, 200) || modelNumber.trim()
       const incomingDescription = description.trim()
       const incomingModel = modelNumber.trim() || null
       const updated = await updateBoatAsset(boatId, existingMatch.id, {
+        brand:
+          mode === 'overwrite'
+            ? brand.trim()
+            : existingMatch.brand || brand.trim(),
         name:
           mode === 'overwrite'
             ? incomingName
@@ -396,7 +430,11 @@ export function AddAssetModal({
           void createBoatAsset(
             boatId,
             {
-              name: name.trim() || description.trim().slice(0, 200),
+              name:
+                name.trim() ||
+                description.trim().slice(0, 200) ||
+                modelNumber.trim(),
+              brand: brand.trim(),
               description: description.trim() || null,
               modelNumber: modelNumber.trim() || null,
               category: category || null,
@@ -545,13 +583,37 @@ export function AddAssetModal({
               </div>
             )}
           </div>
+          <AssetBrandField
+            value={brand}
+            onChange={(value) => {
+              setBrand(value)
+              invalidateResearch()
+              syncExistingMatch({ brand: value })
+            }}
+          />
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">{t('labelName')}</span>
+            <span className="sr-only">{t('labelModelNumber')}</span>
             <input
-              className={fieldClass}
+              className="w-full min-w-0 border-0 bg-transparent py-1 text-xl font-semibold outline-none focus:ring-1 focus:ring-[var(--chip-line)]"
+              placeholder={t('labelModelNumber')}
+              value={modelNumber}
+              maxLength={200}
+              onChange={(e) => {
+                const next = e.target.value
+                setModelNumber(next)
+                invalidateResearch()
+                syncExistingMatch({ modelNumber: next.trim() || null })
+              }}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="sr-only">{t('labelName')}</span>
+            <input
+              className="w-full min-w-0 border-0 bg-transparent py-1 text-lg font-semibold outline-none focus:ring-1 focus:ring-[var(--chip-line)]"
+              placeholder={t('labelName')}
               value={name}
               maxLength={200}
-              required={!description.trim()}
+              required={!description.trim() && !modelNumber.trim()}
               onChange={(e) => {
                 const next = e.target.value
                 setName(next)
@@ -571,20 +633,6 @@ export function AddAssetModal({
               onChange={(e) => {
                 setDescription(e.target.value)
                 invalidateResearch()
-              }}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">{t('labelModelNumber')}</span>
-            <input
-              className={fieldClass}
-              value={modelNumber}
-              maxLength={200}
-              onChange={(e) => {
-                const next = e.target.value
-                setModelNumber(next)
-                invalidateResearch()
-                syncExistingMatch({ modelNumber: next.trim() || null })
               }}
             />
           </label>

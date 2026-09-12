@@ -8,7 +8,8 @@ import {
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { I18nProvider } from '../lib/i18n'
-import { AddAssetModal, type ListedBoatAsset } from './AddAssetModal'
+import { AddAssetModal, findExistingBoatAsset } from './AddAssetModal'
+import type { ListedBoatAsset } from './AddAssetModal'
 
 const mocks = vi.hoisted(() => ({
   identify: vi.fn(),
@@ -198,9 +199,7 @@ describe('photo asset review', () => {
     fireEvent.change(screen.getByLabelText('Model number'), {
       target: { value: '' },
     })
-    expect(
-      screen.queryByRole('button', { name: 'Find documents' }),
-    ).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Find documents' })).toBeNull()
     expect(mocks.startResearchJob).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
     await waitFor(() =>
@@ -299,9 +298,7 @@ describe('photo asset review', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Auto-identify' }))
     expect(
-      await screen.findByText(
-        'Identifying the device and reading its label…',
-      ),
+      await screen.findByText('Identifying the device and reading its label…'),
     ).toBeTruthy()
     finish({
       name: 'Water pump',
@@ -432,11 +429,100 @@ describe('photo asset review', () => {
     renderModal()
     fireEvent.click(screen.getByRole('button', { name: 'Take a photo' }))
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Auto-identify' })).toBeTruthy(),
+      expect(
+        screen.getByRole('button', { name: 'Auto-identify' }),
+      ).toBeTruthy(),
     )
     expect(mocks.identify).not.toHaveBeenCalled()
     expect(mocks.camera).toHaveBeenCalledWith(
       expect.objectContaining({ source: 'CAMERA', saveToGallery: false }),
     )
   })
+})
+
+it('reviews a recognized brand separately from the model and product name', async () => {
+  mocks.identify.mockResolvedValue({
+    name: 'Quark-Elec QK-A026-Plus NMEA 2000 AIS+GPS Receiver',
+    brand: 'Quark Elec',
+    modelNumber: 'Quark-Elec QK-A026-Plus',
+    description: '',
+    confidence: 'high',
+    category: 'Communications',
+  })
+  renderModal()
+  fireEvent.change(screen.getByLabelText('Asset photo'), {
+    target: { files: [photo] },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Auto-identify' }))
+  await screen.findByRole('img', { name: 'Quark-Elec' })
+  expect(screen.getByLabelText<HTMLInputElement>('Model number').value).toBe(
+    'QK-A026-Plus',
+  )
+  expect(screen.getByLabelText<HTMLInputElement>('Name').value).toBe(
+    'NMEA 2000 AIS+GPS Receiver',
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
+  await screen.findByText('Water tank')
+  expect(mocks.startResearchJob).toHaveBeenCalledWith(
+    'boat',
+    expect.objectContaining({
+      brand: 'Quark-Elec',
+      modelNumber: 'QK-A026-Plus',
+    }),
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
+  await waitFor(() =>
+    expect(mocks.create).toHaveBeenCalledWith(
+      'boat',
+      expect.objectContaining({
+        brand: 'Quark-Elec',
+        modelNumber: 'QK-A026-Plus',
+        name: 'NMEA 2000 AIS+GPS Receiver',
+      }),
+      photo,
+    ),
+  )
+})
+
+it('allows a custom manufacturer and saves manually entered details', async () => {
+  renderModal()
+  fireEvent.change(screen.getByLabelText('Brand'), {
+    target: { value: 'Custom Marine' },
+  })
+  fireEvent.change(screen.getByLabelText('Name'), {
+    target: { value: 'Bilge pump' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
+  await waitFor(() =>
+    expect(mocks.create).toHaveBeenCalledWith(
+      'boat',
+      expect.objectContaining({ brand: 'Custom Marine', name: 'Bilge pump' }),
+      undefined,
+    ),
+  )
+})
+
+it('matches legacy branded models without confusing different manufacturers', () => {
+  const existing = {
+    id: 'receiver',
+    name: 'Quark-Elec QK-A026-Plus Receiver',
+    brand: null,
+    modelNumber: 'Quark Elec QK-A026-Plus',
+    description: null,
+    category: null,
+  }
+  expect(
+    findExistingBoatAsset([existing], {
+      brand: 'Quark-Elec',
+      name: 'Receiver',
+      modelNumber: 'QK-A026-Plus',
+    }),
+  ).toBe(existing)
+  expect(
+    findExistingBoatAsset([existing], {
+      brand: 'Custom Marine',
+      name: 'Receiver',
+      modelNumber: 'QK-A026-Plus',
+    }),
+  ).toBeNull()
 })

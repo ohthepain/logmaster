@@ -67,6 +67,7 @@ export type BoatAsset = {
   boatId: string
   name: string
   description: string | null
+  brand: string | null
   modelNumber: string | null
   category: AssetCategory | null
   suggestedDownloads: AssetDownloadSuggestion[]
