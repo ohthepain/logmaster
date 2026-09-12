@@ -26,8 +26,10 @@ if [[ -z "$KEY" ]]; then
 fi
 
 PREFIX="$(ssm_env_prefix "$ENV")"
+ACCOUNT_PARAM="$(ssm_account_prefix)/openai-api-key"
 ssm_put_secure "${PREFIX}/OPENAI_API_KEY" "$KEY"
-echo "Updated ${PREFIX}/OPENAI_API_KEY."
+ssm_put_secure "$ACCOUNT_PARAM" "$KEY"
+echo "Updated ${PREFIX}/OPENAI_API_KEY and ${ACCOUNT_PARAM}."
 
 if [[ "$NO_REDEPLOY" == "true" ]]; then
   exit 0

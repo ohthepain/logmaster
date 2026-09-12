@@ -1,6 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
-import { Camera as CameraIcon, Sparkles, Trash2 } from 'lucide-react'
+import { Camera as CameraIcon, LoaderCircle, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Modal } from './Modal'
 import { ASSET_CATEGORIES } from '../domain/asset-intelligence'
@@ -11,7 +11,46 @@ import {
   createBoatAsset,
   identifyAssetPhoto,
   researchNewAsset,
+  updateBoatAsset,
+  uploadAndLinkAssetDocument,
 } from '../lib/boat-assets-api'
+
+export type ListedBoatAsset = Pick<
+  BoatAsset,
+  'id' | 'name' | 'description' | 'modelNumber' | 'category'
+>
+
+function normalizeAssetKey(value: string) {
+  return value.trim().toLowerCase().replace(/[\s\-_/]/g, '')
+}
+
+export function findExistingBoatAsset(
+  assets: ListedBoatAsset[],
+  identified: { name: string; modelNumber: string | null },
+): ListedBoatAsset | null {
+  const model = identified.modelNumber?.trim()
+  if (model) {
+    const modelKey = normalizeAssetKey(model)
+    const byModel = assets.find(
+      (asset) =>
+        asset.modelNumber && normalizeAssetKey(asset.modelNumber) === modelKey,
+    )
+    if (byModel) return byModel
+  }
+  const nameKey = normalizeAssetKey(identified.name)
+  if (!nameKey) return null
+  return (
+    assets.find((asset) => normalizeAssetKey(asset.name) === nameKey) ?? null
+  )
+}
+
+function mergeAssetText(existing: string | null, incoming: string) {
+  const current = existing?.trim() ?? ''
+  const next = incoming.trim()
+  if (!current) return next || null
+  if (!next || current.toLowerCase() === next.toLowerCase()) return current
+  return `${current}\n\n${next}`
+}
 
 const fieldClass =
   'rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2'
@@ -26,14 +65,18 @@ export function AddAssetModal({
   assets,
   onClose,
   onCreated,
+  onUpdated,
+  onOpenExisting,
 }: {
   boatId: string
   boatName: string
   orgName: string | null
   members: ResourceMember[]
-  assets: Pick<BoatAsset, 'id' | 'name'>[]
+  assets: ListedBoatAsset[]
   onClose: () => void
   onCreated: (asset: BoatAsset) => void
+  onUpdated: (asset: BoatAsset) => void
+  onOpenExisting: (asset: ListedBoatAsset) => void
 }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -51,9 +94,21 @@ export function AddAssetModal({
   const [notice, setNotice] = useState('')
   const [research, setResearch] = useState<AssetResearch | null>(null)
   const [confirmed, setConfirmed] = useState<string[]>([])
+  const [existingMatch, setExistingMatch] = useState<ListedBoatAsset | null>(
+    null,
+  )
   const input = useRef<HTMLInputElement>(null)
   const request = useRef<AbortController | null>(null)
   const busy = status !== 'idle'
+
+  function rememberMatch(nextName: string, nextModel: string | null) {
+    setExistingMatch(
+      findExistingBoatAsset(assets, {
+        name: nextName,
+        modelNumber: nextModel,
+      }),
+    )
+  }
 
   useEffect(() => () => request.current?.abort(), [])
   useEffect(() => {
@@ -82,6 +137,7 @@ export function AddAssetModal({
     setPhoto(file)
     setModelNumber('')
     setModelReviewed(false)
+    setExistingMatch(null)
     invalidateResearch()
     setNotice('')
     setStatus('identifying')
@@ -92,6 +148,7 @@ export function AddAssetModal({
       setDescription(result.description)
       setModelNumber(result.modelNumber ?? '')
       setCategory(result.category ?? '')
+      rememberMatch(result.name, result.modelNumber)
       setNotice(
         result.confidence === 'low'
           ? 'The photo could not be identified confidently. Describe the asset and confirm a model number, or choose “No model number”.'
@@ -185,13 +242,75 @@ export function AddAssetModal({
             : 'Suggestions are unavailable. You can still save the asset.',
         )
     } finally {
-      if (!controller.signal.aborted) setStatus('idle')
+      if (!controller.signal.aborted) {
+        rememberMatch(name, model)
+        setStatus('idle')
+      }
     }
   }
+
+  async function applyExisting(mode: 'overwrite' | 'merge') {
+    if (!existingMatch) return
+    setStatus('saving')
+    setNotice('')
+    try {
+      const incomingName = name.trim() || description.trim().slice(0, 200)
+      const incomingDescription = description.trim()
+      const incomingModel = modelNumber.trim() || null
+      const updated = await updateBoatAsset(boatId, existingMatch.id, {
+        name:
+          mode === 'overwrite'
+            ? incomingName
+            : existingMatch.name.trim() || incomingName,
+        description:
+          mode === 'overwrite'
+            ? incomingDescription || null
+            : mergeAssetText(existingMatch.description, incomingDescription),
+        modelNumber:
+          mode === 'overwrite'
+            ? incomingModel
+            : existingMatch.modelNumber || incomingModel,
+        category:
+          mode === 'overwrite'
+            ? category || null
+            : existingMatch.category || category || null,
+      })
+      if (photo) {
+        await uploadAndLinkAssetDocument(
+          boatId,
+          existingMatch.id,
+          photo,
+          'photo',
+        )
+      }
+      onUpdated(updated)
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : 'Could not update the existing asset. Please retry.',
+      )
+      setStatus('idle')
+    }
+  }
+
+  const statusLabel =
+    status === 'identifying'
+      ? 'Identifying the device and reading its label…'
+      : status === 'researching'
+        ? 'Searching for documents and possible connections…'
+        : status === 'saving'
+          ? existingMatch
+            ? 'Updating the existing asset…'
+            : 'Saving asset and photo…'
+          : status === 'camera'
+            ? 'Opening camera…'
+            : null
 
   return (
     <Modal
       title="Add asset"
+      closeOnOutside={false}
       onClose={() => {
         if (status !== 'saving') {
           request.current?.abort()
@@ -201,9 +320,10 @@ export function AddAssetModal({
     >
       <form
         className="space-y-4"
+        aria-busy={busy}
         onSubmit={(event) => {
           event.preventDefault()
-          if (busy || !modelReviewed) return
+          if (busy || existingMatch || !modelReviewed) return
           setStatus('saving')
           void createBoatAsset(
             boatId,
@@ -235,6 +355,63 @@ export function AddAssetModal({
             })
         }}
       >
+        {busy && statusLabel ? (
+          <p
+            role="status"
+            className="flex items-center gap-3 rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-3 text-sm font-medium"
+          >
+            <LoaderCircle
+              className="size-5 shrink-0 animate-spin"
+              aria-hidden
+            />
+            {statusLabel}
+          </p>
+        ) : null}
+        {existingMatch && !busy ? (
+          <div
+            role="status"
+            className="space-y-3 rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] p-4"
+          >
+            <p className="m-0 font-semibold">
+              This equipment is already on the boat.
+            </p>
+            <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
+              {existingMatch.name}
+              {existingMatch.modelNumber
+                ? ` · ${existingMatch.modelNumber}`
+                : ''}
+              {existingMatch.category ? ` · ${existingMatch.category}` : ''}.
+              Open the existing record, overwrite it with these details, merge
+              the new information, or close.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="rounded-full bg-[var(--btn-bg)] px-3 py-2 text-sm font-semibold text-[var(--btn-text)]"
+                onClick={() => onOpenExisting(existingMatch)}
+              >
+                Open
+              </button>
+              <button
+                type="button"
+                className={buttonClass}
+                onClick={() => void applyExisting('overwrite')}
+              >
+                Overwrite
+              </button>
+              <button
+                type="button"
+                className={buttonClass}
+                onClick={() => void applyExisting('merge')}
+              >
+                Merge
+              </button>
+              <button type="button" className={buttonClass} onClick={onClose}>
+                Close
+              </button>
+            </div>
+          </div>
+        ) : null}
         <fieldset
           disabled={busy}
           className="m-0 min-w-0 space-y-4 border-0 p-0 disabled:opacity-70"
@@ -312,6 +489,7 @@ export function AddAssetModal({
               required={!description.trim()}
               onChange={(e) => {
                 setName(e.target.value)
+                setExistingMatch(null)
                 invalidateResearch()
               }}
             />
@@ -340,6 +518,7 @@ export function AddAssetModal({
                 onChange={(e) => {
                   setModelNumber(e.target.value)
                   setModelReviewed(false)
+                  setExistingMatch(null)
                   invalidateResearch()
                 }}
               />
@@ -519,24 +698,15 @@ export function AddAssetModal({
             {notice}
           </p>
         )}
-        {busy && (
-          <p role="status" className="text-sm">
-            {status === 'identifying'
-              ? 'Identifying the device and reading its label…'
-              : status === 'researching'
-                ? 'Searching for documents and possible connections…'
-                : status === 'saving'
-                  ? 'Saving asset and photo…'
-                  : 'Opening camera…'}
-          </p>
+        {existingMatch ? null : (
+          <button
+            type="submit"
+            disabled={busy || !modelReviewed}
+            className="w-full rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-50"
+          >
+            {status === 'saving' ? 'Saving…' : 'Add asset'}
+          </button>
         )}
-        <button
-          type="submit"
-          disabled={busy || !modelReviewed}
-          className="w-full rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-50"
-        >
-          {status === 'saving' ? 'Saving…' : 'Add asset'}
-        </button>
       </form>
     </Modal>
   )

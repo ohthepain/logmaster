@@ -1,7 +1,11 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Pencil, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import {
+  AssetEditModal,
+  AssetWorkModal,
+} from '../../../../../components/AssetEditorModals'
 import { AssetDocumentsSection } from '../../../../../components/AssetDocumentsSection'
 import { AssetSuggestionsSection } from '../../../../../components/AssetSuggestionsSection'
 import type {
@@ -10,11 +14,16 @@ import type {
   DocumentPurpose,
 } from '../../../../../domain/boat-assets'
 import { ASSET_WORK_TYPE_LABELS } from '../../../../../domain/boat-assets'
+import type { ResourceMember } from '../../../../../domain/member-invite'
 import {
   addAndLinkAssetDocumentLink,
+  createAssetWork,
+  deleteBoatAsset,
   fetchBoatAsset,
+  updateBoatAsset,
   uploadAndLinkAssetDocument,
 } from '../../../../../lib/boat-assets-api'
+import { fetchBoat, fetchBoatMembers } from '../../../../../lib/boats-api'
 
 export const Route = createFileRoute('/_main/boats/$boatId/assets/$assetId')({
   component: BoatAssetDetailPage,
@@ -22,19 +31,35 @@ export const Route = createFileRoute('/_main/boats/$boatId/assets/$assetId')({
 
 function BoatAssetDetailPage() {
   const { boatId, assetId } = Route.useParams()
+  const navigate = useNavigate()
   const [asset, setAsset] = useState<BoatAssetDetail | null>(null)
   const [boatName, setBoatName] = useState<string | null>(null)
+  const [orgName, setOrgName] = useState<string | null>(null)
+  const [members, setMembers] = useState<ResourceMember[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [workOpen, setWorkOpen] = useState(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (opts?: { background?: boolean }) => {
+    if (!opts?.background) setLoading(true)
     setError(null)
     try {
       const data = await fetchBoatAsset(boatId, assetId)
       setAsset(data.asset)
       setBoatName(data.boat.name)
+      const extras = await Promise.allSettled([
+        fetchBoat(boatId),
+        fetchBoatMembers(boatId),
+      ])
+      if (extras[0].status === 'fulfilled') {
+        setOrgName(extras[0].value.boat.orgName)
+      }
+      if (extras[1].status === 'fulfilled') {
+        setMembers(extras[1].value.members)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load asset')
       setAsset(null)
@@ -51,7 +76,7 @@ function BoatAssetDetailPage() {
     setUploading(true)
     try {
       await uploadAndLinkAssetDocument(boatId, assetId, file, purpose)
-      await load()
+      await load({ background: true })
       toast.success(
         purpose === 'receipt'
           ? 'Receipt uploaded'
@@ -74,7 +99,7 @@ function BoatAssetDetailPage() {
     setUploading(true)
     try {
       await addAndLinkAssetDocumentLink(boatId, assetId, input)
-      await load()
+      await load({ background: true })
       toast.success('Link added')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to add link')
@@ -152,10 +177,57 @@ function BoatAssetDetailPage() {
               {asset.description}
             </p>
           ) : null}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold"
+            >
+              <Pencil className="size-3" />
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => setWorkOpen(true)}
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold"
+            >
+              <Wrench className="h-3 w-3" />
+              Add work
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!confirm(`Remove ${asset.name}?`)) return
+                void (async () => {
+                  try {
+                    await deleteBoatAsset(boatId, asset.id)
+                    toast.success('Asset removed')
+                    void navigate({
+                      to: '/boats/$boatId',
+                      params: { boatId },
+                      search: { tab: 'assets' },
+                    })
+                  } catch (e) {
+                    toast.error(
+                      e instanceof Error
+                        ? e.message
+                        : 'Failed to remove asset',
+                    )
+                  }
+                })()
+              }}
+              className="rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600"
+            >
+              Delete
+            </button>
+          </div>
         </header>
 
         <section className="mb-8">
-          <AssetSuggestionsSection asset={asset} onChange={load} />
+          <AssetSuggestionsSection
+            asset={asset}
+            onChange={() => load({ background: true })}
+          />
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--sea-ink-soft)]">
             Documents
           </h2>
@@ -172,35 +244,78 @@ function BoatAssetDetailPage() {
             uploading={uploading}
             onUpload={handleUpload}
             onAddLink={handleAddLink}
-            onDocumentsChange={() => void load()}
+            onDocumentsChange={() => void load({ background: true })}
           />
         </section>
 
-        {asset.workRecords.length > 0 ? (
-          <section>
-            <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--sea-ink-soft)]">
-              <Wrench className="size-3.5" />
-              Work records
-            </h2>
+        <section>
+          <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--sea-ink-soft)]">
+            <Wrench className="size-3.5" />
+            Work records
+          </h2>
+          {asset.workRecords.length === 0 ? (
+            <p className="text-sm text-[var(--sea-ink-soft)]">
+              No work records yet.
+            </p>
+          ) : (
             <ul className="m-0 list-none space-y-2 p-0">
               {asset.workRecords.map((work) => (
                 <WorkRecordItem key={work.id} work={work} />
               ))}
             </ul>
-          </section>
+          )}
+        </section>
+
+        {editOpen ? (
+          <AssetEditModal
+            boatName={boatName ?? 'Boat'}
+            orgName={orgName}
+            members={members}
+            initial={asset}
+            busy={busy}
+            onClose={() => setEditOpen(false)}
+            onSave={async (input) => {
+              setBusy(true)
+              try {
+                await updateBoatAsset(boatId, asset.id, input)
+                toast.success('Asset updated')
+                setEditOpen(false)
+                await load({ background: true })
+              } catch (e) {
+                toast.error(
+                  e instanceof Error ? e.message : 'Failed to save asset',
+                )
+              } finally {
+                setBusy(false)
+              }
+            }}
+          />
         ) : null}
 
-        <div className="mt-8">
-          <Link
-            to="/boats/$boatId"
-            params={{ boatId }}
-            search={{ tab: 'assets' }}
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2 text-sm font-semibold text-[var(--sea-ink)]"
-          >
-            <Pencil className="size-4" />
-            Edit on boat page
-          </Link>
-        </div>
+        {workOpen ? (
+          <AssetWorkModal
+            assetName={asset.name}
+            busy={busy}
+            onClose={() => setWorkOpen(false)}
+            onSave={async (input) => {
+              setBusy(true)
+              try {
+                await createAssetWork(boatId, asset.id, input)
+                toast.success('Work record added')
+                setWorkOpen(false)
+                await load({ background: true })
+              } catch (e) {
+                toast.error(
+                  e instanceof Error
+                    ? e.message
+                    : 'Failed to add work record',
+                )
+              } finally {
+                setBusy(false)
+              }
+            }}
+          />
+        ) : null}
       </div>
     </main>
   )

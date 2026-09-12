@@ -7,6 +7,11 @@ ssm_env_prefix() {
   echo "/${project}/${env}"
 }
 
+ssm_account_prefix() {
+  local project="${LOGMASTER_PROJECT_NAME:-logmaster}"
+  echo "/${project}/account"
+}
+
 ssm_put_secure() {
   local name="$1"
   local value="$2"

@@ -31,6 +31,19 @@ function unauthorized() {
   })
 }
 
+function firstUploadedFile(value: unknown): File | undefined {
+  if (value instanceof File) return value
+  if (Array.isArray(value)) {
+    return value.find((item): item is File => item instanceof File)
+  }
+  if (value instanceof Blob && value.size > 0) {
+    return new File([value], 'asset-photo.jpg', {
+      type: value.type || 'image/jpeg',
+    })
+  }
+  return undefined
+}
+
 async function requireUserId(c: { req: { raw: { headers: Headers } } }) {
   return getSessionUserId(c.req.raw.headers)
 }
@@ -485,9 +498,10 @@ boatAssetsRoutes.post(
     let photo: File | undefined
     try {
       if (c.req.header('content-type')?.includes('multipart/form-data')) {
-        const form = await c.req.parseBody()
-        body = JSON.parse(String(form.data))
-        if (form.photo instanceof File) photo = form.photo
+        const form = await c.req.parseBody({ all: true })
+        const rawData = Array.isArray(form.data) ? form.data[0] : form.data
+        body = JSON.parse(String(rawData))
+        photo = firstUploadedFile(form.photo)
       } else body = await c.req.json()
     } catch {
       return c.json({ error: 'Invalid asset details.' }, 400)

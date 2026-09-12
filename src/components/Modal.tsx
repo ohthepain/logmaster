@@ -10,6 +10,8 @@ type ModalProps = {
   headerActions?: ReactNode
   headerBelow?: ReactNode
   showKicker?: boolean
+  /** Backdrop tap closes the modal. Default true; keep false for in-progress flows. */
+  closeOnOutside?: boolean
   layer?: 'base' | 'overlay'
   devComponentName?: string
 }
@@ -21,6 +23,7 @@ export function Modal({
   headerActions,
   headerBelow,
   showKicker = true,
+  closeOnOutside = true,
   layer = 'base',
   devComponentName = 'Modal',
 }: ModalProps) {
@@ -42,7 +45,7 @@ export function Modal({
       data-blocking-overlay
       className={`ios-map-touch-target fixed inset-0 ${zClass} flex items-center justify-center bg-[var(--overlay)] p-3 backdrop-blur-sm`}
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose()
+        if (closeOnOutside && event.target === event.currentTarget) onClose()
       }}
     >
       <div

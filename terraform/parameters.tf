@@ -96,9 +96,18 @@ data "aws_ssm_parameter" "account_aisstream_api_key" {
   name  = var.aisstream_api_key_parameter_name
 }
 
+# Optional: OpenAI is not required to deploy. List first so a missing account
+# parameter does not fail plan the way a direct data.aws_ssm_parameter would.
+data "aws_ssm_parameters_by_path" "account" {
+  path = local.ssm_account_prefix
+}
+
 data "aws_ssm_parameter" "account_openai_api_key" {
-  count = var.openai_api_key_parameter_name != "" ? 1 : 0
-  name  = var.openai_api_key_parameter_name
+  count = (
+    var.openai_api_key_parameter_name != "" &&
+    contains(data.aws_ssm_parameters_by_path.account.names, var.openai_api_key_parameter_name)
+  ) ? 1 : 0
+  name = var.openai_api_key_parameter_name
 }
 
 data "aws_ssm_parameter" "account_apns_key" {

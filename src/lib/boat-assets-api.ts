@@ -82,12 +82,21 @@ export async function createBoatAsset(
 ): Promise<BoatAsset> {
   const form = new FormData()
   form.append('data', JSON.stringify(input))
-  if (photo) form.append('photo', photo)
+  if (photo) {
+    form.append('photo', photo, photo.name || 'asset-photo.jpg')
+  }
   const data = await api<{ asset: BoatAsset }>(`/api/boats/${boatId}/assets`, {
     method: 'POST',
-    body: photo ? form : JSON.stringify(input),
+    body: form,
   })
-  return data.asset
+  const asset = data.asset
+  if (
+    photo &&
+    !(asset.documents ?? []).some((document) => document.purpose === 'photo')
+  ) {
+    await uploadAndLinkAssetDocument(boatId, asset.id, photo, 'photo')
+  }
+  return asset
 }
 
 export async function updateBoatAsset(

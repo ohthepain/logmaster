@@ -177,7 +177,7 @@ Shared keys (MapTiler, AISStream, OpenAI, Google OAuth, APNS `.p8`) live under `
 
 **AIS live layer on deploy:** ECS reads `AISSTREAM_API_KEY` from SSM. If it is empty, `/api/ais/vessels` returns **503**. Either ensure `/logmaster/account/aisstream-api-key` exists and set `aisstream_api_key_parameter_name` in tfvars, or run `./scripts/set-aisstream-secrets.sh staging`.
 
-**Asset identification on deploy:** ECS reads `OPENAI_API_KEY` from SSM. If it is empty, asset photo identification and web research are skipped. Either ensure `/logmaster/account/openai-api-key` exists and set `openai_api_key_parameter_name` in tfvars, or run `./scripts/set-openai-secrets.sh staging`.
+**Asset identification on deploy:** ECS reads `OPENAI_API_KEY` from SSM. If it is empty, asset photo identification and web research are skipped. Apply succeeds if `/logmaster/account/openai-api-key` is missing (the per-env parameter is created empty). Run `./scripts/set-openai-secrets.sh staging` or `production` from a machine with `OPENAI_API_KEY` in `.env` — that writes both the per-env parameter and the shared account key.
 
 **iOS push (APNS) on deploy:** ECS reads `APNS_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, and `APNS_BUNDLE_ID` from SSM, and `APNS_PRODUCTION` from the task environment (defaults to `true` in production, `false` in staging). If `APNS_KEY` is empty, native iOS push is skipped. Either store the `.p8` in `/logmaster/account/apns-key` with tfvars `apns_key_parameter_name`, or run `./scripts/set-apns-secrets.sh production`.
 
