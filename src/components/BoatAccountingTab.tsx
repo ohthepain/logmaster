@@ -19,6 +19,7 @@ import {
 } from '../lib/boat-assets-api'
 import { createExpenseClaim as createOrgExpenseClaim } from '../lib/org-accounting-api'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import { ResourceSectionHeader } from './NotificationBellToggle'
 import { Modal } from './Modal'
 
@@ -28,6 +29,7 @@ type BoatAccountingTabProps = {
 }
 
 export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
+  const { t } = useTranslation()
   const [accounting, setAccounting] = useState<BoatAccountingSummary | null>(
     null,
   )
@@ -69,7 +71,7 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
     return (
       <div>
         <ResourceSectionHeader
-          title="Accounting"
+          title={t('accounting')}
           onRefresh={() => load()}
           refreshing={refreshing}
         />
@@ -81,14 +83,14 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
   return (
     <div className="flex flex-col gap-8">
       <ResourceSectionHeader
-        title="Accounting"
+        title={t('accounting')}
         onRefresh={() => load({ background: true })}
         refreshing={refreshing}
       />
       {orgId ? (
         accounting.bankAccounts.length > 0 ? (
           <section>
-            <h2 className="brand-title m-0 mb-3 text-xl">Org bank balance</h2>
+            <h2 className="brand-title m-0 mb-3 text-xl">{t('orgBankBalance')}</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {accounting.bankAccounts.map((account) => (
                 <div
@@ -107,30 +109,30 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
           </section>
         ) : (
           <p className="text-sm text-[var(--sea-ink-soft)]">
-            No org bank account yet — add one on the org Accounting tab.
+            {t('noOrgBankAccount')}
           </p>
         )
       ) : (
         <p className="rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4 text-sm text-[var(--sea-ink-soft)]">
-          Attach this boat to an org for reimbursement claims and bank tracking.
+          {t('attachBoatToOrgForAccounting')}
         </p>
       )}
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="brand-title m-0 text-xl">Purchases</h2>
+          <h2 className="brand-title m-0 text-xl">{t('purchases')}</h2>
           <button
             type="button"
             onClick={() => setPurchaseOpen(true)}
             className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)]"
           >
             <Plus className="h-4 w-4" />
-            Add purchase
+            {t('addPurchase')}
           </button>
         </div>
         {accounting.purchases.length === 0 ? (
           <p className="text-sm text-[var(--sea-ink-soft)]">
-            No purchases recorded.
+            {t('noPurchasesRecorded')}
           </p>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-3 p-0">
@@ -196,10 +198,10 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
       {orgId ? (
         <>
           <section>
-            <h2 className="brand-title m-0 mb-3 text-xl">Expense claims</h2>
+            <h2 className="brand-title m-0 mb-3 text-xl">{t('expenseClaims')}</h2>
             {accounting.expenseClaims.length === 0 ? (
               <p className="text-sm text-[var(--sea-ink-soft)]">
-                No expense claims.
+                {t('noExpenseClaims')}
               </p>
             ) : (
               <ul className="m-0 flex list-none flex-col gap-2 p-0 text-sm">
@@ -222,10 +224,10 @@ export function BoatAccountingTab({ boatId, orgId }: BoatAccountingTabProps) {
           </section>
 
           <section>
-            <h2 className="brand-title m-0 mb-3 text-xl">Transactions</h2>
+            <h2 className="brand-title m-0 mb-3 text-xl">{t('transactions')}</h2>
             {accounting.transactions.length === 0 ? (
               <p className="text-sm text-[var(--sea-ink-soft)]">
-                No transactions allocated to this boat.
+                {t('noTransactionsOnBoat')}
               </p>
             ) : (
               <ul className="m-0 flex list-none flex-col gap-2 p-0 text-sm">

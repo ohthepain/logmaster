@@ -4,6 +4,8 @@ import { requestIosMapTouchSync } from '../lib/native/ios-map-touch-passthrough'
 import type { LogEntry } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
+import { translatePlaybackField } from '../lib/playback-field-i18n'
 import type { TripPlaybackPosition } from '../lib/trip-playback'
 import {
   tripPlaybackInfoAt,
@@ -53,6 +55,7 @@ export function TripPlaybackInfoPanel({
   playbackPosition,
   retrip,
 }: TripPlaybackInfoPanelProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const retripSpeedIndexValue = retrip ? retripSpeedIndex(retrip.timescale) : 0
 
@@ -86,7 +89,7 @@ export function TripPlaybackInfoPanel({
       data-map-touch-zone
     >
       <TripMapChromeButton
-        label={open ? 'Hide trip info' : 'Show trip info'}
+        label={open ? t('hideTripInfo') : t('showTripInfo')}
         onClick={() => setOpen((value) => !value)}
         active={open}
         tooltipSide="bottom"
@@ -151,18 +154,24 @@ export function TripPlaybackInfoPanel({
           <div className="px-3 py-2.5">
             {retrip?.paused && availableTracks.length > 0 ? (
               <p className="m-0 mb-2 text-xs leading-5 text-white/70">
-                Tracks: {availableTracks.join(', ')}. Press play when ready.
+                {t('tracks')}:{' '}
+                {availableTracks
+                  .map((track) =>
+                    translatePlaybackField(track.id, t, track.label),
+                  )
+                  .join(', ')}
+                . Press play when ready.
               </p>
             ) : null}
             {snapshot.lines.length > 0 ? (
               <dl className="m-0 space-y-1.5">
                 {snapshot.lines.map((line) => (
                   <div
-                    key={line.label}
+                    key={line.id}
                     className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm"
                   >
                     <dt className="m-0 font-medium text-white/70">
-                      {line.label}
+                      {translatePlaybackField(line.id, t, line.label)}
                     </dt>
                     <dd className="m-0 font-semibold tabular-nums">
                       {line.value}
@@ -172,7 +181,7 @@ export function TripPlaybackInfoPanel({
               </dl>
             ) : (
               <p className="m-0 text-sm text-white/75">
-                No data at this point.
+                {t('noDataAtThisPoint')}
               </p>
             )}
           </div>

@@ -30,6 +30,7 @@ import {
   tripTrackDistanceMeters,
 } from '../../../lib/trip-list-stats'
 import { useSession } from '../../../lib/auth-client'
+import { useTranslation } from '../../../lib/i18n'
 import { useLogbookStore } from '../../../stores/logbook'
 
 type TripsSearch = { startTrip?: boolean }
@@ -47,6 +48,7 @@ export const Route = createFileRoute('/_main/trips/')({
 
 function TripsPage() {
   const store = useLogbookStore()
+  const { t } = useTranslation()
   const session = useSession()
   const navigate = useNavigate()
   const location = useLocation()
@@ -103,14 +105,14 @@ function TripsPage() {
       <div className="mb-6 flex items-center justify-between gap-3">
         <div className="flex items-center gap-4">
           <h1 className="brand-title m-0 text-[2.35rem] leading-none sm:text-[2.75rem]">
-            Trips
+            {t('trips')}
           </h1>
           <Link
             to="/routes"
             className="inline-flex items-center gap-1.5 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] no-underline"
           >
             <MapPin className="size-4" />
-            Routes
+            {t('routes')}
           </Link>
         </div>
         <div className="flex items-center gap-2">
@@ -122,19 +124,19 @@ function TripsPage() {
           />
           <AddButton
             onClick={openStartTrip}
-            aria-label="New trip"
-            tooltip="New trip"
+            aria-label={t('newTrip')}
+            tooltip={t('newTrip')}
           />
         </div>
       </div>
 
       {store.trips.length === 0 ? (
         <EmptyState
-          title="No trips yet"
-          description="Start a sailing session or import a GPX or Signal K track to create your first trip."
-          actionLabel="Add trip"
+          title={t('noTripsYet')}
+          description={t('noTripsYetDescription')}
+          actionLabel={t('addTrip')}
           onAction={openStartTrip}
-          secondaryActionLabel="Import track"
+          secondaryActionLabel={t('importTrack')}
           onSecondaryAction={() => importRef.current?.open()}
           icon={Sailboat}
         />
@@ -176,12 +178,19 @@ function TripCard({
   const coverPhoto = tripCoverPhotoUrl(trip)
   const coverKind = resolveTripCoverKind(trip)
   const name = tripDisplayName(trip)
-  const locationKicker = tripListLocationKicker(trip)
+  const { t } = useTranslation()
+  const locationKicker = tripListLocationKicker(trip, {
+    inProgress: t('inProgress'),
+    planned: t('planned'),
+  })
   const subtitle = tripListSubtitle(trip)
   const distanceLabel = formatTripListDistanceMeters(
     tripTrackDistanceMeters(trip.id, tracks) || null,
   )
-  const durationLabel = formatTripListDuration(tripDurationMs(trip))
+  const durationLabel = formatTripListDuration(tripDurationMs(trip), {
+    week: { one: t('weekCountOne'), other: t('weekCountOther') },
+    day: { one: t('dayCountOne'), other: t('dayCountOther') },
+  })
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
@@ -210,7 +219,7 @@ function TripCard({
             <div className="flex size-full flex-col items-center justify-center gap-2 bg-[linear-gradient(145deg,var(--brand-muted),var(--chip-bg))] text-[var(--sea-ink-soft)]">
               <MapIcon className="size-8" strokeWidth={1.4} />
               <span className="text-xs font-semibold uppercase tracking-[0.18em]">
-                Route map
+                {t('routeMap')}
               </span>
             </div>
           ) : (
@@ -240,7 +249,10 @@ function TripCard({
             <StatSeparator />
             {durationLabel}
             <StatSeparator />
-            {formatTripListEntryCount(entryCount)}
+            {formatTripListEntryCount(entryCount, {
+              one: t('entryCountOne'),
+              other: t('entryCountOther'),
+            })}
           </p>
         </div>
       </button>

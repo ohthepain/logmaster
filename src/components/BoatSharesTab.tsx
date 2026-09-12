@@ -13,6 +13,7 @@ import {
 } from '../lib/boat-shares-api'
 import { CrewAvatar } from './CrewAvatar'
 import { profilePhotoUrl } from '../lib/profile-api'
+import { useTranslation } from '../lib/i18n'
 import { ResourceSectionHeader } from './NotificationBellToggle'
 
 type BoatSharesTabProps = {
@@ -20,6 +21,7 @@ type BoatSharesTabProps = {
 }
 
 export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
+  const { t } = useTranslation()
   const [shareCount, setShareCount] = useState(1)
   const [shares, setShares] = useState<BoatShareSummary[]>([])
   const [canManageShares, setCanManageShares] = useState(false)
@@ -157,7 +159,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
     return (
       <div>
         <ResourceSectionHeader
-          title="Shares"
+          title={t('shares')}
           topic="BOAT_SHARES"
           boatId={boatId}
           onRefresh={() => load()}
@@ -171,7 +173,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
   return (
     <div>
       <ResourceSectionHeader
-        title="Shares"
+        title={t('shares')}
         topic="BOAT_SHARES"
         boatId={boatId}
         onRefresh={() => load({ background: true })}
@@ -181,7 +183,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
         <div className="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3">
           <label className="block min-w-[8rem] flex-1">
             <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
-              Number of shares
+              {t('numberOfShares')}
             </span>
             <input
               type="number"
@@ -197,12 +199,14 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
             onClick={() => void handleSaveShareCount()}
             className="rounded-xl bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
           >
-            {savingCount ? 'Saving…' : 'Update count'}
+            {savingCount ? t('saving') : t('updateCount')}
           </button>
         </div>
       ) : (
         <p className="mb-4 text-sm text-[var(--sea-ink-soft)]">
-          {shareCount} {shareCount === 1 ? 'share' : 'shares'} on this boat
+          {t(shareCount === 1 ? 'shareCountOnBoatOne' : 'shareCountOnBoatOther', {
+            count: shareCount,
+          })}
         </p>
       )}
 
@@ -220,7 +224,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
                     disabled={index === 0 || reordering}
                     onClick={() => void handleMoveShare(index, -1)}
                     className="rounded-lg border border-[var(--chip-line)] p-1 text-[var(--sea-ink-soft)] disabled:opacity-40"
-                    aria-label="Move share up"
+                    aria-label={t('moveShareUp')}
                   >
                     <ChevronUp className="size-4" />
                   </button>
@@ -229,7 +233,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
                     disabled={index === shares.length - 1 || reordering}
                     onClick={() => void handleMoveShare(index, 1)}
                     className="rounded-lg border border-[var(--chip-line)] p-1 text-[var(--sea-ink-soft)] disabled:opacity-40"
-                    aria-label="Move share down"
+                    aria-label={t('moveShareDown')}
                   >
                     <ChevronDown className="size-4" />
                   </button>
@@ -239,7 +243,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-2">
                   <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
-                    Share {share.sequence + 1}
+                    {t('shareNumber', { number: share.sequence + 1 })}
                   </p>
                   {editingLabelShareId === share.id ? (
                     <form
@@ -259,14 +263,14 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
                         type="submit"
                         className="text-xs font-semibold text-[var(--brand)]"
                       >
-                        Save
+                        {t('save')}
                       </button>
                       <button
                         type="button"
                         onClick={() => setEditingLabelShareId(null)}
                         className="text-xs font-semibold text-[var(--sea-ink-soft)]"
                       >
-                        Cancel
+                        {t('cancel')}
                       </button>
                     </form>
                   ) : (
@@ -285,7 +289,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
                           }}
                           className="text-xs font-semibold text-[var(--brand)]"
                         >
-                          {share.label ? 'Edit label' : 'Add label'}
+                          {share.label ? t('editLabel') : t('addLabel')}
                         </button>
                       ) : null}
                     </>
@@ -294,7 +298,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
 
                 {share.owners.length === 0 ? (
                   <p className="m-0 mt-2 text-xs text-[var(--sea-ink-soft)]">
-                    No owners assigned
+                    {t('noOwnersAssigned')}
                   </p>
                 ) : (
                   <ul className="m-0 mt-2 list-none space-y-2 p-0">
@@ -325,7 +329,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
                             className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-2 py-1 text-xs font-semibold text-red-700 dark:text-red-300"
                           >
                             <Trash2 className="size-3" />
-                            Remove
+                            {t('remove')}
                           </button>
                         ) : null}
                       </li>
@@ -353,7 +357,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
                         className="inline-flex items-center gap-1 rounded-xl bg-[var(--btn-bg)] px-3 py-2 text-xs font-semibold text-[var(--btn-text)] disabled:opacity-60"
                       >
                         <Plus className="size-3.5" />
-                        Add
+                        {t('add')}
                       </button>
                       <button
                         type="button"
@@ -364,7 +368,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
                         }}
                         className="text-xs font-semibold text-[var(--sea-ink-soft)]"
                       >
-                        Cancel
+                        {t('cancel')}
                       </button>
                     </form>
                   ) : (
@@ -377,7 +381,7 @@ export function BoatSharesTab({ boatId }: BoatSharesTabProps) {
                       className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand)]"
                     >
                       <UserPlus className="size-3.5" />
-                      Add owner
+                      {t('addOwner')}
                     </button>
                   )
                 ) : null}

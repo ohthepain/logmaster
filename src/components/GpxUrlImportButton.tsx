@@ -1,6 +1,7 @@
 import { Link2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { useTranslation } from '../lib/i18n'
 import { AppIconButtonTooltip } from './AppIconButtonTooltip'
 import { Modal } from './Modal'
 import { cn } from '../lib/cn'
@@ -17,8 +18,10 @@ type GpxUrlImportButtonProps = {
 export function GpxUrlImportButton({
   onImported,
   className,
-  tooltip = 'Import GPX from URL',
+  tooltip,
 }: GpxUrlImportButtonProps) {
+  const { t } = useTranslation()
+  const resolvedTooltip = tooltip ?? t('importGpxFromUrl')
   const importTripFromGpx = useLogbookStore((state) => state.importTripFromGpx)
   const [open, setOpen] = useState(false)
   const [url, setUrl] = useState('')
@@ -50,13 +53,13 @@ export function GpxUrlImportButton({
 
   return (
     <>
-      <AppIconButtonTooltip label={tooltip} side="bottom">
+      <AppIconButtonTooltip label={resolvedTooltip} side="bottom">
         <button
           type="button"
           onClick={() => setOpen(true)}
           disabled={importing}
-          aria-label={tooltip}
-          title={tooltip}
+          aria-label={resolvedTooltip}
+          title={resolvedTooltip}
           className={cn(
             'inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-[var(--chip-line)] bg-[var(--surface-strong)] text-[var(--sea-ink)] transition hover:-translate-y-px hover:bg-[var(--chip-bg)] disabled:opacity-60',
             className,

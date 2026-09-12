@@ -13,6 +13,8 @@ import {
   uploadCrewMemberPhoto,
 } from '../lib/crew-api'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
+import type { TranslationKey, TranslationVars } from '../lib/i18n'
 
 type CrewMemberModalProps = {
   member: CrewMember | null
@@ -22,11 +24,14 @@ type CrewMemberModalProps = {
   onDeleted?: () => void
 }
 
-function memberStatusLabel(member: CrewMember): string {
-  if (member.isFriend) return 'Friend'
-  if (member.isLinked) return 'Connected'
-  if (member.pendingInvite) return 'Invite pending'
-  return 'Local'
+function memberStatusLabel(
+  member: CrewMember,
+  t: (key: TranslationKey, vars?: TranslationVars) => string,
+): string {
+  if (member.isFriend) return t('friend')
+  if (member.isLinked) return t('connected')
+  if (member.pendingInvite) return t('invitePending')
+  return t('localCrew')
 }
 
 function memberPhotoSrc(member: CrewMember, cacheBust: number): string | null {
@@ -48,6 +53,7 @@ export function CrewMemberModal({
   onUpdated,
   onDeleted,
 }: CrewMemberModalProps) {
+  const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const fileInputId = useId()
   const [name, setName] = useState('')
@@ -74,7 +80,7 @@ export function CrewMemberModal({
 
   const photoSrc = memberPhotoSrc(member, photoVersion)
   const hasCustomPhoto = editable && Boolean(member.imageUrl)
-  const statusLabel = memberStatusLabel(member)
+  const statusLabel = memberStatusLabel(member, t)
 
   const handleClose = () => {
     if (busy) return
@@ -302,7 +308,7 @@ export function CrewMemberModal({
               <div className="min-w-0">
                 <p className="m-0 flex items-center gap-1.5 text-sm font-semibold text-[var(--sea-ink)]">
                   <Mail className="size-4 shrink-0" />
-                  Invite pending
+                  {t('invitePending')}
                 </p>
                 <p className="m-0 mt-1 truncate text-xs text-[var(--sea-ink-soft)]">
                   Sent to {member.pendingInvite.inviteeEmail}

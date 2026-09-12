@@ -41,7 +41,6 @@ import { NotificationControlMenuRow } from './NotificationControlMenuRow'
 import { ProfileModal } from './ProfileModal'
 import { LanguageSelector } from './LanguageSelector'
 import { useTranslation } from '../lib/i18n'
-import type { Language } from '../lib/i18n'
 
 export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
   const session = useSession()
@@ -50,7 +49,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
   const trips = useLogbookStore((state) => state.trips)
   const { resetTutorial } = useFtue()
   const { isAdmin } = useIsAdmin()
-  const { language, t } = useTranslation()
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [photoVersion, setPhotoVersion] = useState(0)
@@ -219,7 +218,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     <MenuCard
                       className="col-span-2 min-h-40"
                       wide
-                      ariaLabel={user ? 'Edit profile' : 'Sign in'}
+                      ariaLabel={user ? t('editProfile') : t('signIn')}
                       onClick={openProfile}
                     >
                       <div className="flex h-full items-center gap-5 p-5 sm:px-7">
@@ -232,12 +231,12 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                             {user?.name || (user ? user.email : t('signIn'))}
                           </p>
                           <p className="m-0 mt-2 text-sm font-medium text-[var(--sea-ink-soft)]">
-                            {trips.length}{' '}
-                            {language === 'sv'
-                              ? 'resor'
-                              : trips.length === 1
-                                ? 'trip'
-                                : 'trips'}
+                            {t(
+                              trips.length === 1
+                                ? 'tripCountOne'
+                                : 'tripCountOther',
+                              { count: trips.length },
+                            )}
                           </p>
                           <p className="m-0 mt-3 inline-flex items-center gap-1 text-xs font-bold text-[var(--sea-ink)]">
                             {user ? t('editProfile') : t('openYourAccount')}
@@ -282,11 +281,11 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     >
                       <CollectionCardContent
                         title={t('trips')}
-                        detail={collectionDetail(
-                          trips.length,
-                          language,
-                          'trip',
-                          'resa',
+                        detail={t(
+                          trips.length === 1
+                            ? 'tripCountOne'
+                            : 'tripCountOther',
+                          { count: trips.length },
                         )}
                         loading={false}
                         empty={trips.length === 0}
@@ -333,11 +332,11 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     >
                       <CollectionCardContent
                         title={t('boats')}
-                        detail={collectionDetail(
-                          boats.length,
-                          language,
-                          'boat',
-                          'båt',
+                        detail={t(
+                          boats.length === 1
+                            ? 'boatCountOne'
+                            : 'boatCountOther',
+                          { count: boats.length },
                         )}
                         loading={loadingCollections}
                         empty={boats.length === 0}
@@ -390,11 +389,11 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     >
                       <CollectionCardContent
                         title={t('crew')}
-                        detail={collectionDetail(
-                          crew?.members.length ?? 0,
-                          language,
-                          'member',
-                          'medlem',
+                        detail={t(
+                          (crew?.members.length ?? 0) === 1
+                            ? 'crewCountOne'
+                            : 'crewCountOther',
+                          { count: crew?.members.length ?? 0 },
                         )}
                         loading={loadingCollections}
                         empty={!crew?.members.length}
@@ -740,15 +739,4 @@ function TextMenuButton({
       ) : null}
     </button>
   )
-}
-
-function collectionDetail(
-  count: number,
-  language: Language,
-  englishSingular: string,
-  swedishSingular: string,
-): string {
-  if (language === 'sv')
-    return `${count} ${swedishSingular}${count === 1 ? '' : 'ar'}`
-  return `${count} ${count === 1 ? englishSingular : `${englishSingular}s`}`
 }

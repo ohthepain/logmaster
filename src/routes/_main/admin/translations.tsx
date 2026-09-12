@@ -105,7 +105,7 @@ function TranslationAdminPage() {
             >
               {languages.map(({ code, nameKey }) => (
                 <option key={code} value={code}>
-                  {nameKey === 'swedish' ? 'Swedish' : 'English'}
+                  {englishCatalog[nameKey]}
                 </option>
               ))}
             </select>

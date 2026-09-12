@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { Route, RouteAnnotation, RouteWaypoint } from '../domain/route'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import { readImageFile } from '../lib/image-file'
 import {
   formatRouteListDistanceMeters,
@@ -49,6 +50,7 @@ type RouteDetailPageProps = {
 }
 
 export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const store = useRoutesStore()
   const mapRef = useRef<TripMapHandle>(null)
@@ -390,7 +392,7 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
             to="/routes"
             className="shrink-0 text-sm font-semibold text-[var(--brand)] no-underline"
           >
-            Routes
+            {t('routes')}
           </Link>
           <span className="text-[var(--sea-ink-soft)]">/</span>
           <h1 className="m-0 truncate text-xl font-bold text-[var(--sea-ink)]">
@@ -426,14 +428,14 @@ export function RouteDetailPage({ routeId }: RouteDetailPageProps) {
           {!waypointPickActive ? (
             <div className="pointer-events-none absolute left-3 top-3 z-10 flex flex-col gap-2">
               <TripMapChromeButton
-                label="Edit route cover"
+                label={t('editRouteCover')}
                 onClick={() => setCoverEditOpen(true)}
                 disabled={busy}
               >
                 <Pencil className="size-4" />
               </TripMapChromeButton>
               <TripMapChromeButton
-                label="Add waypoint on map"
+                label={t('addWaypointOnMap')}
                 onClick={() => startWaypointPick()}
               >
                 <MapPinPlus className="size-4" />
@@ -657,6 +659,7 @@ function RouteCard({
   active: boolean
   onSelect: () => void
 }) {
+  const { t } = useTranslation()
   const coverPhoto = routeCoverPhotoUrl(route)
   const coverKind = resolveRouteCoverKind(route)
   const subtitle = routeListSubtitle(route)
@@ -691,7 +694,7 @@ function RouteCard({
             <div className="flex size-full flex-col items-center justify-center gap-2 bg-[linear-gradient(145deg,var(--brand-muted),var(--chip-bg))] text-[var(--sea-ink-soft)]">
               <MapIcon className="size-8" strokeWidth={1.4} />
               <span className="text-xs font-semibold uppercase tracking-[0.18em]">
-                Route map
+                {t('routeMap')}
               </span>
             </div>
           ) : (
@@ -704,7 +707,7 @@ function RouteCard({
 
         <div className="space-y-2 px-4 pb-4 pt-3">
           <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--kicker)]">
-            Planned route
+            {t('plannedRoute')}
           </p>
           <h3 className="m-0 line-clamp-2 text-[1.15rem] font-bold leading-snug text-[var(--sea-ink)]">
             {route.title}
@@ -713,7 +716,10 @@ function RouteCard({
             {subtitle}
           </p>
           <p className="m-0 pt-1 text-sm font-medium text-[var(--sea-ink-soft)]">
-            {formatRouteListWaypointCount(waypoints.length)}
+            {formatRouteListWaypointCount(waypoints.length, {
+              one: t('waypointCountOne'),
+              other: t('waypointCountOther'),
+            })}
             <StatSeparator />
             {distanceLabel}
             <StatSeparator />
@@ -742,6 +748,7 @@ function StatSeparator() {
 }
 
 export function RoutesListPage() {
+  const { t } = useTranslation()
   const store = useRoutesStore()
   const navigate = useNavigate()
   const location = useLocation()
@@ -775,14 +782,14 @@ export function RoutesListPage() {
       <div className="mb-6 flex items-center justify-between gap-3">
         <div className="flex items-center gap-4">
           <h1 className="brand-title m-0 text-[2.35rem] leading-none sm:text-[2.75rem]">
-            Routes
+            {t('routes')}
           </h1>
           <Link
             to="/trips"
             className="inline-flex items-center gap-1.5 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] no-underline"
           >
             <Sailboat className="size-4" />
-            Trips
+            {t('trips')}
           </Link>
         </div>
         <div className="flex items-center gap-2">

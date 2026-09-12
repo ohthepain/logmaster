@@ -64,7 +64,19 @@ export function formatTripListDistanceMeters(distanceM: number | null): string {
   return `${nauticalMiles.toFixed(1)} nm`
 }
 
-export function formatTripListDuration(durationMs: number | null): string {
+type CountLabels = { one: string; other: string }
+
+function formatCountLabel(count: number, labels: CountLabels): string {
+  return (count === 1 ? labels.one : labels.other).replaceAll(
+    '{count}',
+    String(count),
+  )
+}
+
+export function formatTripListDuration(
+  durationMs: number | null,
+  labels?: { week: CountLabels; day: CountLabels },
+): string {
   if (durationMs == null || durationMs <= 0) return '—'
 
   const totalMinutes = Math.round(durationMs / 60_000)
@@ -74,10 +86,16 @@ export function formatTripListDuration(durationMs: number | null): string {
 
   if (days >= 14) {
     const weeks = Math.round(days / 7)
-    return weeks === 1 ? '1 week' : `${weeks} weeks`
+    return formatCountLabel(weeks, labels?.week ?? {
+      one: '{count} week',
+      other: '{count} weeks',
+    })
   }
   if (days >= 1) {
-    return days === 1 ? '1 day' : `${days} days`
+    return formatCountLabel(days, labels?.day ?? {
+      one: '{count} day',
+      other: '{count} days',
+    })
   }
   if (hours >= 1) {
     return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
@@ -85,19 +103,28 @@ export function formatTripListDuration(durationMs: number | null): string {
   return `${minutes}m`
 }
 
-export function formatTripListEntryCount(count: number): string {
-  return count === 1 ? '1 entry' : `${count} entries`
+export function formatTripListEntryCount(
+  count: number,
+  labels: { one: string; other: string },
+): string {
+  return (count === 1 ? labels.one : labels.other).replaceAll(
+    '{count}',
+    String(count),
+  )
 }
 
 export function tripListLocationKicker(
   trip: Pick<Trip, 'status' | 'startCountry'>,
+  labels?: { inProgress?: string; planned?: string },
 ): string | null {
   const location = trip.startCountry?.trim()
+  const inProgress = labels?.inProgress ?? 'In progress'
+  const planned = labels?.planned ?? 'Planned'
   if (trip.status === 'IN_PROGRESS') {
-    return location ? `In progress · ${location}` : 'In progress'
+    return location ? `${inProgress} · ${location}` : inProgress
   }
   if (trip.status === 'PLANNED') {
-    return location ? `Planned · ${location}` : 'Planned'
+    return location ? `${planned} · ${location}` : planned
   }
   return location ?? null
 }

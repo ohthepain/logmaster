@@ -3,6 +3,7 @@ import { ChevronLeft } from 'lucide-react'
 import { AllNotificationsPausedBanner } from '../../../components/AllNotificationsPausedBanner'
 import { GlobalNotificationPreferenceBell } from '../../../components/GlobalNotificationPreferenceBell'
 import { NotificationSettingsPanel } from '../../../components/NotificationSettingsPanel'
+import { useTranslation } from '../../../lib/i18n'
 
 export const Route = createFileRoute('/_main/settings/notifications')({
   head: () => ({
@@ -12,6 +13,7 @@ export const Route = createFileRoute('/_main/settings/notifications')({
 })
 
 function NotificationsSettingsPage() {
+  const { t } = useTranslation()
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
       <Link
@@ -24,7 +26,7 @@ function NotificationsSettingsPage() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="m-0 text-2xl font-semibold text-[var(--sea-ink)]">
-            Notifications settings
+            {t('notificationSettings')}
           </h1>
         </div>
         <GlobalNotificationPreferenceBell />

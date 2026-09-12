@@ -991,7 +991,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
               onLocate={handleLocate}
-              locateLabel={playbackMode ? 'Center on boat position' : undefined}
+              locateMode={playbackMode ? 'boat' : 'you'}
               layers={
                 <SailingMapLayerPanel
                   toggles={mapDataLayerToggles}

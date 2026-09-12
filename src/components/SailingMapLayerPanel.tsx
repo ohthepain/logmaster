@@ -11,6 +11,7 @@ import type {
 } from '../lib/map-data-layers'
 import { MAP_LOG_ENTRY_LAYER_TOGGLES } from '../lib/map-log-entry-layers'
 import type { MapLogEntryLayerToggles } from '../lib/map-log-entry-layers'
+import { useTranslation } from '../lib/i18n'
 import { PopupOutsideDismiss } from './PopupOutsideDismiss'
 import { MapControlButton } from './SailingMapControlStack'
 import { useLogbookStore } from '../stores/logbook'
@@ -82,6 +83,7 @@ export function SailingMapLayerPanel({
   aisSavedTripHint = false,
   aisPlannedRouteHint = false,
 }: SailingMapLayerPanelProps) {
+  const { t } = useTranslation()
   const showLogEntryLayers = logEntryToggles != null && onLogEntryChange != null
   const [open, setOpen] = useState(false)
   const [panelPosition, setPanelPosition] = useState<PanelPosition | null>(null)
@@ -244,7 +246,7 @@ export function SailingMapLayerPanel({
   return (
     <div ref={rootRef} className="relative">
       <MapControlButton
-        label="Map layers"
+        label={t('mapLayers')}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >

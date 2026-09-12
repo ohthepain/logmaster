@@ -35,6 +35,7 @@ import { TripMapChromeButton } from './TripMapChromeButton'
 import { TripMapEditMenu } from './TripMapEditMenu'
 import { PlannedRoutePickerModal } from './RouteCopyModals'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import { tripPlaybackPositionAt, tripPlaybackRange } from '../lib/trip-playback'
 
 export type CompletedTripPanel = 'map' | 'log'
@@ -91,6 +92,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
     ref,
   ) {
     const navigate = useNavigate()
+    const { t } = useTranslation()
     const isActiveTrip =
       trip.status === 'IN_PROGRESS' || trip.status === 'PLANNED'
     const isPlayback = trip.status === 'COMPLETED'
@@ -353,7 +355,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
             onZoomIn={() => mapRef.current?.zoomIn()}
             onZoomOut={() => mapRef.current?.zoomOut()}
             onLocate={() => mapRef.current?.locate()}
-            locateLabel={isPlayback ? 'Center on boat position' : undefined}
+            locateMode={isPlayback ? 'boat' : 'you'}
             layers={
               showMapDataLayers ? (
                 <SailingMapLayerPanel
@@ -405,7 +407,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
                 onZoomIn={() => fullscreenMapRef.current?.zoomIn()}
                 onZoomOut={() => fullscreenMapRef.current?.zoomOut()}
                 onLocate={() => fullscreenMapRef.current?.locate()}
-                locateLabel={isPlayback ? 'Center on boat position' : undefined}
+                locateMode={isPlayback ? 'boat' : 'you'}
                 layers={
                   showMapDataLayers ? (
                     <SailingMapLayerPanel
@@ -481,7 +483,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
             <div className="pointer-events-auto flex justify-start gap-2">
               {isPlayback ? (
                 <TripMapChromeButton
-                  label="Close replay and return to map"
+                  label={t('closeReplayAndReturnToMap')}
                   onClick={() => {
                     if (onCloseReplay) {
                       void onCloseReplay()
@@ -508,8 +510,8 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
                 <TripMapChromeButton
                   label={
                     overlayRouteId
-                      ? 'Change planned route overlay'
-                      : 'Show planned route'
+                      ? t('changePlannedRouteOverlay')
+                      : t('showPlannedRoute')
                   }
                   onClick={() => setPlannedRoutePickerOpen(true)}
                   disabled={busy}
@@ -521,7 +523,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
               ) : null}
               {onReplayTestClick ? (
                 <TripMapChromeButton
-                  label="Start auto-test replay"
+                  label={t('startAutoTestReplay')}
                   onClick={onReplayTestClick}
                   disabled={busy}
                   tooltipSide="bottom"

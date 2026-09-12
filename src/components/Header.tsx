@@ -5,6 +5,7 @@ import { DevComponentLabel } from './DevComponentLabel'
 import ThemeToggle from './ThemeToggle'
 import { NotificationInbox } from './NotificationInbox'
 import { UserMenu } from './UserMenu'
+import { useTranslation } from '../lib/i18n'
 
 type HeaderProps = {
   mapOverlay?: boolean
@@ -17,6 +18,7 @@ export function AppHeaderBrand({
   className?: string
   mapOverlay?: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <Link
       to="/"
@@ -29,7 +31,7 @@ export function AppHeaderBrand({
           : 'focus-visible:ring-offset-[var(--bg-base)]',
         className,
       )}
-      aria-label="Home"
+      aria-label={t('home')}
     >
       <img
         src="/logmaster_logo_trans_crop.png"

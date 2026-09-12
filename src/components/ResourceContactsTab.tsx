@@ -5,25 +5,28 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import {
   BOAT_CONTACT_AREAS,
-  CONTACT_AREA_LABELS,
   ORG_CONTACT_AREAS,
-  formatContactGrants,
 } from '../domain/contact'
 import type {
   BoatContactGroup,
   ContactResourceArea,
   ResourceContact,
 } from '../domain/contact'
+import { useTranslation } from '../lib/i18n'
+import { translateContactArea } from '../lib/resource-section-i18n'
 import { Modal } from './Modal'
 import { ResourceSectionHeader } from './NotificationBellToggle'
 
 type ContactRow = ResourceContact & { id: string }
 
 function ContactGrantBadges({ grants }: { grants: ContactResourceArea[] }) {
+  const { t } = useTranslation()
+  const text =
+    grants.length === 0
+      ? t('addressBookOnly')
+      : grants.map((grant) => translateContactArea(grant, t)).join(', ')
   return (
-    <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">
-      {formatContactGrants(grants)}
-    </p>
+    <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">{text}</p>
   )
 }
 
@@ -40,6 +43,7 @@ function ContactListItem({
   onDelete?: (contact: ContactRow) => void
   canDelete?: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <li className="flex flex-wrap items-start gap-3 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3">
       <Link
@@ -75,7 +79,7 @@ function ContactListItem({
           className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-red-700 dark:text-red-300"
         >
           <Trash2 className="size-3.5" />
-          Delete
+          {t('delete')}
         </button>
       ) : null}
     </li>
@@ -93,6 +97,7 @@ export function ContactGrantsEditor({
   onChange: (grants: ContactResourceArea[]) => void
   disabled?: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-wrap gap-2">
       {areas.map((area) => {
@@ -114,7 +119,7 @@ export function ContactGrantsEditor({
                 )
               }}
             />
-            {CONTACT_AREA_LABELS[area]}
+            {translateContactArea(area, t)}
           </label>
         )
       })}
@@ -125,7 +130,7 @@ export function ContactGrantsEditor({
 export function AddContactModal({
   open,
   onClose,
-  title = 'Add contact',
+  title,
   devComponentName = 'AddContactModal',
   grantAreas = [],
   onSubmit,
@@ -144,6 +149,7 @@ export function AddContactModal({
     grants: ContactResourceArea[]
   }) => Promise<void>
 }) {
+  const { t } = useTranslation()
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -151,6 +157,7 @@ export function AddContactModal({
   const [notes, setNotes] = useState('')
   const [grants, setGrants] = useState<ContactResourceArea[]>([])
   const [loading, setLoading] = useState(false)
+  const resolvedTitle = title ?? t('addContact')
 
   if (!open) return null
 
@@ -197,7 +204,7 @@ export function AddContactModal({
 
   return (
     <Modal
-      title={title}
+      title={resolvedTitle}
       onClose={handleClose}
       devComponentName={devComponentName}
     >
@@ -277,7 +284,7 @@ export function AddContactModal({
             disabled={loading}
             className="rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
           >
-            {loading ? 'Adding…' : 'Add contact'}
+            {loading ? t('saving') : t('addContact')}
           </button>
           <button
             type="button"
@@ -285,7 +292,7 @@ export function AddContactModal({
             onClick={handleClose}
             className="rounded-full border border-[var(--chip-line)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)]"
           >
-            Cancel
+            {t('cancel')}
           </button>
         </div>
       </form>
@@ -294,7 +301,7 @@ export function AddContactModal({
 }
 
 export function ResourceContactsTab({
-  title = 'Contacts',
+  title,
   description,
   contacts,
   boatContactGroups = [],
@@ -327,6 +334,8 @@ export function ResourceContactsTab({
   notificationBoatId?: string
   headerActions?: ReactNode
 }) {
+  const { t } = useTranslation()
+  const resolvedTitle = title ?? t('contacts')
   const totalBoatContacts = boatContactGroups.reduce(
     (count, group) => count + group.contacts.length,
     0,
@@ -336,7 +345,7 @@ export function ResourceContactsTab({
   return (
     <div>
       <ResourceSectionHeader
-        title={title}
+        title={resolvedTitle}
         topic={notificationTopic}
         orgId={notificationOrgId}
         boatId={notificationBoatId}
@@ -351,20 +360,21 @@ export function ResourceContactsTab({
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
             >
               <Plus className="size-4" />
-              Add contact
+              {t('addContact')}
             </button>
           ) : null)
         }
       />
       <p className="mb-4 text-sm text-[var(--sea-ink-soft)]">
         {description ??
-          `${totalCount} ${totalCount === 1 ? 'contact' : 'contacts'}`}
+          t(totalCount === 1 ? 'contactCountOne' : 'contactCountOther', {
+            count: totalCount,
+          })}
       </p>
 
       {contacts.length === 0 && boatContactGroups.length === 0 ? (
         <p className="text-sm text-[var(--sea-ink-soft)]">
-          No contacts yet. Add people who do not need full membership, such as
-          mechanics or suppliers.
+          {t('noContactsYet')}
         </p>
       ) : null}
 
@@ -372,7 +382,7 @@ export function ResourceContactsTab({
         <section className="mb-8">
           {boatContactGroups.length > 0 ? (
             <h3 className="mb-3 text-sm font-semibold text-[var(--sea-ink)]">
-              Org contacts
+              {t('orgContacts')}
             </h3>
           ) : null}
           <ul className="m-0 list-none space-y-2 p-0">

@@ -53,6 +53,7 @@ import { getNativePlatform } from '../lib/platform'
 import { useIosNativeMapTouchPassthrough } from '../lib/native/ios-map-touch-passthrough'
 import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore, triggerLogbookSyncRetry } from '../stores/logbook'
+import { useTranslation } from '../lib/i18n'
 
 type TripDetailPageProps = {
   tripId: string
@@ -63,6 +64,7 @@ export function TripDetailPage({
   tripId,
   startFromLiveActivity = false,
 }: TripDetailPageProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const store = useLogbookStore()
   const trip = store.trips.find((item) => item.id === tripId) ?? null
@@ -976,7 +978,7 @@ export function TripDetailPage({
               className="pointer-events-auto inline-flex items-center justify-center gap-2 rounded-full bg-[var(--btn-bg)] px-5 py-3 text-base font-bold text-[var(--btn-text)] shadow-lg transition hover:-translate-y-px disabled:opacity-60"
             >
               <Sailboat className="size-5" />
-              Start trip
+              {t('startTrip')}
             </button>
           </div>
         ) : null}

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { Route } from '../domain/route'
 import type { Trip } from '../domain/logbook'
 import { tripDisplayName } from '../lib/trip-display'
+import { useTranslation } from '../lib/i18n'
 import { Modal } from './Modal'
 
 type RouteTripCopyModalProps = {
@@ -164,6 +165,7 @@ export function PlannedRoutePickerModal({
   onClose,
   onSelect,
 }: PlannedRoutePickerModalProps) {
+  const { t } = useTranslation()
   const sortedRoutes = useMemo(
     () =>
       [...routes].sort(
@@ -177,13 +179,13 @@ export function PlannedRoutePickerModal({
 
   return (
     <Modal
-      title="Show planned route"
+      title={t('showPlannedRoute')}
       onClose={onClose}
       layer="overlay"
       devComponentName="PlannedRoutePickerModal"
     >
       <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-        Overlay a planned route on the trip map without changing the log.
+        {t('plannedRouteOverlayHint')}
       </p>
       <ul className="mt-4 max-h-72 space-y-2 overflow-y-auto">
         <li>
@@ -194,7 +196,7 @@ export function PlannedRoutePickerModal({
             className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] px-3 py-2.5 text-left transition hover:bg-[var(--chip-bg)] disabled:opacity-60"
           >
             <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
-              Hide overlay
+              {t('hideOverlay')}
             </p>
           </button>
         </li>

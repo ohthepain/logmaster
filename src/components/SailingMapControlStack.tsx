@@ -7,6 +7,7 @@ import {
   MAP_CHROME_DIVIDER_CLASS,
   MAP_CHROME_SURFACE_CLASS,
 } from '../lib/map-chrome'
+import { useTranslation } from '../lib/i18n'
 import { MapButtonTooltip } from './MapButtonTooltip'
 
 type SailingMapControlStackProps = {
@@ -14,6 +15,7 @@ type SailingMapControlStackProps = {
   onZoomOut: () => void
   onLocate?: () => void
   locateLabel?: string
+  locateMode?: 'you' | 'boat' | 'route'
   layers?: ReactNode
   onExpand?: () => void
   className?: string
@@ -23,11 +25,22 @@ export function SailingMapControlStack({
   onZoomIn,
   onZoomOut,
   onLocate,
-  locateLabel = 'Center on your location',
+  locateLabel,
+  locateMode = 'you',
   layers,
   onExpand,
   className,
 }: SailingMapControlStackProps) {
+  const { t } = useTranslation()
+  const resolvedLocateLabel =
+    locateLabel ??
+    t(
+      locateMode === 'boat'
+        ? 'centerOnBoatPosition'
+        : locateMode === 'route'
+          ? 'fitRoute'
+          : 'centerOnYourLocation',
+    )
   return (
     <div
       className={cn(
@@ -42,14 +55,18 @@ export function SailingMapControlStack({
           MAP_CHROME_SURFACE_CLASS,
         )}
       >
-        <MapControlButton label="Zoom in" onClick={onZoomIn}>
+        <MapControlButton label={t('zoomIn')} onClick={onZoomIn}>
           <Plus className="size-4" strokeWidth={2.25} />
         </MapControlButton>
-        <MapControlButton label="Zoom out" onClick={onZoomOut} bordered>
+        <MapControlButton label={t('zoomOut')} onClick={onZoomOut} bordered>
           <Minus className="size-4" strokeWidth={2.25} />
         </MapControlButton>
         {onLocate ? (
-          <MapControlButton label={locateLabel} onClick={onLocate} bordered>
+          <MapControlButton
+            label={resolvedLocateLabel}
+            onClick={onLocate}
+            bordered
+          >
             <LocateFixed className="size-4" strokeWidth={2.25} />
           </MapControlButton>
         ) : null}
@@ -60,7 +77,7 @@ export function SailingMapControlStack({
         ) : null}
         {onExpand ? (
           <MapControlButton
-            label="Open full-screen map"
+            label={t('openFullScreenMap')}
             onClick={onExpand}
             bordered
           >

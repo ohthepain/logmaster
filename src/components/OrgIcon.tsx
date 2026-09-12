@@ -5,6 +5,7 @@ import type { Org, OrgPhoto } from '../domain/org'
 import { defaultOrgPhoto } from '../domain/org'
 import { updateOrgPhoto, uploadOrgPhoto } from '../lib/orgs-api'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 
 type OrgIconSize = 'sm' | 'md' | 'lg'
 
@@ -76,6 +77,7 @@ export function OrgIconSelector({
   size = 'md',
   className,
 }: OrgIconSelectorProps) {
+  const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const photo = orgIconPhoto(org)
@@ -130,7 +132,7 @@ export function OrgIconSelector({
         type="button"
         disabled={disabled || uploading}
         aria-label={
-          photo ? 'Change organization image' : 'Add organization image'
+          photo ? t('changeOrganizationImage') : t('addOrganizationImage')
         }
         onClick={() => fileInputRef.current?.click()}
         className={cn(

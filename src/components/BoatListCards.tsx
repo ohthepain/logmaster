@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { Sailboat, Trash2 } from 'lucide-react'
 import { defaultBoatPhoto } from '../domain/boat'
 import type { Boat } from '../domain/boat'
+import { useTranslation } from '../lib/i18n'
 
 type BoatListCardsProps = {
   boats: Boat[]
@@ -9,6 +10,7 @@ type BoatListCardsProps = {
 }
 
 export function BoatListCards({ boats, onDelete }: BoatListCardsProps) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-8">
       {boats.map((boat) => {
@@ -41,10 +43,10 @@ export function BoatListCards({ boats, onDelete }: BoatListCardsProps) {
                     type="button"
                     onClick={() => onDelete(boat)}
                     className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-[var(--overlay)] px-2.5 py-1.5 text-[11px] font-semibold text-white opacity-90 transition sm:opacity-0 sm:group-hover:opacity-100"
-                    aria-label={`Delete ${boat.name}`}
+                    aria-label={t('deleteNamed', { name: boat.name })}
                   >
                     <Trash2 className="size-3.5" />
-                    Delete
+                    {t('delete')}
                   </button>
                 ) : null}
               </div>

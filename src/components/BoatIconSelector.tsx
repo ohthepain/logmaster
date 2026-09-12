@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react'
 import type { BoatIconId } from '../lib/boat-icons'
 import { boatIconLabel, boatIconSrc } from '../lib/boat-icons'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import { BoatIconPickerDialog } from './BoatIconPickerDialog'
 
 type BoatIconSelectorProps = {
@@ -23,6 +24,7 @@ export function BoatIconSelector({
   pickerLayer = 'base',
   variant = 'default',
 }: BoatIconSelectorProps) {
+  const { t } = useTranslation()
   const [pickerOpen, setPickerOpen] = useState(false)
 
   if (variant === 'icon') {
@@ -31,7 +33,7 @@ export function BoatIconSelector({
         <button
           type="button"
           disabled={disabled}
-          aria-label="Change map icon"
+          aria-label={t('changeMapIcon')}
           onClick={() => setPickerOpen(true)}
           className={cn(
             'shrink-0 p-0 transition-opacity hover:opacity-80 disabled:opacity-60',

@@ -46,8 +46,14 @@ export function routeListSubtitle(route: Pick<Route, 'description'>): string {
   return 'Planned route'
 }
 
-export function formatRouteListWaypointCount(count: number): string {
-  return `${count} waypoint${count === 1 ? '' : 's'}`
+export function formatRouteListWaypointCount(
+  count: number,
+  labels?: { one: string; other: string },
+): string {
+  const template = count === 1
+    ? (labels?.one ?? '{count} waypoint')
+    : (labels?.other ?? '{count} waypoints')
+  return template.replaceAll('{count}', String(count))
 }
 
 export function formatRouteListDistanceMeters(

@@ -39,6 +39,8 @@ import {
   updateOrgMemberRole,
 } from '../../../../lib/orgs-api'
 import { cn } from '../../../../lib/cn'
+import { useTranslation } from '../../../../lib/i18n'
+import type { TranslationKey } from '../../../../lib/i18n'
 import { ResourceSectionHeader } from '../../../../components/NotificationBellToggle'
 import { useSession } from '../../../../lib/auth-client'
 
@@ -76,6 +78,7 @@ export const Route = createFileRoute('/_main/orgs/$orgId/')({
 })
 
 function OrgDetailPage() {
+  const { t } = useTranslation()
   const { orgId } = Route.useParams()
   const { tab: tabFromSearch } = Route.useSearch()
   const tab = tabFromSearch ?? 'members'
@@ -213,7 +216,7 @@ function OrgDetailPage() {
     return (
       <main className="page-wrap px-3 py-8 sm:px-4">
         <p className="text-sm text-[var(--sea-ink-soft)]">
-          Loading organization…
+          {t('loadingOrganization')}
         </p>
       </main>
     )
@@ -245,12 +248,12 @@ function OrgDetailPage() {
   const activeTab = tabCandidates.includes(tab)
     ? tab
     : (tabCandidates[0] ?? 'members')
-  const tabLabels: Record<OrgDetailTab, string> = {
-    members: 'Members',
-    documents: 'Documents',
-    contacts: 'Contacts',
-    boats: 'Boats',
-    accounting: 'Accounting',
+  const tabLabels: Record<OrgDetailTab, TranslationKey> = {
+    members: 'members',
+    documents: 'documents',
+    contacts: 'contacts',
+    boats: 'boats',
+    accounting: 'accounting',
   }
 
   return (
@@ -260,7 +263,7 @@ function OrgDetailPage() {
           to="/orgs"
           className="text-[var(--sea-ink-soft)] no-underline hover:text-[var(--sea-ink)]"
         >
-          ← Orgs
+          ← {t('orgs')}
         </Link>
       </p>
 
@@ -314,7 +317,7 @@ function OrgDetailPage() {
 
       <div
         role="tablist"
-        aria-label="Organization sections"
+        aria-label={t('orgSections')}
         className="mt-8 flex flex-wrap gap-2 border-b border-[var(--line)] pb-3"
       >
         {tabCandidates.map((value) => {
@@ -333,7 +336,7 @@ function OrgDetailPage() {
                   : 'border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] hover:bg-[var(--link-bg-hover)]',
               )}
             >
-              {tabLabels[value]}
+              {t(tabLabels[value])}
             </button>
           )
         })}
@@ -542,10 +545,11 @@ function BoatsTab({
   onRefresh?: () => void | Promise<void>
   refreshing?: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <div>
       <ResourceSectionHeader
-        title="Boats"
+        title={t('boats')}
         topic="ORG_BOATS"
         orgId={orgId}
         onRefresh={onRefresh}
@@ -557,17 +561,19 @@ function BoatsTab({
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
           >
             <Plus className="size-4" />
-            Add boat
+            {t('addBoat')}
           </button>
         }
       />
       <p className="mb-4 text-sm text-[var(--sea-ink-soft)]">
-        {boats.length} {boats.length === 1 ? 'boat' : 'boats'}
+        {t(boats.length === 1 ? 'boatCountOne' : 'boatCountOther', {
+          count: boats.length,
+        })}
       </p>
 
       {boats.length === 0 ? (
         <p className="text-sm text-[var(--sea-ink-soft)]">
-          No boats in this organization yet.
+          {t('noBoatsInOrg')}
         </p>
       ) : (
         <ul className="m-0 list-none space-y-2 p-0">

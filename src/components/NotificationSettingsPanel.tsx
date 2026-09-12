@@ -20,6 +20,8 @@ import {
 } from '../stores/notification-preferences'
 import { useLogbookStore } from '../stores/logbook'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
+import { translatePreferencePathLabel } from '../lib/resource-section-i18n'
 
 type NotificationSettingsPanelProps = {
   className?: string
@@ -44,12 +46,15 @@ export function NotificationPreferenceToggleRow({
   indent?: number
   titleOverride?: string
 }) {
+  const { t } = useTranslation()
   const enabled = !node.muted
   const rowLabel =
     titleOverride ??
-    NOTIFICATION_PREFERENCE_PATH_LABELS[node.path] ??
-    node.label ??
-    node.path
+    translatePreferencePathLabel(
+      node.path,
+      t,
+      NOTIFICATION_PREFERENCE_PATH_LABELS[node.path] ?? node.label ?? node.path,
+    )
 
   return (
     <div
@@ -165,6 +170,7 @@ function ActiveTripBlock({
   busyPath: string | null
   onToggle: (path: string, currentlyEnabled: boolean) => void
 }) {
+  const { t } = useTranslation()
   const instancePath = `trip:${trip.id}`
   const instanceNode =
     nodeMap.get(instancePath) ??
@@ -177,7 +183,7 @@ function ActiveTripBlock({
           {tripDisplayTitle(trip)}
         </p>
         <p className="m-0 mt-0.5 text-xs font-medium text-[var(--brand)]">
-          In progress
+          {t('inProgress')}
         </p>
       </div>
       <div className="flex flex-col gap-2">
@@ -212,6 +218,7 @@ function ActiveTripBlock({
 export function NotificationSettingsPanel({
   className,
 }: NotificationSettingsPanelProps) {
+  const { t } = useTranslation()
   const trips = useLogbookStore((state) => state.trips)
   const tree = useNotificationPreferencesStore((state) => state.tree)
   const loading = useNotificationPreferencesStore((state) => state.loading)
@@ -296,7 +303,7 @@ export function NotificationSettingsPanel({
       ) : null}
 
       <SettingsAccordion
-        title="Boats"
+        title={t('boats')}
         categoryPath="boat"
         categoryNode={nodeMap.get('boat')}
         busyPath={busyPath}
@@ -333,7 +340,7 @@ export function NotificationSettingsPanel({
 
       {resources.orgs.length > 0 ? (
         <SettingsAccordion
-          title="Organizations"
+          title={t('organizations')}
           categoryPath="org"
           categoryNode={nodeMap.get('org')}
           busyPath={busyPath}
@@ -365,7 +372,7 @@ export function NotificationSettingsPanel({
 
       {completed.length > 0 ? (
         <SettingsAccordion
-          title="Trips"
+          title={t('trips')}
           categoryPath="trip"
           categoryNode={nodeMap.get('trip')}
           busyPath={busyPath}

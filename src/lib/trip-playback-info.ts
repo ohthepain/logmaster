@@ -24,6 +24,7 @@ import {
 } from './trip-track-playback'
 
 export type TripPlaybackInfoLine = {
+  id: string
   label: string
   value: string
 }
@@ -42,21 +43,24 @@ function validDateMs(value: string | null | undefined): number | null {
 export function tripPlaybackAvailableTrackLabels(
   tripId: string,
   tracks: TripTrack[],
-): string[] {
-  const labels: string[] = []
+): Array<{ id: string; label: string }> {
+  const labels: Array<{ id: string; label: string }> = []
   if (
     tripTrackSamplesForTrip(tripId, tracks).length > 0 ||
     positionTracksForTrip(tripId, tracks).some(
       (track) => decodeTripTrack(track).length > 0,
     )
   ) {
-    labels.push('Position')
+    labels.push({ id: 'position', label: 'Position' })
   }
 
   for (const track of instrumentTracksForTrip(tripId, tracks)) {
     if (!isInstrumentTrack(track)) continue
     if (decodeInstrumentTrack(track).length === 0) continue
-    labels.push(instrumentTrackMeta(track.kind).label)
+    labels.push({
+      id: track.kind,
+      label: instrumentTrackMeta(track.kind).label,
+    })
   }
 
   return labels
@@ -202,13 +206,14 @@ function nearestEntryInstruments(entries: LogEntry[], timeMs: number) {
 function pushLine(
   lines: TripPlaybackInfoLine[],
   seen: Set<string>,
+  id: string,
   label: string,
   value: string | null | undefined,
 ) {
   if (value == null || value.trim() === '') return
-  if (seen.has(label)) return
-  seen.add(label)
-  lines.push({ label, value })
+  if (seen.has(id)) return
+  seen.add(id)
+  lines.push({ id, label, value })
 }
 
 export function tripPlaybackInfoAt(
@@ -233,16 +238,17 @@ export function tripPlaybackInfoAt(
     timeMs,
   )
 
-  pushLine(lines, seen, 'Time', formatClock(timeMs))
+  pushLine(lines, seen, 'time', 'Time', formatClock(timeMs))
 
   if (position) {
     pushLine(
       lines,
       seen,
+      'position',
       'Position',
       formatPosition(position.latitude, position.longitude),
     )
-    pushLine(lines, seen, 'Heading', formatDegrees(position.heading))
+    pushLine(lines, seen, 'heading', 'Heading', formatDegrees(position.heading))
   } else if (
     entryInstruments?.latitude != null &&
     entryInstruments.longitude != null
@@ -250,6 +256,7 @@ export function tripPlaybackInfoAt(
     pushLine(
       lines,
       seen,
+      'position',
       'Position',
       formatPosition(entryInstruments.latitude, entryInstruments.longitude),
     )
@@ -262,6 +269,7 @@ export function tripPlaybackInfoAt(
     pushLine(
       lines,
       seen,
+      'heading',
       'Heading',
       formatDegrees(entryInstruments.headingTrue),
     )
@@ -278,6 +286,7 @@ export function tripPlaybackInfoAt(
         pushLine(
           lines,
           seen,
+          track.kind,
           meta.label,
           value != null ? formatKnots(value) : null,
         )
@@ -288,6 +297,7 @@ export function tripPlaybackInfoAt(
         pushLine(
           lines,
           seen,
+          track.kind,
           meta.label,
           value != null ? formatKnots(value) : null,
         )
@@ -298,6 +308,7 @@ export function tripPlaybackInfoAt(
         pushLine(
           lines,
           seen,
+          track.kind,
           meta.label,
           value != null ? `${value.toFixed(1)}°C` : null,
         )
@@ -309,6 +320,7 @@ export function tripPlaybackInfoAt(
         pushLine(
           lines,
           seen,
+          track.kind,
           meta.label,
           value != null ? formatDegrees(value) : null,
         )
@@ -319,6 +331,7 @@ export function tripPlaybackInfoAt(
         pushLine(
           lines,
           seen,
+          track.kind,
           meta.label,
           value != null
             ? formatWind(value.speedKnots, value.directionTrue)
@@ -332,7 +345,7 @@ export function tripPlaybackInfoAt(
   }
 
   if (elevation != null && Number.isFinite(elevation)) {
-    pushLine(lines, seen, 'Elevation', `${elevation.toFixed(0)} m`)
+    pushLine(lines, seen, 'elevation', 'Elevation', `${elevation.toFixed(0)} m`)
   }
 
   if (
@@ -342,6 +355,7 @@ export function tripPlaybackInfoAt(
     pushLine(
       lines,
       seen,
+      'wind',
       'Wind',
       formatWind(
         entryInstruments.windSpeedKnots,
@@ -357,6 +371,7 @@ export function tripPlaybackInfoAt(
     pushLine(
       lines,
       seen,
+      'water-temperature',
       'Water temperature',
       `${entryInstruments.waterTemperatureC.toFixed(1)}°C`,
     )
@@ -369,6 +384,7 @@ export function tripPlaybackInfoAt(
     pushLine(
       lines,
       seen,
+      'depth',
       'Depth',
       `${entryInstruments.depthMeters.toFixed(1)} m`,
     )
@@ -381,6 +397,7 @@ export function tripPlaybackInfoAt(
     pushLine(
       lines,
       seen,
+      'engine',
       'Engine',
       `${Math.round(entryInstruments.engineRpm)} rpm`,
     )
@@ -393,16 +410,17 @@ export function tripPlaybackInfoAt(
     pushLine(
       lines,
       seen,
+      'battery',
       'Battery',
       `${entryInstruments.batteryVoltage.toFixed(1)} V`,
     )
   }
 
-  if (position && !seen.has('Heading')) {
-    pushLine(lines, seen, 'Heading', formatDegrees(position.heading))
+  if (position && !seen.has('heading')) {
+    pushLine(lines, seen, 'heading', 'Heading', formatDegrees(position.heading))
   }
 
-  if (!seen.has('Position') && positionSamples.length > 0) {
+  if (!seen.has('position') && positionSamples.length > 0) {
     const fromTrack = tripPlaybackPositionFromTrackSamples(
       positionSamples,
       timeMs,
@@ -411,6 +429,7 @@ export function tripPlaybackInfoAt(
       pushLine(
         lines,
         seen,
+        'position',
         'Position',
         formatPosition(fromTrack.latitude, fromTrack.longitude),
       )
@@ -421,7 +440,13 @@ export function tripPlaybackInfoAt(
     const samples = decodeTripTrack(track)
     const detail = positionDetailAt(samples, timeMs)
     if (detail?.elevationM != null && Number.isFinite(detail.elevationM)) {
-      pushLine(lines, seen, 'Elevation', `${detail.elevationM.toFixed(0)} m`)
+      pushLine(
+        lines,
+        seen,
+        'elevation',
+        'Elevation',
+        `${detail.elevationM.toFixed(0)} m`,
+      )
     }
   }
 

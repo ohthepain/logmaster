@@ -34,8 +34,9 @@ describe('trip-list-stats', () => {
   })
 
   it('formats entry counts', () => {
-    expect(formatTripListEntryCount(1)).toBe('1 entry')
-    expect(formatTripListEntryCount(4)).toBe('4 entries')
+    const labels = { one: '{count} entry', other: '{count} entries' }
+    expect(formatTripListEntryCount(1, labels)).toBe('1 entry')
+    expect(formatTripListEntryCount(4, labels)).toBe('4 entries')
   })
 
   it('builds location kickers from trip status and country', () => {

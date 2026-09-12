@@ -110,7 +110,7 @@ describe('tripPlaybackInfoAt', () => {
       null,
     )
     expect(snapshot.lines).toEqual([
-      { label: 'Time', value: expect.any(String) },
+      { id: 'time', label: 'Time', value: expect.any(String) },
     ])
   })
 })

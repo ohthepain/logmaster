@@ -3,6 +3,7 @@ import { Bell } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useSession } from '../lib/auth-client'
 import { useNotificationInbox } from '../hooks/use-notification-inbox'
+import { useTranslation } from '../lib/i18n'
 
 type NotificationInboxProps = {
   mapOverlay?: boolean
@@ -11,6 +12,7 @@ type NotificationInboxProps = {
 export function NotificationInbox({
   mapOverlay = false,
 }: NotificationInboxProps) {
+  const { t } = useTranslation()
   const userId = useSession().data?.user?.id
   const { unreadCount } = useNotificationInbox(userId)
 
@@ -19,7 +21,7 @@ export function NotificationInbox({
   return (
     <Link
       to="/settings/notifications"
-      aria-label="Notification settings"
+      aria-label={t('notificationSettings')}
       className={cn(
         'relative inline-flex size-10 items-center justify-center rounded-full border no-underline transition',
         mapOverlay

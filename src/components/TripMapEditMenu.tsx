@@ -3,6 +3,7 @@ import { Pencil } from 'lucide-react'
 import { useId, useState } from 'react'
 import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 
 type TripMapEditMenuProps = {
   tripId: string
@@ -23,6 +24,7 @@ export function TripMapEditMenu({
   onEditWaypoints,
   uploadInputId,
 }: TripMapEditMenuProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const menuId = useId()
@@ -42,7 +44,7 @@ export function TripMapEditMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
-        aria-label="Trip edit options"
+        aria-label={t('tripEditOptions')}
         disabled={busy}
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => {
@@ -61,7 +63,7 @@ export function TripMapEditMenu({
         <div
           id={menuId}
           role="menu"
-          aria-label="Trip edit options"
+          aria-label={t('tripEditOptions')}
           data-map-touch-zone
           className={cn(
             'ios-map-touch-target pointer-events-auto absolute left-full top-0 ml-2 min-w-[12.5rem] overflow-hidden rounded-xl border border-white/25 bg-black/80 py-1 shadow-xl backdrop-blur-md',
@@ -85,7 +87,7 @@ export function TripMapEditMenu({
               busy && 'pointer-events-none opacity-60',
             )}
           >
-            {uploading ? 'Uploading…' : 'Upload photos and video'}
+            {uploading ? t('uploading') : t('uploadPhotosAndVideo')}
           </label>
           <button
             type="button"
@@ -103,7 +105,7 @@ export function TripMapEditMenu({
             }}
             className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
           >
-            Track stories
+            {t('trackStories')}
           </button>
           {onAddWaypoint ? (
             <button
@@ -117,7 +119,7 @@ export function TripMapEditMenu({
               }}
               className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
             >
-              Add waypoint
+              {t('addWaypoint')}
             </button>
           ) : null}
           {onEditWaypoints ? (
@@ -132,7 +134,7 @@ export function TripMapEditMenu({
               }}
               className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
             >
-              Edit waypoints
+              {t('editWaypoints')}
             </button>
           ) : null}
           <button
@@ -146,7 +148,7 @@ export function TripMapEditMenu({
             }}
             className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
           >
-            Edit trip cover
+            {t('editTripCover')}
           </button>
         </div>
       ) : null}

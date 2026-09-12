@@ -45,6 +45,8 @@ import {
 import type { BoatIconId } from '../../../../lib/boat-icons'
 import { isBoatIconId } from '../../../../lib/boat-icons'
 import { cn } from '../../../../lib/cn'
+import { useTranslation } from '../../../../lib/i18n'
+import type { TranslationKey } from '../../../../lib/i18n'
 import { NotificationBellToggle } from '../../../../components/NotificationBellToggle'
 
 type BoatDetailTab =
@@ -87,6 +89,7 @@ export const Route = createFileRoute('/_main/boats/$boatId/')({
 })
 
 function BoatDetailPage() {
+  const { t } = useTranslation()
   const { boatId } = Route.useParams()
   const { tab: tabFromSearch } = Route.useSearch()
   const navigate = useNavigate()
@@ -200,7 +203,7 @@ function BoatDetailPage() {
   if (loading) {
     return (
       <main className="page-wrap px-3 py-8 sm:px-4">
-        <p className="text-sm text-[var(--sea-ink-soft)]">Loading boat…</p>
+        <p className="text-sm text-[var(--sea-ink-soft)]">{t('loadingBoat')}</p>
       </main>
     )
   }
@@ -242,14 +245,14 @@ function BoatDetailPage() {
   const tab: BoatDetailTab = tabCandidates.includes(tabRaw)
     ? tabRaw
     : (tabCandidates[0] ?? 'photos')
-  const tabLabels: Record<BoatDetailTab, string> = {
-    photos: 'Photos',
-    documents: 'Documents',
-    assets: 'Assets',
-    accounting: 'Accounting',
-    shares: 'Shares',
-    contacts: 'Contacts',
-    members: 'Members',
+  const tabLabels: Record<BoatDetailTab, TranslationKey> = {
+    photos: 'photos',
+    documents: 'documents',
+    assets: 'assets',
+    accounting: 'accounting',
+    shares: 'shares',
+    contacts: 'contacts',
+    members: 'members',
   }
 
   return (
@@ -259,7 +262,7 @@ function BoatDetailPage() {
           to="/boats"
           className="text-[var(--sea-ink-soft)] no-underline hover:text-[var(--sea-ink)]"
         >
-          ← Boats
+          ← {t('boats')}
         </Link>
       </p>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -281,20 +284,20 @@ function BoatDetailPage() {
             search={{ tab: 'boats' }}
             className="mt-1 inline-flex shrink-0 items-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] no-underline transition hover:bg-[var(--link-bg-hover)] sm:mt-2"
           >
-            Org: {boat.orgName}
+            {t('orgNamed', { name: boat.orgName })}
           </Link>
         ) : null}
         <NotificationBellToggle
           topic="BOAT_TRIPS_COMPLETED"
           boatId={boat.id}
-          label="Completed trips"
+          label={t('completedTrips')}
           className="mt-1 sm:mt-2"
         />
       </div>
 
       <div
         role="tablist"
-        aria-label="Boat sections"
+        aria-label={t('boatSections')}
         className="mt-8 flex flex-wrap gap-2 border-b border-[var(--line)] pb-3"
       >
         {tabCandidates.map((value) => {
@@ -313,7 +316,7 @@ function BoatDetailPage() {
                   : 'border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] hover:bg-[var(--link-bg-hover)]',
               )}
             >
-              {tabLabels[value]}
+              {t(tabLabels[value])}
             </button>
           )
         })}

@@ -13,6 +13,7 @@ import {
   declineFriendRequest,
   fetchCrew,
 } from '../../../lib/crew-api'
+import { useTranslation } from '../../../lib/i18n'
 
 type CrewSearch = { addCrew?: boolean }
 
@@ -28,6 +29,7 @@ export const Route = createFileRoute('/_main/crew/')({
 })
 
 function CrewPage() {
+  const { t } = useTranslation()
   const session = useSession()
   const navigate = useNavigate()
   const { addCrew: addCrewSearch } = Route.useSearch()
@@ -129,7 +131,7 @@ function CrewPage() {
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] transition hover:text-[var(--brand-hover)]"
             >
               <Plus className="size-4" strokeWidth={2.5} />
-              Add
+              {t('add')}
             </button>
           )}
         </div>
@@ -248,10 +250,7 @@ function CrewPage() {
             </Section>
           ) : null}
 
-          <Section
-            title="Friends"
-            subtitle="People you've mutually connected with."
-          >
+          <Section title={t('friends')}>
             {data?.friends.length ? (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                 {data.friends.map((friend) => (
@@ -272,17 +271,11 @@ function CrewPage() {
                 ))}
               </div>
             ) : (
-              <EmptyState
-                icon={UserCheck}
-                message="No friends yet. Accept a friend request after someone joins your crew."
-              />
+              <EmptyState icon={UserCheck} message={t('noFriendsYet')} />
             )}
           </Section>
 
-          <Section
-            title="Your crew"
-            subtitle="Local placeholders and linked sailors on your roster."
-          >
+          <Section title="Your crew">
             {data?.members.length ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {data.members.map((member) => (
@@ -308,12 +301,12 @@ function CrewPage() {
                       )}
                       <p className="m-0 mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--kicker)]">
                         {member.isFriend
-                          ? 'Friend'
+                          ? t('friend')
                           : member.isLinked
-                            ? 'Connected'
+                            ? t('connected')
                             : member.pendingInvite
-                              ? 'Invite pending'
-                              : 'Local'}
+                              ? t('invitePending')
+                              : t('localCrew')}
                       </p>
                     </div>
                   </button>
@@ -362,16 +355,18 @@ function Section({
   children,
 }: {
   title: string
-  subtitle: string
+  subtitle?: string
   children: React.ReactNode
 }) {
   return (
     <section>
       <div className="mb-4">
         <h2 className="m-0 text-xl font-bold text-[var(--sea-ink)]">{title}</h2>
-        <p className="m-0 mt-1 max-w-2xl text-sm leading-6 text-[var(--sea-ink-soft)]">
-          {subtitle}
-        </p>
+        {subtitle ? (
+          <p className="m-0 mt-1 max-w-2xl text-sm leading-6 text-[var(--sea-ink-soft)]">
+            {subtitle}
+          </p>
+        ) : null}
       </div>
       {children}
     </section>

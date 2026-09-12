@@ -13,6 +13,7 @@ import { useLogbookStore } from '../stores/logbook'
 import { DevTripRetripModal } from './DevTripRetripModal'
 import { Modal } from './Modal'
 import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
+import { useTranslation } from '../lib/i18n'
 import { AppIconButtonTooltip } from './AppIconButtonTooltip'
 
 type TripActionsMenuProps = {
@@ -30,8 +31,10 @@ export function TripActionsMenu({
   onDeleted,
   onOpenChange,
   className,
-  tooltip = 'Trip options',
+  tooltip,
 }: TripActionsMenuProps) {
+  const { t } = useTranslation()
+  const resolvedTooltip = tooltip ?? t('tripOptions')
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -116,12 +119,12 @@ export function TripActionsMenu({
     <>
       <div className={cn('relative', className)} ref={rootRef}>
         {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
-        <AppIconButtonTooltip label={tooltip} side="bottom">
+        <AppIconButtonTooltip label={resolvedTooltip} side="bottom">
           <button
             type="button"
             disabled={busy}
-            aria-label={`${tooltip} for ${displayName}`}
-            title={tooltip}
+            aria-label={t('tripOptionsFor', { name: displayName })}
+            title={resolvedTooltip}
             aria-haspopup="menu"
             aria-expanded={open}
             aria-controls={menuId}

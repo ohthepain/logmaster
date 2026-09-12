@@ -8,6 +8,7 @@ import {
   ensureNotificationPreferencesReady,
   useNotificationPreferencesStore,
 } from '../stores/notification-preferences'
+import { useTranslation } from '../lib/i18n'
 import { NotificationPreferenceBell } from './NotificationPreferenceBell'
 import { cn } from '../lib/cn'
 
@@ -32,6 +33,7 @@ export function NotificationControlMenuRow({
   className,
 }: NotificationControlMenuRowProps) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const loading = useNotificationPreferencesStore((state) => state.loading)
   const tree = useNotificationPreferencesStore((state) => state.tree)
   const globalNode = useNotificationPreferencesStore(
@@ -59,13 +61,13 @@ export function NotificationControlMenuRow({
       })
       useNotificationPreferencesStore.getState().patchNode(result.node)
       toast.success(
-        nextMuted ? 'All notifications paused' : 'All notifications resumed',
+        nextMuted ? t('allNotificationsPaused') : t('allNotificationsResumed'),
       )
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : 'Failed to update notifications',
+          : t('failedToUpdateNotifications'),
       )
     } finally {
       setBusy(false)
@@ -92,7 +94,7 @@ export function NotificationControlMenuRow({
         className="flex min-w-0 flex-1 items-center px-5 py-4 text-left outline-none transition hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20"
       >
         <span className="text-lg font-extrabold tracking-[-0.02em] text-[var(--sea-ink)]">
-          Notifications settings
+          {t('notificationSettings')}
         </span>
       </button>
       <NotificationPreferenceBell
@@ -101,12 +103,14 @@ export function NotificationControlMenuRow({
         disabled={loading && !tree}
         onToggle={toggleGlobalMute}
         className="mr-1"
-        label={paused ? 'Resume all notifications' : 'Pause all notifications'}
+        label={
+          paused ? t('resumeAllNotifications') : t('pauseAllNotifications')
+        }
       />
       <button
         type="button"
         onClick={openSettings}
-        aria-label="Open notification settings"
+        aria-label={t('openNotificationSettings')}
         className="px-4 py-4 text-[var(--sea-ink)] outline-none transition hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20"
       >
         <ChevronRight className="size-7" strokeWidth={2.5} aria-hidden />

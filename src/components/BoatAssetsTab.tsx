@@ -24,6 +24,7 @@ import {
   uploadAndLinkAssetDocument,
 } from '../lib/boat-assets-api'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import { ResourceSectionHeader } from './NotificationBellToggle'
 import { Modal } from './Modal'
 
@@ -50,6 +51,7 @@ export function BoatAssetsTab({
   orgName,
   members,
 }: BoatAssetsTabProps) {
+  const { t } = useTranslation()
   const [assets, setAssets] = useState<BoatAsset[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -171,7 +173,7 @@ export function BoatAssetsTab({
     return (
       <div>
         <ResourceSectionHeader
-          title="Assets"
+          title={t('assets')}
           topic="BOAT_ASSETS"
           boatId={boatId}
           onRefresh={() => load()}
@@ -185,7 +187,7 @@ export function BoatAssetsTab({
   return (
     <div>
       <ResourceSectionHeader
-        title="Assets"
+        title={t('assets')}
         topic="BOAT_ASSETS"
         boatId={boatId}
         onRefresh={() => load({ background: true })}
@@ -197,14 +199,14 @@ export function BoatAssetsTab({
             className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)]"
           >
             <Plus className="h-4 w-4" />
-            Add asset
+            {t('addAsset')}
           </button>
         }
       />
 
       {assets.length === 0 ? (
         <p className="text-sm text-[var(--sea-ink-soft)]">
-          No assets recorded yet.
+          {t('noAssetsYet')}
         </p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">

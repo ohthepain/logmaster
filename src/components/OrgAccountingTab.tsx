@@ -21,6 +21,7 @@ import {
   updateOrgBankAccount,
 } from '../lib/org-accounting-api'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import { ResourceSectionHeader } from './NotificationBellToggle'
 import { Modal } from './Modal'
 
@@ -30,6 +31,7 @@ type OrgAccountingTabProps = {
 }
 
 export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
+  const { t } = useTranslation()
   const [bankAccounts, setBankAccounts] = useState<OrgBankAccount[]>([])
   const [transactions, setTransactions] = useState<OrgTransaction[]>([])
   const [expenseClaims, setExpenseClaims] = useState<ExpenseClaim[]>([])
@@ -124,7 +126,7 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
     return (
       <div>
         <ResourceSectionHeader
-          title="Accounting"
+          title={t('accounting')}
           onRefresh={() => load()}
           refreshing={refreshing}
         />
@@ -136,13 +138,13 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
   return (
     <div className="flex flex-col gap-8">
       <ResourceSectionHeader
-        title="Accounting"
+        title={t('accounting')}
         onRefresh={() => load({ background: true })}
         refreshing={refreshing}
       />
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="brand-title m-0 text-xl">Bank accounts</h2>
+          <h2 className="brand-title m-0 text-xl">{t('bankAccounts')}</h2>
           {canManage ? (
             <button
               type="button"
@@ -150,13 +152,13 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
               className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)]"
             >
               <Plus className="h-4 w-4" />
-              Add account
+              {t('addAccount')}
             </button>
           ) : null}
         </div>
         {bankAccounts.length === 0 ? (
           <p className="text-sm text-[var(--sea-ink-soft)]">
-            No bank accounts yet.
+            {t('noBankAccountsYet')}
           </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
@@ -172,8 +174,12 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
                   {formatMoney(account.currentBalance, account.currency)}
                 </p>
                 <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">
-                  Opening{' '}
-                  {formatMoney(account.openingBalance, account.currency)}
+                  {t('openingBalanceAmount', {
+                    amount: formatMoney(
+                      account.openingBalance,
+                      account.currency,
+                    ),
+                  })}
                 </p>
                 {canManage ? (
                   <button
@@ -200,7 +206,7 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
                     }}
                     className="mt-3 text-xs font-semibold text-[var(--sea-ink-soft)] underline"
                   >
-                    Edit opening balance
+                    {t('editOpeningBalance')}
                   </button>
                 ) : null}
               </div>
@@ -211,11 +217,11 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="brand-title m-0 text-xl">Expense claims</h2>
+          <h2 className="brand-title m-0 text-xl">{t('expenseClaims')}</h2>
         </div>
         {expenseClaims.length === 0 ? (
           <p className="text-sm text-[var(--sea-ink-soft)]">
-            No expense claims.
+            {t('noExpenseClaims')}
           </p>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-3 p-0">
@@ -279,7 +285,7 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="brand-title m-0 text-xl">Transactions</h2>
+          <h2 className="brand-title m-0 text-xl">{t('transactions')}</h2>
           {canManage ? (
             <button
               type="button"
@@ -288,13 +294,13 @@ export function OrgAccountingTab({ orgId, canManage }: OrgAccountingTabProps) {
               className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] px-4 py-2 text-sm font-semibold"
             >
               <Plus className="h-4 w-4" />
-              Add transaction
+              {t('addTransaction')}
             </button>
           ) : null}
         </div>
         {transactions.length === 0 ? (
           <p className="text-sm text-[var(--sea-ink-soft)]">
-            No transactions yet.
+            {t('noTransactionsYet')}
           </p>
         ) : (
           <ul className="m-0 flex list-none flex-col gap-2 p-0 text-sm">

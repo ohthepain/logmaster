@@ -1,6 +1,7 @@
 import { forwardRef, useId, useImperativeHandle, useRef, useState } from 'react'
 import { Upload } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from '../lib/i18n'
 import { AppIconButtonTooltip } from './AppIconButtonTooltip'
 import { cn } from '../lib/cn'
 import {
@@ -34,14 +35,11 @@ export const TripImportButton = forwardRef<
   TripImportButtonHandle,
   TripImportButtonProps
 >(function TripImportButtonView(
-  {
-    onImported,
-    onRouteImported,
-    className,
-    tooltip = 'Import trip or route (Shift+click for OpenCPN export folder)',
-  },
+  { onImported, onRouteImported, className, tooltip },
   ref,
 ) {
+  const { t } = useTranslation()
+  const resolvedTooltip = tooltip ?? t('importTripOrRoute')
   const gpxFileInputRef = useRef<HTMLInputElement>(null)
   const signalKFileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
@@ -270,12 +268,16 @@ export const TripImportButton = forwardRef<
         } as React.InputHTMLAttributes<HTMLInputElement>)}
       />
 
-      <AppIconButtonTooltip label={tooltip} side="bottom" hidden={menuOpen}>
+      <AppIconButtonTooltip
+        label={resolvedTooltip}
+        side="bottom"
+        hidden={menuOpen}
+      >
         <button
           type="button"
           onClick={handleMainClick}
           disabled={importing}
-          aria-label={tooltip}
+          aria-label={resolvedTooltip}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           aria-controls={menuId}

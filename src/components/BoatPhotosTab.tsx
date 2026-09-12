@@ -8,6 +8,7 @@ import {
   uploadBoatPhoto,
 } from '../lib/boats-api'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import { ResourceSectionHeader } from './NotificationBellToggle'
 
 type BoatPhotosTabProps = {
@@ -23,6 +24,7 @@ export function BoatPhotosTab({
   onRefresh,
   refreshing = false,
 }: BoatPhotosTabProps) {
+  const { t } = useTranslation()
   const [uploading, setUploading] = useState(false)
   const [activePhoto, setActivePhoto] = useState<BoatPhoto | null>(null)
   const [captionDraft, setCaptionDraft] = useState('')
@@ -107,7 +109,7 @@ export function BoatPhotosTab({
   return (
     <>
       <ResourceSectionHeader
-        title="Photos"
+        title={t('photos')}
         topic="BOAT_PHOTOS"
         boatId={boat.id}
         onRefresh={onRefresh}
@@ -131,13 +133,13 @@ export function BoatPhotosTab({
           className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
         >
           <ImagePlus className="size-4" />
-          {uploading ? 'Uploading…' : 'Add photos'}
+          {uploading ? t('uploading') : t('addPhotos')}
         </button>
       </div>
 
       {boat.photos.length === 0 ? (
         <p className="mt-6 text-sm text-[var(--sea-ink-soft)]">
-          No photos yet. Add one to show it here.
+          {t('noPhotosYet')}
         </p>
       ) : (
         <div className="mt-6 -mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
@@ -162,7 +164,7 @@ export function BoatPhotosTab({
                 {photo.isDefault && (
                   <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-[var(--btn-bg)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--btn-text)]">
                     <Star className="size-3" />
-                    Default
+                    {t('defaultPhoto')}
                   </span>
                 )}
                 {photo.caption && (
@@ -229,7 +231,7 @@ export function BoatPhotosTab({
                   className="inline-flex items-center gap-1.5 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2 text-sm font-semibold text-[var(--sea-ink)]"
                 >
                   <Star className="size-4" />
-                  Set as default
+                  {t('setAsDefaultPhoto')}
                 </button>
               )}
               <button

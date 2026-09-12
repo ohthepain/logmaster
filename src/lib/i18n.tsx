@@ -7,6 +7,7 @@ export type TranslationKey =
   | 'language'
   | 'english'
   | 'swedish'
+  | 'vietnamese'
   | 'home'
   | 'profile'
   | 'profileMenu'
@@ -45,12 +46,223 @@ export type TranslationKey =
   | 'pageNotFound'
   | 'unknownUrl'
   | 'backToLogmaster'
+  | 'notificationSettings'
+  | 'pauseAllNotifications'
+  | 'resumeAllNotifications'
+  | 'openNotificationSettings'
+  | 'allNotificationsPaused'
+  | 'allNotificationsResumed'
+  | 'failedToUpdateNotifications'
+  | 'tripCountOne'
+  | 'tripCountOther'
+  | 'boatCountOne'
+  | 'boatCountOther'
+  | 'crewCountOne'
+  | 'crewCountOther'
+  | 'contactCountOne'
+  | 'contactCountOther'
+  | 'memberCountOne'
+  | 'memberCountOther'
+  | 'entryCountOne'
+  | 'entryCountOther'
+  | 'tripOptions'
+  | 'tripOptionsFor'
+  | 'routeOptions'
+  | 'routeOptionsFor'
+  | 'newTrip'
+  | 'importTripOrRoute'
+  | 'importGpxFromUrl'
+  | 'zoomIn'
+  | 'zoomOut'
+  | 'centerOnYourLocation'
+  | 'centerOnBoatPosition'
+  | 'openFullScreenMap'
+  | 'mapLayers'
+  | 'logEntry'
+  | 'fitRoute'
+  | 'startRecording'
+  | 'pauseRecording'
+  | 'closeReplayAndReturnToMap'
+  | 'showPlannedRoute'
+  | 'changePlannedRouteOverlay'
+  | 'startAutoTestReplay'
+  | 'editRouteCover'
+  | 'addWaypointOnMap'
+  | 'tripEditOptions'
+  | 'uploadPhotosAndVideo'
+  | 'uploading'
+  | 'trackStories'
+  | 'addWaypoint'
+  | 'editWaypoints'
+  | 'editTripCover'
+  | 'tracks'
+  | 'timelineTracks'
+  | 'showOnTimeline'
+  | 'noGraphDataForSelectedTracks'
+  | 'logEntries'
+  | 'media'
+  | 'logShort'
+  | 'timeZoom'
+  | 'plannedRouteOverlayHint'
+  | 'hideOverlay'
+  | 'hideTripInfo'
+  | 'showTripInfo'
+  | 'noDataAtThisPoint'
+  | 'fieldTime'
+  | 'fieldPosition'
+  | 'fieldHeading'
+  | 'fieldElevation'
+  | 'fieldSpeedOverGround'
+  | 'fieldSpeedThroughWater'
+  | 'fieldWaterTemperature'
+  | 'fieldCourseOverGround'
+  | 'fieldWind'
+  | 'fieldDepth'
+  | 'fieldEngine'
+  | 'fieldBattery'
+  | 'fieldSpeedOverGroundGps'
+  | 'fieldHeartRate'
+  | 'fieldCadence'
+  | 'fieldAmbientTemperature'
+  | 'fieldPower'
+  | 'fieldDistance'
+  | 'add'
+  | 'photos'
+  | 'documents'
+  | 'assets'
+  | 'accounting'
+  | 'shares'
+  | 'contacts'
+  | 'members'
+  | 'boatSections'
+  | 'orgSections'
+  | 'organizations'
+  | 'routes'
+  | 'startTrip'
+  | 'openingMap'
+  | 'loadingOrganization'
+  | 'loadingBoat'
+  | 'loadingBoats'
+  | 'loadingOrganizations'
+  | 'signInToManageOrgs'
+  | 'signInToManageBoats'
+  | 'noTripsYet'
+  | 'noTripsYetDescription'
+  | 'importTrack'
+  | 'routeMap'
+  | 'plannedRoute'
+  | 'inProgress'
+  | 'planned'
+  | 'weekCountOne'
+  | 'weekCountOther'
+  | 'dayCountOne'
+  | 'dayCountOther'
+  | 'waypointCountOne'
+  | 'waypointCountOther'
+  | 'pendingCount'
+  | 'expiresOn'
+  | 'invite'
+  | 'inviteLink'
+  | 'resendInvite'
+  | 'copyLink'
+  | 'refresh'
+  | 'remove'
+  | 'cancel'
+  | 'delete'
+  | 'deleteNamed'
+  | 'save'
+  | 'saving'
+  | 'sending'
+  | 'edit'
+  | 'uploadDocument'
+  | 'addLink'
+  | 'addContact'
+  | 'addPhotos'
+  | 'addAsset'
+  | 'addAccount'
+  | 'addTransaction'
+  | 'addPurchase'
+  | 'addOwner'
+  | 'addLabel'
+  | 'editLabel'
+  | 'addOrganization'
+  | 'noDocumentsYet'
+  | 'noPhotosYet'
+  | 'noAssetsYet'
+  | 'noMembersYet'
+  | 'noContactsYet'
+  | 'noOwnersAssigned'
+  | 'noBoatsInOrg'
+  | 'noBoatsYet'
+  | 'noBoatsYetDescription'
+  | 'noOrganizationsYet'
+  | 'noOrganizationsYetDescription'
+  | 'numberOfShares'
+  | 'updateCount'
+  | 'shareCountOnBoatOne'
+  | 'shareCountOnBoatOther'
+  | 'shareNumber'
+  | 'moveShareUp'
+  | 'moveShareDown'
+  | 'orgBankBalance'
+  | 'noOrgBankAccount'
+  | 'attachBoatToOrgForAccounting'
+  | 'purchases'
+  | 'noPurchasesRecorded'
+  | 'expenseClaims'
+  | 'noExpenseClaims'
+  | 'transactions'
+  | 'noTransactionsYet'
+  | 'noTransactionsOnBoat'
+  | 'bankAccounts'
+  | 'noBankAccountsYet'
+  | 'openingBalanceAmount'
+  | 'editOpeningBalance'
+  | 'orgContacts'
+  | 'addressBookOnly'
+  | 'changeOrganizationImage'
+  | 'addOrganizationImage'
+  | 'changeMapIcon'
+  | 'stopNotificationsFor'
+  | 'notifyWhenSectionChanges'
+  | 'completedTrips'
+  | 'adminJobs'
+  | 'roleOwner'
+  | 'roleAdmin'
+  | 'roleMember'
+  | 'roleViewer'
+  | 'pending'
+  | 'documentOptionsFor'
+  | 'onlyAdminsManageMembers'
+  | 'orgNamed'
+  | 'defaultPhoto'
+  | 'setAsDefaultPhoto'
+  | 'friends'
+  | 'noFriendsYet'
+  | 'friend'
+  | 'connected'
+  | 'invitePending'
+  | 'localCrew'
+  | 'adminJobNotifications'
 export type TranslationCatalog = Record<TranslationKey, string>
+export type TranslationVars = Record<string, string | number>
+
+export function interpolateTranslation(
+  template: string,
+  vars?: TranslationVars,
+): string {
+  if (!vars) return template
+  return template.replace(/\{(\w+)\}/g, (match, name: string) => {
+    const value = vars[name]
+    return value == null ? match : String(value)
+  })
+}
 
 /** Register a locale here after adding its lazy-loaded catalog module. */
 export const languages = [
   { code: 'en', nameKey: 'english', load: () => import('./locales/en') },
   { code: 'sv', nameKey: 'swedish', load: () => import('./locales/sv') },
+  { code: 'vi', nameKey: 'vietnamese', load: () => import('./locales/vi') },
 ] as const
 export type Language = (typeof languages)[number]['code']
 
@@ -90,7 +302,7 @@ type I18nContextValue = {
   language: Language
   loading: boolean
   setLanguage: (language: Language) => void
-  t: (key: TranslationKey) => string
+  t: (key: TranslationKey, vars?: TranslationVars) => string
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null)
@@ -101,8 +313,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>('en')
   const [catalog, setCatalog] = useState<TranslationCatalog>(englishCatalog)
   const [loading, setLoading] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
 
-  useEffect(() => setLanguageState(preferredLanguage()), [])
+  useEffect(() => {
+    setLanguageState(preferredLanguage())
+    setHydrated(true)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -118,16 +334,18 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, [language])
 
   useEffect(() => {
+    if (!hydrated) return
     document.documentElement.lang = language
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
-  }, [language])
+  }, [hydrated, language])
 
   const value = useMemo<I18nContextValue>(
     () => ({
       language,
       loading,
       setLanguage: setLanguageState,
-      t: (key) => catalog[key] ?? englishCatalog[key],
+      t: (key, vars) =>
+        interpolateTranslation(catalog[key] ?? englishCatalog[key], vars),
     }),
     [catalog, language, loading],
   )

@@ -3,6 +3,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { LogEntry, Media } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
+import {
+  translatePlaybackField,
+  translatePlaybackShortLabel,
+} from '../lib/playback-field-i18n'
 import type { TripPlaybackRange } from '../lib/trip-playback'
 import {
   availablePlaybackPanels,
@@ -35,6 +40,7 @@ export function TripPlaybackInstrumentGraph({
   windowRange,
   currentTimeMs,
 }: TripPlaybackInstrumentGraphProps) {
+  const { t } = useTranslation()
   const series = useMemo(
     () => buildPlaybackGraphSeries(enabledGraphPanelIds, tripId, tracks),
     [enabledGraphPanelIds, tracks, tripId],
@@ -43,7 +49,7 @@ export function TripPlaybackInstrumentGraph({
   if (series.length === 0) {
     return (
       <p className="m-0 py-2 text-sm text-white/60">
-        No graph data for selected tracks.
+        {t('noGraphDataForSelectedTracks')}
       </p>
     )
   }
@@ -68,6 +74,7 @@ export function TripPlaybackViewSelector({
   viewState,
   onToggle,
 }: TripPlaybackViewSelectorProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const enabledCount = countEnabledPlaybackViews(viewState)
@@ -84,23 +91,23 @@ export function TripPlaybackViewSelector({
         className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-white hover:bg-white/15"
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-label="Timeline tracks"
-        title="Timeline tracks"
+        aria-label={t('timelineTracks')}
+        title={t('timelineTracks')}
       >
         <Layers className="size-3.5" />
-        {enabledCount > 0 ? enabledCount : 'Tracks'}
+        {enabledCount > 0 ? enabledCount : t('tracks')}
       </button>
       {open ? (
         <div
           role="group"
-          aria-label="Timeline tracks"
+          aria-label={t('timelineTracks')}
           className={cn(
             'absolute bottom-full right-0 mb-2 min-w-[13rem] overflow-hidden rounded-xl border border-white/15 bg-black/90 p-2 shadow-xl backdrop-blur-md',
             POPUP_MENU_Z_CLASS,
           )}
         >
           <p className="m-0 px-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">
-            Show on timeline
+            {t('showOnTimeline')}
           </p>
           <div className="space-y-1">
             {options.map((option) => {
@@ -135,9 +142,15 @@ export function TripPlaybackViewSelector({
                       <Check className="size-3" strokeWidth={3} />
                     ) : null}
                   </span>
-                  <span className="min-w-0 flex-1">{option.label}</span>
+                  <span className="min-w-0 flex-1">
+                    {translatePlaybackField(option.id, t, option.label)}
+                  </span>
                   <span className="text-[10px] uppercase tracking-[0.12em] text-white/45">
-                    {option.shortLabel}
+                    {translatePlaybackShortLabel(
+                      option.id,
+                      t,
+                      option.shortLabel,
+                    )}
                   </span>
                 </button>
               )

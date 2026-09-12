@@ -6,6 +6,7 @@ import { OrgIcon, orgIconPhoto } from '../../../components/OrgIcon'
 import type { Org } from '../../../domain/org'
 import { useSession } from '../../../lib/auth-client'
 import { fetchOrgs } from '../../../lib/orgs-api'
+import { useTranslation } from '../../../lib/i18n'
 
 type OrgsSearch = { addOrg?: boolean }
 
@@ -21,6 +22,7 @@ export const Route = createFileRoute('/_main/orgs/')({
 })
 
 function OrgsPage() {
+  const { t } = useTranslation()
   const session = useSession()
   const navigate = useNavigate()
   const { addOrg: addOrgSearch } = Route.useSearch()
@@ -65,7 +67,7 @@ function OrgsPage() {
       <div className="page-wrap px-3 sm:px-4">
         <div className="mb-6 flex items-center justify-between gap-3 pt-2">
           <h1 className="brand-title m-0 text-[2.35rem] leading-none sm:text-[2.75rem]">
-            Orgs
+            {t('orgs')}
           </h1>
           {user && (
             <button
@@ -74,7 +76,7 @@ function OrgsPage() {
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] transition hover:text-[var(--brand-hover)]"
             >
               <Plus className="size-4" strokeWidth={2.5} />
-              Add
+              {t('add')}
             </button>
           )}
         </div>
@@ -84,21 +86,21 @@ function OrgsPage() {
         <div className="page-wrap px-3 sm:px-4">
           <section className="rounded-2xl bg-[var(--panel)] px-6 py-10 text-center">
             <p className="m-0 text-[var(--sea-ink-soft)]">
-              Sign in to view and manage your organizations.
+              {t('signInToManageOrgs')}
             </p>
             <Link
               to="/sign-in"
               search={{ redirect: '/orgs' }}
               className="brand-emphasis mt-4 inline-flex text-sm font-semibold no-underline hover:text-[var(--brand-hover)]"
             >
-              Sign in
+              {t('signIn')}
             </Link>
           </section>
         </div>
       ) : loading ? (
         <div className="page-wrap px-3 sm:px-4">
           <p className="text-sm text-[var(--sea-ink-soft)]">
-            Loading organizations…
+            {t('loadingOrganizations')}
           </p>
         </div>
       ) : error ? (
@@ -112,10 +114,10 @@ function OrgsPage() {
               <Building2 className="size-6 text-[var(--brand)]" />
             </div>
             <h2 className="m-0 text-xl font-semibold text-[var(--sea-ink)]">
-              No organizations yet
+              {t('noOrganizationsYet')}
             </h2>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[var(--sea-ink-soft)]">
-              Create an organization to share boats, documents, and members.
+              {t('noOrganizationsYetDescription')}
             </p>
             <button
               type="button"
@@ -123,7 +125,7 @@ function OrgsPage() {
               className="brand-emphasis mt-5 inline-flex items-center gap-1.5 text-sm font-semibold hover:text-[var(--brand-hover)]"
             >
               <Plus className="size-4" />
-              Add organization
+              {t('addOrganization')}
             </button>
           </section>
         </div>
@@ -145,12 +147,19 @@ function OrgsPage() {
                         {org.name}
                       </h2>
                       <p className="m-0 mt-1 truncate text-sm text-[var(--sea-ink-soft)]">
-                        {org.memberCount ?? 0}{' '}
-                        {(org.memberCount ?? 0) === 1 ? 'member' : 'members'}
+                        {t(
+                          (org.memberCount ?? 0) === 1
+                            ? 'memberCountOne'
+                            : 'memberCountOther',
+                          { count: org.memberCount ?? 0 },
+                        )}
                         {org.boats?.length
-                          ? ` · ${org.boats.length} ${
-                              org.boats.length === 1 ? 'boat' : 'boats'
-                            }`
+                          ? ` · ${t(
+                              org.boats.length === 1
+                                ? 'boatCountOne'
+                                : 'boatCountOther',
+                              { count: org.boats.length },
+                            )}`
                           : ''}
                       </p>
                     </div>

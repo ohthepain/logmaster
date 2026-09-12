@@ -3,10 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 import type { NotificationTopic } from '../domain/notifications'
-import {
-  isNotificationTopicEnabled,
-  NOTIFICATION_TOPIC_LABELS,
-} from '../domain/notifications'
+import { isNotificationTopicEnabled } from '../domain/notifications'
 import { preferencePathForSubscription } from '../domain/notification-preferences'
 import { upsertNotificationSubscription } from '../lib/notifications-api'
 import {
@@ -18,6 +15,8 @@ import {
   invalidateNotificationSubscriptions,
 } from '../lib/notification-subscriptions-cache'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
+import { translateNotificationTopic } from '../lib/resource-section-i18n'
 
 type NotificationBellToggleProps = {
   topic: NotificationTopic
@@ -34,6 +33,7 @@ export function NotificationBellToggle({
   className,
   label,
 }: NotificationBellToggleProps) {
+  const { t } = useTranslation()
   const [enabled, setEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -86,10 +86,10 @@ export function NotificationBellToggle({
     void load()
   }, [load])
 
-  const topicLabel = label ?? NOTIFICATION_TOPIC_LABELS[topic]
+  const topicLabel = label ?? translateNotificationTopic(topic, t)
   const tooltip = enabled
-    ? `Stop notifications for ${topicLabel}`
-    : `Notify me when ${topicLabel.toLowerCase()} change`
+    ? t('stopNotificationsFor', { name: topicLabel })
+    : t('notifyWhenSectionChanges', { name: topicLabel })
 
   const toggle = async () => {
     if (busy || loading) return
@@ -176,13 +176,14 @@ export function ResourceRefreshButton({
   refreshing?: boolean
   className?: string
 }) {
+  const { t } = useTranslation()
   return (
     <button
       type="button"
       onClick={() => void onRefresh()}
       disabled={refreshing}
-      aria-label="Refresh"
-      title="Refresh"
+      aria-label={t('refresh')}
+      title={t('refresh')}
       className={cn(resourceIconButtonClassName, className)}
     >
       <RefreshCw

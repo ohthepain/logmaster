@@ -23,6 +23,7 @@ import {
   playbackMediaMarkerOffsets,
 } from '../lib/trip-playback-media-timeline'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import { compareLogEntriesChronologically } from '../lib/logbook-entry-order'
 import { PlaybackTimelineLogEntryMarker } from './PlaybackTimelineLogEntryMarker'
 import { PLAYBACK_SPEEDS, PlaybackSpeedControl } from './PlaybackSpeedControl'
@@ -114,6 +115,7 @@ export function TripPlaybackOverlay({
   onShowLogEntries,
   onPlayingChange,
 }: TripPlaybackOverlayProps) {
+  const { t } = useTranslation()
   const timelineRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
   const currentTimeRef = useRef(currentTimeMs)
@@ -440,7 +442,11 @@ export function TripPlaybackOverlay({
               {formatDuration(Math.max(0, currentTimeMs - range.startMs))} /{' '}
               {formatDuration(range.durationMs)}
             </span>
-            <span>Time zoom {timeZoom.toFixed(timeZoom < 2 ? 1 : 0)}×</span>
+            <span>
+              {t('timeZoom', {
+                value: timeZoom.toFixed(timeZoom < 2 ? 1 : 0),
+              })}
+            </span>
           </div>
 
           <div

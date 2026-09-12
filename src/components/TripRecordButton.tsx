@@ -1,6 +1,7 @@
 import { FileText, Pause } from 'lucide-react'
 import { useAppOptionsStore } from '../stores/app-options'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import { DevComponentLabel } from './DevComponentLabel'
 
 const SHEET_CHROME_BUTTON_CLASS =
@@ -21,8 +22,9 @@ export function TripRecordButton({
   const setRecordingTripId = useAppOptionsStore(
     (state) => state.setRecordingTripId,
   )
+  const { t } = useTranslation()
   const recording = recordingTripId === tripId
-  const label = recording ? 'Pause recording' : 'Start recording'
+  const label = recording ? t('pauseRecording') : t('startRecording')
 
   return (
     <div className="relative flex items-center gap-2">
@@ -56,8 +58,8 @@ export function TripRecordButton({
       {recording && onLogEntryClick ? (
         <button
           type="button"
-          aria-label="Log entry"
-          title="Log entry"
+          aria-label={t('logEntry')}
+          title={t('logEntry')}
           disabled={logEntryDisabled}
           onPointerDown={(event) => event.stopPropagation()}
           onClick={(event) => {

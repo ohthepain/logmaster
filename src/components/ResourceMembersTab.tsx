@@ -5,11 +5,13 @@ import { useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import type { MemberInvite, ResourceMember } from '../domain/member-invite'
 import { MEMBER_ROLE_LABELS } from '../domain/member-invite'
+import { translateMemberRole } from '../lib/resource-section-i18n'
 import type { OrgMemberRole } from '../domain/org'
 import { CrewAvatar } from './CrewAvatar'
 import { Modal } from './Modal'
 import { profilePhotoUrl } from '../lib/profile-api'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import {
   NotificationBellToggle,
   ResourceRefreshButton,
@@ -32,6 +34,7 @@ export function InviteMemberModal({
   title,
   onSubmit,
 }: InviteMemberModalProps) {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<OrgMemberRole>('MEMBER')
   const [loading, setLoading] = useState(false)
@@ -93,9 +96,9 @@ export function InviteMemberModal({
             onChange={(e) => setRole(e.target.value as OrgMemberRole)}
             className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
           >
-            {Object.entries(MEMBER_ROLE_LABELS).map(([value, label]) => (
+            {Object.entries(MEMBER_ROLE_LABELS).map(([value]) => (
               <option key={value} value={value}>
-                {label}
+                {translateMemberRole(value as OrgMemberRole, t)}
               </option>
             ))}
           </select>
@@ -111,14 +114,14 @@ export function InviteMemberModal({
             disabled={loading}
             className="rounded-xl border border-[var(--line)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)]"
           >
-            Cancel
+            {t('cancel')}
           </button>
           <button
             type="submit"
             disabled={loading}
             className="rounded-xl bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
           >
-            {loading ? 'Sending…' : 'Send invite'}
+            {loading ? t('sending') : t('invite')}
           </button>
         </div>
       </form>
@@ -170,6 +173,7 @@ export function ResourceMembersTab({
   onRefresh,
   refreshing = false,
 }: ResourceMembersTabProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(
     null,
@@ -180,9 +184,11 @@ export function ResourceMembersTab({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-            {members.length} {members.length === 1 ? 'member' : 'members'}
+            {t(members.length === 1 ? 'memberCountOne' : 'memberCountOther', {
+              count: members.length,
+            })}
             {pendingInvites.length > 0
-              ? ` · ${pendingInvites.length} pending`
+              ? ` ${t('pendingCount', { count: pendingInvites.length })}`
               : ''}
           </p>
           {notificationTopic ? (
@@ -203,7 +209,7 @@ export function ResourceMembersTab({
                   className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
                 >
                   <Link2 className="size-4" />
-                  Invite link
+                  {t('inviteLink')}
                 </button>
                 <button
                   type="button"
@@ -211,7 +217,7 @@ export function ResourceMembersTab({
                   className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
                 >
                   <UserPlus className="size-4" />
-                  Invite
+                  {t('invite')}
                 </button>
               </>
             ) : null}
@@ -227,12 +233,12 @@ export function ResourceMembersTab({
 
       {!canManageMembers ? (
         <p className="mb-4 text-sm text-[var(--sea-ink-soft)]">
-          Only the boat owner or an admin can invite and manage members.
+          {t('onlyAdminsManageMembers')}
         </p>
       ) : null}
 
       {members.length === 0 && pendingInvites.length === 0 ? (
-        <p className="text-sm text-[var(--sea-ink-soft)]">No members yet.</p>
+        <p className="text-sm text-[var(--sea-ink-soft)]">{t('noMembersYet')}</p>
       ) : (
         <ul className="m-0 list-none space-y-2 p-0">
           {members.map((member) => {
@@ -248,7 +254,7 @@ export function ResourceMembersTab({
                     {member.user.name}
                     {member.isOwner ? (
                       <span className="ml-2 text-xs font-medium text-[var(--sea-ink-soft)]">
-                        Owner
+                        {t('roleOwner')}
                       </span>
                     ) : null}
                   </p>
@@ -305,7 +311,7 @@ export function ResourceMembersTab({
                 </div>
                 {member.isOwner || !canManageMembers ? (
                   <span className="rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
-                    {MEMBER_ROLE_LABELS[member.role]}
+                    {translateMemberRole(member.role, t)}
                   </span>
                 ) : (
                   <>
@@ -317,13 +323,11 @@ export function ResourceMembersTab({
                       }
                       className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--sea-ink)]"
                     >
-                      {Object.entries(MEMBER_ROLE_LABELS).map(
-                        ([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ),
-                      )}
+                      {Object.entries(MEMBER_ROLE_LABELS).map(([value]) => (
+                        <option key={value} value={value}>
+                          {translateMemberRole(value as OrgMemberRole, t)}
+                        </option>
+                      ))}
                     </select>
                     <button
                       type="button"
@@ -334,7 +338,7 @@ export function ResourceMembersTab({
                       className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-red-700 dark:text-red-300"
                     >
                       <Trash2 className="size-3.5" />
-                      Remove
+                      {t('remove')}
                     </button>
                   </>
                 )}
@@ -352,14 +356,16 @@ export function ResourceMembersTab({
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="m-0 truncate text-sm font-semibold text-[var(--sea-ink)]">
-                    {invite.inviteeEmail ?? 'Invite link'}
+                    {invite.inviteeEmail ?? t('inviteLink')}
                     <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-950/60 dark:text-amber-200">
-                      Pending
+                      {t('pending')}
                     </span>
                   </p>
                   <p className="m-0 truncate text-xs text-[var(--sea-ink-soft)]">
-                    {MEMBER_ROLE_LABELS[invite.role]} · expires{' '}
-                    {new Date(invite.expiresAt).toLocaleDateString()}
+                    {translateMemberRole(invite.role, t)} ·{' '}
+                    {t('expiresOn', {
+                      date: new Date(invite.expiresAt).toLocaleDateString(),
+                    })}
                   </p>
                 </div>
               </div>
@@ -386,8 +392,8 @@ export function ResourceMembersTab({
                     >
                       <Mail className="size-3.5" />
                       {resendingInviteId === invite.id
-                        ? 'Sending…'
-                        : 'Resend invite'}
+                        ? t('sending')
+                        : t('resendInvite')}
                     </button>
                   ) : null}
                   <button
@@ -396,7 +402,7 @@ export function ResourceMembersTab({
                     className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)]"
                   >
                     <Copy className="size-3.5" />
-                    Copy link
+                    {t('copyLink')}
                   </button>
                   <button
                     type="button"
@@ -404,12 +410,12 @@ export function ResourceMembersTab({
                     className="inline-flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-red-700 dark:text-red-300"
                   >
                     <X className="size-3.5" />
-                    Cancel
+                    {t('cancel')}
                   </button>
                 </>
               ) : (
                 <span className="rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
-                  {MEMBER_ROLE_LABELS[invite.role]}
+                  {translateMemberRole(invite.role, t)}
                 </span>
               )}
             </li>

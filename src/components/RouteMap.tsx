@@ -432,7 +432,7 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(
               onZoomIn={() => mapRef.current?.zoomIn({ duration: 200 })}
               onZoomOut={() => mapRef.current?.zoomOut({ duration: 200 })}
               onLocate={fitRouteBounds}
-              locateLabel="Fit route"
+              locateMode="route"
               layers={
                 showMapDataLayers ? (
                   <SailingMapLayerPanel

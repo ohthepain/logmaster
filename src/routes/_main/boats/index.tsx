@@ -7,6 +7,7 @@ import { BoatListCards } from '../../../components/BoatListCards'
 import type { Boat } from '../../../domain/boat'
 import { useSession } from '../../../lib/auth-client'
 import { deleteBoat, fetchBoats } from '../../../lib/boats-api'
+import { useTranslation } from '../../../lib/i18n'
 
 type BoatsSearch = { addBoat?: boolean }
 
@@ -22,6 +23,7 @@ export const Route = createFileRoute('/_main/boats/')({
 })
 
 function BoatsPage() {
+  const { t } = useTranslation()
   const session = useSession()
   const navigate = useNavigate()
   const { addBoat: addBoatSearch } = Route.useSearch()
@@ -77,7 +79,7 @@ function BoatsPage() {
       <div className="page-wrap px-3 sm:px-4">
         <div className="mb-6 flex items-center justify-between gap-3 pt-2">
           <h1 className="brand-title m-0 text-[2.35rem] leading-none sm:text-[2.75rem]">
-            Boats
+            {t('boats')}
           </h1>
           {user && (
             <button
@@ -86,7 +88,7 @@ function BoatsPage() {
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] transition hover:text-[var(--brand-hover)]"
             >
               <Plus className="size-4" strokeWidth={2.5} />
-              Add
+              {t('add')}
             </button>
           )}
         </div>
@@ -96,20 +98,20 @@ function BoatsPage() {
         <div className="page-wrap px-3 sm:px-4">
           <section className="rounded-2xl bg-[var(--panel)] px-6 py-10 text-center">
             <p className="m-0 text-[var(--sea-ink-soft)]">
-              Sign in to create and manage your boats.
+              {t('signInToManageBoats')}
             </p>
             <Link
               to="/sign-in"
               search={{ redirect: '/boats' }}
               className="brand-emphasis mt-4 inline-flex text-sm font-semibold no-underline hover:text-[var(--brand-hover)]"
             >
-              Sign in
+              {t('signIn')}
             </Link>
           </section>
         </div>
       ) : loading ? (
         <div className="page-wrap px-3 sm:px-4">
-          <p className="text-sm text-[var(--sea-ink-soft)]">Loading boats…</p>
+          <p className="text-sm text-[var(--sea-ink-soft)]">{t('loadingBoats')}</p>
         </div>
       ) : error ? (
         <div className="page-wrap px-3 sm:px-4">
@@ -122,10 +124,10 @@ function BoatsPage() {
               <Sailboat className="size-6 text-[var(--brand)]" />
             </div>
             <h2 className="m-0 text-xl font-semibold text-[var(--sea-ink)]">
-              No boats yet
+              {t('noBoatsYet')}
             </h2>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-[var(--sea-ink-soft)]">
-              Add your first boat with a name and photos.
+              {t('noBoatsYetDescription')}
             </p>
             <button
               type="button"
@@ -133,7 +135,7 @@ function BoatsPage() {
               className="brand-emphasis mt-5 inline-flex items-center gap-1.5 text-sm font-semibold hover:text-[var(--brand-hover)]"
             >
               <Plus className="size-4" />
-              Add boat
+              {t('addBoat')}
             </button>
           </section>
         </div>

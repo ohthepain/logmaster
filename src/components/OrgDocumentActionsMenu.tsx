@@ -29,6 +29,7 @@ import {
 } from '../lib/org-document-open'
 import type { OrgDocumentViewerPayload } from '../lib/org-document-open'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import { OrgDocumentCategoryField } from './OrgDocumentCategoryField'
 import { Modal } from './Modal'
 import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
@@ -54,6 +55,7 @@ export function OrgDocumentActionsMenu({
   onUpdated,
   onDeleted,
 }: OrgDocumentActionsMenuProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [updateOpen, setUpdateOpen] = useState(false)
@@ -249,7 +251,7 @@ export function OrgDocumentActionsMenu({
         <button
           type="button"
           disabled={busy}
-          aria-label={`Document options for ${orgDocument.title}`}
+          aria-label={t('documentOptionsFor', { name: orgDocument.title })}
           aria-haspopup="menu"
           aria-expanded={open}
           aria-controls={menuId}

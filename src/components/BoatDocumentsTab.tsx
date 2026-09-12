@@ -17,6 +17,7 @@ import {
 import { openBoatDocumentRecord } from '../lib/boat-document-open'
 import type { BoatDocumentViewerPayload } from '../lib/boat-document-open'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import { ResourceSectionHeader } from './NotificationBellToggle'
 import { Modal } from './Modal'
 import { BoatDocumentCategoryField } from './BoatDocumentCategoryField'
@@ -38,6 +39,7 @@ type BoatDocumentsTabProps = {
 type AddMode = 'upload' | 'link' | null
 
 export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
+  const { t } = useTranslation()
   const [categories, setCategories] = useState<BoatDocumentCategory[]>([])
   const [documents, setDocuments] = useState<BoatDocument[]>([])
   const [loading, setLoading] = useState(true)
@@ -236,7 +238,7 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
     return (
       <div className="mt-6 space-y-3">
         <ResourceSectionHeader
-          title="Documents"
+          title={t('documents')}
           topic="BOAT_DOCUMENTS"
           boatId={boatId}
           onRefresh={() => load()}
@@ -250,7 +252,7 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
   return (
     <>
       <ResourceSectionHeader
-        title="Documents"
+        title={t('documents')}
         topic="BOAT_DOCUMENTS"
         boatId={boatId}
         onRefresh={() => load({ background: true })}
@@ -263,7 +265,7 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
           className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)]"
         >
           <FileUp className="size-4" />
-          Upload document
+          {t('uploadDocument')}
         </button>
         <button
           type="button"
@@ -271,13 +273,13 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
           className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)]"
         >
           <Link2 className="size-4" />
-          Add link
+          {t('addLink')}
         </button>
       </div>
 
       {documents.length === 0 ? (
         <p className="mt-6 text-sm text-[var(--sea-ink-soft)]">
-          No documents yet. Upload a file or add a link to get started.
+          {t('noDocumentsYet')}
         </p>
       ) : (
         <div className="mt-6 space-y-8">
@@ -351,7 +353,7 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
 
       {addMode === 'upload' ? (
         <Modal
-          title="Upload document"
+          title={t('uploadDocument')}
           showKicker={false}
           onClose={() => {
             if (!busy) setAddMode(null)
@@ -499,7 +501,7 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
                 onClick={() => void handleCreateLink()}
                 className="rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
               >
-                {busy ? 'Saving…' : 'Add link'}
+                {busy ? t('saving') : t('addLink')}
               </button>
               <button
                 type="button"

@@ -29,6 +29,7 @@ import {
 } from '../lib/boat-document-open'
 import type { BoatDocumentViewerPayload } from '../lib/boat-document-open'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import { BoatDocumentCategoryField } from './BoatDocumentCategoryField'
 import { Modal } from './Modal'
 import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
@@ -54,6 +55,7 @@ export function BoatDocumentActionsMenu({
   onUpdated,
   onDeleted,
 }: BoatDocumentActionsMenuProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [updateOpen, setUpdateOpen] = useState(false)
@@ -254,7 +256,7 @@ export function BoatDocumentActionsMenu({
         <button
           type="button"
           disabled={busy}
-          aria-label={`Document options for ${boatDocument.title}`}
+          aria-label={t('documentOptionsFor', { name: boatDocument.title })}
           aria-haspopup="menu"
           aria-expanded={open}
           aria-controls={menuId}

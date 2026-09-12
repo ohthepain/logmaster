@@ -6,6 +6,7 @@ import { TripLogMap } from './TripLogMap'
 import type { Trip } from '../domain/logbook'
 import { resolveMapModeTrip } from '../lib/trip-nav'
 import { useLogbookStore } from '../stores/logbook'
+import { useTranslation } from '../lib/i18n'
 
 const EMPTY_MAP_TRIP: Trip = {
   id: 'map-without-trip',
@@ -17,6 +18,7 @@ const EMPTY_MAP_TRIP: Trip = {
 }
 
 export function MapDefaultView() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const store = useLogbookStore()
   const trip = useMemo(() => resolveMapModeTrip(store.trips), [store.trips])
@@ -71,7 +73,7 @@ export function MapDefaultView() {
             className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-5 py-3 text-base font-bold text-[var(--btn-text)] no-underline shadow-lg transition hover:-translate-y-px"
           >
             <Sailboat className="size-5" />
-            Start trip
+            {t('startTrip')}
           </Link>
         </div>
       </main>
@@ -81,7 +83,7 @@ export function MapDefaultView() {
   return (
     <main className="page-wrap px-3 py-8 sm:px-4">
       <DevComponentLabel name="MapDefaultView" />
-      <p className="text-sm text-[var(--sea-ink-soft)]">Opening map…</p>
+      <p className="text-sm text-[var(--sea-ink-soft)]">{t('openingMap')}</p>
     </main>
   )
 }

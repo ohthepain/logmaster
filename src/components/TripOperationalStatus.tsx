@@ -21,6 +21,7 @@ import {
 } from '../lib/map-chrome'
 import { useLogbookStore } from '../stores/logbook'
 import { DevComponentLabel } from './DevComponentLabel'
+import { useTranslation } from '../lib/i18n'
 import { MapButtonTooltip } from './MapButtonTooltip'
 import { OperationalToggleButton } from './OperationalToggleButton'
 import { TripOperationalConfirmModal } from './TripOperationalConfirmModal'
@@ -45,6 +46,7 @@ export function TripOperationalStatus({
   onLogEntryClick,
   logEntryDisabled = false,
 }: TripOperationalStatusProps) {
+  const { t } = useTranslation()
   const addEntry = useLogbookStore((state) => state.addEntry)
   const updateTrip = useLogbookStore((state) => state.updateTrip)
   const [busyToggle, setBusyToggle] = useState<OperationalToggle | null>(null)
@@ -181,7 +183,7 @@ export function TripOperationalStatus({
             )
           })}
           {isInProgress && onLogEntryClick ? (
-            <MapButtonTooltip label="Log entry">
+            <MapButtonTooltip label={t('logEntry')}>
               <button
                 type="button"
                 disabled={logEntryDisabled || pendingConfirm !== null}
@@ -193,8 +195,8 @@ export function TripOperationalStatus({
                   MAP_CHROME_DIVIDER_CLASS,
                   'disabled:cursor-default',
                 )}
-                aria-label="Log entry"
-                title="Log entry"
+                aria-label={t('logEntry')}
+                title={t('logEntry')}
               >
                 <FileText className="size-5 text-white" strokeWidth={2.25} />
               </button>
