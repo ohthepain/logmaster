@@ -1,5 +1,10 @@
 import type { BoatDocumentVersion } from './boat'
 import type { ExpenseClaim, OrgTransaction } from './org-accounting'
+import type {
+  AssetCategory,
+  AssetConnection,
+  AssetDownloadSuggestion,
+} from './asset-intelligence'
 
 export type AssetOwnership = 'BOAT' | 'ORG' | 'USER' | 'EXTERNAL'
 
@@ -42,6 +47,10 @@ export type BoatAsset = {
   boatId: string
   name: string
   description: string | null
+  modelNumber: string | null
+  category: AssetCategory | null
+  suggestedDownloads: AssetDownloadSuggestion[]
+  connections: AssetConnection[]
   ownership: AssetOwnership
   ownedByUserId: string | null
   onLoanFromUserId: string | null

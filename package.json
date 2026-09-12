@@ -54,6 +54,7 @@
     "@better-auth/prisma-adapter": "^1.6.6",
     "@capacitor-community/background-geolocation": "^1.2.26",
     "@capacitor/app": "^8.1.1",
+    "@capacitor/camera": "^8.2.4",
     "@capacitor/core": "^8.4.2",
     "@capacitor/file-viewer": "^2.0.2",
     "@capacitor/filesystem": "^8.1.3",
@@ -67,6 +68,8 @@
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
     "@tailwindcss/vite": "^4.1.18",
+    "@tanstack/ai": "^0.54.0",
+    "@tanstack/ai-openai": "^0.22.6",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-router": "^1.168.23",
     "@tanstack/react-router-devtools": "latest",
@@ -80,6 +83,7 @@
     "dotenv": "^17.4.2",
     "hono": "^4.12.14",
     "idb": "^8.0.3",
+    "ipaddr.js": "^2.5.0",
     "jszip": "^3.10.1",
     "logmaster-apple-map": "file:plugins/logmaster-apple-map",
     "lucide-react": "^0.545.0",
@@ -96,6 +100,7 @@
     "tinymce": "^8.9.0",
     "web-push": "^3.6.7",
     "workbox-window": "^7.4.1",
+    "zod": "^4.6.2",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

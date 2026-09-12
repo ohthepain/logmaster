@@ -35,6 +35,7 @@ import { consortiaMediaRoutes } from './routes/consortia-media'
 import { memberInvitesRoutes } from './routes/member-invites'
 import { boatMembersRoutes } from './routes/boat-members'
 import { boatAssetsRoutes } from './routes/boat-assets'
+import { assetIntelligenceRoutes } from './routes/asset-intelligence'
 import { boatContactsRoutes } from './routes/boat-contacts'
 import { orgAccountingRoutes } from './routes/org-accounting'
 import { notificationsRoutes } from './routes/notifications'
@@ -82,6 +83,7 @@ app.route('/boats', boatsRoutes)
 app.route('/boats', boatSharesRoutes)
 app.route('/boats', boatMembersRoutes)
 app.route('/boats', boatAssetsRoutes)
+app.route('/boats', assetIntelligenceRoutes)
 app.route('/boats', boatContactsRoutes)
 app.route('/profile', profileRoutes)
 app.route('/crew', crewRoutes)

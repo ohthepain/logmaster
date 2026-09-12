@@ -1,4 +1,8 @@
 import { Hono } from 'hono'
+import { bodyLimit } from 'hono/body-limit'
+import { categorySchema, createAssetSchema } from '../asset-intelligence-schema'
+import { createAssetWithAttachments } from '../asset-storage'
+import type { AssetDownloadSuggestion } from '../../domain/asset-intelligence'
 import type {
   AssetOwnership,
   AssetWorkType,
@@ -117,6 +121,19 @@ function serializeAsset(asset: {
   boatId: string
   name: string
   description: string | null
+  modelNumber: string | null
+  category: string | null
+  suggestedDownloads?: AssetDownloadSuggestion[]
+  connectionsFrom?: Array<{
+    id: string
+    reason: string
+    toAsset: { id: string; name: string }
+  }>
+  connectionsTo?: Array<{
+    id: string
+    reason: string
+    fromAsset: { id: string; name: string }
+  }>
   ownership: string
   ownedByUserId: string | null
   onLoanFromUserId: string | null
@@ -139,6 +156,23 @@ function serializeAsset(asset: {
     boatId: asset.boatId,
     name: asset.name,
     description: asset.description,
+    modelNumber: asset.modelNumber,
+    category: asset.category,
+    suggestedDownloads: asset.suggestedDownloads ?? [],
+    connections: [
+      ...(asset.connectionsFrom ?? []).map((item) => ({
+        id: item.id,
+        assetId: item.toAsset.id,
+        name: item.toAsset.name,
+        reason: item.reason,
+      })),
+      ...(asset.connectionsTo ?? []).map((item) => ({
+        id: item.id,
+        assetId: item.fromAsset.id,
+        name: item.fromAsset.name,
+        reason: item.reason,
+      })),
+    ],
     ownership: asset.ownership as AssetOwnership,
     ownedByUserId: asset.ownedByUserId,
     onLoanFromUserId: asset.onLoanFromUserId,
@@ -307,6 +341,13 @@ function userOwnershipFields(
 }
 
 const assetInclude = {
+  suggestedDownloads: { orderBy: { createdAt: 'asc' } },
+  connectionsFrom: {
+    include: { toAsset: { select: { id: true, name: true } } },
+  },
+  connectionsTo: {
+    include: { fromAsset: { select: { id: true, name: true } } },
+  },
   boat: {
     select: {
       name: true,
@@ -332,6 +373,9 @@ const assetInclude = {
 }
 
 const assetDetailInclude = {
+  suggestedDownloads: assetInclude.suggestedDownloads,
+  connectionsFrom: assetInclude.connectionsFrom,
+  connectionsTo: assetInclude.connectionsTo,
   boat: {
     select: {
       id: true,
@@ -426,57 +470,66 @@ boatAssetsRoutes.get('/:boatId/assets/:assetId', async (c) => {
   })
 })
 
-boatAssetsRoutes.post('/:boatId/assets', async (c) => {
-  const userId = await requireUserId(c)
-  if (!userId) return unauthorized()
+boatAssetsRoutes.post(
+  '/:boatId/assets',
+  bodyLimit({ maxSize: 16 * 1024 * 1024 }),
+  async (c) => {
+    const userId = await requireUserId(c)
+    if (!userId) return unauthorized()
 
-  const boatId = c.req.param('boatId')
-  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
-  if (!boat) return c.json({ error: 'Boat not found' }, 404)
+    const boatId = c.req.param('boatId')
+    const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
+    if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
-  const body = (await c.req.json().catch(() => ({}))) as {
-    name?: string
-    description?: string | null
-    ownership?: string
-    ownedByUserId?: string | null
-    onLoanFromUserId?: string | null
-    installedAt?: string | null
-  }
+    let body: unknown
+    let photo: File | undefined
+    try {
+      if (c.req.header('content-type')?.includes('multipart/form-data')) {
+        const form = await c.req.parseBody()
+        body = JSON.parse(String(form.data))
+        if (form.photo instanceof File) photo = form.photo
+      } else body = await c.req.json()
+    } catch {
+      return c.json({ error: 'Invalid asset details.' }, 400)
+    }
+    const input = createAssetSchema.safeParse(body)
+    if (!input.success)
+      return c.json(
+        { error: input.error.issues[0]?.message ?? 'Invalid asset details.' },
+        400,
+      )
+    let assetId: string
+    try {
+      assetId = await createAssetWithAttachments(
+        boatId,
+        userId,
+        input.data,
+        photo,
+      )
+    } catch (error) {
+      console.error('[assets] create failed', error)
+      return c.json(
+        {
+          error:
+            'Could not save the asset and attachments. Check the photo and connections, then retry.',
+        },
+        400,
+      )
+    }
+    const asset = await db.boatAsset.findUnique({
+      where: { id: assetId },
+      include: assetInclude,
+    })
 
-  const name = body.name?.trim()
-  if (!name) return c.json({ error: 'Name is required' }, 400)
-  if (!body.ownership || !isAssetOwnership(body.ownership)) {
-    return c.json({ error: 'Valid ownership is required' }, 400)
-  }
+    fireBoatAssetsNotification(
+      userId,
+      boat,
+      `added asset “${input.data.name}”.`,
+    )
 
-  const maxSort =
-    (
-      await db.boatAsset.aggregate({
-        where: { boatId },
-        _max: { sortOrder: true },
-      })
-    )._max.sortOrder ?? -1
-
-  const ownership = body.ownership
-  const userFields = userOwnershipFields(ownership, body.ownedByUserId)
-
-  const asset = await db.boatAsset.create({
-    data: {
-      boatId,
-      name,
-      description: body.description?.trim() || null,
-      ownership,
-      ...userFields,
-      installedAt: body.installedAt ? new Date(body.installedAt) : null,
-      sortOrder: maxSort + 1,
-    },
-    include: assetInclude,
-  })
-
-  fireBoatAssetsNotification(userId, boat, `added asset “${name}”.`)
-
-  return c.json({ asset: serializeAsset(asset) }, 201)
-})
+    return c.json({ asset: serializeAsset(asset) }, 201)
+  },
+)
 
 boatAssetsRoutes.patch('/:boatId/assets/:assetId', async (c) => {
   const userId = await requireUserId(c)
@@ -495,6 +548,8 @@ boatAssetsRoutes.patch('/:boatId/assets/:assetId', async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as {
     name?: string
     description?: string | null
+    modelNumber?: string | null
+    category?: string | null
     ownership?: string
     ownedByUserId?: string | null
     onLoanFromUserId?: string | null
@@ -502,6 +557,20 @@ boatAssetsRoutes.patch('/:boatId/assets/:assetId', async (c) => {
   }
 
   const data: Record<string, unknown> = {}
+  if (body.category !== undefined) {
+    const category = categorySchema.safeParse(body.category)
+    if (!category.success)
+      return c.json({ error: 'Invalid asset category' }, 400)
+    data.category = category.data
+  }
+  if (body.modelNumber !== undefined) {
+    if (
+      body.modelNumber !== null &&
+      (typeof body.modelNumber !== 'string' || body.modelNumber.length > 200)
+    )
+      return c.json({ error: 'Invalid model number' }, 400)
+    data.modelNumber = body.modelNumber?.trim() || null
+  }
   if (body.name !== undefined) {
     const name = body.name.trim()
     if (!name) return c.json({ error: 'Name cannot be empty' }, 400)
