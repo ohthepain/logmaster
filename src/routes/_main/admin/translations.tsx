@@ -103,9 +103,13 @@ function TranslationAdminPage() {
               onChange={(event) => setLanguage(event.target.value as Language)}
               className="rounded-lg border border-[var(--chip-line)] bg-[var(--surface-strong)] px-3 py-2 font-normal"
             >
-              {languages.map(({ code, nameKey }) => (
+              {[...languages]
+                .sort((left, right) =>
+                  left.nativeName.localeCompare(right.nativeName, 'en'),
+                )
+                .map(({ code, flag, nativeName }) => (
                 <option key={code} value={code}>
-                  {englishCatalog[nameKey]}
+                  {flag} {nativeName}
                 </option>
               ))}
             </select>

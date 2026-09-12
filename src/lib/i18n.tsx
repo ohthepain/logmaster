@@ -8,6 +8,20 @@ export type TranslationKey =
   | 'english'
   | 'swedish'
   | 'vietnamese'
+  | 'spanish'
+  | 'french'
+  | 'dutch'
+  | 'german'
+  | 'portuguese'
+  | 'greek'
+  | 'turkish'
+  | 'cantonese'
+  | 'mandarin'
+  | 'japanese'
+  | 'korean'
+  | 'finnish'
+  | 'danish'
+  | 'arabic'
   | 'home'
   | 'profile'
   | 'profileMenu'
@@ -260,21 +274,152 @@ export function interpolateTranslation(
 
 /** Register a locale here after adding its lazy-loaded catalog module. */
 export const languages = [
-  { code: 'en', nameKey: 'english', load: () => import('./locales/en') },
-  { code: 'sv', nameKey: 'swedish', load: () => import('./locales/sv') },
-  { code: 'vi', nameKey: 'vietnamese', load: () => import('./locales/vi') },
+  {
+    code: 'ar',
+    nameKey: 'arabic',
+    nativeName: 'العربية',
+    flag: '🇸🇦',
+    load: () => import('./locales/ar'),
+  },
+  {
+    code: 'da',
+    nameKey: 'danish',
+    nativeName: 'Dansk',
+    flag: '🇩🇰',
+    load: () => import('./locales/da'),
+  },
+  {
+    code: 'de',
+    nameKey: 'german',
+    nativeName: 'Deutsch',
+    flag: '🇩🇪',
+    load: () => import('./locales/de'),
+  },
+  {
+    code: 'el',
+    nameKey: 'greek',
+    nativeName: 'Ελληνικά',
+    flag: '🇬🇷',
+    load: () => import('./locales/el'),
+  },
+  {
+    code: 'en',
+    nameKey: 'english',
+    nativeName: 'English',
+    flag: '🇬🇧',
+    load: () => import('./locales/en'),
+  },
+  {
+    code: 'es',
+    nameKey: 'spanish',
+    nativeName: 'Español',
+    flag: '🇪🇸',
+    load: () => import('./locales/es'),
+  },
+  {
+    code: 'fi',
+    nameKey: 'finnish',
+    nativeName: 'Suomi',
+    flag: '🇫🇮',
+    load: () => import('./locales/fi'),
+  },
+  {
+    code: 'fr',
+    nameKey: 'french',
+    nativeName: 'Français',
+    flag: '🇫🇷',
+    load: () => import('./locales/fr'),
+  },
+  {
+    code: 'ja',
+    nameKey: 'japanese',
+    nativeName: '日本語',
+    flag: '🇯🇵',
+    load: () => import('./locales/ja'),
+  },
+  {
+    code: 'ko',
+    nameKey: 'korean',
+    nativeName: '한국어',
+    flag: '🇰🇷',
+    load: () => import('./locales/ko'),
+  },
+  {
+    code: 'nl',
+    nameKey: 'dutch',
+    nativeName: 'Nederlands',
+    flag: '🇳🇱',
+    load: () => import('./locales/nl'),
+  },
+  {
+    code: 'pt',
+    nameKey: 'portuguese',
+    nativeName: 'Português',
+    flag: '🇵🇹',
+    load: () => import('./locales/pt'),
+  },
+  {
+    code: 'sv',
+    nameKey: 'swedish',
+    nativeName: 'Svenska',
+    flag: '🇸🇪',
+    load: () => import('./locales/sv'),
+  },
+  {
+    code: 'tr',
+    nameKey: 'turkish',
+    nativeName: 'Türkçe',
+    flag: '🇹🇷',
+    load: () => import('./locales/tr'),
+  },
+  {
+    code: 'vi',
+    nameKey: 'vietnamese',
+    nativeName: 'Tiếng Việt',
+    flag: '🇻🇳',
+    load: () => import('./locales/vi'),
+  },
+  {
+    code: 'yue',
+    nameKey: 'cantonese',
+    nativeName: '廣東話',
+    flag: '🇭🇰',
+    load: () => import('./locales/yue'),
+  },
+  {
+    code: 'zh',
+    nameKey: 'mandarin',
+    nativeName: '普通话',
+    flag: '🇨🇳',
+    load: () => import('./locales/zh'),
+  },
 ] as const
 export type Language = (typeof languages)[number]['code']
 
 export const LANGUAGE_STORAGE_KEY = 'language'
+
+function matchBrowserLanguage(tag: string): Language | undefined {
+  const normalized = tag.toLowerCase().replaceAll('_', '-')
+  const exact = languages.find((item) => item.code === normalized)?.code
+  if (exact) return exact
+  if (
+    normalized.startsWith('zh-hk') ||
+    normalized.startsWith('zh-mo') ||
+    normalized.startsWith('yue')
+  ) {
+    return 'yue'
+  }
+  if (normalized.startsWith('zh')) return 'zh'
+  const prefix = normalized.split('-')[0]
+  return languages.find((item) => item.code === prefix)?.code
+}
 
 function preferredLanguage(): Language {
   if (typeof window === 'undefined') return 'en'
   const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
   const storedLanguage = languages.find((item) => item.code === stored)?.code
   if (storedLanguage) return storedLanguage
-  const browserLanguage = navigator.language.toLowerCase().split('-')[0]
-  return languages.find((item) => item.code === browserLanguage)?.code ?? 'en'
+  return matchBrowserLanguage(navigator.language) ?? 'en'
 }
 
 async function loadCatalog(language: Language): Promise<TranslationCatalog> {
@@ -336,6 +481,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hydrated) return
     document.documentElement.lang = language
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr'
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
   }, [hydrated, language])
 
