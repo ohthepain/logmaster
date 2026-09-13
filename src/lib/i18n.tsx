@@ -1,9 +1,11 @@
+import type { productUiCopy } from './product-ui-copy'
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import englishCatalog from './locales/en'
 import { apiUrl } from './app-origin'
 
 export type TranslationKey =
+  | keyof typeof productUiCopy
   | 'language'
   | 'english'
   | 'swedish'

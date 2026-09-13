@@ -1,3 +1,4 @@
+import { deleteAssetDocumentObjects } from '../asset-photo-deletion'
 import { Hono } from 'hono'
 import { defaultBoatPhoto } from '../../domain/boat'
 import { DEFAULT_BOAT_ICON_ID, isBoatIconId } from '../../lib/boat-icons'
@@ -505,9 +506,11 @@ boatsRoutes.delete('/:boatId', async (c) => {
 
   const documentVersions = await db.boatDocumentVersion.findMany({
     where: { document: { boatId: boat.id } },
-    select: { s3Key: true },
+    select: { s3Key: true, previewS3Key: true },
   })
   for (const version of documentVersions) {
+    if (version.previewS3Key)
+      await deletePhotoObject(version.previewS3Key).catch(() => {})
     if (!version.s3Key) continue
     try {
       await deletePhotoObject(version.s3Key)
@@ -1056,14 +1059,13 @@ boatsRoutes.delete('/documents/:documentId', async (c) => {
     where: { documentId: existing.id },
   })
 
-  for (const version of versions) {
-    if (version.s3Key) {
-      try {
-        await deletePhotoObject(version.s3Key)
-      } catch (error) {
-        console.warn('[boats] failed to delete S3 object', version.s3Key, error)
-      }
-    }
+  try {
+    await deleteAssetDocumentObjects(versions)
+  } catch {
+    return c.json(
+      { error: 'Could not delete all document files. Please retry.' },
+      503,
+    )
   }
 
   await db.boatDocument.delete({ where: { id: existing.id } })
@@ -1092,18 +1094,21 @@ boatsRoutes.get('/documents/versions/:versionId/content', async (c) => {
   }
 
   try {
-    const object = await getPhotoObject(existing.s3Key)
+    const preview = c.req.query('preview') === '1' && existing.previewS3Key
+    const object = await getPhotoObject(preview || existing.s3Key)
     if (!object.Body) return c.json({ error: 'Document unavailable' }, 404)
 
     const bytes = await object.Body.transformToByteArray()
     const fileName = existing.fileName ?? 'document'
     return new Response(Buffer.from(bytes), {
       headers: {
-        'Content-Type': contentTypeForStoredDocument(
-          existing.mimeType,
-          existing.fileName,
-          object.ContentType,
-        ),
+        'Content-Type': preview
+          ? 'image/jpeg'
+          : contentTypeForStoredDocument(
+              existing.mimeType,
+              existing.fileName,
+              object.ContentType,
+            ),
         'Content-Disposition': inlineContentDisposition(fileName),
         'Cache-Control': 'private, max-age=3600',
       },

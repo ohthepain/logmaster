@@ -1,3 +1,4 @@
+import { findProduct } from '../product-catalog'
 import { getAssetIdentity } from '../../domain/asset-brands'
 import {
   brandSchema,
@@ -8,6 +9,7 @@ import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { pickAssetCoverPhoto } from '../asset-cover-photo'
 import {
+  createAndEnqueueAssetResearchJob,
   ensureResearchAppliedToAsset,
   findLatestResearchJobForAsset,
   linkAssetResearchJobToAsset,
@@ -143,6 +145,16 @@ function serializeLinkedDocumentDetail(document: {
 }
 
 function serializeAsset(asset: {
+  productId?: string | null
+  product?: {
+    reviewStatus: string
+    canonicalImageId: string | null
+    resources: Array<{
+      id: string
+      displayS3Key: string | null
+      reviewStatus: string
+    }>
+  } | null
   id: string
   boatId: string
   name: string
@@ -183,6 +195,17 @@ function serializeAsset(asset: {
   const ownerLabel = assetOwnerLabel(asset)
   return {
     id: asset.id,
+    productId: asset.productId ?? null,
+    productImageUrl:
+      asset.product?.reviewStatus !== 'rejected' &&
+      asset.product?.resources.some(
+        (r) =>
+          r.id === asset.product?.canonicalImageId &&
+          r.displayS3Key &&
+          r.reviewStatus === 'verified',
+      )
+        ? `/api/products/${asset.productId}/resources/${asset.product.canonicalImageId}/content?display=1`
+        : null,
     boatId: asset.boatId,
     name: asset.name,
     description: asset.description,
@@ -373,6 +396,14 @@ function userOwnershipFields(
 }
 
 const assetInclude = {
+  product: {
+    include: {
+      resources: {
+        where: { reviewStatus: 'verified', purpose: 'photo' },
+        select: { id: true, displayS3Key: true, reviewStatus: true },
+      },
+    },
+  },
   suggestedDownloads: { orderBy: { createdAt: 'asc' } },
   connectionsFrom: {
     include: { toAsset: { select: { id: true, name: true } } },
@@ -405,6 +436,7 @@ const assetInclude = {
 }
 
 const assetDetailInclude = {
+  product: assetInclude.product,
   suggestedDownloads: assetInclude.suggestedDownloads,
   connectionsFrom: assetInclude.connectionsFrom,
   connectionsTo: assetInclude.connectionsTo,
@@ -547,6 +579,22 @@ boatAssetsRoutes.post(
       )
     let assetId: string
     const { researchJobId, ...createInput } = input.data
+    if (
+      researchJobId &&
+      !(await prisma.assetResearchJob.findFirst({
+        where: {
+          id: researchJobId,
+          boatId,
+          requestedByUserId: userId,
+          assetId: null,
+        },
+      }))
+    ) {
+      return c.json(
+        { error: 'This research job cannot be attached to the asset.' },
+        400,
+      )
+    }
     try {
       assetId = await createAssetWithAttachments(
         boatId,
@@ -554,15 +602,6 @@ boatAssetsRoutes.post(
         createInput,
         photo,
       )
-      if (researchJobId) {
-        await linkAssetResearchJobToAsset(
-          researchJobId,
-          boatId,
-          assetId,
-          userId,
-        )
-        await ensureResearchAppliedToAsset(researchJobId)
-      }
     } catch (error) {
       console.error('[assets] create failed', error)
       return c.json(
@@ -573,11 +612,39 @@ boatAssetsRoutes.post(
         400,
       )
     }
+    try {
+      if (researchJobId) {
+        await linkAssetResearchJobToAsset(
+          researchJobId,
+          boatId,
+          assetId,
+          userId,
+        )
+        await ensureResearchAppliedToAsset(researchJobId)
+      }
+    } catch (error) {
+      console.warn('[assets] saved asset enrichment could not be linked', error)
+    }
     const asset = await db.boatAsset.findUnique({
       where: { id: assetId },
       include: assetInclude,
     })
 
+    if (!researchJobId && asset?.productId) {
+      try {
+        const job = await createAndEnqueueAssetResearchJob(boatId, userId, {
+          brand: asset.brand,
+          modelNumber: asset.modelNumber,
+          name: asset.modelNumber,
+          description: '',
+          productId: asset.productId,
+          language: input.data.language ?? 'en',
+        })
+        await linkAssetResearchJobToAsset(job.id, boatId, assetId, userId)
+      } catch (error) {
+        console.warn('[assets] product enrichment could not start', error)
+      }
+    }
     fireBoatAssetsNotification(
       userId,
       boat,
@@ -612,6 +679,7 @@ boatAssetsRoutes.patch('/:boatId/assets/:assetId', async (c) => {
     ownedByUserId?: string | null
     onLoanFromUserId?: string | null
     installedAt?: string | null
+    productId?: string | null
   }
 
   const data: Record<string, unknown> = {}
@@ -658,6 +726,31 @@ boatAssetsRoutes.patch('/:boatId/assets/:assetId', async (c) => {
     data.name = identity.productName || identity.modelNumber || existing.name
     data.brand = identity.brand
     data.modelNumber = identity.modelNumber
+  }
+  if (
+    data.brand !== undefined ||
+    data.modelNumber !== undefined ||
+    body.productId !== undefined
+  ) {
+    const nextBrand = (
+      data.brand !== undefined ? data.brand : existing.brand
+    ) as string | null
+    const nextModel = (
+      data.modelNumber !== undefined ? data.modelNumber : existing.modelNumber
+    ) as string | null
+    const match =
+      nextBrand && nextModel ? await findProduct(nextBrand, nextModel) : null
+    if (body.productId && match?.id !== body.productId)
+      return c.json(
+        { error: 'The selected product does not match this model.' },
+        400,
+      )
+    data.productId =
+      body.productId !== undefined
+        ? body.productId
+        : match?.id === existing.productId
+          ? existing.productId
+          : null
   }
   if (body.ownership !== undefined) {
     if (!isAssetOwnership(body.ownership)) {

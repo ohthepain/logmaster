@@ -689,6 +689,7 @@ model BoatDocument {
 }
 
 model BoatDocumentVersion {
+  previewS3Key  String?
   id            String           @id @default(cuid())
   documentId    String
   document      BoatDocument     @relation(fields: [documentId], references: [id], onDelete: Cascade)
@@ -954,6 +955,8 @@ model DeletedRoute {
 }
 
 model BoatAsset {
+  productId        String?
+  product          CatalogProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
   id               String         @id @default(cuid())
   boatId           String
   name             String
@@ -981,6 +984,7 @@ model BoatAsset {
   researchJobs AssetResearchJob[]
 
   @@index([boatId, sortOrder])
+  @@index([productId])
   @@map("boat_asset")
 }
 
@@ -1243,4 +1247,80 @@ model TranslationOverride {
   @@unique([language, key])
   @@index([language])
   @@map("translation_override")
+}
+
+// Only public manufacturer/model research belongs here. Never copy boat context
+// or private photos/documents into the shared catalog.
+model CatalogProduct {
+  id               String            @id @default(cuid())
+  brandKey         String
+  modelKey         String
+  brand            String
+  modelNumber      String
+  reviewStatus     String            @default("candidate")
+  reviewedAt       DateTime?
+  reviewedBy       String?
+  canonicalImageId String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  assets           BoatAsset[]
+  locales          ProductLocale[]
+  resources        ProductResource[]
+  aliases          ProductAlias[]
+
+  @@unique([brandKey, modelKey])
+  @@map("catalog_product")
+}
+
+model ProductAlias {
+  id        String         @id @default(cuid())
+  productId String
+  product   CatalogProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  brandKey  String
+  modelKey  String
+  label     String
+
+  @@unique([brandKey, modelKey])
+  @@map("product_alias")
+}
+
+model ProductLocale {
+  id           String         @id @default(cuid())
+  productId    String
+  product      CatalogProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  language     String
+  status       String         @default("pending")
+  result       Json?
+  leaseToken   String?
+  leaseUntil   DateTime?
+  error        String?
+  researchedAt DateTime?
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([productId, language])
+  @@map("product_locale")
+}
+
+model ProductResource {
+  id            String         @id @default(cuid())
+  productId     String
+  product       CatalogProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sourceUrl     String
+  title         String
+  purpose       String
+  languages     String[]
+  revision      String?
+  modelNumbers  String[]
+  reason        String
+  reviewStatus  String         @default("candidate")
+  originalS3Key String?
+  displayS3Key  String?
+  mimeType      String?
+  leaseToken    String?
+  leaseUntil    DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([productId, sourceUrl])
+  @@map("product_resource")
 }

@@ -13,6 +13,7 @@ type LinkedDocument = {
     mimeType: string | null
     fileName: string | null
     versionNumber: number
+    previewS3Key?: string | null
   }>
 }
 
@@ -60,6 +61,6 @@ export function pickAssetCoverPhoto(
 
   return {
     documentId: pick.document.id,
-    contentUrl: `/api/boats/documents/versions/${pick.version.id}/content`,
+    contentUrl: `/api/boats/documents/versions/${pick.version.id}/content${pick.version.previewS3Key ? '?preview=1' : ''}`,
   }
 }

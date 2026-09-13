@@ -8,7 +8,8 @@ import {
   uploadPhotoObject,
 } from './s3-photos'
 import type { createAssetSchema } from './asset-intelligence-schema'
-import { normalizeAssetPhoto } from './asset-intelligence'
+import { prepareOriginalAssetPhoto } from './asset-original-photo'
+import { resolveProduct } from './product-catalog'
 import { downloadAssetDocument } from './asset-download'
 
 export async function createAssetWithAttachments(
@@ -18,13 +19,33 @@ export async function createAssetWithAttachments(
   file?: File,
 ) {
   const identity = getAssetIdentity(input)
+  const product =
+    input.sharedProduct !== false && identity.brand && identity.modelNumber
+      ? await resolveProduct(
+          identity.brand,
+          identity.modelNumber,
+          input.productId,
+        )
+      : null
+  if (input.productId && !product)
+    throw new Error('Check the brand and model before selecting a product.')
   const id = randomUUID()
   const documentId = randomUUID()
   const versionId = randomUUID()
-  const key = boatDocumentS3Key(userId, boatId, documentId, versionId, 'jpg')
-  const photo = file ? await normalizeAssetPhoto(file) : null
-  if (photo) await uploadPhotoObject(key, photo, 'image/jpeg')
+  const photo = file ? await prepareOriginalAssetPhoto(file) : null
+  const key = boatDocumentS3Key(
+    userId,
+    boatId,
+    documentId,
+    versionId,
+    photo?.extension ?? 'jpg',
+  )
+  const previewKey = `${key}.preview.jpg`
   try {
+    if (photo) {
+      await uploadPhotoObject(key, photo.original, photo.mimeType)
+      await uploadPhotoObject(previewKey, photo.preview, 'image/jpeg')
+    }
     await prisma.$transaction(async (tx) => {
       const connections = [
         ...new Map(
@@ -46,6 +67,7 @@ export async function createAssetWithAttachments(
         data: {
           id,
           boatId,
+          productId: product?.id ?? null,
           name: identity.productName || identity.modelNumber || input.name,
           description: input.description || null,
           brand: identity.brand,
@@ -61,7 +83,10 @@ export async function createAssetWithAttachments(
           suggestedDownloads: {
             create: [
               ...new Map(
-                input.suggestedDownloads.map((item) => [item.url, item]),
+                (product ? [] : input.suggestedDownloads).map((item) => [
+                  item.url,
+                  item,
+                ]),
               ).values(),
             ],
           },
@@ -98,8 +123,9 @@ export async function createAssetWithAttachments(
                 versionNumber: 1,
                 kind: 'upload',
                 s3Key: key,
-                mimeType: 'image/jpeg',
-                fileName: 'asset-photo.jpg',
+                previewS3Key: previewKey,
+                mimeType: photo.mimeType,
+                fileName: file?.name || `asset-photo.${photo.extension}`,
               },
             },
           },
@@ -108,7 +134,12 @@ export async function createAssetWithAttachments(
     })
     return id
   } catch (error) {
-    if (photo) await deletePhotoObject(key).catch(() => {})
+    if (photo)
+      await Promise.all(
+        [key, previewKey].map((storedKey) =>
+          deletePhotoObject(storedKey).catch(() => {}),
+        ),
+      )
     throw error
   }
 }

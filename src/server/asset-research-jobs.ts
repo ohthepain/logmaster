@@ -1,3 +1,5 @@
+import { findProduct } from './product-catalog'
+import { productIdentity } from '../domain/product-catalog'
 import type { Prisma } from '../../generated/prisma/client'
 import type { AssetResearch } from '../domain/asset-intelligence'
 import { researchInputSchema } from './asset-intelligence-schema'
@@ -35,13 +37,32 @@ export async function applyResearchResultToAsset(
 ) {
   const asset = await prisma.boatAsset.findUnique({
     where: { id: assetId },
-    select: { id: true, category: true },
+    select: {
+      id: true,
+      category: true,
+      brand: true,
+      modelNumber: true,
+      productId: true,
+    },
   })
   if (!asset) return
+  if (research.productId) {
+    const match =
+      asset.brand && asset.modelNumber
+        ? await findProduct(asset.brand, asset.modelNumber)
+        : null
+    if (
+      match?.id !== research.productId ||
+      asset.productId !== research.productId
+    )
+      return
+  }
 
-  const downloads = [
-    ...new Map(research.downloads.map((item) => [item.url, item])).values(),
-  ]
+  // Shared sources are read live in ProductCatalogPanel so moderation applies
+  // to every asset, including ones linked before a source was rejected.
+  const downloads = research.productId
+    ? []
+    : [...new Map(research.downloads.map((item) => [item.url, item])).values()]
   if (downloads.length) {
     await prisma.assetSuggestedDownload.createMany({
       data: downloads.map((item) => ({
@@ -78,21 +99,71 @@ export async function createAndEnqueueAssetResearchJob(
     throw new Error('A model number is required for document search.')
   }
 
+  if (parsed.data.assetId) {
+    const target = await prisma.boatAsset.findFirst({
+      where: { id: parsed.data.assetId, boatId },
+    })
+    if (!target) throw new Error('Asset not found on this boat.')
+    if (parsed.data.productId && target.productId !== parsed.data.productId)
+      throw new Error('The product link has changed. Reload the asset.')
+    if (
+      parsed.data.brand &&
+      target.brand &&
+      parsed.data.modelNumber &&
+      target.modelNumber
+    ) {
+      const requested = productIdentity(
+        parsed.data.brand,
+        parsed.data.modelNumber,
+      )
+      const current = productIdentity(target.brand, target.modelNumber)
+      if (
+        requested.brandKey !== current.brandKey ||
+        requested.modelKey !== current.modelKey
+      ) {
+        const [requestedProduct, currentProduct] = parsed.data.productId
+          ? await Promise.all([
+              findProduct(parsed.data.brand, parsed.data.modelNumber),
+              findProduct(target.brand, target.modelNumber),
+            ])
+          : [null, null]
+        if (
+          !parsed.data.productId ||
+          requestedProduct?.id !== parsed.data.productId ||
+          currentProduct?.id !== parsed.data.productId
+        )
+          throw new Error('The asset model has changed. Reload the asset.')
+      }
+    }
+  }
   const job = await prisma.assetResearchJob.create({
     data: {
       boatId,
       requestedByUserId: userId,
       input: parsed.data,
       status: 'pending',
+      assetId: parsed.data.assetId,
     },
   })
 
-  const boss = await getBoss()
-  await boss.send(
-    ASSET_RESEARCH_QUEUE,
-    { researchJobId: job.id },
-    { retryLimit: 1 },
-  )
+  try {
+    const boss = await getBoss()
+    await boss.send(
+      ASSET_RESEARCH_QUEUE,
+      { researchJobId: job.id },
+      { retryLimit: 20, retryDelay: 10 },
+    )
+  } catch (error) {
+    await prisma.assetResearchJob.update({
+      where: { id: job.id },
+      data: {
+        status: 'failed',
+        error: 'Document search could not start. Please retry.',
+        completedAt: new Date(),
+      },
+    })
+    throw error
+  }
 
   return job
 }

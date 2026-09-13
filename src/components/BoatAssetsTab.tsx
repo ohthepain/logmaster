@@ -156,6 +156,7 @@ export function BoatAssetsTab({
                 >
                   <AssetCoverPhoto
                     cover={asset.coverPhoto}
+                    productImageUrl={asset.productImageUrl}
                     alt=""
                     variant="list"
                   />

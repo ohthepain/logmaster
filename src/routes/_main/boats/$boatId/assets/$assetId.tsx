@@ -1,3 +1,4 @@
+import { ProductCatalogPanel } from '../../../../../components/ProductCatalogPanel'
 import { AssetBrandLogo } from '../../../../../components/AssetBrandLogo'
 import { getAssetIdentity } from '../../../../../domain/asset-brands'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
@@ -310,6 +311,18 @@ function BoatAssetDetailPage() {
           </p>
         ) : null}
 
+        {asset.productId && (
+          <ProductCatalogPanel
+            productId={asset.productId}
+            boatId={boatId}
+            assetId={assetId}
+            onResearchStarted={() => void load({ background: true })}
+            researchActive={
+              asset.researchJob?.status === 'pending' ||
+              asset.researchJob?.status === 'active'
+            }
+          />
+        )}
         <section className="mb-8">
           {asset.researchJob?.connectionSuggestions?.length ? (
             <div className="mb-6">
@@ -328,8 +341,11 @@ function BoatAssetDetailPage() {
             onChange={() => load({ background: true })}
           />
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--sea-ink-soft)]">
-            Documents
+            {t('productPersonalDocuments')}
           </h2>
+          <p className="mb-3 text-sm text-[var(--sea-ink-soft)]">
+            {t('productPrivateHelp')}
+          </p>
           {asset.documents.length === 0 && !uploading ? (
             <p className="mb-3 text-sm text-[var(--sea-ink-soft)]">
               No documents yet. Upload a receipt or photo, add a file, or paste

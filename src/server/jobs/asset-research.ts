@@ -1,5 +1,6 @@
 import type { Job } from 'pg-boss'
-import { researchAsset } from '../asset-intelligence'
+import { researchCatalogAsset } from '../catalog-asset-research'
+import { ProductResearchBusy } from '../product-catalog'
 import { researchInputSchema } from '../asset-intelligence-schema'
 import { prisma } from '../db'
 import { logServerEvent } from '../lib/server-log'
@@ -53,7 +54,11 @@ export async function runAssetResearchJob(
 
   try {
     const { assets, connections } = await loadBoatResearchContext(row.boatId)
-    const research = await researchAsset(parsed.data, assets, connections)
+    const research = await researchCatalogAsset(
+      parsed.data,
+      assets,
+      connections,
+    )
     const completed = await prisma.assetResearchJob.update({
       where: { id: researchJobId },
       data: {
@@ -75,6 +80,16 @@ export async function runAssetResearchJob(
       outcome: 'success',
     })
   } catch (error) {
+    if (
+      error instanceof ProductResearchBusy &&
+      Date.now() - row.createdAt.getTime() < 180_000
+    ) {
+      await prisma.assetResearchJob.update({
+        where: { id: researchJobId },
+        data: { status: 'pending' },
+      })
+      throw error
+    }
     const message =
       error instanceof Error && !error.message.includes('prisma')
         ? error.message

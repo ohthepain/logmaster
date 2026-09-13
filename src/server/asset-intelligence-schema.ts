@@ -35,12 +35,28 @@ export const researchSchema = z.object({
 })
 export const brandSchema = z.string().trim().max(100).nullable()
 export const researchInputSchema = z.object({
+  assetId: z.string().min(1).max(200).optional(),
+  productId: z.string().min(1).max(200).optional(),
+  sharedProduct: z.boolean().optional(),
+  includeConnections: z.boolean().optional(),
+  language: z
+    .string()
+    .regex(/^[a-z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)
+    .max(35)
+    .optional(),
   brand: brandSchema.optional(),
   name: z.string().trim().min(1).max(200),
   description: z.string().max(2000).default(''),
   modelNumber: z.string().trim().min(1).max(200).nullable(),
 })
 export const createAssetSchema = z.object({
+  productId: z.string().min(1).max(200).nullable().optional(),
+  sharedProduct: z.boolean().optional(),
+  language: z
+    .string()
+    .regex(/^[a-z]{2,3}(?:-[a-zA-Z0-9]{2,8})*$/)
+    .max(35)
+    .optional(),
   brand: brandSchema.optional(),
   name: z.string().trim().min(1).max(200),
   description: z.string().trim().max(2000).nullable().optional(),

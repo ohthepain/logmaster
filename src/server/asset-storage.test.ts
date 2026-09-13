@@ -35,8 +35,11 @@ vi.mock('./s3-photos', () => ({
   uploadPhotoObject: mocks.upload,
   deletePhotoObject: mocks.remove,
 }))
-vi.mock('./asset-intelligence', () => ({
-  normalizeAssetPhoto: mocks.normalize,
+vi.mock('./asset-original-photo', () => ({
+  prepareOriginalAssetPhoto: mocks.normalize,
+}))
+vi.mock('./product-catalog', () => ({
+  resolveProduct: vi.fn(async () => ({ id: 'shared-product' })),
 }))
 vi.mock('./asset-download', () => ({ downloadAssetDocument: mocks.download }))
 
@@ -46,7 +49,12 @@ beforeEach(() => {
   mocks.tx.boatAsset.count.mockResolvedValue(0)
   mocks.tx.boatAsset.aggregate.mockResolvedValue({ _max: { sortOrder: null } })
   mocks.tx.boatDocumentCategory.upsert.mockResolvedValue({ id: 'photos' })
-  mocks.normalize.mockResolvedValue(Buffer.from('photo'))
+  mocks.normalize.mockResolvedValue({
+    original: Buffer.from('original-photo'),
+    preview: Buffer.from('preview-photo'),
+    mimeType: 'image/jpeg',
+    extension: 'jpg',
+  })
   mocks.remove.mockResolvedValue(undefined)
 })
 

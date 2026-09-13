@@ -45,6 +45,7 @@ export type AssetConnection = {
 }
 
 export type AssetResearch = {
+  productId?: string
   category: AssetCategory | null
   downloads: Omit<AssetDownloadSuggestion, 'id' | 'documentId'>[]
   connections: AssetConnectionSuggestion[]

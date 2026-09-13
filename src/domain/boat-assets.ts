@@ -63,6 +63,8 @@ export type BoatAssetDetail = Omit<
 }
 
 export type BoatAsset = {
+  productId?: string | null
+  productImageUrl?: string | null
   id: string
   boatId: string
   name: string

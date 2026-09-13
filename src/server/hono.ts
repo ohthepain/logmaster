@@ -1,3 +1,4 @@
+import { productsRoutes } from './routes/products'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { ServerEnv } from './lib/hono-env'
@@ -106,5 +107,6 @@ app.route('/orgs', orgAccountingRoutes)
 app.route('/member-invites', memberInvitesRoutes)
 app.route('/notifications', notificationsRoutes)
 app.route('/translations', translationsRoutes)
+app.route('/products', productsRoutes)
 app.route('/places', placesRoutes)
 app.route('/ais', aisRoutes)

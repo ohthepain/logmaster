@@ -1,3 +1,5 @@
+import { ProductCatalogMatch } from './ProductCatalogMatch'
+import { fetchCatalogProduct } from '../lib/product-catalog-api'
 import { AssetBrandField } from './AssetBrandField'
 import { getAssetIdentity } from '../domain/asset-brands'
 import { Capacitor } from '@capacitor/core'
@@ -107,7 +109,10 @@ export function AddAssetModal({
   onUpdated: (asset: BoatAsset) => void
   onOpenExisting: (asset: ListedBoatAsset) => void
 }) {
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
+  const [productId, setProductId] = useState<string | null>(null)
+  const [sharedProduct, setSharedProduct] = useState(true)
+  const [includeConnections, setIncludeConnections] = useState(false)
   const [name, setName] = useState('')
   const [brand, setBrand] = useState('')
   const [description, setDescription] = useState('')
@@ -178,6 +183,23 @@ export function AddAssetModal({
         if (controller.signal.aborted || cancelled) return
         if (job.status === 'completed' && job.result) {
           setResearch(job.result)
+          if (job.result.productId) {
+            setProductId(job.result.productId)
+            void fetchCatalogProduct(
+              job.result.productId,
+              language,
+              controller.signal,
+            )
+              .then((product) => {
+                if (controller.signal.aborted || cancelled || !product.info)
+                  return
+                setName((current) => current || product.info!.name)
+                setDescription(
+                  (current) => current || product.info!.description,
+                )
+              })
+              .catch(() => {})
+          }
           if (job.result.category) setCategory(job.result.category)
           setResearchJobActive(false)
           if (!job.result.downloads.length && !job.result.connections.length) {
@@ -207,7 +229,7 @@ export function AddAssetModal({
       controller.abort()
       window.clearInterval(interval)
     }
-  }, [boatId, researchJobId, t])
+  }, [boatId, researchJobId, t, language])
   useEffect(() => {
     if (!photo) {
       setPreview('')
@@ -256,6 +278,7 @@ export function AddAssetModal({
       const result = await identifyAssetPhoto(boatId, photo, controller.signal)
       if (controller.signal.aborted) return
       const identity = getAssetIdentity(result)
+      setProductId(null)
       setBrand(identity.brand ?? '')
       setName(identity.productName)
       setDescription(result.description)
@@ -295,9 +318,7 @@ export function AddAssetModal({
       const result = await Camera.getPhoto({
         source: CameraSource.Camera,
         resultType: CameraResultType.Uri,
-        quality: 90,
-        width: 2400,
-        height: 2400,
+        quality: 100,
         correctOrientation: true,
         saveToGallery: false,
       })
@@ -334,6 +355,10 @@ export function AddAssetModal({
         brand,
         description,
         modelNumber: identity.modelNumber,
+        productId: productId ?? undefined,
+        sharedProduct,
+        includeConnections,
+        language,
       })
       setResearchJobId(jobId)
       setResearchJobActive(true)
@@ -448,6 +473,9 @@ export function AddAssetModal({
                   confirmed.includes(item.assetId),
                 ) ?? [],
               researchJobId: researchJobId ?? undefined,
+              productId,
+              sharedProduct,
+              language,
             },
             photo,
           )
@@ -552,6 +580,9 @@ export function AddAssetModal({
                 if (file) attachPhoto(file)
               }}
             />
+            <p className="mt-2 text-xs text-[var(--sea-ink-soft)]">
+              {t('productOriginalPhotoHelp')}
+            </p>
             {preview && (
               <div className="mt-3 space-y-2">
                 <img
@@ -586,6 +617,7 @@ export function AddAssetModal({
           <AssetBrandField
             value={brand}
             onChange={(value) => {
+              setProductId(null)
               setBrand(value)
               invalidateResearch()
               syncExistingMatch({ brand: value })
@@ -600,12 +632,53 @@ export function AddAssetModal({
               maxLength={200}
               onChange={(e) => {
                 const next = e.target.value
+                setProductId(null)
                 setModelNumber(next)
                 invalidateResearch()
                 syncExistingMatch({ modelNumber: next.trim() || null })
               }}
             />
           </label>
+          {brand.trim() && modelNumber.trim() && (
+            <div className="space-y-2">
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={sharedProduct}
+                  onChange={(event) => {
+                    setSharedProduct(event.target.checked)
+                    setProductId(null)
+                    invalidateResearch()
+                  }}
+                />
+                <span>{t('productSharedConsent')}</span>
+              </label>
+              {sharedProduct && (
+                <ProductCatalogMatch
+                  brand={brand}
+                  model={modelNumber}
+                  language={language}
+                  selectedId={productId}
+                  onSelect={(product) => {
+                    invalidateResearch()
+                    setProductId(product.id)
+                    setBrand(product.brand)
+                    setModelNumber(product.modelNumber)
+                    syncExistingMatch({
+                      brand: product.brand,
+                      modelNumber: product.modelNumber,
+                      name: product.info?.name ?? name,
+                    })
+                    if (product.info) {
+                      setName(product.info.name)
+                      setDescription(product.info.description)
+                      setCategory(product.info.category ?? '')
+                    }
+                  }}
+                />
+              )}
+            </div>
+          )}
           <label className="flex flex-col gap-1 text-sm">
             <span className="sr-only">{t('labelName')}</span>
             <input
@@ -651,6 +724,18 @@ export function AddAssetModal({
               ))}
             </select>
           </label>
+          {modelNumber.trim() && !existingMatch && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={includeConnections}
+                onChange={(event) =>
+                  setIncludeConnections(event.target.checked)
+                }
+              />
+              {t('productSuggestConnections')}
+            </label>
+          )}
           {modelNumber.trim() && !existingMatch ? (
             <button
               type="button"
@@ -690,6 +775,7 @@ export function AddAssetModal({
                         <button
                           type="button"
                           className="shrink-0 rounded-full border border-[var(--chip-line)] p-2"
+                          hidden={!!research.productId}
                           aria-label={t('dismissSuggestion', {
                             title: item.title,
                           })}

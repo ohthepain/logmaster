@@ -1,6 +1,8 @@
+import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
 
 const catalog: TranslationCatalog = {
+  ...productUiCopy,
   language: 'Idioma',
   english: 'English',
   swedish: 'Svenska',

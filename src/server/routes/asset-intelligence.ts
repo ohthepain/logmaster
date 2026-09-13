@@ -1,13 +1,10 @@
+import { researchCatalogAsset } from '../catalog-asset-research'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { prisma } from '../db'
 import { getSessionUserId } from '../session'
 import { canAccessBoatResource } from '../contact-utils'
-import {
-  identifyAsset,
-  normalizeAssetPhoto,
-  researchAsset,
-} from '../asset-intelligence'
+import { identifyAsset, normalizeAssetPhoto } from '../asset-intelligence'
 import {
   connectionSchema,
   researchInputSchema,
@@ -84,7 +81,7 @@ assetIntelligenceRoutes.post('/:boatId/assets/research', async (c) => {
   const { assets, connections } = await loadBoatResearchContext(boatId)
   try {
     return c.json({
-      research: await researchAsset(input.data, assets, connections),
+      research: await researchCatalogAsset(input.data, assets, connections),
     })
   } catch {
     return c.json(

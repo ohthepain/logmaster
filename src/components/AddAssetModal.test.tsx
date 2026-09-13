@@ -154,7 +154,9 @@ describe('photo asset review', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
     await waitFor(() => expect(mocks.startResearchJob).toHaveBeenCalled())
     await screen.findByText('Water tank')
-    const checkbox = screen.getByRole<HTMLInputElement>('checkbox')
+    const checkbox = screen.getByRole<HTMLInputElement>('checkbox', {
+      name: /Water tank/,
+    })
     expect(checkbox.checked).toBe(false)
     fireEvent.click(checkbox)
     fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
@@ -218,7 +220,7 @@ describe('photo asset review', () => {
     await selectPhoto()
     fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
     await screen.findByText('Water tank')
-    fireEvent.click(screen.getByRole('checkbox'))
+    fireEvent.click(screen.getByRole('checkbox', { name: /Water tank/ }))
     fireEvent.change(screen.getByLabelText('Description'), {
       target: { value: 'Actually a bilge pump' },
     })

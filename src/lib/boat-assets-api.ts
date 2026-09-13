@@ -79,6 +79,9 @@ export async function createBoatAsset(
     onLoanFromUserId?: string | null
     installedAt?: string | null
     researchJobId?: string
+    productId?: string | null
+    sharedProduct?: boolean
+    language?: string
   },
   photo?: File,
 ): Promise<BoatAsset> {
@@ -144,6 +147,11 @@ export async function researchNewAsset(
     brand?: string | null
     description: string
     modelNumber: string | null
+    language?: string
+    assetId?: string
+    productId?: string
+    sharedProduct?: boolean
+    includeConnections?: boolean
   },
   signal?: AbortSignal,
 ): Promise<AssetResearch> {
@@ -169,6 +177,11 @@ export async function startAssetResearchJob(
     brand?: string | null
     description: string
     modelNumber: string | null
+    language?: string
+    assetId?: string
+    productId?: string
+    sharedProduct?: boolean
+    includeConnections?: boolean
   },
 ): Promise<{ jobId: string }> {
   const data = await api<{ jobId: string }>(

@@ -57,7 +57,7 @@ describe('asset research jobs', () => {
     expect(boss.send).toHaveBeenCalledWith(
       'asset_research',
       { researchJobId: 'job-1' },
-      { retryLimit: 1 },
+      { retryLimit: 20, retryDelay: 10 },
     )
   })
 
