@@ -21,6 +21,8 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
+    "admin:platform": "node --import tsx scripts/platform-admin.ts",
+    "admin:platform:ecs": "bash scripts/platform-admin-via-ecs.sh",
     "db:push": "prisma db push",
     "db:up": "docker compose up -d",
     "geo:features": "node --import tsx ./src/server/geo-features/build.ts",

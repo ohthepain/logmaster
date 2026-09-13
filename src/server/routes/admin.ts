@@ -3,8 +3,8 @@ import { prisma } from '../db'
 import {
   forbidden,
   getSessionUser,
-  isAdminEmail,
   isAdminRequest,
+  isPlatformAdmin,
   unauthorized,
 } from '../admin-auth'
 import { getBoss } from '../jobs/boss'
@@ -49,7 +49,8 @@ adminRoutes.get('/status', async (c) => {
 adminRoutes.use('*', async (c, next) => {
   const user = await getSessionUser(c.req.raw.headers)
   if (!user) return unauthorized()
-  if (!isAdminEmail(user.email)) return forbidden()
+  if (!(await isPlatformAdmin({ id: user.id, email: user.email })))
+    return forbidden()
   await next()
 })
 

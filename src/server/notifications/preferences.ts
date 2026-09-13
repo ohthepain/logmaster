@@ -10,7 +10,7 @@ import type {
   NotificationPreferenceNode,
   NotificationPreferenceTreeResources,
 } from '../../domain/notification-preferences'
-import { isAdminEmail } from '../admin-auth'
+import { isPlatformAdmin } from '../admin-auth'
 import { boatAccessFilter, canAccess } from '../permissions/access'
 import { getUserConsortiumIds } from '../permissions/consortium'
 import { prisma } from '../db'
@@ -52,9 +52,9 @@ export async function assertPreferencePathAccess(
   if (path === 'job') {
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { email: true },
+      select: { id: true, email: true },
     })
-    if (!user?.email || !isAdminEmail(user.email)) {
+    if (!user?.email || !(await isPlatformAdmin(user))) {
       throw new Error('Forbidden')
     }
     return
@@ -134,9 +134,9 @@ export async function listNotificationPreferenceTree(
 ): Promise<NotificationPreferenceTreeResult> {
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { email: true },
+    select: { id: true, email: true },
   })
-  const isAdmin = Boolean(user?.email && isAdminEmail(user.email))
+  const isAdmin = Boolean(user?.email && (await isPlatformAdmin(user)))
 
   const [boats, orgIds, accessibleTripIds] = await Promise.all([
     db.boat.findMany({
@@ -213,9 +213,9 @@ export async function listNotificationPreferenceNodes(
 
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { email: true },
+    select: { id: true, email: true },
   })
-  const isAdmin = Boolean(user?.email && isAdminEmail(user.email))
+  const isAdmin = Boolean(user?.email && (await isPlatformAdmin(user)))
 
   const paths = listPathsForPreferencesQuery({
     ...args,

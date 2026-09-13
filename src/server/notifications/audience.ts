@@ -46,18 +46,30 @@ export async function listUsersWithOrgAccess(orgId: string): Promise<string[]> {
 }
 
 export async function listAdminUserIds(): Promise<string[]> {
-  const raw = process.env.ADMIN_EMAILS ?? ''
-  const emails = raw
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean)
-  if (emails.length === 0) return []
-
+  const envEmails = [...adminEmailsFromEnv()]
   const users = await db.user.findMany({
-    where: { email: { in: emails } },
-    select: { id: true, email: true },
+    where: {
+      OR: [
+        { platformAdminAt: { not: null } },
+        ...(envEmails.length > 0 ? [{ email: { in: envEmails } }] : []),
+      ],
+    },
+    select: { id: true, email: true, platformAdminAt: true },
   })
   return users
-    .filter((user: { email: string }) => isAdminEmail(user.email))
+    .filter(
+      (user: { email: string; platformAdminAt: Date | null }) =>
+        user.platformAdminAt != null || isAdminEmail(user.email),
+    )
     .map((user: { id: string }) => user.id)
+}
+
+function adminEmailsFromEnv(): Set<string> {
+  const raw = process.env.ADMIN_EMAILS ?? ''
+  return new Set(
+    raw
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
+  )
 }

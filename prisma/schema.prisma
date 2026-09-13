@@ -69,6 +69,8 @@ model User {
   emailVerified        Boolean   @default(false)
   image                String?
   tutorialCompletedAt  DateTime?
+  /** Set via `pnpm admin:platform grant` — site-wide /admin access (not org boat roles). */
+  platformAdminAt      DateTime?
   notificationDefaults Json?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt

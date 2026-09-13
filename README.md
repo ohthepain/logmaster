@@ -39,6 +39,27 @@ Set `BETTER_AUTH_URL` to the same origin you use in the browser (e.g. `http://lo
 `pnpm dev`) so OAuth state cookies validate. Optional: `pnpm worker` in another terminal to process
 background map data jobs if the API process does not run the worker.
 
+### Granting platform admin access
+
+Platform admins are stored on `User.platformAdminAt`. RDS is **private** (ECS tasks only), so
+`pnpm admin:platform …` with a production `DATABASE_URL` from your laptop will usually **time out**.
+
+**Production / staging** — run inside the VPC via a one-off ECS task (deploy first so the image
+includes `scripts/platform-admin.ts` and the migration):
+
+```bash
+./scripts/platform-admin-via-ecs.sh production grant you@example.com
+./scripts/platform-admin-via-ecs.sh production list
+```
+
+**Local dev** — against your `.env` database:
+
+```bash
+pnpm admin:platform grant you@example.com
+```
+
+The user must have signed in on that environment at least once before `grant`.
+
 ### Secrets
 
 We are using AWS Systems Manager Parameter Store for secrets. Except that for the db we use Secrets Manager.
