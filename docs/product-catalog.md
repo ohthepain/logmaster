@@ -22,7 +22,11 @@ The asset list uses an approved canonical product photo when available, otherwis
 
 ## Review
 
-Administrators use `/admin/products` to inspect candidates and manufacturer sources, edit localized names/descriptions, approve or reject products/resources, add exact model aliases and choose canonical images. Only explicitly approved images become canonical. Shared sources are read live from the catalog instead of copied into each asset's suggested downloads, so later rejection applies to linked assets. Files explicitly saved by users as personal documents remain their own copies.
+Administrators open **Shared asset information** from `/admin`, or visit `/admin/products`. Search covers all records by brand, model, normalized model aliases, and names/descriptions in every stored language. Results are paginated in groups of 25 and can be filtered to candidates, approved products or rejected products. Search does not initiate AI research.
+
+Tapping a result opens its detail panel. Admins can edit brand/model identity, aliases, review status, each language's name/description/category/specifications/manufacturer sources, resource URLs and metadata, and the canonical product photo. The panel also displays research status, original research document references, file cache state, and creation/review metadata. New languages and public resources can be added; mark an existing resource rejected to hide it. Only explicitly approved public photos can be selected as canonical images. No private boat assets, photos or documents are included in these admin responses.
+
+Edits are saved transactionally with duplicate model/alias checks and product/locale version checks. A stale panel or active research lease is rejected rather than overwriting newer shared information. Replacing a resource URL or purpose invalidates its cache and download lease; old stored files remain available for existing personal document copies. Clear the canonical photo before replacing its source. Shared sources are read live from the catalog instead of copied into each asset's suggested downloads, so later rejection applies to linked assets. Files explicitly saved by users as personal documents remain their own copies. This admin-panel expansion needs no database migration.
 
 Research candidates are visible with an unreviewed label. Human source review is required before marking them verified. The initial catalog is populated as users add equipment; this change does not bulk-seed products or automatically backfill existing assets.
 

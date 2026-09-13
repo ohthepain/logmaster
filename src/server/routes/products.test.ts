@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest'
+import type * as ProductAdminModule from '../product-admin'
 import { productsRoutes } from './products'
 
 const mocks = vi.hoisted(() => ({
@@ -7,6 +8,9 @@ const mocks = vi.hoisted(() => ({
   product: vi.fn(),
   media: vi.fn(),
   get: vi.fn(),
+  search: vi.fn(),
+  detail: vi.fn(),
+  edit: vi.fn(),
 }))
 vi.mock('../session', () => ({ getSessionUserId: mocks.session }))
 vi.mock('../admin-auth', () => ({ isAdminRequest: mocks.admin }))
@@ -15,6 +19,12 @@ vi.mock('../db', () => ({
 }))
 vi.mock('../product-media', () => ({ storeProductResource: mocks.media }))
 vi.mock('../s3-photos', () => ({ getPhotoObject: mocks.get }))
+vi.mock('../product-admin', async (original) => ({
+  ...(await original<typeof ProductAdminModule>()),
+  searchAdminProducts: mocks.search,
+  getAdminProduct: mocks.detail,
+  editAdminProduct: mocks.edit,
+}))
 beforeEach(() => {
   vi.resetAllMocks()
   mocks.session.mockResolvedValue('user')
@@ -51,4 +61,56 @@ it('returns a prepared product file with its validated media type', async () => 
   )
   expect(response.headers.get('content-type')).toBe('image/webp')
   expect(mocks.get).toHaveBeenCalledWith('products/p/r/display.webp')
+})
+
+it.each([
+  '/admin?q=pump',
+  '/admin/p',
+])('protects shared admin data at %s', async (url) => {
+  expect((await productsRoutes.request(url)).status).toBe(403)
+  expect(mocks.search).not.toHaveBeenCalled()
+  expect(mocks.detail).not.toHaveBeenCalled()
+})
+it('protects edits even when the client submits valid-looking data', async () => {
+  expect(
+    (await productsRoutes.request('/admin/p', { method: 'PATCH', body: '{}' }))
+      .status,
+  ).toBe(403)
+  expect(mocks.edit).not.toHaveBeenCalled()
+})
+it('searches across all shared records with bounded pagination', async () => {
+  mocks.admin.mockResolvedValue(true)
+  mocks.search.mockResolvedValue({
+    products: [],
+    total: 0,
+    page: 2,
+    pageSize: 25,
+  })
+  const response = await productsRoutes.request(
+    '/admin?q=Garmin%20923&status=all&page=2',
+  )
+  expect(response.status).toBe(200)
+  expect(mocks.search).toHaveBeenCalledWith('Garmin 923', 'all', 2)
+})
+it.each([
+  '/admin?page=-1',
+  '/admin?page=1.5',
+  '/admin?status=unknown',
+])('rejects invalid search %s', async (url) => {
+  mocks.admin.mockResolvedValue(true)
+  expect((await productsRoutes.request(url)).status).toBe(400)
+  expect(mocks.search).not.toHaveBeenCalled()
+})
+it('returns the full admin detail, including rejected records', async () => {
+  mocks.admin.mockResolvedValue(true)
+  mocks.detail.mockResolvedValue({
+    id: 'p',
+    reviewStatus: 'rejected',
+    locales: [],
+    resources: [],
+    aliases: ['Alias'],
+  })
+  const response = await productsRoutes.request('/admin/p')
+  expect(response.status).toBe(200)
+  expect((await response.json()).product.aliases).toEqual(['Alias'])
 })
