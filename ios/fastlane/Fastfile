@@ -4,14 +4,21 @@ def apple_account_username
   ENV.fetch('APPLE_ID', 'cremoni@gmail.com')
 end
 
+def xcode_organizer_archive_path
+  script = File.expand_path('../../scripts/ios-archive-path.sh', __dir__)
+  sh('bash', script, log: false).strip
+end
+
 platform :ios do
   desc 'Build a release .ipa (run pnpm cap:sync:staging or cap:sync:prod before archiving)'
   lane :build do
+    archive_path = xcode_organizer_archive_path
     build_app(
       project: 'App/App.xcodeproj',
       scheme: 'Logbook2.0',
       configuration: 'Release',
       export_method: 'app-store',
+      archive_path: archive_path,
       output_directory: 'build',
       output_name: 'Logbook2.0.ipa',
       xcargs: '-allowProvisioningUpdates DEVELOPMENT_TEAM=RPGSNMH65P',
@@ -23,6 +30,7 @@ platform :ios do
         uploadBitcode: false,
       },
     )
+    UI.success("Archive (Xcode Organizer): #{archive_path}")
   end
 
   desc 'Upload to TestFlight (production web app — run via pnpm ios:beta)'

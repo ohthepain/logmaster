@@ -44,9 +44,10 @@ function AdminHome() {
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           <li>
             <Link to="/admin/products" className="underline">
-              Product catalog
+              Shared asset information
             </Link>{' '}
-            — review shared product information and photos
+            — search and edit shared products, specifications, documents and
+            photos
           </li>
           <li>
             <Link

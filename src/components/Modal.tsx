@@ -12,6 +12,7 @@ type ModalProps = {
   showKicker?: boolean
   /** Backdrop tap closes the modal. Default true; keep false for in-progress flows. */
   closeOnOutside?: boolean
+  wide?: boolean
   layer?: 'base' | 'overlay'
   devComponentName?: string
 }
@@ -24,6 +25,7 @@ export function Modal({
   headerBelow,
   showKicker = true,
   closeOnOutside = true,
+  wide = false,
   layer = 'base',
   devComponentName = 'Modal',
 }: ModalProps) {
@@ -52,7 +54,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="ios-map-touch-target flex max-h-[calc(100dvh-1.5rem)] w-full max-w-xl flex-col rounded-[1.75rem] border border-[var(--panel-border)] bg-[var(--surface-strong)] p-4 shadow-2xl sm:p-6"
+        className={`ios-map-touch-target flex max-h-[calc(100dvh-1.5rem)] w-full ${wide ? 'max-w-4xl' : 'max-w-xl'} flex-col rounded-[1.75rem] border border-[var(--panel-border)] bg-[var(--surface-strong)] p-4 shadow-2xl sm:p-6`}
         onClick={(event) => event.stopPropagation()}
       >
         <DevComponentLabel name={devComponentName} />

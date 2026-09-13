@@ -1,5 +1,44 @@
 import { apiUrl } from './app-origin'
 import type { CatalogProduct } from '../domain/product-catalog'
+import type {
+  ProductAdminDetail,
+  ProductAdminEdit,
+  ProductAdminSummary,
+} from '../domain/product-admin'
+
+export type ProductAdminSearch = {
+  products: ProductAdminSummary[]
+  total: number
+  page: number
+  pageSize: number
+}
+export function searchSharedProducts(
+  q: string,
+  status: string,
+  page: number,
+  signal?: AbortSignal,
+) {
+  return productApi<ProductAdminSearch>(
+    `/admin?${new URLSearchParams({ q, status, page: String(page) })}`,
+    { signal },
+  )
+}
+export async function fetchAdminProduct(id: string, signal?: AbortSignal) {
+  return (
+    await productApi<{ product: ProductAdminDetail }>(
+      `/admin/${encodeURIComponent(id)}`,
+      { signal },
+    )
+  ).product
+}
+export async function saveAdminProduct(id: string, input: ProductAdminEdit) {
+  return (
+    await productApi<{ product: ProductAdminDetail }>(
+      `/admin/${encodeURIComponent(id)}`,
+      { method: 'PATCH', body: JSON.stringify(input) },
+    )
+  ).product
+}
 
 export async function productApi<T>(
   path: string,

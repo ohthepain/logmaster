@@ -11,6 +11,13 @@ import {
 import { storeProductResource } from '../product-media'
 import { getPhotoObject } from '../s3-photos'
 import { productIdentity } from '../../domain/product-catalog'
+import {
+  editAdminProduct,
+  getAdminProduct,
+  productAdminEditSchema,
+  ProductAdminError,
+  searchAdminProducts,
+} from '../product-admin'
 
 export const productsRoutes = new Hono()
 productsRoutes.use('*', async (c, next) => {
@@ -55,6 +62,74 @@ productsRoutes.get('/review', async (c) => {
       rows.map((p) => getProduct(p.id, c.req.query('language'), true)),
     ),
   })
+})
+productsRoutes.get('/admin', async (c) => {
+  if (!(await isAdminRequest(c.req.raw.headers)))
+    return c.json({ error: 'Forbidden' }, 403)
+  const parsed = z
+    .object({
+      q: z.string().trim().max(200).default(''),
+      status: z
+        .enum(['all', 'candidate', 'verified', 'rejected'])
+        .default('all'),
+      page: z.coerce.number().int().min(1).max(100000).default(1),
+    })
+    .safeParse(c.req.query())
+  if (!parsed.success) return c.json({ error: 'Invalid search.' }, 400)
+  return c.json(
+    await searchAdminProducts(
+      parsed.data.q,
+      parsed.data.status,
+      parsed.data.page,
+    ),
+  )
+})
+productsRoutes.get('/admin/:productId', async (c) => {
+  if (!(await isAdminRequest(c.req.raw.headers)))
+    return c.json({ error: 'Forbidden' }, 403)
+  const product = await getAdminProduct(c.req.param('productId'))
+  return product
+    ? c.json({ product })
+    : c.json({ error: 'Product not found.' }, 404)
+})
+productsRoutes.patch('/admin/:productId', async (c) => {
+  if (!(await isAdminRequest(c.req.raw.headers)))
+    return c.json({ error: 'Forbidden' }, 403)
+  const parsed = productAdminEditSchema.safeParse(
+    await c.req.json().catch(() => null),
+  )
+  if (!parsed.success)
+    return c.json(
+      { error: parsed.error.issues[0]?.message ?? 'Invalid product data.' },
+      400,
+    )
+  try {
+    return c.json({
+      product: await editAdminProduct(
+        c.req.param('productId'),
+        parsed.data,
+        (await getSessionUserId(c.req.raw.headers))!,
+      ),
+    })
+  } catch (error) {
+    if (error instanceof ProductAdminError)
+      return c.json({ error: error.message }, error.status)
+    if ((error as { code?: string }).code === 'P2002')
+      return c.json(
+        {
+          error:
+            'This model, alias or source already exists. Check for duplicates.',
+        },
+        409,
+      )
+    return c.json(
+      {
+        error:
+          'Could not save the shared asset information. Check the selected photo and retry.',
+      },
+      400,
+    )
+  }
 })
 productsRoutes.get('/:productId', async (c) => {
   const product = await getProduct(
