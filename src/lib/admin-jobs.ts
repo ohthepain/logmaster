@@ -3,6 +3,7 @@ import { formatMapBbox, mapRegionLabel } from './map-regions'
 export const BUILD_GEO_FEATURES_QUEUE = 'build_geo_features'
 export const BUILD_MARINAS_QUEUE = 'build_marinas'
 export const BUILD_OSM_POINTS_QUEUE = 'build_osm_points'
+export const PRODUCT_CATALOG_NAUTICEXPO_QUEUE = 'product_catalog_nauticexpo'
 
 export const ADMIN_JOB_CATALOG = [
   {
@@ -25,6 +26,13 @@ export const ADMIN_JOB_CATALOG = [
     description:
       'Harbours, anchorages, coastal places, and seamarks via Overpass → 1° S3 tiles.',
     queue: BUILD_OSM_POINTS_QUEUE,
+  },
+  {
+    id: 'product-catalog-nauticexpo',
+    title: 'Product catalog',
+    description:
+      'NauticExpo equipment crawl → candidate brands, logos, and catalog products (Playwright locally until worker image supports Chromium).',
+    queue: PRODUCT_CATALOG_NAUTICEXPO_QUEUE,
   },
 ] as const
 
@@ -172,6 +180,40 @@ export function formatMarinasRunResult(
   return parts.join(' · ')
 }
 
+export function formatProductCatalogNauticExpoRunInput(
+  data: Record<string, unknown>,
+): string {
+  const parts = ['NauticExpo equipment']
+  if (data.dryRun) parts.push('dry run')
+  if (data.maxProducts != null) parts.push(`${String(data.maxProducts)} products`)
+  if (data.maxPages != null) parts.push(`${String(data.maxPages)} pages`)
+  if (data.resumeRunId) parts.push(`resume ${String(data.resumeRunId)}`)
+  return parts.join(' · ')
+}
+
+export function formatProductCatalogNauticExpoRunResult(
+  output: Record<string, unknown> | undefined,
+): string | null {
+  const value = unwrapJobOutput(output)
+  if (!value) return null
+  const result = value as {
+    progress?: { pagesCrawled?: number; productsParsed?: number }
+    import?: { products?: number; resources?: number } | null
+    dryRun?: boolean
+  }
+  if (result.progress?.pagesCrawled == null) return null
+  const parts = [
+    `${result.progress.pagesCrawled ?? 0} pages`,
+    `${result.progress.productsParsed ?? 0} products parsed`,
+  ]
+  if (result.dryRun) parts.push('dry run')
+  else if (result.import) {
+    parts.push(`${result.import.products ?? 0} products imported`)
+    parts.push(`${result.import.resources ?? 0} resources`)
+  }
+  return parts.join(' · ')
+}
+
 export function formatOsmPointsRunResult(
   output: Record<string, unknown> | undefined,
 ): string | null {
@@ -206,6 +248,9 @@ export function formatJobRunResult(
   if (queue === BUILD_OSM_POINTS_QUEUE) {
     return formatOsmPointsRunResult(output)
   }
+  if (queue === PRODUCT_CATALOG_NAUTICEXPO_QUEUE) {
+    return formatProductCatalogNauticExpoRunResult(output)
+  }
   return null
 }
 
@@ -221,6 +266,9 @@ export function formatJobRunInput(
   }
   if (queue === BUILD_OSM_POINTS_QUEUE) {
     return formatOsmPointsRunInput(data)
+  }
+  if (queue === PRODUCT_CATALOG_NAUTICEXPO_QUEUE) {
+    return formatProductCatalogNauticExpoRunInput(data)
   }
   return '—'
 }
@@ -258,6 +306,7 @@ export const JOB_TYPE_LABELS: Record<AdminJobCatalogId, string> = {
   'geo-features': 'Geo features',
   marinas: 'Marinas',
   'osm-points': 'OSM points',
+  'product-catalog-nauticexpo': 'Product catalog',
 }
 
 export const JOB_STATE_STYLES: Record<string, string> = {

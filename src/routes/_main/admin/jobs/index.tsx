@@ -7,12 +7,15 @@ import {
   BUILD_GEO_FEATURES_QUEUE,
   BUILD_MARINAS_QUEUE,
   BUILD_OSM_POINTS_QUEUE,
+  PRODUCT_CATALOG_NAUTICEXPO_QUEUE,
   formatGeoFeaturesRunInput,
   formatGeoFeaturesRunResult,
   formatMarinasRunInput,
   formatMarinasRunResult,
   formatOsmPointsRunInput,
   formatOsmPointsRunResult,
+  formatProductCatalogNauticExpoRunInput,
+  formatProductCatalogNauticExpoRunResult,
 } from '../../../../lib/admin-jobs'
 import type { AdminJobCatalogId } from '../../../../lib/admin-jobs'
 
@@ -23,7 +26,12 @@ type JobsSearch = {
 export const Route = createFileRoute('/_main/admin/jobs/')({
   validateSearch: (search: Record<string, unknown>): JobsSearch => {
     const tab = search.tab
-    if (tab === 'geo-features' || tab === 'marinas' || tab === 'osm-points') {
+    if (
+      tab === 'geo-features' ||
+      tab === 'marinas' ||
+      tab === 'osm-points' ||
+      tab === 'product-catalog-nauticexpo'
+    ) {
       return { tab }
     }
     return {}
@@ -119,6 +127,23 @@ function AdminJobsIndexPage() {
             queue={BUILD_OSM_POINTS_QUEUE}
             formatInput={formatOsmPointsRunInput}
             formatResult={formatOsmPointsRunResult}
+          />
+        </div>
+      ) : null}
+
+      {tab === 'product-catalog-nauticexpo' ? (
+        <div role="tabpanel" className="flex flex-col gap-8">
+          <p className="text-sm text-[var(--sea-ink-soft)]">
+            Requires Playwright Chromium on the worker host (
+            <code className="text-xs">npx playwright install chromium</code>
+            ). Production ECS worker image does not include browsers yet — run{' '}
+            <code className="text-xs">pnpm catalog:nauticexpo</code> locally for
+            full crawls.
+          </p>
+          <AdminJobRunsPanel
+            queue={PRODUCT_CATALOG_NAUTICEXPO_QUEUE}
+            formatInput={formatProductCatalogNauticExpoRunInput}
+            formatResult={formatProductCatalogNauticExpoRunResult}
           />
         </div>
       ) : null}

@@ -14,6 +14,7 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+storage/nauticexpo/
 
 terraform/backend.hcl
 terraform/network/backend.hcl

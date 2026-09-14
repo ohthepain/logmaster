@@ -39,6 +39,10 @@ Set `BETTER_AUTH_URL` to the same origin you use in the browser (e.g. `http://lo
 `pnpm dev`) so OAuth state cookies validate. Optional: `pnpm worker` in another terminal to process
 background map data jobs if the API process does not run the worker.
 
+NauticExpo catalog seeding: `npx playwright install chromium` then
+`pnpm catalog:nauticexpo --dry-run --max-products 20` (see [docs/product-catalog.md](docs/product-catalog.md)).
+Production ECS workers do not bundle Playwright yet.
+
 ### Granting platform admin access
 
 Platform admins are stored on `User.platformAdminAt`. RDS is **private** (ECS tasks only), so

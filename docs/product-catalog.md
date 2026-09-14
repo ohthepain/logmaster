@@ -28,7 +28,29 @@ Tapping a result opens its detail panel. Admins can edit brand/model identity, a
 
 Edits are saved transactionally with duplicate model/alias checks and product/locale version checks. A stale panel or active research lease is rejected rather than overwriting newer shared information. Replacing a resource URL or purpose invalidates its cache and download lease; old stored files remain available for existing personal document copies. Clear the canonical photo before replacing its source. Shared sources are read live from the catalog instead of copied into each asset's suggested downloads, so later rejection applies to linked assets. Files explicitly saved by users as personal documents remain their own copies. This admin-panel expansion needs no database migration.
 
-Research candidates are visible with an unreviewed label. Human source review is required before marking them verified. The initial catalog is populated as users add equipment; this change does not bulk-seed products or automatically backfill existing assets.
+Research candidates are visible with an unreviewed label. Human source review is required before marking them verified. The initial catalog is populated as users add equipment; bulk seeding uses the NauticExpo crawl job (see below).
+
+## NauticExpo crawl (equipment seed)
+
+Candidate brands, logos, and products can be imported from NauticExpo equipment categories via Crawlee. Parsed rows stay `reviewStatus: candidate` until an admin verifies them in **Shared asset information**.
+
+**Local / operator CLI**
+
+```bash
+npx playwright install chromium
+pnpm catalog:nauticexpo --dry-run --max-products 20 --max-pages 200
+pnpm catalog:nauticexpo --max-products 50
+```
+
+Flags: `--dry-run` (crawl and stage only), `--max-products`, `--max-pages`, `--resume <runId>`, `--storage-dir`, `--mark-missing-removed`.
+
+**Background job**
+
+- pg-boss queue: `product_catalog_nauticexpo`
+- Admin: **Background jobs → Product catalog**, or `POST /api/admin/jobs/product-catalog-nauticexpo/runs`
+- Crawl staging tables: `catalog_crawl_run`, `catalog_crawl_page`, `catalog_source_link` (source URL, content hash, last seen)
+
+Production ECS worker images do **not** include Playwright Chromium yet. Run full crawls locally (or a Playwright-enabled worker host) until the runner Docker image is extended.
 
 ## Release and validation
 

@@ -25,6 +25,7 @@ import {
   parseMarinasRegionId,
 } from '../jobs/marina-queue'
 import { enqueueOsmPointsBuild } from '../jobs/osm-points-queue'
+import { enqueueProductCatalogNauticExpo } from '../jobs/product-catalog-crawl-queue'
 import type { OsmPointDatasetId } from '../../lib/map-data-layers'
 import { isMapRegionId } from '../../lib/map-regions'
 import { deleteTripsFromLogbook } from '../deleted-trips'
@@ -487,6 +488,48 @@ function parseOsmPointDataset(value: unknown): OsmPointDatasetId | null {
   }
   return null
 }
+
+adminRoutes.post('/jobs/product-catalog-nauticexpo/runs', async (c) => {
+  const body = await c.req.json().catch(() => ({}))
+  const dryRun =
+    typeof body === 'object' &&
+    body !== null &&
+    !Array.isArray(body) &&
+    (body as Record<string, unknown>).dryRun === true
+  const maxProductsRaw = (body as Record<string, unknown>).maxProducts
+  const maxPagesRaw = (body as Record<string, unknown>).maxPages
+  const maxProducts =
+    typeof maxProductsRaw === 'number' && Number.isInteger(maxProductsRaw)
+      ? maxProductsRaw
+      : null
+  const maxPages =
+    typeof maxPagesRaw === 'number' && Number.isInteger(maxPagesRaw)
+      ? maxPagesRaw
+      : null
+  const resumeRunIdRaw = (body as Record<string, unknown>).resumeRunId
+  const resumeRunId =
+    typeof resumeRunIdRaw === 'string' && resumeRunIdRaw.trim()
+      ? resumeRunIdRaw.trim()
+      : null
+  const id = await enqueueProductCatalogNauticExpo({
+    dryRun,
+    maxProducts,
+    maxPages,
+    resumeRunId,
+  })
+  return c.json(
+    {
+      ok: true,
+      jobId: id,
+      queued: true,
+      dryRun,
+      maxProducts,
+      maxPages,
+      resumeRunId,
+    },
+    202,
+  )
+})
 
 adminRoutes.post('/jobs/osm-points/runs', async (c) => {
   const body = await c.req.json().catch(() => ({}))

@@ -12,7 +12,14 @@ import {
   ASSET_RESEARCH_QUEUE,
   handleAssetResearchBatches,
 } from './asset-research'
-import { MARINA_QUEUE_EXPIRE_SECONDS } from './marina-job-expire'
+import {
+  PRODUCT_CATALOG_NAUTICEXPO_QUEUE,
+  handleProductCatalogNauticExpoBatches,
+} from './product-catalog-crawl'
+import {
+  MARINA_QUEUE_EXPIRE_SECONDS,
+  PG_BOSS_MAX_EXPIRE_SECONDS,
+} from './marina-job-expire'
 import { registerNotificationWorkers } from '../notifications/deliver'
 import { wrapJobHandlerWithNotifications } from './job-notifications'
 
@@ -35,6 +42,10 @@ export async function getBoss(): Promise<PgBoss> {
       await b.createQueue(BUILD_MARINAS_QUEUE)
       await b.createQueue(BUILD_OSM_POINTS_QUEUE)
       await b.createQueue(ASSET_RESEARCH_QUEUE)
+      await b.createQueue(PRODUCT_CATALOG_NAUTICEXPO_QUEUE)
+      await b.updateQueue(PRODUCT_CATALOG_NAUTICEXPO_QUEUE, {
+        expireInSeconds: PG_BOSS_MAX_EXPIRE_SECONDS,
+      })
       await b.updateQueue(BUILD_MARINAS_QUEUE, {
         expireInSeconds: MARINA_QUEUE_EXPIRE_SECONDS,
       })
@@ -86,6 +97,18 @@ export async function getBoss(): Promise<PgBoss> {
           pollingIntervalSeconds: 2,
         },
         handleAssetResearchBatches,
+      )
+      await b.work(
+        PRODUCT_CATALOG_NAUTICEXPO_QUEUE,
+        {
+          localConcurrency: 1,
+          batchSize: 1,
+          pollingIntervalSeconds: 10,
+        },
+        wrapJobHandlerWithNotifications(
+          PRODUCT_CATALOG_NAUTICEXPO_QUEUE,
+          handleProductCatalogNauticExpoBatches,
+        ),
       )
       await registerNotificationWorkers(b)
       registered = true

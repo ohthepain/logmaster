@@ -14,12 +14,18 @@ import { BUILD_MARINAS_QUEUE } from './marinas'
 import type { BuildMarinasPayload } from './marinas'
 import { BUILD_OSM_POINTS_QUEUE } from './osm-points'
 import type { BuildOsmPointsPayload } from './osm-points'
-import { marinaJobExpireSeconds } from './marina-job-expire'
+import {
+  marinaJobExpireSeconds,
+  PG_BOSS_MAX_EXPIRE_SECONDS,
+} from './marina-job-expire'
+import { PRODUCT_CATALOG_NAUTICEXPO_QUEUE } from './product-catalog-crawl'
+import type { ProductCatalogNauticExpoPayload } from './product-catalog-crawl'
 
 export const SUPPORTED_JOB_QUEUES = [
   BUILD_GEO_FEATURES_QUEUE,
   BUILD_MARINAS_QUEUE,
   BUILD_OSM_POINTS_QUEUE,
+  PRODUCT_CATALOG_NAUTICEXPO_QUEUE,
 ] as const
 
 export type SupportedJobQueue = (typeof SUPPORTED_JOB_QUEUES)[number]
@@ -28,11 +34,13 @@ type AdminJobPayload =
   | BuildGeoFeaturesPayload
   | BuildMarinasPayload
   | BuildOsmPointsPayload
+  | ProductCatalogNauticExpoPayload
 
 const QUEUE_TO_CATALOG_ID: Record<SupportedJobQueue, AdminJobCatalogId> = {
   [BUILD_GEO_FEATURES_QUEUE]: 'geo-features',
   [BUILD_MARINAS_QUEUE]: 'marinas',
   [BUILD_OSM_POINTS_QUEUE]: 'osm-points',
+  [PRODUCT_CATALOG_NAUTICEXPO_QUEUE]: 'product-catalog-nauticexpo',
 }
 
 const CATALOG_TITLE: Record<AdminJobCatalogId, string> = Object.fromEntries(
@@ -232,7 +240,12 @@ export async function rerunUnifiedAdminJob(jobId: string): Promise<{
               retryLimit: 1,
               expireInSeconds: marinaJobExpireSeconds(data),
             }
-          : { retryLimit: 1 }
+          : queue === PRODUCT_CATALOG_NAUTICEXPO_QUEUE
+            ? {
+                retryLimit: 1,
+                expireInSeconds: PG_BOSS_MAX_EXPIRE_SECONDS,
+              }
+            : { retryLimit: 1 }
     const newId = await boss.send(queue, data, sendOptions)
     if (!newId) {
       throw new Error('Failed to queue job')

@@ -1264,6 +1264,7 @@ model Brand {
   updatedAt      DateTime @updatedAt
   logos          BrandLogo[]
   products       CatalogProduct[]
+  sourceLinks    CatalogSourceLink[]
 
   @@unique([canonicalName])
   @@map("brand")
@@ -1281,6 +1282,8 @@ model BrandLogo {
   fetchedAt     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  sourceLinks   CatalogSourceLink[]
 
   @@unique([brandId, sourceUrl])
   @@index([brandId])
@@ -1306,6 +1309,7 @@ model CatalogProduct {
   locales          ProductLocale[]
   resources        ProductResource[]
   aliases          ProductAlias[]
+  sourceLinks      CatalogSourceLink[]
 
   @@unique([brandKey, modelKey])
   @@map("catalog_product")
@@ -1360,6 +1364,67 @@ model ProductResource {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
+  sourceLinks   CatalogSourceLink[]
+
   @@unique([productId, sourceUrl])
   @@map("product_resource")
+}
+
+model CatalogCrawlRun {
+  id          String             @id @default(cuid())
+  source      String
+  status      String
+  config      Json
+  stats       Json?
+  storagePath String?
+  startedAt   DateTime           @default(now())
+  completedAt DateTime?
+  error       String?
+  pages       CatalogCrawlPage[]
+
+  @@index([source, startedAt])
+  @@map("catalog_crawl_run")
+}
+
+model CatalogCrawlPage {
+  id          String          @id @default(cuid())
+  runId       String
+  run         CatalogCrawlRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  url         String
+  pageType    String
+  httpStatus  Int?
+  contentHash String?
+  raw         Json?
+  normalized  Json?
+  crawledAt   DateTime?
+  error       String?
+
+  @@unique([runId, url])
+  @@index([runId])
+  @@map("catalog_crawl_page")
+}
+
+model CatalogSourceLink {
+  id                String           @id @default(cuid())
+  source            String
+  sourceUrl         String
+  brandKey          String?
+  catalogBrand      Brand?           @relation(fields: [brandKey], references: [id], onDelete: SetNull)
+  productId         String?
+  product           CatalogProduct?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  brandLogoId       String?
+  brandLogo         BrandLogo?       @relation(fields: [brandLogoId], references: [id], onDelete: SetNull)
+  productResourceId String?
+  productResource   ProductResource? @relation(fields: [productResourceId], references: [id], onDelete: SetNull)
+  contentHash       String?
+  lastCrawledAt     DateTime
+  lastSeenAt        DateTime
+  removedAt         DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([source, sourceUrl])
+  @@index([brandKey])
+  @@index([productId])
+  @@map("catalog_source_link")
 }
