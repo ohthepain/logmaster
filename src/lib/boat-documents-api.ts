@@ -5,24 +5,10 @@ import type {
   BoatDocumentsPayload,
 } from '../domain/boat'
 import type { DocumentPurpose } from '../domain/boat-assets'
-import { apiUrl } from './app-origin'
+import { apiJson } from './api-client'
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(apiUrl(path), {
-    credentials: 'include',
-    ...init,
-    headers: {
-      ...(init?.body instanceof FormData
-        ? {}
-        : { 'Content-Type': 'application/json' }),
-      ...init?.headers,
-    },
-  })
-  if (!response.ok) {
-    const text = await response.text().catch(() => '')
-    throw new Error(text || `Request failed (${response.status})`)
-  }
-  return response.json() as Promise<T>
+  return apiJson<T>(path, init)
 }
 
 export async function fetchBoatDocuments(

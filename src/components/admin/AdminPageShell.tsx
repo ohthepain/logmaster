@@ -25,7 +25,8 @@ export function AdminPageShell({
 
   useEffect(() => {
     if (loading || session.isPending) return
-    if (!session.data?.user || !isAdmin) {
+    if (!session.data?.user) return
+    if (!isAdmin) {
       void navigate({ to: '/' })
     }
   }, [isAdmin, loading, navigate, session.data?.user, session.isPending])

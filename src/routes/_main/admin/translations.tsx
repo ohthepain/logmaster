@@ -30,7 +30,8 @@ function TranslationAdminPage() {
 
   useEffect(() => {
     if (adminLoading || session.isPending) return
-    if (!session.data?.user || !isAdmin) void navigate({ to: '/' })
+    if (!session.data?.user) return
+    if (!isAdmin) void navigate({ to: '/' })
   }, [adminLoading, isAdmin, navigate, session.data?.user, session.isPending])
 
   const load = useCallback(async () => {

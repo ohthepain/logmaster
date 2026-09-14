@@ -1,4 +1,4 @@
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   Building2,
   ChevronRight,
@@ -22,6 +22,7 @@ import { toast } from 'sonner'
 import type { Boat } from '../domain/boat'
 import type { CrewPayload } from '../domain/crew'
 import { signOutToSignIn, useSession } from '../lib/auth-client'
+import { currentReturnPath, signInSearch } from '../lib/sign-in-redirect'
 import {
   formatAppBuildFooter,
   getAppEnvironmentLabel,
@@ -46,6 +47,13 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
   const session = useSession()
   const user = session.data?.user
   const navigate = useNavigate()
+  const location = useRouterState({
+    select: (state) => ({
+      pathname: state.location.pathname,
+      searchStr: state.location.searchStr,
+      hash: state.location.hash,
+    }),
+  })
   const trips = useLogbookStore((state) => state.trips)
   const { resetTutorial } = useFtue()
   const { isAdmin } = useIsAdmin()
@@ -74,7 +82,16 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
     if (user) {
       setProfileOpen(true)
     } else {
-      void navigate({ to: '/sign-in' })
+      void navigate({
+        to: '/sign-in',
+        search: signInSearch(
+          currentReturnPath(
+            location.pathname,
+            location.searchStr,
+            location.hash,
+          ),
+        ),
+      })
     }
   }
 

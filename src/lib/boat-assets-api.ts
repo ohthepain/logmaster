@@ -8,7 +8,7 @@ import type {
   BoatPurchase,
   DocumentPurpose,
 } from '../domain/boat-assets'
-import { apiUrl } from './app-origin'
+import { apiJson } from './api-client'
 import type {
   AssetCategory,
   AssetConnectionSuggestion,
@@ -26,28 +26,7 @@ import {
 } from './document-title'
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(apiUrl(path), {
-    credentials: 'include',
-    ...init,
-    headers: {
-      ...(init?.body instanceof FormData
-        ? {}
-        : { 'Content-Type': 'application/json' }),
-      ...init?.headers,
-    },
-  })
-  if (!response.ok) {
-    const text = await response.text().catch(() => '')
-    let message = text
-    try {
-      const parsed = JSON.parse(text) as { error?: string }
-      message = parsed.error ?? text
-    } catch {
-      // keep raw text
-    }
-    throw new Error(message || `Request failed (${response.status})`)
-  }
-  return response.json() as Promise<T>
+  return apiJson<T>(path, init)
 }
 
 export async function fetchBoatAssets(boatId: string): Promise<BoatAsset[]> {

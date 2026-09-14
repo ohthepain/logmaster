@@ -1,22 +1,8 @@
 import type { CrewInvitePreview, CrewMember, CrewPayload } from '../domain/crew'
-import { apiUrl } from './app-origin'
+import { apiJson } from './api-client'
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(apiUrl(`/api/crew${path}`), {
-    ...init,
-    credentials: 'include',
-    headers: {
-      ...(init?.body instanceof FormData
-        ? {}
-        : { 'Content-Type': 'application/json' }),
-      ...init?.headers,
-    },
-  })
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string }
-    throw new Error(body.error ?? `Request failed (${res.status})`)
-  }
-  return res.json() as Promise<T>
+  return apiJson<T>(`/api/crew${path}`, init)
 }
 
 export async function fetchCrew(): Promise<CrewPayload> {

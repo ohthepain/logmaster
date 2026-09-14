@@ -6,6 +6,7 @@ import { LiveActivityController } from './LiveActivityController'
 import { DevComponentLabel } from './DevComponentLabel'
 import { DevTripReplayController } from './DevTripReplayController'
 import { DevTripRetripController } from './DevTripRetripController'
+import { AuthGate } from './AuthGate'
 import { FtueGate } from './FtueGate'
 import {
   isTripDetailImmersiveRoute,
@@ -52,11 +53,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <BackgroundTripRecorder />
         <LiveActivityController />
         {hideChrome ? (
-          children
+          <AuthGate>{children}</AuthGate>
         ) : (
           <>
             <Header mapOverlay={mapOverlayHeader} />
-            {children}
+            <AuthGate>{children}</AuthGate>
           </>
         )}
       </FtueGate>

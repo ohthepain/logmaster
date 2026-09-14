@@ -5,24 +5,12 @@ import type {
   OrgDocumentsPayload,
 } from '../domain/org'
 import type { DocumentPurpose } from '../domain/boat-assets'
+import { apiJson } from './api-client'
 import { apiUrl } from './app-origin'
+import { redirectToSignInIfUnauthorized } from './sign-in-redirect'
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(apiUrl(path), {
-    credentials: 'include',
-    ...init,
-    headers: {
-      ...(init?.body instanceof FormData
-        ? {}
-        : { 'Content-Type': 'application/json' }),
-      ...init?.headers,
-    },
-  })
-  if (!response.ok) {
-    const text = await response.text().catch(() => '')
-    throw new Error(text || `Request failed (${response.status})`)
-  }
-  return response.json() as Promise<T>
+  return apiJson<T>(path, init)
 }
 
 export async function fetchOrgDocuments(
@@ -149,6 +137,7 @@ export async function fetchOrgDocumentBytes(
     { credentials: 'include' },
   )
   if (!response.ok) {
+    if (response.status === 401) redirectToSignInIfUnauthorized()
     throw new Error(`Failed to load document (${response.status})`)
   }
   return response.arrayBuffer()

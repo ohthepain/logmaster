@@ -1,4 +1,4 @@
-import { apiUrl } from './app-origin'
+import { apiJson } from './api-client'
 import type { CatalogProduct } from '../domain/product-catalog'
 import type {
   ProductAdminDetail,
@@ -44,15 +44,7 @@ export async function productApi<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(apiUrl(`/api/products${path}`), {
-    credentials: 'include',
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-  })
-  const body = await response.json()
-  if (!response.ok)
-    throw new Error(body.error ?? 'Product catalog unavailable.')
-  return body as T
+  return apiJson<T>(`/api/products${path}`, init)
 }
 export async function findCatalogProducts(
   brand: string,

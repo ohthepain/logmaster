@@ -1,24 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo } from 'react'
 import { signIn } from '../../lib/auth-client'
+import { safeReturnPath } from '../../lib/sign-in-redirect'
 import ThemeToggle from '../../components/ThemeToggle'
 import { SignInPanel } from '../../components/SignInPanel'
 
 const INTRO =
   'Logmaster keeps sailing trips, notes, and media local first. Sign in later if you want the same logbook synced across devices.'
-
-function safeRedirectPath(raw: string | undefined): string {
-  if (!raw || typeof raw !== 'string') return '/'
-  const t = raw.trim()
-  if (!t.startsWith('/') || t.startsWith('//')) return '/'
-  try {
-    const u = new URL(t, window.location.origin)
-    if (u.origin !== window.location.origin) return '/'
-    return u.pathname + u.search + u.hash
-  } catch {
-    return '/'
-  }
-}
 
 type SignInSearch = {
   redirect?: string
@@ -54,7 +42,7 @@ function SignInPage() {
     mode: modeParam,
   } = Route.useSearch()
   const afterAuthPath = useMemo(
-    () => safeRedirectPath(redirectParam),
+    () => safeReturnPath(redirectParam),
     [redirectParam],
   )
 
