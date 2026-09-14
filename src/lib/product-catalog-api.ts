@@ -46,6 +46,30 @@ export async function productApi<T>(
 ): Promise<T> {
   return apiJson<T>(`/api/products${path}`, init)
 }
+export async function findCatalogBrands(q: string, signal?: AbortSignal) {
+  return (
+    await productApi<{ brands: Array<{ name: string; logo: string | null }> }>(
+      `/brands?${new URLSearchParams({ q })}`,
+      { signal },
+    )
+  ).brands
+}
+export function resolveEquipmentProduct(
+  brand: string,
+  model: string,
+  language: string,
+  signal?: AbortSignal,
+) {
+  return productApi<{
+    product: CatalogProduct
+    pending: boolean
+    notice: string
+  }>('/resolve', {
+    method: 'POST',
+    body: JSON.stringify({ brand, model, language }),
+    signal,
+  })
+}
 export async function findCatalogProducts(
   brand: string,
   model: string,

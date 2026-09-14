@@ -5,12 +5,15 @@ import { getSessionUserId } from '../session'
 import { isAdminRequest } from '../admin-auth'
 import {
   findProduct,
+  resolveProduct,
+  ensureProductResearch,
   getProduct,
   ProductResearchBusy,
 } from '../product-catalog'
 import { storeProductResource } from '../product-media'
 import { getPhotoObject } from '../s3-photos'
 import { productIdentity } from '../../domain/product-catalog'
+import { ASSET_BRANDS, findAssetBrand } from '../../domain/asset-brands'
 import {
   editAdminProduct,
   getAdminProduct,
@@ -25,10 +28,73 @@ productsRoutes.use('*', async (c, next) => {
     return c.json({ error: 'Unauthorized' }, 401)
   await next()
 })
+productsRoutes.get('/brands', async (c) => {
+  const query = c.req.query('q')?.trim().slice(0, 100) ?? ''
+  const rows = await prisma.catalogProduct.findMany({
+    where: {
+      reviewStatus: { not: 'rejected' },
+      brand: { contains: query, mode: 'insensitive' },
+    },
+    distinct: ['brand'],
+    select: { brand: true },
+    orderBy: { brand: 'asc' },
+    take: 30,
+  })
+  const names = new Set([
+    ...ASSET_BRANDS.filter((brand) =>
+      [brand.name, ...brand.aliases].some((name) =>
+        name.toLowerCase().includes(query.toLowerCase()),
+      ),
+    ).map((brand) => brand.name),
+    ...rows.map((row) => findAssetBrand(row.brand)?.name ?? row.brand),
+  ])
+  return c.json({
+    brands: [...names]
+      .sort()
+      .slice(0, 30)
+      .map((name) => ({ name, logo: findAssetBrand(name)?.logo ?? null })),
+  })
+})
+productsRoutes.post('/resolve', async (c) => {
+  const input = z
+    .object({
+      brand: z.string().trim().min(1).max(100),
+      model: z.string().trim().min(1).max(200),
+      language: z.string().max(35).default('en'),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!input.success) return c.json({ error: 'Enter a brand and model.' }, 400)
+  try {
+    const row = await resolveProduct(input.data.brand, input.data.model)
+    let product = await getProduct(row.id, input.data.language)
+    let pending = false
+    let notice = ''
+    if (!product?.info) {
+      try {
+        await ensureProductResearch(row.id, 'en', true)
+      } catch (error) {
+        pending = error instanceof ProductResearchBusy
+        if (!pending)
+          notice =
+            'We could not find a product photo. Check the model or continue with your details.'
+      }
+      product = await getProduct(row.id, input.data.language)
+    }
+    return c.json({ product, pending, notice })
+  } catch {
+    return c.json(
+      {
+        error:
+          'This model could not be matched. Check the brand and model and retry.',
+      },
+      400,
+    )
+  }
+})
 productsRoutes.get('/', async (c) => {
   const brand = c.req.query('brand')?.trim().slice(0, 100) ?? ''
   const model = c.req.query('model')?.trim().slice(0, 200) ?? ''
-  if (!brand || !model) return c.json({ products: [] })
+  if (!brand) return c.json({ products: [], exact: false })
   const exact = await findProduct(brand, model)
   const { brandKey, modelKey } = productIdentity(brand, model)
   const candidates = exact

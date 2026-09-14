@@ -20,14 +20,27 @@ export async function researchCatalogAsset(
     !input.brand?.trim() ||
     !input.modelNumber
   ) {
-    return researchAsset(input, assets, connections)
+    const result = await researchAsset(
+      input,
+      input.includeConnections ? assets : [],
+      input.includeConnections ? connections : [],
+    )
+    return {
+      ...result,
+      connections: input.includeConnections ? result.connections : [],
+    }
   }
   const product = await resolveProduct(
     input.brand,
     input.modelNumber,
     input.productId,
   )
-  const result = await ensureProductResearch(product.id, input.language)
+  const result = await ensureProductResearch(
+    product.id,
+    input.language,
+    false,
+    true,
+  )
   const current = await getProduct(product.id, input.language)
   if (!current) throw new Error('This product is no longer available.')
   const privateConnections = input.includeConnections

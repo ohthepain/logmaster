@@ -50,6 +50,7 @@ export const researchInputSchema = z.object({
   modelNumber: z.string().trim().min(1).max(200).nullable(),
 })
 export const createAssetSchema = z.object({
+  researchDocuments: z.boolean().optional(),
   productId: z.string().min(1).max(200).nullable().optional(),
   sharedProduct: z.boolean().optional(),
   language: z

@@ -60,6 +60,7 @@ export async function createBoatAsset(
     researchJobId?: string
     productId?: string | null
     sharedProduct?: boolean
+    researchDocuments?: boolean
     language?: string
   },
   photo?: File,
@@ -117,6 +118,29 @@ export async function identifyAssetPhoto(
     { method: 'POST', body: form, signal },
   )
   return data.identification
+}
+
+export async function findEquipmentConnections(
+  boatId: string,
+  input: {
+    name: string
+    brand: string | null
+    modelNumber: string | null
+    description: string
+    category: AssetCategory | null
+  },
+  signal?: AbortSignal,
+) {
+  return (
+    await api<{ connections: AssetConnectionSuggestion[] }>(
+      `/api/boats/${boatId}/assets/connections/search`,
+      {
+        method: 'POST',
+        body: JSON.stringify(input),
+        signal,
+      },
+    )
+  ).connections
 }
 
 export async function researchNewAsset(

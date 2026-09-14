@@ -4,9 +4,14 @@ import { bodyLimit } from 'hono/body-limit'
 import { prisma } from '../db'
 import { getSessionUserId } from '../session'
 import { canAccessBoatResource } from '../contact-utils'
-import { identifyAsset, normalizeAssetPhoto } from '../asset-intelligence'
+import {
+  identifyAsset,
+  normalizeAssetPhoto,
+  researchAssetConnections,
+} from '../asset-intelligence'
 import {
   connectionSchema,
+  categorySchema,
   researchInputSchema,
 } from '../asset-intelligence-schema'
 import {
@@ -64,6 +69,55 @@ assetIntelligenceRoutes.post('/:boatId/assets/identify', async (c) => {
     )
   }
 })
+
+assetIntelligenceRoutes.post(
+  '/:boatId/assets/connections/search',
+  async (c) => {
+    const parsed = researchInputSchema
+      .extend({ category: categorySchema })
+      .safeParse(await c.req.json().catch(() => null))
+    if (!parsed.success)
+      return c.json({ error: 'Check the equipment details and category.' }, 400)
+    if (!parsed.data.category) return c.json({ connections: [] })
+    const boatId = c.req.param('boatId')
+    const assets = await prisma.boatAsset.findMany({
+      where: { boatId, category: parsed.data.category },
+      select: {
+        id: true,
+        name: true,
+        brand: true,
+        description: true,
+        modelNumber: true,
+        category: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    })
+    const ids = assets.map((asset) => asset.id)
+    const connections = ids.length
+      ? await prisma.assetConnection.findMany({
+          where: { fromAssetId: { in: ids }, toAssetId: { in: ids } },
+          select: { fromAssetId: true, toAssetId: true, reason: true },
+        })
+      : []
+    try {
+      return c.json({
+        connections: await researchAssetConnections(
+          parsed.data,
+          assets,
+          connections,
+        ),
+      })
+    } catch {
+      return c.json(
+        {
+          error:
+            'Connection search is unavailable. You can add connections yourself.',
+        },
+        503,
+      )
+    }
+  },
+)
 
 assetIntelligenceRoutes.post('/:boatId/assets/research', async (c) => {
   const input = researchInputSchema.safeParse(

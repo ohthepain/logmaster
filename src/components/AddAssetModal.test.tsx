@@ -1,67 +1,92 @@
 // @vitest-environment jsdom
 import {
+  act,
   cleanup,
   fireEvent,
   render,
   screen,
   waitFor,
 } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { I18nProvider } from '../lib/i18n'
 import { AddAssetModal, findExistingBoatAsset } from './AddAssetModal'
 import type { ListedBoatAsset } from './AddAssetModal'
+import type { CatalogProduct } from '../domain/product-catalog'
 
 const mocks = vi.hoisted(() => ({
   identify: vi.fn(),
-  startResearchJob: vi.fn(),
-  fetchResearchJob: vi.fn(),
+  start: vi.fn(),
+  poll: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
   upload: vi.fn(),
   camera: vi.fn(),
   native: vi.fn(),
+  resolve: vi.fn(),
+  brands: vi.fn(),
+  models: vi.fn(),
+  product: vi.fn(),
+  connections: vi.fn(),
+  openDocument: vi.fn(),
 }))
 vi.mock('../lib/boat-assets-api', () => ({
   createBoatAsset: mocks.create,
   identifyAssetPhoto: mocks.identify,
-  startAssetResearchJob: mocks.startResearchJob,
-  fetchAssetResearchJob: mocks.fetchResearchJob,
+  startAssetResearchJob: mocks.start,
+  fetchAssetResearchJob: mocks.poll,
   updateBoatAsset: mocks.update,
   uploadAndLinkAssetDocument: mocks.upload,
+  findEquipmentConnections: mocks.connections,
+}))
+vi.mock('../lib/product-catalog-api', () => ({
+  resolveEquipmentProduct: mocks.resolve,
+  findCatalogBrands: mocks.brands,
+  findCatalogProducts: mocks.models,
+  fetchCatalogProduct: mocks.product,
+}))
+vi.mock('../lib/boat-document-open', () => ({
+  openBoatDocument: mocks.openDocument,
 }))
 vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: mocks.native },
 }))
 vi.mock('@capacitor/camera', () => ({
   Camera: { getPhoto: mocks.camera },
-  CameraSource: { Camera: 'CAMERA' },
+  CameraSource: { Prompt: 'PROMPT' },
   CameraResultType: { Uri: 'uri' },
-}))
-vi.mock('./Modal', () => ({
-  Modal: ({
-    children,
-    onClose,
-    closeOnOutside = true,
-  }: {
-    children: React.ReactNode
-    onClose: () => void
-    closeOnOutside?: boolean
-  }) => (
-    <div>
-      <button
-        type="button"
-        onClick={() => {
-          if (closeOnOutside) onClose()
-        }}
-      >
-        backdrop
-      </button>
-      {children}
-    </div>
-  ),
 }))
 
 const photo = new File(['photo'], 'pump.jpg', { type: 'image/jpeg' })
+const product: CatalogProduct = {
+  id: 'product',
+  brand: 'Garmin',
+  modelNumber: '923',
+  reviewStatus: 'candidate',
+  language: 'en',
+  requestedLanguage: 'en',
+  researchStatus: 'preview',
+  imageUrl: '/photo',
+  resources: [],
+  info: {
+    name: 'Chartplotter',
+    description: 'Marine display',
+    category: 'Navigation',
+    specifications: [],
+    sources: [],
+  },
+}
+const manual = {
+  id: 'manual',
+  title: 'Installation guide',
+  sourceUrl: 'https://example.com/manual.pdf',
+  purpose: 'manual',
+  languages: ['en'],
+  revision: null,
+  modelNumbers: ['923'],
+  reason: 'Official',
+  reviewStatus: 'candidate',
+  contentUrl: '/api/products/product/resources/manual/content',
+}
 const props = {
   boatId: 'boat',
   boatName: 'Boat',
@@ -69,11 +94,25 @@ const props = {
   members: [],
   assets: [
     {
-      id: 'tank',
-      name: 'Water tank',
+      id: 'gps',
+      name: 'GPS receiver',
+      description: null,
+      modelNumber: 'GPS1',
+      category: 'Navigation',
+    },
+    {
+      id: 'radar',
+      name: 'Radar',
+      description: null,
+      modelNumber: 'R1',
+      category: 'Navigation',
+    },
+    {
+      id: 'pump',
+      name: 'Water pump',
       description: null,
       modelNumber: null,
-      category: null,
+      category: 'Plumbing',
     },
   ] satisfies ListedBoatAsset[],
   onClose: vi.fn(),
@@ -81,17 +120,34 @@ const props = {
   onUpdated: vi.fn(),
   onOpenExisting: vi.fn(),
 }
-
-function renderModal(
-  overrides: Partial<Omit<typeof props, 'assets'>> & {
-    assets?: ListedBoatAsset[]
-  } = {},
-) {
+function mount(overrides: { assets?: ListedBoatAsset[] } = {}) {
   return render(
     <I18nProvider>
       <AddAssetModal {...props} {...overrides} />
     </I18nProvider>,
   )
+}
+function click(name: string) {
+  fireEvent.click(screen.getByRole('button', { name }))
+}
+function enter(label: string, value: string) {
+  const input = screen.getByRole('combobox', { name: label })
+  fireEvent.focus(input)
+  fireEvent.change(input, { target: { value } })
+  fireEvent.blur(input)
+}
+async function find() {
+  enter('Brand', 'Garmin')
+  enter('Model', '923')
+  click('Next')
+  await screen.findByText('Is this your equipment?')
+}
+async function skipDocuments() {
+  click('Next')
+  await screen.findByText('Search for documents?')
+  click('Skip')
+  click('Next')
+  await screen.findByText('Search for connections?')
 }
 
 beforeEach(() => {
@@ -99,412 +155,371 @@ beforeEach(() => {
   mocks.native.mockReturnValue(false)
   URL.createObjectURL = vi.fn(() => 'blob:photo')
   URL.revokeObjectURL = vi.fn()
+  mocks.brands.mockResolvedValue([
+    { name: 'Garmin', logo: '/brands/garmin.svg' },
+  ])
+  mocks.models.mockResolvedValue({ products: [product], exact: true })
+  mocks.resolve.mockResolvedValue({ product, pending: false, notice: '' })
+  mocks.product.mockResolvedValue({ ...product, resources: [manual] })
   mocks.identify.mockResolvedValue({
-    name: 'Water pump',
-    description: 'Fresh water pump',
-    modelNumber: 'P123',
+    name: 'Garmin 923 Chartplotter',
+    brand: 'Garmin',
+    modelNumber: '923',
+    description: 'My display',
+    category: 'Navigation',
     confidence: 'high',
-    category: 'Plumbing',
   })
-  mocks.startResearchJob.mockResolvedValue({ jobId: 'job-1' })
-  mocks.fetchResearchJob.mockResolvedValue({
-    id: 'job-1',
-    status: 'completed',
-    error: null,
-    result: {
-      category: 'Plumbing',
-      downloads: [
-        {
-          title: 'Installation guide',
-          url: 'https://example.com/guide.pdf',
-          purpose: 'manual',
-          reason: 'Matches pump',
-        },
-      ],
-      connections: [{ assetId: 'tank', reason: 'Water supplied by tank' }],
-    },
-  })
+  mocks.start.mockResolvedValue({ jobId: 'job' })
+  mocks.poll.mockResolvedValue({ id: 'job', status: 'pending', error: null })
+  mocks.connections.mockResolvedValue([
+    { assetId: 'gps', reason: 'Position data' },
+  ])
   mocks.create.mockResolvedValue({ id: 'created' })
-  mocks.update.mockResolvedValue({ id: 'pump', name: 'Water pump' })
+  mocks.update.mockResolvedValue({ id: 'existing' })
   mocks.upload.mockResolvedValue(undefined)
+  mocks.openDocument.mockResolvedValue(undefined)
 })
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
 })
 
-async function selectPhoto() {
-  fireEvent.change(screen.getByLabelText('Asset photo'), {
-    target: { files: [photo] },
-  })
-  expect(mocks.identify).not.toHaveBeenCalled()
-  fireEvent.click(screen.getByRole('button', { name: 'Auto-identify' }))
-  await waitFor(() =>
-    expect(screen.getByLabelText<HTMLInputElement>('Model number').value).toBe(
-      'P123',
-    ),
+it('uses the catalog automatically and settles brand/model into editable identity labels', async () => {
+  mount()
+  await find()
+  expect(mocks.resolve).toHaveBeenCalledWith(
+    'Garmin',
+    '923',
+    'en',
+    expect.any(AbortSignal),
   )
-}
-
-describe('photo asset review', () => {
-  it('leaves connections unchecked after Find documents and retains the photo', async () => {
-    renderModal()
-    await selectPhoto()
-    expect(mocks.startResearchJob).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
-    await waitFor(() => expect(mocks.startResearchJob).toHaveBeenCalled())
-    await screen.findByText('Water tank')
-    const checkbox = screen.getByRole<HTMLInputElement>('checkbox', {
-      name: /Water tank/,
-    })
-    expect(checkbox.checked).toBe(false)
-    fireEvent.click(checkbox)
-    fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
-    await waitFor(() =>
-      expect(mocks.create).toHaveBeenCalledWith(
-        'boat',
-        expect.objectContaining({
-          modelNumber: 'P123',
-          confirmedConnections: [
-            { assetId: 'tank', reason: 'Water supplied by tank' },
-          ],
-          researchJobId: 'job-1',
-        }),
-        photo,
-      ),
-    )
-  })
-  it('does not search until Find documents is tapped, and can save without it', async () => {
-    renderModal()
-    await selectPhoto()
-    expect(mocks.startResearchJob).not.toHaveBeenCalled()
-    const add = screen.getByRole<HTMLButtonElement>('button', {
-      name: 'Add asset',
-    })
-    expect(add.disabled).toBe(false)
-    fireEvent.click(add)
-    await waitFor(() =>
-      expect(mocks.create).toHaveBeenCalledWith(
-        'boat',
-        expect.objectContaining({
-          modelNumber: 'P123',
-          suggestedDownloads: [],
-          confirmedConnections: [],
-        }),
-        photo,
-      ),
-    )
-  })
-  it('hides Find documents without a model number and saves with a blank model', async () => {
-    renderModal()
-    await selectPhoto()
-    fireEvent.change(screen.getByLabelText('Model number'), {
-      target: { value: '' },
-    })
-    expect(screen.queryByRole('button', { name: 'Find documents' })).toBeNull()
-    expect(mocks.startResearchJob).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
-    await waitFor(() =>
-      expect(mocks.create).toHaveBeenCalledWith(
-        'boat',
-        expect.objectContaining({
-          modelNumber: null,
-          confirmedConnections: [],
-        }),
-        photo,
-      ),
-    )
-  })
-  it('discards stale suggestions and confirmations when identity changes', async () => {
-    renderModal()
-    await selectPhoto()
-    fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
-    await screen.findByText('Water tank')
-    fireEvent.click(screen.getByRole('checkbox', { name: /Water tank/ }))
-    fireEvent.change(screen.getByLabelText('Description'), {
-      target: { value: 'Actually a bilge pump' },
-    })
-    expect(screen.queryByText('Water tank')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
-    await waitFor(() =>
-      expect(mocks.create).toHaveBeenCalledWith(
-        'boat',
-        expect.objectContaining({
-          confirmedConnections: [],
-          suggestedDownloads: [],
-        }),
-        photo,
-      ),
-    )
-  })
-  it('can save without auto-identify when the user enters details manually', async () => {
-    renderModal()
-    fireEvent.change(screen.getByLabelText('Asset photo'), {
-      target: { files: [photo] },
-    })
-    expect(mocks.identify).not.toHaveBeenCalled()
-    fireEvent.change(screen.getByLabelText('Description'), {
-      target: { value: 'Red pump in bilge' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
-    await waitFor(() =>
-      expect(mocks.create).toHaveBeenCalledWith(
-        'boat',
-        expect.objectContaining({
-          name: 'Red pump in bilge',
-          modelNumber: null,
-        }),
-        photo,
-      ),
-    )
-  })
-  it('can save a manual description and photo after identification and research fail', async () => {
-    mocks.identify.mockRejectedValue(new Error('AI unavailable'))
-    renderModal()
-    fireEvent.change(screen.getByLabelText('Asset photo'), {
-      target: { files: [photo] },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Auto-identify' }))
-    await screen.findByText('AI unavailable')
-    fireEvent.change(screen.getByLabelText('Description'), {
-      target: { value: 'Red pump in bilge' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
-    await waitFor(() =>
-      expect(mocks.create).toHaveBeenCalledWith(
-        'boat',
-        expect.objectContaining({
-          name: 'Red pump in bilge',
-          modelNumber: null,
-        }),
-        photo,
-      ),
-    )
-  })
-  it('does not close when the backdrop is tapped', () => {
-    renderModal()
-    fireEvent.click(screen.getByRole('button', { name: 'backdrop' }))
-    expect(props.onClose).not.toHaveBeenCalled()
-  })
-
-  it('shows a spinner while identification is in progress', async () => {
-    let finish: (value: unknown) => void = () => undefined
-    mocks.identify.mockReturnValue(
-      new Promise((resolve) => {
-        finish = resolve
-      }),
-    )
-    renderModal()
-    fireEvent.change(screen.getByLabelText('Asset photo'), {
-      target: { files: [photo] },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Auto-identify' }))
-    expect(
-      await screen.findByText('Identifying the device and reading its label…'),
-    ).toBeTruthy()
-    finish({
-      name: 'Water pump',
-      description: 'Fresh water pump',
-      modelNumber: 'P123',
-      confidence: 'high',
-      category: 'Plumbing',
-    })
-    await waitFor(() =>
-      expect(
-        screen.queryByText('Identifying the device and reading its label…'),
-      ).toBeNull(),
-    )
-  })
-
-  it('offers open, overwrite, merge, or close when the equipment is already listed', async () => {
-    renderModal({
-      assets: [
-        ...props.assets,
-        {
-          id: 'pump',
-          name: 'Old pump',
-          description: 'Needs service',
-          modelNumber: 'P123',
-          category: 'Plumbing',
-        },
-      ],
-    })
-    await selectPhoto()
-    expect(
-      screen.getByText('This equipment is already on the boat.'),
-    ).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Add asset' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Open' }))
-    expect(props.onOpenExisting).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'pump', modelNumber: 'P123' }),
-    )
-  })
-
-  it('overwrites the existing asset and attaches the photo', async () => {
-    renderModal({
-      assets: [
-        ...props.assets,
-        {
-          id: 'pump',
-          name: 'Old pump',
-          description: 'Needs service',
-          modelNumber: 'P123',
-          category: 'Plumbing',
-        },
-      ],
-    })
-    await selectPhoto()
-    fireEvent.click(screen.getByRole('button', { name: 'Overwrite' }))
-    await waitFor(() =>
-      expect(mocks.update).toHaveBeenCalledWith(
-        'boat',
-        'pump',
-        expect.objectContaining({
-          name: 'Water pump',
-          description: 'Fresh water pump',
-          modelNumber: 'P123',
-          category: 'Plumbing',
-        }),
-      ),
-    )
-    expect(mocks.upload).toHaveBeenCalledWith('boat', 'pump', photo, 'photo')
-    expect(props.onUpdated).toHaveBeenCalled()
-  })
-
-  it('merges new details into the existing asset', async () => {
-    renderModal({
-      assets: [
-        ...props.assets,
-        {
-          id: 'pump',
-          name: 'Old pump',
-          description: 'Needs service',
-          modelNumber: 'P123',
-          category: 'Plumbing',
-        },
-      ],
-    })
-    await selectPhoto()
-    fireEvent.click(screen.getByRole('button', { name: 'Merge' }))
-    await waitFor(() =>
-      expect(mocks.update).toHaveBeenCalledWith(
-        'boat',
-        'pump',
-        expect.objectContaining({
-          name: 'Old pump',
-          description: 'Needs service\n\nFresh water pump',
-          modelNumber: 'P123',
-          category: 'Plumbing',
-        }),
-      ),
-    )
-  })
-
-  it('closes the add flow from the already-listed prompt', async () => {
-    renderModal({
-      assets: [
-        ...props.assets,
-        {
-          id: 'pump',
-          name: 'Old pump',
-          description: null,
-          modelNumber: 'P123',
-          category: null,
-        },
-      ],
-    })
-    await selectPhoto()
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
-    expect(props.onClose).toHaveBeenCalled()
-    expect(mocks.create).not.toHaveBeenCalled()
-  })
-
-  it('opens the native camera with CameraSource.Camera', async () => {
-    mocks.native.mockReturnValue(true)
-    mocks.camera.mockResolvedValue({ webPath: 'native-photo', format: 'jpeg' })
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        blob: async () => new Blob(['photo'], { type: 'image/jpeg' }),
-      }),
-    )
-    renderModal()
-    fireEvent.click(screen.getByRole('button', { name: 'Take a photo' }))
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: 'Auto-identify' }),
-      ).toBeTruthy(),
-    )
-    expect(mocks.identify).not.toHaveBeenCalled()
-    expect(mocks.camera).toHaveBeenCalledWith(
-      expect.objectContaining({ source: 'CAMERA', saveToGallery: false }),
-    )
-  })
+  expect(screen.getByRole('img', { name: 'Garmin' })).toBeTruthy()
+  expect(screen.getByText('923')).toBeTruthy()
+  expect(mocks.start).not.toHaveBeenCalled()
+  click('Back')
+  expect(
+    screen.getByRole('button', { name: 'Edit Model' }).textContent,
+  ).toContain('923')
+  expect(screen.queryByText(/Use the shared product catalog/)).toBeNull()
 })
-
-it('reviews a recognized brand separately from the model and product name', async () => {
-  mocks.identify.mockResolvedValue({
-    name: 'Quark-Elec QK-A026-Plus NMEA 2000 AIS+GPS Receiver',
-    brand: 'Quark Elec',
-    modelNumber: 'Quark-Elec QK-A026-Plus',
-    description: '',
-    confidence: 'high',
-    category: 'Communications',
-  })
-  renderModal()
-  fireEvent.change(screen.getByLabelText('Asset photo'), {
-    target: { files: [photo] },
-  })
-  fireEvent.click(screen.getByRole('button', { name: 'Auto-identify' }))
-  await screen.findByRole('img', { name: 'Quark-Elec' })
-  expect(screen.getByLabelText<HTMLInputElement>('Model number').value).toBe(
-    'QK-A026-Plus',
-  )
-  expect(screen.getByLabelText<HTMLInputElement>('Name').value).toBe(
-    'NMEA 2000 AIS+GPS Receiver',
-  )
-  fireEvent.click(screen.getByRole('button', { name: 'Find documents' }))
-  await screen.findByText('Water tank')
-  expect(mocks.startResearchJob).toHaveBeenCalledWith(
-    'boat',
-    expect.objectContaining({
-      brand: 'Quark-Elec',
-      modelNumber: 'QK-A026-Plus',
-    }),
-  )
-  fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
+it('completes the skip path without any document or connection AI requests', async () => {
+  mount()
+  await find()
+  await skipDocuments()
+  click('Skip')
+  click('Add equipment')
   await waitFor(() =>
     expect(mocks.create).toHaveBeenCalledWith(
       'boat',
       expect.objectContaining({
-        brand: 'Quark-Elec',
-        modelNumber: 'QK-A026-Plus',
-        name: 'NMEA 2000 AIS+GPS Receiver',
+        productId: 'product',
+        sharedProduct: true,
+        researchDocuments: false,
+        confirmedConnections: [],
+        researchJobId: undefined,
       }),
+      undefined,
+    ),
+  )
+  expect(mocks.start).not.toHaveBeenCalled()
+  expect(mocks.connections).not.toHaveBeenCalled()
+  expect(props.onCreated).toHaveBeenCalled()
+})
+it('skips research prompts when documents already exist in the user language', async () => {
+  mocks.resolve.mockResolvedValue({
+    product: { ...product, resources: [manual] },
+    pending: false,
+    notice: '',
+  })
+  mount()
+  await find()
+  click('Next')
+  expect(screen.queryByText('Search for documents?')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: /Installation guide/ }))
+  expect(mocks.openDocument).toHaveBeenCalledWith(
+    expect.objectContaining({ contentUrl: manual.contentUrl }),
+    expect.anything(),
+  )
+  expect(mocks.start).not.toHaveBeenCalled()
+})
+it('keeps the photo attached and identifies it immediately', async () => {
+  mount()
+  fireEvent.change(screen.getByLabelText('Asset photo'), {
+    target: { files: [photo] },
+  })
+  await screen.findByRole('button', { name: 'Edit Model' })
+  click('Next')
+  await screen.findByText('Is this your equipment?')
+  await skipDocuments()
+  click('Skip')
+  click('Add equipment')
+  await waitFor(() =>
+    expect(mocks.create).toHaveBeenCalledWith(
+      'boat',
+      expect.objectContaining({ modelNumber: '923' }),
       photo,
     ),
   )
 })
-
-it('allows a custom manufacturer and saves manually entered details', async () => {
-  renderModal()
-  fireEvent.change(screen.getByLabelText('Brand'), {
-    target: { value: 'Custom Marine' },
+it('opens the OS chooser for a camera or existing photo on native devices', async () => {
+  mocks.native.mockReturnValue(true)
+  mocks.camera.mockResolvedValue({ webPath: 'native-photo', format: 'jpeg' })
+  vi.stubGlobal(
+    'fetch',
+    vi
+      .fn()
+      .mockResolvedValue({
+        blob: async () => new Blob(['photo'], { type: 'image/jpeg' }),
+      }),
+  )
+  mount()
+  click('Take or choose a photo')
+  await waitFor(() => expect(mocks.identify).toHaveBeenCalled())
+  expect(mocks.camera).toHaveBeenCalledWith(
+    expect.objectContaining({ source: 'PROMPT', saveToGallery: false }),
+  )
+})
+it('continues without a model after identification fails and retains the photo', async () => {
+  mocks.identify.mockRejectedValue(new Error('Photo unavailable'))
+  mount()
+  fireEvent.change(screen.getByLabelText('Asset photo'), {
+    target: { files: [photo] },
   })
-  fireEvent.change(screen.getByLabelText('Name'), {
-    target: { value: 'Bilge pump' },
+  await screen.findByText('Photo unavailable')
+  fireEvent.click(screen.getByLabelText('No model number'))
+  fireEvent.change(screen.getByLabelText('Description'), {
+    target: { value: 'Red pump under the sink' },
   })
-  fireEvent.click(screen.getByRole('button', { name: 'Add asset' }))
+  click('Next')
+  await skipDocuments()
+  click('Skip')
+  click('Add equipment')
   await waitFor(() =>
     expect(mocks.create).toHaveBeenCalledWith(
       'boat',
-      expect.objectContaining({ brand: 'Custom Marine', name: 'Bilge pump' }),
+      expect.objectContaining({
+        name: 'Red pump under the sink',
+        modelNumber: null,
+      }),
+      photo,
+    ),
+  )
+  expect(mocks.resolve).not.toHaveBeenCalled()
+})
+it('lets document research continue in the background and links the job on save', async () => {
+  mount()
+  await find()
+  click('Next')
+  click('Okay')
+  await screen.findByText('Search in progress')
+  expect(mocks.start).toHaveBeenCalledWith(
+    'boat',
+    expect.objectContaining({
+      includeConnections: false,
+      language: 'en',
+      sharedProduct: true,
+    }),
+  )
+  click('Skip')
+  click('Next')
+  click('Skip')
+  click('Add equipment')
+  await waitFor(() =>
+    expect(mocks.create).toHaveBeenCalledWith(
+      'boat',
+      expect.objectContaining({ researchJobId: 'job' }),
       undefined,
     ),
   )
 })
-
-it('matches legacy branded models without confusing different manufacturers', () => {
+it('advances to documents when research completes', async () => {
+  mocks.poll.mockResolvedValue({
+    id: 'job',
+    status: 'completed',
+    result: {
+      productId: 'product',
+      category: 'Navigation',
+      downloads: [],
+      connections: [],
+    },
+  })
+  mount()
+  await find()
+  click('Next')
+  click('Okay')
+  await screen.findByText('Installation guide')
+  expect(screen.queryByText('Search in progress')).toBeNull()
+})
+it('does not pull the user back from connections when background documents finish', async () => {
+  let finish!: (value: unknown) => void
+  mocks.poll.mockReturnValue(
+    new Promise((resolve) => {
+      finish = resolve
+    }),
+  )
+  mount()
+  await find()
+  click('Next')
+  click('Okay')
+  await screen.findByText('Search in progress')
+  click('Skip')
+  click('Next')
+  click('Skip')
+  await act(async () =>
+    finish({
+      status: 'completed',
+      result: {
+        productId: 'product',
+        downloads: [],
+        connections: [],
+        category: 'Navigation',
+      },
+    }),
+  )
+  expect(screen.getByText('Review connections')).toBeTruthy()
+})
+it('lets users uncheck AI connections and manually choose only same-category equipment', async () => {
+  mocks.connections.mockResolvedValue([
+    { assetId: 'gps', reason: 'Position data' },
+    { assetId: 'pump', reason: 'Wrong category' },
+  ])
+  mount()
+  await find()
+  await skipDocuments()
+  click('Okay')
+  await screen.findByText('GPS receiver')
+  expect(screen.queryByText('Water pump')).toBeNull()
+  const checkbox = screen.getByRole<HTMLInputElement>('checkbox', {
+    name: /GPS receiver/,
+  })
+  expect(checkbox.checked).toBe(true)
+  fireEvent.click(checkbox)
+  click('Add connection')
+  expect(screen.queryByText('Water pump')).toBeNull()
+  fireEvent.click(screen.getByRole('radio', { name: /Radar/ }))
+  click('Add connection')
+  click('Add equipment')
+  await waitFor(() =>
+    expect(mocks.create).toHaveBeenCalledWith(
+      'boat',
+      expect.objectContaining({
+        confirmedConnections: [
+          { assetId: 'radar', reason: 'Connection selected by the user.' },
+        ],
+      }),
+      undefined,
+    ),
+  )
+})
+it('ignores a stale model lookup after going back and changing the model', async () => {
+  let finish!: (value: unknown) => void
+  mocks.resolve.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve
+    }),
+  )
+  mount()
+  enter('Brand', 'Garmin')
+  enter('Model', '923')
+  click('Next')
+  await screen.findByText('Finding your equipment…')
+  click('Back')
+  click('Edit Model')
+  enter('Model', '943')
+  await act(async () => finish({ product, pending: false, notice: '' }))
+  expect(
+    screen.getByRole('button', { name: 'Edit Model' }).textContent,
+  ).toContain('943')
+  expect(screen.queryByText('Is this your equipment?')).toBeNull()
+})
+it('keeps the form for retry on a catalog failure', async () => {
+  mocks.resolve.mockRejectedValueOnce(new Error('Catalog unavailable'))
+  mount()
+  await find()
+  expect(
+    screen.getByRole<HTMLButtonElement>('button', { name: 'Next' }).disabled,
+  ).toBe(true)
+  click('Try again')
+  await screen.findByText('Chartplotter')
+  expect(
+    screen.getByRole<HTMLButtonElement>('button', { name: 'Next' }).disabled,
+  ).toBe(false)
+})
+it('keeps confirmed choices after a save failure and prevents duplicate submissions', async () => {
+  mocks.create.mockRejectedValueOnce(new Error('Save unavailable'))
+  mount()
+  await find()
+  await skipDocuments()
+  click('Okay')
+  await screen.findByText('GPS receiver')
+  click('Add equipment')
+  await screen.findByText('Save unavailable')
+  expect(
+    screen.getByRole<HTMLInputElement>('checkbox', { name: /GPS receiver/ })
+      .checked,
+  ).toBe(true)
+  click('Add equipment')
+  await waitFor(() => expect(props.onCreated).toHaveBeenCalled())
+})
+it('handles a duplicate by opening or merging existing equipment', async () => {
+  mount({
+    assets: [
+      {
+        id: 'existing',
+        name: 'Old display',
+        brand: 'Garmin',
+        modelNumber: '923',
+        category: 'Navigation',
+        description: 'Existing note',
+      },
+    ],
+  })
+  await find()
+  expect(
+    screen.getByRole<HTMLButtonElement>('button', { name: 'Next' }).disabled,
+  ).toBe(true)
+  click('Merge')
+  await waitFor(() =>
+    expect(mocks.update).toHaveBeenCalledWith(
+      'boat',
+      'existing',
+      expect.objectContaining({
+        description: 'Existing note\n\nMarine display',
+      }),
+    ),
+  )
+  expect(props.onUpdated).toHaveBeenCalled()
+})
+it('selects brand suggestions with the keyboard without reverting on blur', async () => {
+  mount()
+  const brand = screen.getByRole('combobox', { name: 'Brand' })
+  fireEvent.focus(brand)
+  fireEvent.change(brand, { target: { value: 'Gar' } })
+  await screen.findByRole('option', { name: 'Garmin' })
+  fireEvent.keyDown(brand, { key: 'ArrowDown' })
+  fireEvent.keyDown(brand, { key: 'Enter' })
+  expect(screen.getByRole('img', { name: 'Garmin' })).toBeTruthy()
+  enter('Model', '923')
+  click('Next')
+  await waitFor(() =>
+    expect(mocks.resolve).toHaveBeenCalledWith(
+      'Garmin',
+      '923',
+      'en',
+      expect.anything(),
+    ),
+  )
+})
+it('requires confirmation to discard and never closes on backdrop taps', () => {
+  mount()
+  enter('Brand', 'Garmin')
+  vi.spyOn(window, 'confirm').mockReturnValue(false)
+  fireEvent.click(screen.getByRole('dialog').parentElement!)
+  expect(props.onClose).not.toHaveBeenCalled()
+  click('Close')
+  expect(props.onClose).not.toHaveBeenCalled()
+})
+it('matches legacy branded models without confusing manufacturers', () => {
   const existing = {
     id: 'receiver',
     name: 'Quark-Elec QK-A026-Plus Receiver',

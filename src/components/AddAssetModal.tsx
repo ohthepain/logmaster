@@ -1,44 +1,62 @@
-import { ProductCatalogMatch } from './ProductCatalogMatch'
-import { fetchCatalogProduct } from '../lib/product-catalog-api'
-import { AssetBrandField } from './AssetBrandField'
-import { getAssetIdentity } from '../domain/asset-brands'
 import { Capacitor } from '@capacitor/core'
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
 import {
+  ArrowLeft,
+  ArrowRight,
   Camera as CameraIcon,
+  FileText,
+  ImageIcon,
   LoaderCircle,
-  Sparkles,
-  Trash2,
+  Network,
+  Plus,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Modal } from './Modal'
+import { EquipmentFlowDialog } from './EquipmentFlowDialog'
+import { EquipmentIdentityFields } from './EquipmentIdentityFields'
+import { AssetBrandLogo } from './AssetBrandLogo'
+import { BoatDocumentViewerModal } from './BoatDocumentViewerModal'
 import { ASSET_CATEGORIES } from '../domain/asset-intelligence'
-import type { AssetCategory, AssetResearch } from '../domain/asset-intelligence'
-import type { AssetOwnership, BoatAsset } from '../domain/boat-assets'
-import type { ResourceMember } from '../domain/member-invite'
+import { getAssetIdentity } from '../domain/asset-brands'
+import {
+  equipmentDocuments,
+  hasLocalizedDocuments,
+  languageRank,
+} from '../domain/product-catalog'
+import {
+  fetchCatalogProduct,
+  resolveEquipmentProduct,
+} from '../lib/product-catalog-api'
 import {
   createBoatAsset,
   fetchAssetResearchJob,
+  findEquipmentConnections,
   identifyAssetPhoto,
   startAssetResearchJob,
   updateBoatAsset,
   uploadAndLinkAssetDocument,
 } from '../lib/boat-assets-api'
+import { apiUrl } from '../lib/app-origin'
 import { useTranslation } from '../lib/i18n'
-import { AssetLinkTitle, AssetLinkTypeTag } from './AssetLinkRowParts'
+import { openBoatDocument } from '../lib/boat-document-open'
+import type { BoatDocumentViewerPayload } from '../lib/boat-document-open'
+import type {
+  AssetCategory,
+  AssetConnectionSuggestion,
+  AssetResearch,
+} from '../domain/asset-intelligence'
+import type { CatalogProduct } from '../domain/product-catalog'
+import type { AssetOwnership, BoatAsset } from '../domain/boat-assets'
+import type { ResourceMember } from '../domain/member-invite'
 
 export type ListedBoatAsset = Pick<
   BoatAsset,
   'id' | 'name' | 'description' | 'modelNumber' | 'category'
 > & { brand?: string | null }
-
-function normalizeAssetKey(value: string) {
-  return value
+const normalized = (value: string) =>
+  value
     .trim()
     .toLowerCase()
     .replace(/[\s\-_/]/g, '')
-}
-
 export function findExistingBoatAsset(
   assets: ListedBoatAsset[],
   identified: {
@@ -49,44 +67,43 @@ export function findExistingBoatAsset(
 ): ListedBoatAsset | null {
   const identity = getAssetIdentity(identified)
   const candidates = assets.filter((asset) => {
-    const existingBrand = getAssetIdentity(asset).brand
+    const brand = getAssetIdentity(asset).brand
     return (
       !identity.brand ||
-      !existingBrand ||
-      normalizeAssetKey(identity.brand) === normalizeAssetKey(existingBrand)
+      !brand ||
+      normalized(identity.brand) === normalized(brand)
     )
   })
-  const model = identity.modelNumber
-  if (model) {
-    const modelKey = normalizeAssetKey(model)
-    const byModel = candidates.find((asset) => {
-      const existingModel = getAssetIdentity(asset).modelNumber
-      return existingModel && normalizeAssetKey(existingModel) === modelKey
+  if (identity.modelNumber) {
+    const match = candidates.find((asset) => {
+      const model = getAssetIdentity(asset).modelNumber
+      return model && normalized(model) === normalized(identity.modelNumber!)
     })
-    if (byModel) return byModel
+    if (match) return match
   }
-  const nameKey = normalizeAssetKey(identity.productName)
-  if (!nameKey) return null
-  return (
-    candidates.find(
-      (asset) =>
-        normalizeAssetKey(getAssetIdentity(asset).productName) === nameKey,
-    ) ?? null
-  )
+  return identity.productName
+    ? (candidates.find(
+        (asset) =>
+          normalized(getAssetIdentity(asset).productName) ===
+          normalized(identity.productName),
+      ) ?? null)
+    : null
 }
-
-function mergeAssetText(existing: string | null, incoming: string) {
-  const current = existing?.trim() ?? ''
-  const next = incoming.trim()
-  if (!current) return next || null
-  if (!next || current.toLowerCase() === next.toLowerCase()) return current
-  return `${current}\n\n${next}`
-}
-
-const fieldClass =
-  'rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2'
-const buttonClass =
-  'rounded-full border border-[var(--chip-line)] px-3 py-2 text-sm font-semibold disabled:opacity-50'
+type Step =
+  | 'find'
+  | 'results'
+  | 'documentPrompt'
+  | 'documentProgress'
+  | 'documents'
+  | 'connectionPrompt'
+  | 'connections'
+  | 'addConnection'
+const field =
+  'min-h-12 w-full min-w-0 rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-3 text-base outline-none focus:border-[var(--sea-ink)]'
+const secondary =
+  'inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[var(--chip-line)] px-5 py-3 text-sm font-semibold disabled:opacity-40'
+const primary =
+  'inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-[var(--btn-bg)] px-6 py-3 text-sm font-semibold text-[var(--btn-text)] transition-opacity hover:opacity-85 disabled:opacity-40'
 
 export function AddAssetModal({
   boatId,
@@ -110,126 +127,73 @@ export function AddAssetModal({
   onOpenExisting: (asset: ListedBoatAsset) => void
 }) {
   const { t, language } = useTranslation()
-  const [productId, setProductId] = useState<string | null>(null)
-  const [sharedProduct, setSharedProduct] = useState(true)
-  const [includeConnections, setIncludeConnections] = useState(false)
-  const [name, setName] = useState('')
-  const [brand, setBrand] = useState('')
-  const [description, setDescription] = useState('')
-  const [modelNumber, setModelNumber] = useState('')
+  const [step, setStep] = useState<Step>('find')
+  const [brand, setBrand] = useState(''),
+    [model, setModel] = useState('')
+  const [noModel, setNoModel] = useState(false)
+  const [name, setName] = useState(''),
+    [description, setDescription] = useState('')
   const [category, setCategory] = useState<AssetCategory | ''>('')
   const [ownership, setOwnership] = useState<AssetOwnership>('BOAT')
-  const [ownedByUserId, setOwnedByUserId] = useState('')
-  const [installedAt, setInstalledAt] = useState('')
-  const [photo, setPhoto] = useState<File>()
-  const [preview, setPreview] = useState('')
-  const [status, setStatus] = useState<
-    'idle' | 'camera' | 'identifying' | 'saving'
-  >('idle')
-  const [notice, setNotice] = useState('')
+  const [ownedByUserId, setOwnedByUserId] = useState(''),
+    [installedAt, setInstalledAt] = useState('')
+  const [photo, setPhoto] = useState<File>(),
+    [preview, setPreview] = useState('')
+  const [product, setProduct] = useState<CatalogProduct | null>(null)
+  const [busy, setBusy] = useState<
+    'camera' | 'identify' | 'lookup' | 'connections' | 'save' | null
+  >(null)
+  const [notice, setNotice] = useState(''),
+    [lookupFailed, setLookupFailed] = useState(false)
+  const [imageFailed, setImageFailed] = useState(false)
+  const [jobId, setJobId] = useState<string | null>(null)
   const [research, setResearch] = useState<AssetResearch | null>(null)
-  const [researchJobId, setResearchJobId] = useState<string | null>(null)
-  const [researchJobActive, setResearchJobActive] = useState(false)
-  const [confirmed, setConfirmed] = useState<string[]>([])
-  const [existingMatch, setExistingMatch] = useState<ListedBoatAsset | null>(
-    null,
-  )
-  const input = useRef<HTMLInputElement>(null)
-  const request = useRef<AbortController | null>(null)
-  const researchPoll = useRef<AbortController | null>(null)
-  const blocking =
-    status === 'camera' || status === 'identifying' || status === 'saving'
-
-  function syncExistingMatch(identity?: {
-    brand?: string | null
-    name?: string
-    modelNumber?: string | null
-  }) {
-    setExistingMatch(
-      findExistingBoatAsset(assets, {
-        brand: identity?.brand ?? brand,
-        name: identity?.name ?? name,
-        modelNumber:
-          identity?.modelNumber !== undefined
-            ? identity.modelNumber
-            : modelNumber.trim() || null,
-      }),
-    )
-  }
-
-  useEffect(
-    () => () => {
-      request.current?.abort()
-      researchPoll.current?.abort()
-    },
-    [],
-  )
+  const [researchActive, setResearchActive] = useState(false),
+    [researchStarting, setResearchStarting] = useState(false)
+  const [researchError, setResearchError] = useState('')
+  const [connections, setConnections] = useState<AssetConnectionSuggestion[]>(
+      [],
+    ),
+    [selected, setSelected] = useState<string[]>([])
+  const [manualId, setManualId] = useState(''),
+    [anotherUnit, setAnotherUnit] = useState(false)
+  const [viewer, setViewer] = useState<BoatDocumentViewerPayload | null>(null)
+  const input = useRef<HTMLInputElement>(null),
+    request = useRef<AbortController | null>(null)
+  const generation = useRef(0),
+    mounted = useRef(true),
+    saving = useRef(false),
+    researchStart = useRef(false)
+  const stage =
+    step === 'find' || step === 'results'
+      ? 0
+      : step.startsWith('document')
+        ? 1
+        : 2
+  const existing = anotherUnit
+    ? null
+    : findExistingBoatAsset(assets, {
+        name,
+        brand,
+        modelNumber: noModel ? null : model,
+      })
+  const candidates = category
+    ? assets.filter((asset) => asset.category === category)
+    : []
+  const documents = equipmentDocuments(product, language)
+  const privateDocuments = product
+    ? []
+    : (research?.downloads.filter((item) => item.purpose !== 'photo') ?? [])
+  const sharedImage = product?.imageUrl || product?.previewImageUrl
+  const image = !imageFailed && sharedImage ? apiUrl(sharedImage) : preview
 
   useEffect(() => {
-    if (!researchJobId) return
-    const activeJobId: string = researchJobId
-    let cancelled = false
-    researchPoll.current?.abort()
-    const controller = new AbortController()
-    researchPoll.current = controller
-
-    async function poll() {
-      try {
-        const job = await fetchAssetResearchJob(
-          boatId,
-          activeJobId,
-          controller.signal,
-        )
-        if (controller.signal.aborted || cancelled) return
-        if (job.status === 'completed' && job.result) {
-          setResearch(job.result)
-          if (job.result.productId) {
-            setProductId(job.result.productId)
-            void fetchCatalogProduct(
-              job.result.productId,
-              language,
-              controller.signal,
-            )
-              .then((product) => {
-                if (controller.signal.aborted || cancelled || !product.info)
-                  return
-                setName((current) => current || product.info!.name)
-                setDescription(
-                  (current) => current || product.info!.description,
-                )
-              })
-              .catch(() => {})
-          }
-          if (job.result.category) setCategory(job.result.category)
-          setResearchJobActive(false)
-          if (!job.result.downloads.length && !job.result.connections.length) {
-            setNotice(t('addAssetNoResearchResults'))
-          }
-        } else if (job.status === 'failed') {
-          setResearchJobActive(false)
-          setNotice(job.error ?? t('addAssetSuggestionsUnavailable'))
-        } else {
-          setResearchJobActive(true)
-        }
-      } catch (error) {
-        if (controller.signal.aborted || cancelled) return
-        setResearchJobActive(false)
-        setNotice(
-          error instanceof Error
-            ? error.message
-            : t('addAssetSuggestionsUnavailable'),
-        )
-      }
-    }
-
-    void poll()
-    const interval = window.setInterval(() => void poll(), 2000)
+    mounted.current = true
     return () => {
-      cancelled = true
-      controller.abort()
-      window.clearInterval(interval)
+      mounted.current = false
+      request.current?.abort()
     }
-  }, [boatId, researchJobId, t, language])
+  }, [])
   useEffect(() => {
     if (!photo) {
       setPreview('')
@@ -239,177 +203,357 @@ export function AddAssetModal({
     setPreview(url)
     return () => URL.revokeObjectURL(url)
   }, [photo])
+  useEffect(() => {
+    if (!jobId) return
+    const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout> | undefined
+    async function poll() {
+      try {
+        const job = await fetchAssetResearchJob(
+          boatId,
+          jobId!,
+          controller.signal,
+        )
+        if (controller.signal.aborted) return
+        if (job.status === 'completed' && job.result) {
+          setResearch(job.result)
+          if (job.result.productId) {
+            const updated = await fetchCatalogProduct(
+              job.result.productId,
+              language,
+              controller.signal,
+            )
+            if (controller.signal.aborted) return
+            setProduct(updated)
+          }
+          setResearchActive(false)
+          setResearchError('')
+          setStep((current) =>
+            current === 'documentProgress' ? 'documents' : current,
+          )
+          return
+        }
+        if (job.status === 'failed') {
+          setResearchActive(false)
+          setResearchError(job.error || t('addAssetSuggestionsUnavailable'))
+          return
+        }
+        setResearchError('')
+        timer = setTimeout(() => void poll(), 2000)
+      } catch (error) {
+        if (controller.signal.aborted) return
+        setResearchError(
+          error instanceof Error
+            ? error.message
+            : t('addAssetSuggestionsUnavailable'),
+        )
+        timer = setTimeout(() => void poll(), 5000)
+      }
+    }
+    void poll()
+    return () => {
+      controller.abort()
+      clearTimeout(timer)
+    }
+  }, [boatId, jobId, language, t])
 
-  function invalidateResearch() {
-    researchPoll.current?.abort()
-    researchPoll.current = null
+  function invalidate() {
+    generation.current += 1
+    request.current?.abort()
+    setProduct(null)
+    setJobId(null)
     setResearch(null)
-    setResearchJobId(null)
-    setResearchJobActive(false)
-    setConfirmed([])
+    setResearchActive(false)
+    setResearchError('')
+    setConnections([])
+    setSelected([])
+    setAnotherUnit(false)
+    setLookupFailed(false)
+    setImageFailed(false)
+    setNotice('')
   }
-
-  function attachPhoto(file: File) {
+  function close() {
+    if (saving.current) return
+    if (
+      !(brand || model || description || photo) ||
+      window.confirm(t('equipmentCloseConfirm'))
+    )
+      onClose()
+  }
+  function backToFind() {
+    request.current?.abort()
+    setBusy(null)
+    setNotice('')
+    setStep('find')
+  }
+  function identityInput() {
+    return {
+      name: name.trim() || model.trim() || description.trim().slice(0, 200),
+      brand: brand.trim() || null,
+      modelNumber: noModel ? null : model.trim() || null,
+      description,
+      category: category || null,
+    }
+  }
+  async function identify(file: File) {
     if (!file.size || file.size > 15 * 1024 * 1024) {
       setNotice(t('addAssetPhotoTooLarge'))
+      setBusy(null)
       return
     }
-    request.current?.abort()
+    invalidate()
     setPhoto(file)
-    setExistingMatch(null)
-    invalidateResearch()
-    setNotice('')
-  }
-
-  async function autoIdentify() {
-    if (!photo) return
-    if (!photo.size || photo.size > 15 * 1024 * 1024) {
-      setNotice(t('addAssetPhotoTooLarge'))
-      return
-    }
-    request.current?.abort()
     const controller = new AbortController()
     request.current = controller
-    setExistingMatch(null)
-    invalidateResearch()
-    setNotice('')
-    setStatus('identifying')
+    setBusy('identify')
     try {
-      const result = await identifyAssetPhoto(boatId, photo, controller.signal)
-      if (controller.signal.aborted) return
+      const result = await identifyAssetPhoto(boatId, file, controller.signal)
+      if (controller.signal.aborted || !mounted.current) return
       const identity = getAssetIdentity(result)
-      setProductId(null)
       setBrand(identity.brand ?? '')
+      setModel(identity.modelNumber ?? '')
       setName(identity.productName)
       setDescription(result.description)
-      setModelNumber(identity.modelNumber ?? '')
       setCategory(result.category ?? '')
-      syncExistingMatch({
-        brand: identity.brand,
-        name: result.name,
-        modelNumber: result.modelNumber,
-      })
+      setNoModel(!identity.modelNumber)
       setNotice(
-        result.confidence === 'low'
-          ? t('addAssetIdentifyLowConfidence')
-          : result.modelNumber
-            ? t('addAssetIdentifyCheckModel')
-            : t('addAssetIdentifyNoModelFound'),
+        t(
+          result.confidence === 'low'
+            ? 'addAssetIdentifyLowConfidence'
+            : result.modelNumber
+              ? 'addAssetIdentifyCheckModel'
+              : 'addAssetIdentifyNoModelFound',
+        ),
       )
     } catch (error) {
-      if (!controller.signal.aborted)
+      if (!controller.signal.aborted && mounted.current)
         setNotice(
           error instanceof Error
             ? error.message
             : t('addAssetIdentifyFailedFallback'),
         )
     } finally {
-      if (!controller.signal.aborted) setStatus('idle')
+      if (!controller.signal.aborted && mounted.current) setBusy(null)
     }
   }
-
   async function openCamera() {
     if (!Capacitor.isNativePlatform()) {
       input.current?.click()
       return
     }
-    setStatus('camera')
+    setBusy('camera')
     try {
       const result = await Camera.getPhoto({
-        source: CameraSource.Camera,
+        source: CameraSource.Prompt,
         resultType: CameraResultType.Uri,
         quality: 100,
         correctOrientation: true,
         saveToGallery: false,
       })
+      if (!mounted.current) return
       if (result.webPath) {
-        const response = await fetch(result.webPath)
-        const blob = await response.blob()
-        attachPhoto(
-          new File([blob], 'asset-photo.jpg', {
+        const blob = await (await fetch(result.webPath)).blob()
+        if (!mounted.current) return
+        await identify(
+          new File([blob], `equipment-photo.${result.format || 'jpg'}`, {
             type: blob.type || 'image/jpeg',
           }),
         )
-        setStatus('idle')
-      } else setStatus('idle')
+      } else setBusy(null)
     } catch (error) {
-      setStatus('idle')
-      if (!/cancel/i.test(String(error)))
-        setNotice(t('addAssetCameraUnavailable'))
+      if (mounted.current) {
+        setBusy(null)
+        if (!/cancel/i.test(String(error)))
+          setNotice(t('addAssetCameraUnavailable'))
+      }
     }
   }
-
-  async function findSuggestions(model: string) {
-    const identity = getAssetIdentity({ name, brand, modelNumber: model })
-    setModelNumber(identity.modelNumber ?? '')
-    if (!(name.trim() || description.trim() || model)) {
-      setNotice(t('addAssetEnterNameForResearch'))
-      return
-    }
-    invalidateResearch()
+  async function findModel() {
+    setStep('results')
     setNotice('')
+    setImageFailed(false)
+    if (noModel || !brand.trim() || !model.trim()) return
+    const controller = new AbortController()
+    request.current?.abort()
+    request.current = controller
+    setBusy('lookup')
+    setLookupFailed(false)
     try {
-      const { jobId } = await startAssetResearchJob(boatId, {
-        name:
-          name.trim() || description.trim().slice(0, 200) || modelNumber.trim(),
-        brand,
-        description,
-        modelNumber: identity.modelNumber,
-        productId: productId ?? undefined,
-        sharedProduct,
-        includeConnections,
+      let result = await resolveEquipmentProduct(
+        brand.trim(),
+        model.trim(),
         language,
-      })
-      setResearchJobId(jobId)
-      setResearchJobActive(true)
-    } catch (error) {
-      setNotice(
-        error instanceof Error
-          ? error.message
-          : t('addAssetSuggestionsUnavailable'),
+        controller.signal,
       )
-    }
-  }
-
-  async function applyExisting(mode: 'overwrite' | 'merge') {
-    if (!existingMatch) return
-    setStatus('saving')
-    setNotice('')
-    try {
-      const incomingName =
-        name.trim() || description.trim().slice(0, 200) || modelNumber.trim()
-      const incomingDescription = description.trim()
-      const incomingModel = modelNumber.trim() || null
-      const updated = await updateBoatAsset(boatId, existingMatch.id, {
-        brand:
-          mode === 'overwrite'
-            ? brand.trim()
-            : existingMatch.brand || brand.trim(),
-        name:
-          mode === 'overwrite'
-            ? incomingName
-            : existingMatch.name.trim() || incomingName,
-        description:
-          mode === 'overwrite'
-            ? incomingDescription || null
-            : mergeAssetText(existingMatch.description, incomingDescription),
-        modelNumber:
-          mode === 'overwrite'
-            ? incomingModel
-            : existingMatch.modelNumber || incomingModel,
-        category:
-          mode === 'overwrite'
-            ? category || null
-            : existingMatch.category || category || null,
-      })
-      if (photo) {
-        await uploadAndLinkAssetDocument(
-          boatId,
-          existingMatch.id,
-          photo,
-          'photo',
+      while (result.pending && !controller.signal.aborted) {
+        await new Promise<void>((resolve) => {
+          const done = () => {
+            clearTimeout(timer)
+            controller.signal.removeEventListener('abort', done)
+            resolve()
+          }
+          const timer = setTimeout(done, 2500)
+          controller.signal.addEventListener('abort', done, { once: true })
+        })
+        if (controller.signal.aborted) return
+        result = await resolveEquipmentProduct(
+          brand.trim(),
+          model.trim(),
+          language,
+          controller.signal,
         )
       }
+      if (controller.signal.aborted || !mounted.current) return
+      setProduct(result.product)
+      setBrand(result.product.brand)
+      setModel(result.product.modelNumber)
+      setNotice(result.notice)
+      if (result.product.info) {
+        setName(result.product.info.name)
+        setDescription((current) => current || result.product.info!.description)
+        setCategory((current) => current || result.product.info!.category || '')
+      }
+    } catch (error) {
+      if (!controller.signal.aborted && mounted.current) {
+        setLookupFailed(true)
+        setNotice(
+          error instanceof Error
+            ? error.message
+            : t('productLookupUnavailable'),
+        )
+      }
+    } finally {
+      if (!controller.signal.aborted && mounted.current) setBusy(null)
+    }
+  }
+  function startDocumentsStep() {
+    setNotice('')
+    setStep(
+      researchActive
+        ? 'documentProgress'
+        : hasLocalizedDocuments(product, language)
+          ? 'documents'
+          : 'documentPrompt',
+    )
+  }
+  async function startDocuments() {
+    if (researchStart.current || researchActive) return
+    researchStart.current = true
+    setResearchStarting(true)
+    setResearchError('')
+    const version = generation.current
+    try {
+      const result = await startAssetResearchJob(boatId, {
+        ...identityInput(),
+        productId: product?.id,
+        sharedProduct: true,
+        includeConnections: false,
+        language,
+      })
+      if (!mounted.current || version !== generation.current) return
+      setJobId(result.jobId)
+      setResearchActive(true)
+      setStep('documentProgress')
+    } catch (error) {
+      if (mounted.current && version === generation.current)
+        setResearchError(
+          error instanceof Error
+            ? error.message
+            : t('addAssetSuggestionsUnavailable'),
+        )
+    } finally {
+      researchStart.current = false
+      if (mounted.current) setResearchStarting(false)
+    }
+  }
+  async function searchConnections() {
+    setNotice('')
+    setStep('connections')
+    setBusy('connections')
+    const controller = new AbortController()
+    request.current?.abort()
+    request.current = controller
+    try {
+      const result = await findEquipmentConnections(
+        boatId,
+        identityInput(),
+        controller.signal,
+      )
+      if (!controller.signal.aborted && mounted.current) {
+        const allowed = result.filter((item) =>
+          candidates.some((asset) => asset.id === item.assetId),
+        )
+        setConnections(allowed)
+        setSelected(allowed.map((item) => item.assetId))
+      }
+    } catch (error) {
+      if (!controller.signal.aborted && mounted.current)
+        setNotice(
+          error instanceof Error
+            ? error.message
+            : t('addAssetSuggestionsUnavailable'),
+        )
+    } finally {
+      if (!controller.signal.aborted && mounted.current) setBusy(null)
+    }
+  }
+  async function save() {
+    if (saving.current) return
+    saving.current = true
+    setBusy('save')
+    setNotice('')
+    try {
+      const asset = await createBoatAsset(
+        boatId,
+        {
+          ...identityInput(),
+          productId: product?.id,
+          sharedProduct: true,
+          researchDocuments: false,
+          language,
+          ownership,
+          ownedByUserId: ownedByUserId || null,
+          installedAt: installedAt
+            ? new Date(`${installedAt}T12:00:00`).toISOString()
+            : null,
+          researchJobId: jobId ?? undefined,
+          suggestedDownloads: product ? [] : (research?.downloads ?? []),
+          confirmedConnections: connections.filter((item) =>
+            selected.includes(item.assetId),
+          ),
+        },
+        photo,
+      )
+      onCreated(asset)
+    } catch (error) {
+      setNotice(
+        error instanceof Error ? error.message : t('addAssetSaveFailed'),
+      )
+      saving.current = false
+      setBusy(null)
+    }
+  }
+  async function mergeExisting() {
+    if (!existing || saving.current) return
+    saving.current = true
+    setBusy('save')
+    try {
+      const current = existing.description?.trim() ?? '',
+        incoming = description.trim()
+      const updated = await updateBoatAsset(boatId, existing.id, {
+        name: existing.name || name || model,
+        brand: existing.brand || brand,
+        modelNumber: existing.modelNumber || model || null,
+        category: existing.category || category || null,
+        description:
+          current &&
+          incoming &&
+          current.toLowerCase() !== incoming.toLowerCase()
+            ? `${current}\n\n${incoming}`
+            : current || incoming || null,
+      })
+      if (photo)
+        await uploadAndLinkAssetDocument(boatId, existing.id, photo, 'photo')
       onUpdated(updated)
     } catch (error) {
       setNotice(
@@ -417,486 +561,725 @@ export function AddAssetModal({
           ? error.message
           : t('addAssetUpdateExistingFailed'),
       )
-      setStatus('idle')
+      saving.current = false
+      setBusy(null)
     }
   }
-
-  const statusLabel =
-    status === 'identifying'
-      ? t('addAssetStatusIdentifying')
-      : status === 'saving'
-        ? existingMatch
-          ? t('addAssetStatusUpdating')
-          : t('addAssetStatusSaving')
-        : status === 'camera'
-          ? t('addAssetStatusOpeningCamera')
-          : null
+  const action = (
+    label: string,
+    onClick: () => void,
+    disabled = false,
+    next = false,
+  ) => (
+    <button
+      type="button"
+      className={primary}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {label}
+      {next && <ArrowRight className="size-4" />}
+    </button>
+  )
+  const back = (onClick: () => void) => (
+    <button
+      type="button"
+      className={secondary}
+      onClick={onClick}
+      disabled={busy === 'save'}
+    >
+      <ArrowLeft className="size-4" />
+      {t('equipmentBack')}
+    </button>
+  )
+  let footer
+  if (step === 'find')
+    footer = action(
+      t('equipmentNext'),
+      () => void findModel(),
+      !!busy ||
+        (noModel ? !description.trim() : !brand.trim() || !model.trim()),
+      true,
+    )
+  else if (step === 'results')
+    footer = (
+      <>
+        {back(backToFind)}
+        {action(
+          t('equipmentNext'),
+          startDocumentsStep,
+          !!busy || !!existing || lookupFailed,
+          true,
+        )}
+      </>
+    )
+  else if (step === 'documentPrompt')
+    footer = (
+      <>
+        <button
+          type="button"
+          className={secondary}
+          onClick={() => setStep('documents')}
+          disabled={researchStarting}
+        >
+          {t('equipmentSkip')}
+        </button>
+        {action(
+          researchStarting ? t('loading') : t('equipmentOkay'),
+          () => void startDocuments(),
+          researchStarting,
+        )}
+      </>
+    )
+  else if (step === 'documentProgress')
+    footer = (
+      <>
+        {back(() => setStep('results'))}
+        {action(t('equipmentSkip'), () => setStep('documents'))}
+      </>
+    )
+  else if (step === 'documents')
+    footer = (
+      <>
+        {back(() => setStep('results'))}
+        {action(
+          t('equipmentNext'),
+          () => {
+            setNotice('')
+            setStep('connectionPrompt')
+          },
+          false,
+          true,
+        )}
+      </>
+    )
+  else if (step === 'connectionPrompt')
+    footer = (
+      <>
+        <button
+          type="button"
+          className={secondary}
+          onClick={() => setStep('connections')}
+        >
+          {t('equipmentSkip')}
+        </button>
+        {action(t('equipmentOkay'), () => void searchConnections())}
+      </>
+    )
+  else if (step === 'connections')
+    footer = (
+      <>
+        {back(() => {
+          request.current?.abort()
+          setBusy(null)
+          setStep('connectionPrompt')
+        })}
+        {action(
+          busy === 'save' ? t('saving') : t('equipmentFinish'),
+          () => void save(),
+          !!busy || selected.length > 20,
+        )}
+      </>
+    )
+  else
+    footer = (
+      <>
+        {back(() => setStep('connections'))}
+        {action(
+          t('equipmentAddConnection'),
+          () => {
+            if (!manualId) return
+            if (!connections.some((item) => item.assetId === manualId))
+              setConnections([
+                ...connections,
+                { assetId: manualId, reason: t('equipmentManualConnection') },
+              ])
+            setSelected([...new Set([...selected, manualId])])
+            setManualId('')
+            setStep('connections')
+          },
+          !manualId || selected.length >= 20,
+        )}
+      </>
+    )
+  function intro(title: string, help: string) {
+    return (
+      <div className="mb-6">
+        <h3 className="m-0 text-xl font-semibold tracking-tight">{title}</h3>
+        <p className="mb-0 mt-2 text-sm leading-relaxed text-[var(--sea-ink-soft)]">
+          {help}
+        </p>
+      </div>
+    )
+  }
+  function loading(title: string, help?: string) {
+    return (
+      <div
+        role="status"
+        className="flex min-h-64 flex-col items-center justify-center gap-5 py-10 text-center"
+      >
+        <div className="flex size-20 items-center justify-center rounded-full bg-[var(--chip-bg)]">
+          <LoaderCircle className="size-8 animate-spin motion-reduce:animate-none" />
+        </div>
+        <div>
+          <h3 className="m-0 text-xl font-semibold">{title}</h3>
+          {help && (
+            <p className="mb-0 mt-3 max-w-sm text-sm leading-relaxed text-[var(--sea-ink-soft)]">
+              {help}
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <Modal
-      title={t('addAsset')}
-      showKicker={false}
-      devComponentName="AddAssetModal"
-      closeOnOutside={false}
-      onClose={() => {
-        if (status !== 'saving') {
-          request.current?.abort()
-          onClose()
-        }
-      }}
+    <EquipmentFlowDialog
+      title={
+        step === 'addConnection'
+          ? t('equipmentAddConnection')
+          : t('equipmentTitle')
+      }
+      stage={stage}
+      stages={[
+        t('equipmentStage'),
+        t('equipmentDocuments'),
+        t('equipmentConnections'),
+      ]}
+      stepKey={step}
+      closeLabel={t('close')}
+      suspended={!!viewer}
+      onClose={close}
+      footer={<div className="flex items-center gap-3">{footer}</div>}
     >
-      <form
-        className="space-y-4"
-        aria-busy={blocking}
-        onSubmit={(event) => {
-          event.preventDefault()
-          if (blocking || existingMatch) return
-          setStatus('saving')
-          void createBoatAsset(
-            boatId,
-            {
-              name:
-                name.trim() ||
-                description.trim().slice(0, 200) ||
-                modelNumber.trim(),
-              brand: brand.trim(),
-              description: description.trim() || null,
-              modelNumber: modelNumber.trim() || null,
-              category: category || null,
-              ownership,
-              ownedByUserId:
-                ownership === 'USER' ? ownedByUserId || null : null,
-              installedAt: installedAt ? `${installedAt}T12:00:00.000Z` : null,
-              suggestedDownloads: research?.downloads ?? [],
-              confirmedConnections:
-                research?.connections.filter((item) =>
-                  confirmed.includes(item.assetId),
-                ) ?? [],
-              researchJobId: researchJobId ?? undefined,
-              productId,
-              sharedProduct,
-              language,
-            },
-            photo,
-          )
-            .then(onCreated)
-            .catch((error) => {
-              setNotice(
-                error instanceof Error
-                  ? error.message
-                  : t('addAssetSaveFailed'),
-              )
-              setStatus('idle')
-            })
-        }}
-      >
-        {blocking && statusLabel ? (
-          <p
-            role="status"
-            className="flex items-center gap-3 rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-3 text-sm font-medium"
-          >
-            <LoaderCircle
-              className="size-5 shrink-0 animate-spin"
-              aria-hidden
-            />
-            {statusLabel}
-          </p>
-        ) : null}
-        {existingMatch && status !== 'saving' ? (
-          <div
-            role="status"
-            className="space-y-3 rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] p-4"
-          >
-            <p className="m-0 font-semibold">{t('addAssetExistingOnBoat')}</p>
-            <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-              {existingMatch.name}
-              {existingMatch.modelNumber
-                ? ` · ${existingMatch.modelNumber}`
-                : ''}
-              {existingMatch.category ? ` · ${existingMatch.category}` : ''}.{' '}
-              {t('addAssetExistingOnBoatHelp')}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="rounded-full bg-[var(--btn-bg)] px-3 py-2 text-sm font-semibold text-[var(--btn-text)]"
-                onClick={() => onOpenExisting(existingMatch)}
-              >
-                {t('open')}
-              </button>
-              <button
-                type="button"
-                className={buttonClass}
-                onClick={() => void applyExisting('overwrite')}
-              >
-                {t('overwrite')}
-              </button>
-              <button
-                type="button"
-                className={buttonClass}
-                onClick={() => void applyExisting('merge')}
-              >
-                {t('merge')}
-              </button>
-              <button type="button" className={buttonClass} onClick={onClose}>
-                {t('close')}
-              </button>
-            </div>
-          </div>
-        ) : null}
-        <fieldset
-          disabled={blocking}
-          className="m-0 min-w-0 space-y-4 border-0 p-0 disabled:opacity-70"
-        >
-          <div className="rounded-2xl border border-[var(--panel-border)] p-4">
+      {step === 'find' && (
+        <>
+          <div className="relative mb-7 flex min-h-36 flex-col items-center justify-center py-4">
             <button
               type="button"
               onClick={() => void openCamera()}
-              className={`${buttonClass} inline-flex items-center gap-2`}
+              disabled={!!busy}
+              aria-label={t('equipmentCamera')}
+              className="group relative flex size-24 items-center justify-center overflow-hidden rounded-[2rem] border border-[var(--chip-line)] bg-[var(--chip-bg)] shadow-sm transition-transform hover:scale-105 disabled:opacity-50"
             >
-              <CameraIcon className="size-5" />
-              {Capacitor.isNativePlatform()
-                ? t('addAssetTakePhoto')
-                : t('addAssetSelectPhoto')}
+              {preview ? (
+                <img
+                  src={preview}
+                  alt={t('addAssetPhotoAlt')}
+                  className="absolute inset-0 size-full object-cover"
+                />
+              ) : (
+                <CameraIcon className="size-9 stroke-[1.5]" />
+              )}
+              {preview && (
+                <span className="absolute bottom-1 right-1 rounded-full bg-[var(--surface-strong)] p-1.5">
+                  <CameraIcon className="size-4" />
+                </span>
+              )}
             </button>
-            {Capacitor.isNativePlatform() && (
-              <button
-                type="button"
-                className={`${buttonClass} ml-2`}
-                onClick={() => input.current?.click()}
-              >
-                {t('addAssetChoosePhoto')}
-              </button>
-            )}
+            <p className="mb-0 mt-3 text-xs text-[var(--sea-ink-soft)]">
+              {t('equipmentCameraHint')}
+            </p>
             <input
               ref={input}
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+              accept="image/*"
               className="hidden"
               aria-label={t('addAssetPhotoAriaLabel')}
               onChange={(event) => {
                 const file = event.target.files?.[0]
                 event.target.value = ''
-                if (file) attachPhoto(file)
+                if (file) void identify(file)
               }}
             />
-            <p className="mt-2 text-xs text-[var(--sea-ink-soft)]">
-              {t('productOriginalPhotoHelp')}
-            </p>
-            {preview && (
-              <div className="mt-3 space-y-2">
-                <img
-                  src={preview}
-                  alt={t('addAssetPhotoAlt')}
-                  className="max-h-48 w-full rounded-xl object-contain"
+          </div>
+          {busy === 'identify' || busy === 'camera' ? (
+            loading(
+              t(busy === 'identify' ? 'addAssetStatusIdentifying' : 'loading'),
+            )
+          ) : (
+            <>
+              <EquipmentIdentityFields
+                brand={brand}
+                model={model}
+                language={language}
+                noModel={noModel}
+                onBrand={(value) => {
+                  if (value !== brand) {
+                    invalidate()
+                    setBrand(value)
+                    setModel('')
+                    setName('')
+                    setCategory('')
+                  }
+                }}
+                onModel={(value) => {
+                  if (value !== model) {
+                    invalidate()
+                    setModel(value)
+                    setName('')
+                    setCategory('')
+                  }
+                }}
+              />
+              <label className="my-5 flex min-h-11 items-center gap-3 text-sm text-[var(--sea-ink-soft)]">
+                <input
+                  type="checkbox"
+                  className="size-5 accent-[var(--sea-ink)]"
+                  checked={noModel}
+                  onChange={(event) => {
+                    invalidate()
+                    setNoModel(event.target.checked)
+                    setModel('')
+                  }}
                 />
+                {t('equipmentNoModel')}
+              </label>
+              {noModel && (
+                <label className="block space-y-2 text-sm font-semibold">
+                  {t('labelDescription')}
+                  <textarea
+                    className={field}
+                    rows={3}
+                    maxLength={2000}
+                    placeholder={t('equipmentDescriptionHint')}
+                    value={description}
+                    onChange={(event) => {
+                      invalidate()
+                      setDescription(event.target.value)
+                    }}
+                  />
+                </label>
+              )}
+            </>
+          )}
+        </>
+      )}
+      {step === 'results' &&
+        (busy === 'lookup' ? (
+          loading(t('equipmentLooking'), t('equipmentLookingHelp'))
+        ) : (
+          <>
+            {intro(t('equipmentResults'), t('equipmentResultsHelp'))}
+            <div className="mb-6 flex aspect-[16/9] items-center justify-center overflow-hidden rounded-3xl border border-[var(--line)] bg-white p-5">
+              {image ? (
+                <img
+                  src={image}
+                  alt={[brand, model, name].filter(Boolean).join(' ')}
+                  onError={() => setImageFailed(true)}
+                  className="max-h-full max-w-full object-contain"
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-3 text-center text-sm text-slate-500">
+                  <ImageIcon className="size-10 stroke-1" />
+                  {t('equipmentNoPhoto')}
+                </div>
+              )}
+            </div>
+            <AssetBrandLogo brand={brand} prominent />
+            <h3 className="mb-1 mt-3 break-words text-3xl font-bold tracking-tight">
+              {model || name || description}
+            </h3>
+            {name && model && (
+              <p className="mt-1 text-sm text-[var(--sea-ink-soft)]">{name}</p>
+            )}
+            {product?.createdAt && (
+              <p className="text-xs text-[var(--sea-ink-soft)]">
+                {t('equipmentAdded', {
+                  date: new Date(product.createdAt).toLocaleDateString(
+                    language,
+                  ),
+                })}
+              </p>
+            )}
+            {lookupFailed && (
+              <button
+                type="button"
+                className={`${secondary} my-3`}
+                onClick={() => void findModel()}
+              >
+                {t('equipmentRetry')}
+              </button>
+            )}
+            <label className="mt-5 block space-y-2 text-sm font-semibold">
+              {t('labelCategory')}
+              <select
+                className={field}
+                value={category}
+                onChange={(event) => {
+                  setCategory(event.target.value as AssetCategory | '')
+                  setConnections([])
+                  setSelected([])
+                }}
+              >
+                <option value="">{t('uncategorized')}</option>
+                {ASSET_CATEGORIES.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+            </label>
+            <details className="mt-5 border-t border-[var(--line)] pt-4">
+              <summary className="cursor-pointer py-2 text-sm font-semibold">
+                {t('equipmentDetails')}
+              </summary>
+              <div className="mt-3 space-y-4">
+                <label className="block space-y-2 text-sm">
+                  {t('labelName')}
+                  <input
+                    className={field}
+                    value={name}
+                    maxLength={200}
+                    onChange={(event) => setName(event.target.value)}
+                  />
+                </label>
+                <label className="block space-y-2 text-sm">
+                  {t('labelDescription')}
+                  <textarea
+                    className={field}
+                    value={description}
+                    rows={3}
+                    maxLength={2000}
+                    onChange={(event) => setDescription(event.target.value)}
+                  />
+                </label>
+                <label className="block space-y-2 text-sm">
+                  {t('labelOwnership')}
+                  <select
+                    className={field}
+                    value={ownership}
+                    onChange={(event) =>
+                      setOwnership(event.target.value as AssetOwnership)
+                    }
+                  >
+                    <option value="BOAT">{boatName}</option>
+                    <option value="ORG">{orgName ?? t('ownershipOrg')}</option>
+                    <option value="USER">{t('ownershipUser')}</option>
+                    <option value="EXTERNAL">{t('ownershipExternal')}</option>
+                  </select>
+                </label>
+                {ownership === 'USER' && (
+                  <label className="block space-y-2 text-sm">
+                    {t('labelOwnedBy')}
+                    <select
+                      className={field}
+                      value={ownedByUserId}
+                      onChange={(event) => setOwnedByUserId(event.target.value)}
+                    >
+                      <option value="">{t('selectMember')}</option>
+                      {members.map((member) => (
+                        <option key={member.userId} value={member.userId}>
+                          {member.user.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <label className="block space-y-2 text-sm">
+                  {t('labelInstalledDate')}
+                  <input
+                    type="date"
+                    className={field}
+                    value={installedAt}
+                    onChange={(event) => setInstalledAt(event.target.value)}
+                  />
+                </label>
+              </div>
+            </details>
+            {existing && (
+              <div className="mt-5 rounded-2xl bg-[var(--chip-bg)] p-4">
+                <p className="mt-0 text-sm leading-relaxed">
+                  {t('equipmentExistingHelp')}
+                </p>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    disabled={status === 'identifying'}
-                    className={`${buttonClass} inline-flex items-center gap-2`}
-                    onClick={() => void autoIdentify()}
+                    className={secondary}
+                    disabled={!!busy}
+                    onClick={() => onOpenExisting(existing)}
                   >
-                    <Sparkles className="size-4" />
-                    {t('addAssetAutoIdentify')}
+                    {t('open')}
                   </button>
                   <button
                     type="button"
-                    className={buttonClass}
-                    onClick={() => {
-                      setPhoto(undefined)
-                      invalidateResearch()
-                    }}
+                    className={secondary}
+                    disabled={!!busy}
+                    onClick={() => void mergeExisting()}
                   >
-                    {t('addAssetRemovePhoto')}
+                    {t('merge')}
+                  </button>
+                  <button
+                    type="button"
+                    className={secondary}
+                    disabled={!!busy}
+                    onClick={() => setAnotherUnit(true)}
+                  >
+                    {t('equipmentAnotherUnit')}
                   </button>
                 </div>
               </div>
             )}
+          </>
+        ))}
+      {step === 'documentPrompt' && (
+        <div className="py-7">
+          <div className="mb-7 flex size-20 items-center justify-center rounded-3xl bg-[var(--chip-bg)]">
+            <FileText className="size-9 stroke-[1.5]" />
           </div>
-          <AssetBrandField
-            value={brand}
-            onChange={(value) => {
-              setProductId(null)
-              setBrand(value)
-              invalidateResearch()
-              syncExistingMatch({ brand: value })
-            }}
-          />
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="sr-only">{t('labelModelNumber')}</span>
-            <input
-              className="w-full min-w-0 border-0 bg-transparent py-1 text-xl font-semibold outline-none focus:ring-1 focus:ring-[var(--chip-line)]"
-              placeholder={t('labelModelNumber')}
-              value={modelNumber}
-              maxLength={200}
-              onChange={(e) => {
-                const next = e.target.value
-                setProductId(null)
-                setModelNumber(next)
-                invalidateResearch()
-                syncExistingMatch({ modelNumber: next.trim() || null })
-              }}
-            />
-          </label>
-          {brand.trim() && modelNumber.trim() && (
-            <div className="space-y-2">
-              <label className="flex items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={sharedProduct}
-                  onChange={(event) => {
-                    setSharedProduct(event.target.checked)
-                    setProductId(null)
-                    invalidateResearch()
-                  }}
-                />
-                <span>{t('productSharedConsent')}</span>
-              </label>
-              {sharedProduct && (
-                <ProductCatalogMatch
-                  brand={brand}
-                  model={modelNumber}
-                  language={language}
-                  selectedId={productId}
-                  onSelect={(product) => {
-                    invalidateResearch()
-                    setProductId(product.id)
-                    setBrand(product.brand)
-                    setModelNumber(product.modelNumber)
-                    syncExistingMatch({
-                      brand: product.brand,
-                      modelNumber: product.modelNumber,
-                      name: product.info?.name ?? name,
-                    })
-                    if (product.info) {
-                      setName(product.info.name)
-                      setDescription(product.info.description)
-                      setCategory(product.info.category ?? '')
-                    }
-                  }}
-                />
-              )}
-            </div>
-          )}
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="sr-only">{t('labelName')}</span>
-            <input
-              className="w-full min-w-0 border-0 bg-transparent py-1 text-lg font-semibold outline-none focus:ring-1 focus:ring-[var(--chip-line)]"
-              placeholder={t('labelName')}
-              value={name}
-              maxLength={200}
-              required={!description.trim() && !modelNumber.trim()}
-              onChange={(e) => {
-                const next = e.target.value
-                setName(next)
-                invalidateResearch()
-                syncExistingMatch({ name: next })
-              }}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">{t('labelDescription')}</span>
-            <textarea
-              className={fieldClass}
-              rows={2}
-              maxLength={2000}
-              required={!!photo && !modelNumber.trim()}
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value)
-                invalidateResearch()
-              }}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">{t('labelCategory')}</span>
-            <select
-              className={fieldClass}
-              value={category}
-              onChange={(e) =>
-                setCategory(e.target.value as AssetCategory | '')
-              }
-            >
-              <option value="">{t('uncategorized')}</option>
-              {ASSET_CATEGORIES.map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </label>
-          {modelNumber.trim() && !existingMatch && (
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={includeConnections}
-                onChange={(event) =>
-                  setIncludeConnections(event.target.checked)
-                }
-              />
-              {t('productSuggestConnections')}
-            </label>
-          )}
-          {modelNumber.trim() && !existingMatch ? (
+          {intro(t('equipmentDocumentsPrompt'), t('equipmentDocumentsHelp'))}
+        </div>
+      )}
+      {step === 'documentProgress' && (
+        <>
+          {researchActive
+            ? loading(
+                t('equipmentDocumentsProgress'),
+                t('equipmentDocumentsProgressHelp'),
+              )
+            : intro(t('equipmentDocumentsReady'), t('equipmentDocumentsEmpty'))}
+          {researchError && !researchActive && (
             <button
               type="button"
-              disabled={researchJobActive}
-              className={`${buttonClass} inline-flex items-center gap-2`}
-              onClick={() => void findSuggestions(modelNumber.trim())}
+              className={secondary}
+              onClick={() => void startDocuments()}
             >
-              <Sparkles className="size-4" />
-              {t('findDocuments')}
+              {t('equipmentRetry')}
             </button>
-          ) : null}
-          {researchJobActive ? (
+          )}
+        </>
+      )}
+      {step === 'documents' && (
+        <>
+          {intro(
+            t('equipmentDocumentsReady'),
+            t('equipmentDocumentsReadyHelp'),
+          )}
+          {researchActive && (
             <p
               role="status"
-              className="flex items-center gap-2 text-sm text-[var(--sea-ink-soft)]"
+              className="mb-5 flex items-center gap-2 text-sm text-[var(--sea-ink-soft)]"
             >
-              <LoaderCircle
-                className="size-4 shrink-0 animate-spin"
-                aria-hidden
-              />
-              {t('addAssetResearchingBackground')}
+              <LoaderCircle className="size-4 animate-spin" />
+              {t('equipmentDocumentsBackground')}
             </p>
-          ) : null}
-          {research && (
-            <div className="space-y-4">
-              {!!research.downloads.length && (
-                <div>
-                  <h4 className="m-0 font-semibold">{t('assetLinks')}</h4>
-                  <ul className="mt-2 list-none space-y-2 p-0">
-                    {research.downloads.map((item) => (
-                      <li
-                        key={item.url}
-                        className="flex items-center gap-2 rounded-xl border border-[var(--line)] p-3 text-sm"
-                      >
-                        <AssetLinkTypeTag url={item.url} />
-                        <AssetLinkTitle url={item.url} title={item.title} />
-                        <button
-                          type="button"
-                          className="shrink-0 rounded-full border border-[var(--chip-line)] p-2"
-                          hidden={!!research.productId}
-                          aria-label={t('dismissSuggestion', {
-                            title: item.title,
-                          })}
-                          onClick={() => {
-                            if (
-                              !window.confirm(
-                                t('removeAssetLinkConfirm', {
-                                  title: item.title,
-                                }),
-                              )
-                            ) {
-                              return
-                            }
-                            setResearch({
-                              ...research,
-                              downloads: research.downloads.filter(
-                                (other) => other.url !== item.url,
-                              ),
-                            })
-                          }}
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {!!research.connections.length && (
-                <div>
-                  <h4 className="m-0 font-semibold">
-                    {t('possibleConnections')}
-                  </h4>
-                  <p className="text-xs text-[var(--sea-ink-soft)]">
-                    {t('possibleConnectionsHint')}
-                  </p>
-                  {research.connections.map((item) => (
-                    <label
-                      key={item.assetId}
-                      className="mb-2 flex items-start gap-3 rounded-xl border border-[var(--line)] p-3 text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={confirmed.includes(item.assetId)}
-                        onChange={(e) =>
-                          setConfirmed(
-                            e.target.checked
-                              ? [...confirmed, item.assetId]
-                              : confirmed.filter((id) => id !== item.assetId),
-                          )
-                        }
-                      />
-                      <span>
-                        <strong>
-                          {assets.find((asset) => asset.id === item.assetId)
-                            ?.name ?? t('existingAsset')}
-                        </strong>
-                        <br />
-                        {item.reason}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              )}
+          )}
+          {documents.length > 0 &&
+            languageRank(documents[0].languages, language) === 3 && (
+              <p className="text-sm text-[var(--sea-ink-soft)]">
+                {t('equipmentEnglishFallback')}
+              </p>
+            )}
+          <div className="space-y-3">
+            {[
+              ...documents.map((item) => ({
+                shared: true,
+                id: item.id,
+                title: item.title,
+                contentUrl: item.contentUrl,
+                purpose: item.purpose,
+                languages: item.languages,
+              })),
+              ...privateDocuments.map((item) => ({
+                shared: false,
+                id: item.url,
+                title: item.title,
+                contentUrl: item.url,
+                purpose: item.purpose,
+                languages: [] as string[],
+              })),
+            ].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="flex w-full items-center gap-4 rounded-2xl border border-[var(--line)] p-4 text-left transition-colors hover:bg-[var(--chip-bg)]"
+                onClick={() =>
+                  void openBoatDocument(
+                    {
+                      title: item.title,
+                      kind: item.shared ? 'upload' : 'link',
+                      mimeType: 'application/pdf',
+                      fileName: 'document.pdf',
+                      url: item.shared ? null : item.contentUrl,
+                      contentUrl: item.contentUrl,
+                    },
+                    { onOpenViewer: setViewer },
+                  ).catch((error) => setNotice(error.message))
+                }
+              >
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--chip-bg)]">
+                  <FileText className="size-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <strong className="block break-words text-sm">
+                    {item.title}
+                  </strong>
+                  <span className="mt-1 block text-xs uppercase text-[var(--sea-ink-soft)]">
+                    {item.purpose} {item.languages.join(' · ')}
+                  </span>
+                </span>
+                <ArrowRight className="size-4 shrink-0" />
+              </button>
+            ))}
+          </div>
+          {!documents.length && !privateDocuments.length && (
+            <div className="rounded-2xl bg-[var(--chip-bg)] p-6 text-center text-sm leading-relaxed text-[var(--sea-ink-soft)]">
+              {t('equipmentDocumentsEmpty')}
             </div>
           )}
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">{t('labelOwnership')}</span>
-            <select
-              className={fieldClass}
-              value={ownership}
-              onChange={(e) => setOwnership(e.target.value as AssetOwnership)}
-            >
-              <option value="BOAT">{boatName}</option>
-              <option value="ORG">{orgName ?? t('ownershipOrg')}</option>
-              <option value="USER">{t('ownershipUser')}</option>
-              <option value="EXTERNAL">{t('ownershipExternal')}</option>
-            </select>
-          </label>
-          {ownership === 'USER' && (
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-semibold">{t('labelOwnedBy')}</span>
-              <select
-                className={fieldClass}
-                value={ownedByUserId}
-                onChange={(e) => setOwnedByUserId(e.target.value)}
-              >
-                <option value="">{t('selectMember')}</option>
-                {members.map((member) => (
-                  <option key={member.userId} value={member.userId}>
-                    {member.user.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+        </>
+      )}
+      {step === 'connectionPrompt' && (
+        <div className="py-7">
+          <div className="mb-7 flex size-20 items-center justify-center rounded-3xl bg-[var(--chip-bg)]">
+            <Network className="size-9 stroke-[1.5]" />
+          </div>
+          {intro(
+            t('equipmentConnectionsPrompt'),
+            t('equipmentConnectionsHelp'),
           )}
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-semibold">{t('labelInstalledDate')}</span>
-            <input
-              type="date"
-              className={fieldClass}
-              value={installedAt}
-              onChange={(e) => setInstalledAt(e.target.value)}
-            />
-          </label>
-        </fieldset>
-        {notice && (
-          <p role="status" className="text-sm text-[var(--sea-ink-soft)]">
-            {notice}
-          </p>
-        )}
-        {existingMatch ? null : (
+          {category && (
+            <span className="rounded-full bg-[var(--chip-bg)] px-3 py-2 text-xs font-semibold">
+              {category} · {candidates.length}
+            </span>
+          )}
           <button
-            type="submit"
-            disabled={blocking}
-            className="w-full rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-50"
+            type="button"
+            className="mt-6 flex min-h-11 items-center gap-2 text-sm text-[var(--sea-ink-soft)]"
+            onClick={() => setStep('documents')}
           >
-            {status === 'saving' ? t('saving') : t('addAsset')}
+            <ArrowLeft className="size-4" />
+            {t('equipmentBack')}
           </button>
-        )}
-      </form>
-    </Modal>
+        </div>
+      )}
+      {step === 'connections' &&
+        (busy === 'connections' ? (
+          loading(t('equipmentConnectionsSearching'))
+        ) : (
+          <>
+            {intro(
+              t('equipmentConnectionsReview'),
+              t('equipmentConnectionsReviewHelp'),
+            )}
+            {connections.length ? (
+              <div className="space-y-3">
+                {connections.map((connection) => (
+                  <label
+                    key={connection.assetId}
+                    className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 ${selected.includes(connection.assetId) ? 'border-[var(--sea-ink)] bg-[var(--chip-bg)]' : 'border-[var(--line)]'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-1 size-5 shrink-0 accent-[var(--sea-ink)]"
+                      checked={selected.includes(connection.assetId)}
+                      disabled={
+                        !!busy ||
+                        (!selected.includes(connection.assetId) &&
+                          selected.length >= 20)
+                      }
+                      onChange={(event) =>
+                        setSelected(
+                          event.target.checked
+                            ? [...selected, connection.assetId]
+                            : selected.filter(
+                                (id) => id !== connection.assetId,
+                              ),
+                        )
+                      }
+                    />
+                    <span className="min-w-0">
+                      <strong className="block text-sm">
+                        {
+                          assets.find(
+                            (asset) => asset.id === connection.assetId,
+                          )?.name
+                        }
+                      </strong>
+                      <span className="mt-1 block text-sm leading-relaxed text-[var(--sea-ink-soft)]">
+                        {connection.reason}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-2xl bg-[var(--chip-bg)] p-5 text-sm leading-relaxed text-[var(--sea-ink-soft)]">
+                {t('equipmentConnectionsEmpty')}
+              </p>
+            )}
+            <button
+              type="button"
+              disabled={!!busy || selected.length >= 20}
+              className={`${secondary} mt-5 w-full`}
+              onClick={() => setStep('addConnection')}
+            >
+              <Plus className="size-4" />
+              {t('equipmentAddConnection')}
+            </button>
+            {researchActive && (
+              <p className="mt-5 text-xs text-[var(--sea-ink-soft)]">
+                {t('equipmentDocumentsBackground')}
+              </p>
+            )}
+          </>
+        ))}
+      {step === 'addConnection' && (
+        <>
+          {intro(
+            t('equipmentChooseConnection'),
+            t('equipmentChooseConnectionHelp'),
+          )}
+          <div className="space-y-3">
+            {candidates
+              .filter((asset) => !selected.includes(asset.id))
+              .map((asset) => (
+                <label
+                  key={asset.id}
+                  className={`flex min-h-20 cursor-pointer items-center gap-3 rounded-2xl border p-4 ${manualId === asset.id ? 'border-[var(--sea-ink)] bg-[var(--chip-bg)]' : 'border-[var(--line)]'}`}
+                >
+                  <input
+                    type="radio"
+                    name="equipment-connection"
+                    className="size-5 accent-[var(--sea-ink)]"
+                    checked={manualId === asset.id}
+                    onChange={() => setManualId(asset.id)}
+                  />
+                  <span className="min-w-0">
+                    <strong className="block text-sm">{asset.name}</strong>
+                    <span className="mt-1 block text-xs text-[var(--sea-ink-soft)]">
+                      {[asset.brand, asset.modelNumber]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </span>
+                  </span>
+                </label>
+              ))}
+          </div>
+          {!candidates.some((asset) => !selected.includes(asset.id)) && (
+            <p className="text-sm text-[var(--sea-ink-soft)]">
+              {t('equipmentNoConnectionCandidates')}
+            </p>
+          )}
+        </>
+      )}
+      {researchError && stage === 1 && (
+        <p
+          role="alert"
+          className="mt-5 rounded-xl bg-[var(--chip-bg)] p-4 text-sm"
+        >
+          {researchError}
+        </p>
+      )}
+      {notice && (
+        <p
+          role="status"
+          className="mt-5 rounded-xl bg-[var(--chip-bg)] p-4 text-sm leading-relaxed"
+        >
+          {notice}
+        </p>
+      )}
+      {viewer && (
+        <BoatDocumentViewerModal {...viewer} onClose={() => setViewer(null)} />
+      )}
+    </EquipmentFlowDialog>
   )
 }

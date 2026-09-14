@@ -95,10 +95,6 @@ export async function createAndEnqueueAssetResearchJob(
       parsed.error.issues[0]?.message ?? 'Invalid research input.',
     )
   }
-  if (!parsed.data.modelNumber?.trim()) {
-    throw new Error('A model number is required for document search.')
-  }
-
   if (parsed.data.assetId) {
     const target = await prisma.boatAsset.findFirst({
       where: { id: parsed.data.assetId, boatId },

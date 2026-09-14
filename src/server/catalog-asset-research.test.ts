@@ -50,7 +50,7 @@ it('shares only product identity and language, never personal notes or the boat 
     'QK-A026+',
     undefined,
   )
-  expect(mocks.shared).toHaveBeenCalledWith('global-product', 'sv')
+  expect(mocks.shared).toHaveBeenCalledWith('global-product', 'sv', false, true)
   expect(mocks.privateResearch).not.toHaveBeenCalled()
   expect(mocks.connections).not.toHaveBeenCalled()
   expect(JSON.stringify(result)).not.toContain('Private')

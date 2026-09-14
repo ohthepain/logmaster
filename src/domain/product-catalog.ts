@@ -34,7 +34,7 @@ export function languageRank(languages: string[], preferred: string) {
   const tags = languages.map((language) => normalizeProductLanguage(language))
   if (tags.includes(locale)) return languages.length === 1 ? 0 : 1
   if (tags.some((tag) => tag.split('-')[0] === locale.split('-')[0])) return 2
-  if (tags.includes('en')) return 3
+  if (tags.some((tag) => tag === 'en' || tag.startsWith('en-'))) return 3
   return 4
 }
 export type ProductResource = {
@@ -66,5 +66,34 @@ export type CatalogProduct = {
   researchStatus: string
   info: ProductInfo | null
   imageUrl: string | null
+  previewImageUrl?: string | null
   resources: ProductResource[]
+  createdAt?: string
+}
+
+export function hasLocalizedDocuments(
+  product: CatalogProduct | null,
+  language: string,
+) {
+  return !!product?.resources.some(
+    (resource) =>
+      resource.purpose !== 'photo' &&
+      languageRank(resource.languages, language) < 3,
+  )
+}
+
+export function equipmentDocuments(
+  product: CatalogProduct | null,
+  language: string,
+) {
+  const documents =
+    product?.resources.filter((resource) => resource.purpose !== 'photo') ?? []
+  const localized = documents.filter(
+    (resource) => languageRank(resource.languages, language) < 3,
+  )
+  return localized.length
+    ? localized
+    : documents.filter(
+        (resource) => languageRank(resource.languages, language) === 3,
+      )
 }

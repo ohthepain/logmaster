@@ -1,9 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import { prisma } from './db'
-import { productResearchSchema, researchProduct } from './product-research'
+import {
+  productResearchSchema,
+  researchProduct,
+  researchProductPreview,
+} from './product-research'
 import type { ProductResearch } from './product-research'
 import {
   languageRank,
+  hasLocalizedDocuments,
   normalizeProductLanguage,
   productIdentity,
   productModelKey,
@@ -91,8 +96,12 @@ function publicInfo(result: ProductResearch): ProductInfo {
 export async function ensureProductResearch(
   productId: string,
   requestedLanguage = 'en',
+  previewOnly = false,
+  refreshMissingDocuments = false,
 ): Promise<ProductResearch> {
-  const language = normalizeProductLanguage(requestedLanguage)
+  const language = previewOnly
+    ? 'en'
+    : normalizeProductLanguage(requestedLanguage)
   const product = await prisma.catalogProduct.findUniqueOrThrow({
     where: { id: productId },
   })
@@ -112,7 +121,25 @@ export async function ensureProductResearch(
         where: { productId_language: { productId, language } },
       })
     })
-  if (row.status === 'completed') return productResearchSchema.parse(row.result)
+  const refresh =
+    row.status === 'completed' &&
+    !previewOnly &&
+    refreshMissingDocuments &&
+    !hasLocalizedDocuments(await getProduct(productId, language), language)
+  if (
+    (row.status === 'completed' && !refresh) ||
+    (previewOnly && row.status === 'preview')
+  )
+    return productResearchSchema.parse(row.result)
+  if (refresh) {
+    // Retry a previous empty/fallback-only search after an explicit request.
+    // The version check protects an admin edit or another worker's newer result.
+    const reset = await prisma.productLocale.updateMany({
+      where: { id: row.id, status: 'completed', updatedAt: row.updatedAt },
+      data: { status: 'pending' },
+    })
+    if (!reset.count) throw new ProductResearchBusy()
+  }
   if (
     row.status === 'failed' &&
     row.leaseUntil &&
@@ -139,11 +166,16 @@ export async function ensureProductResearch(
   if (!claim.count) throw new ProductResearchBusy()
   try {
     const result = productResearchSchema.parse(
-      await researchProduct(
-        { brand: product.brand, modelNumber: product.modelNumber },
-        language,
-        base ? publicInfo(base) : undefined,
-      ),
+      await (previewOnly
+        ? researchProductPreview({
+            brand: product.brand,
+            modelNumber: product.modelNumber,
+          })
+        : researchProduct(
+            { brand: product.brand, modelNumber: product.modelNumber },
+            language,
+            base ? publicInfo(base) : undefined,
+          )),
     )
     // Localization may translate labels, but cannot change the shared facts.
     if (base) {
@@ -181,7 +213,7 @@ export async function ensureProductResearch(
       const saved = await tx.productLocale.updateMany({
         where: { id: row.id, leaseToken: token },
         data: {
-          status: 'completed',
+          status: previewOnly ? 'preview' : 'completed',
           result,
           researchedAt: new Date(),
           leaseUntil: null,
@@ -243,7 +275,9 @@ export async function getProduct(
         item.language === language.split('-')[0] && item.status === 'completed',
     ) ??
     product.locales.find(
-      (item) => item.language === 'en' && item.status === 'completed',
+      (item) =>
+        item.language === 'en' &&
+        ['completed', 'preview'].includes(item.status),
     )
   const chosen = localized?.status === 'completed' ? localized : fallback
   const parsed = productResearchSchema.safeParse(chosen?.result)
@@ -254,6 +288,7 @@ export async function getProduct(
   )
   return {
     id: product.id,
+    createdAt: product.createdAt?.toISOString(),
     brand: product.brand,
     modelNumber: product.modelNumber,
     reviewStatus: product.reviewStatus,
@@ -264,6 +299,15 @@ export async function getProduct(
     imageUrl: image?.displayS3Key
       ? `/api/products/${product.id}/resources/${image.id}/content?display=1`
       : null,
+    previewImageUrl: (() => {
+      const photo = product.resources.find(
+        (resource) =>
+          resource.purpose === 'photo' && resource.reviewStatus !== 'rejected',
+      )
+      return photo
+        ? `/api/products/${product.id}/resources/${photo.id}/content?display=1`
+        : null
+    })(),
     resources: product.resources
       .sort(
         (a, b) =>

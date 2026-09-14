@@ -19,12 +19,13 @@ const mocks = vi.hoisted(() => {
     productResource: { createMany: vi.fn() },
     $transaction: vi.fn(),
   }
-  return { db, research: vi.fn() }
+  return { db, research: vi.fn(), preview: vi.fn() }
 })
 vi.mock('./db', () => ({ prisma: mocks.db }))
 vi.mock('./product-research', async (original) => ({
   ...(await original<typeof ProductResearchModule>()),
   researchProduct: mocks.research,
+  researchProductPreview: mocks.preview,
 }))
 const result = {
   name: 'Receiver',
@@ -51,6 +52,7 @@ beforeEach(() => {
   mocks.db.productAlias.findMany.mockResolvedValue([])
   mocks.db.$transaction.mockImplementation((fn) => fn(mocks.db))
   mocks.research.mockResolvedValue(result)
+  mocks.preview.mockResolvedValue(result)
 })
 it('reuses saved research without an AI call', async () => {
   mocks.db.productLocale.upsert.mockResolvedValue({
@@ -61,12 +63,58 @@ it('reuses saved research without an AI call', async () => {
   expect(mocks.research).not.toHaveBeenCalled()
   expect(mocks.db.productLocale.updateMany).not.toHaveBeenCalled()
 })
+it('caches photo discovery separately without marking document research completed', async () => {
+  await ensureProductResearch('p', 'en', true)
+  expect(mocks.preview).toHaveBeenCalledWith({
+    brand: 'Quark-Elec',
+    modelNumber: 'QK-A026+',
+  })
+  expect(mocks.research).not.toHaveBeenCalled()
+  expect(mocks.db.productLocale.updateMany).toHaveBeenCalledWith(
+    expect.objectContaining({
+      data: expect.objectContaining({ status: 'preview' }),
+    }),
+  )
+})
+it('reuses a photo preview but still researches documents when requested', async () => {
+  mocks.db.productLocale.upsert.mockResolvedValue({
+    id: 'locale',
+    status: 'preview',
+    result,
+  })
+  await ensureProductResearch('p', 'en', true)
+  expect(mocks.preview).not.toHaveBeenCalled()
+  await ensureProductResearch('p', 'en')
+  expect(mocks.research).toHaveBeenCalledOnce()
+})
 it('does not start duplicate research when another worker holds the lease', async () => {
   mocks.db.productLocale.updateMany.mockResolvedValue({ count: 0 })
   await expect(ensureProductResearch('p')).rejects.toBeInstanceOf(
     ProductResearchBusy,
   )
   expect(mocks.research).not.toHaveBeenCalled()
+})
+it('can explicitly retry an earlier completed search with no localized documents', async () => {
+  mocks.db.productLocale.upsert.mockResolvedValue({
+    id: 'locale',
+    status: 'completed',
+    updatedAt: new Date(0),
+    result,
+  })
+  mocks.db.catalogProduct.findUnique.mockResolvedValue({
+    id: 'p',
+    brand: 'Garmin',
+    modelNumber: '923',
+    reviewStatus: 'candidate',
+    locales: [],
+    resources: [],
+  })
+  await ensureProductResearch('p', 'en', false, true)
+  expect(mocks.db.productLocale.updateMany).toHaveBeenCalledWith({
+    where: { id: 'locale', status: 'completed', updatedAt: new Date(0) },
+    data: { status: 'pending' },
+  })
+  expect(mocks.research).toHaveBeenCalledOnce()
 })
 it('discards documents explicitly describing a different model', async () => {
   mocks.research.mockResolvedValue({

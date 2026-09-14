@@ -36,14 +36,15 @@ describe('asset research jobs', () => {
     boss.send.mockResolvedValue('pg-1')
   })
 
-  it('requires a model number to enqueue', async () => {
-    await expect(
-      createAndEnqueueAssetResearchJob('boat', 'user', {
-        name: 'Pump',
-        description: '',
-        modelNumber: null,
-      }),
-    ).rejects.toThrow(/model number/i)
+  it('allows described equipment without a model to be researched in the background', async () => {
+    prisma.assetResearchJob.create.mockResolvedValue({ id: 'job-no-model' })
+    const result = await createAndEnqueueAssetResearchJob('boat', 'user', {
+      name: 'Pump',
+      description: '',
+      modelNumber: null,
+    })
+    expect(result.id).toBe('job-no-model')
+    expect(boss.send).toHaveBeenCalled()
   })
 
   it('creates a job and enqueues pg-boss work', async () => {

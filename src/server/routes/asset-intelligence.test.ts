@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   identify: vi.fn(),
   normalize: vi.fn(),
   research: vi.fn(),
+  connectionResearch: vi.fn(),
   attach: vi.fn(),
   assets: vi.fn(),
   connections: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock('../asset-intelligence', () => ({
   identifyAsset: mocks.identify,
   normalizeAssetPhoto: mocks.normalize,
   researchAsset: mocks.research,
+  researchAssetConnections: mocks.connectionResearch,
 }))
 vi.mock('../asset-storage', () => ({ attachSuggestedDownload: mocks.attach }))
 vi.mock('../db', () => ({
@@ -34,9 +36,70 @@ beforeEach(() => {
   mocks.access.mockResolvedValue(true)
   mocks.assets.mockResolvedValue([])
   mocks.connections.mockResolvedValue([])
+  mocks.connectionResearch.mockResolvedValue([])
 })
 
 describe('asset AI authorization and validation', () => {
+  it('uses every same-category asset for connections and does not search documents', async () => {
+    const assets = Array.from({ length: 501 }, (_, i) => ({
+      id: String(i),
+      name: 'Display',
+      category: 'Navigation',
+      description: null,
+      modelNumber: null,
+    }))
+    mocks.assets.mockResolvedValue(assets)
+    const response = await assetIntelligenceRoutes.request(
+      '/boat/assets/connections/search',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Plotter',
+          modelNumber: '923',
+          category: 'Navigation',
+        }),
+      },
+    )
+    expect(response.status).toBe(200)
+    expect(mocks.assets).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { boatId: 'boat', category: 'Navigation' },
+      }),
+    )
+    expect(mocks.assets.mock.calls[0][0]).not.toHaveProperty('take')
+    expect(mocks.connectionResearch.mock.calls[0][1]).toHaveLength(501)
+    expect(mocks.research).not.toHaveBeenCalled()
+  })
+  it('does not infer cross-category connections when no category is selected', async () => {
+    const response = await assetIntelligenceRoutes.request(
+      '/boat/assets/connections/search',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Pump',
+          modelNumber: null,
+          category: null,
+        }),
+      },
+    )
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ connections: [] })
+    expect(mocks.connectionResearch).not.toHaveBeenCalled()
+  })
+  it('requires boat edit access before searching connections', async () => {
+    mocks.access.mockResolvedValue(false)
+    expect(
+      (
+        await assetIntelligenceRoutes.request(
+          '/boat/assets/connections/search',
+          { method: 'POST' },
+        )
+      ).status,
+    ).toBe(404)
+    expect(mocks.connectionResearch).not.toHaveBeenCalled()
+  })
   it('requires authentication before invoking AI', async () => {
     mocks.session.mockResolvedValue(null)
     const response = await assetIntelligenceRoutes.request(

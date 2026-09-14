@@ -8,6 +8,7 @@ import { PrismaClient } from '../../generated/prisma/client'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import {
   ensureProductResearch,
+  getProduct,
   ProductResearchBusy,
   resolveProduct,
 } from './product-catalog'
@@ -21,6 +22,7 @@ import {
 const state = vi.hoisted(() => ({
   client: null as unknown as PrismaClient,
   research: vi.fn(),
+  preview: vi.fn(),
 }))
 vi.mock('./db', () => ({
   prisma: new Proxy(
@@ -36,6 +38,7 @@ vi.mock('./db', () => ({
 vi.mock('./product-research', async (original) => ({
   ...(await original<typeof ProductResearchModule>()),
   researchProduct: state.research,
+  researchProductPreview: state.preview,
 }))
 
 const enabled = process.env.RUN_PRODUCT_DB_TESTS === '1'
@@ -120,6 +123,70 @@ describe.skipIf(!enabled)(
       expect(await ensureProductResearch(product.id)).toEqual(result)
       expect(state.research).toHaveBeenCalledOnce()
     })
+    it('persists photo discovery independently and still runs opted-in document research', async () => {
+      const product = await resolveProduct('Test Marine', 'Preview-100')
+      const result = {
+        name: 'Display',
+        description: 'Public display',
+        category: 'Navigation',
+        specifications: [],
+        sources: [
+          { title: 'Manufacturer', url: 'https://example.com/display' },
+        ],
+        documents: [
+          {
+            title: 'Product image',
+            url: 'https://example.com/display.jpg',
+            purpose: 'photo',
+            languages: [],
+            revision: null,
+            modelNumbers: ['Preview-100'],
+            reason: 'Official image',
+          },
+        ],
+      }
+      state.preview.mockResolvedValueOnce(result)
+      await ensureProductResearch(product.id, 'en', true)
+      const preview = await getProduct(product.id, 'sv')
+      expect(preview?.info?.name).toBe('Display')
+      expect(preview?.previewImageUrl).toContain('/resources/')
+      expect(preview?.createdAt).toBe(product.createdAt.toISOString())
+      expect(
+        (
+          await state.client.productLocale.findFirst({
+            where: { productId: product.id },
+          })
+        )?.status,
+      ).toBe('preview')
+      await ensureProductResearch(product.id, 'en', true)
+      expect(state.preview).toHaveBeenCalledOnce()
+      state.research.mockResolvedValueOnce({
+        ...result,
+        documents: [
+          {
+            ...result.documents[0],
+            title: 'Instructions',
+            purpose: 'manual',
+            url: 'https://example.com/display.pdf',
+            languages: ['en'],
+          },
+        ],
+      })
+      await ensureProductResearch(product.id, 'en', false, true)
+      expect(
+        (await getProduct(product.id))?.resources.some(
+          (item) => item.purpose === 'manual',
+        ),
+      ).toBe(true)
+      expect(
+        (
+          await state.client.productLocale.findFirst({
+            where: { productId: product.id },
+          })
+        )?.status,
+      ).toBe('completed')
+    })
+
     async function editableProduct(model = 'Edit-100') {
       const product = await resolveProduct('Test Marine', model)
       await state.client.productLocale.create({

@@ -630,7 +630,11 @@ boatAssetsRoutes.post(
       include: assetInclude,
     })
 
-    if (!researchJobId && asset?.productId) {
+    if (
+      !researchJobId &&
+      asset?.productId &&
+      input.data.researchDocuments === true
+    ) {
       try {
         const job = await createAndEnqueueAssetResearchJob(boatId, userId, {
           brand: asset.brand,
