@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => {
       findUnique: vi.fn(),
       upsert: vi.fn(),
     },
+    brand: { upsert: vi.fn() },
     productAlias: { findUnique: vi.fn(), findMany: vi.fn() },
     productLocale: { upsert: vi.fn(), updateMany: vi.fn() },
     productResource: { createMany: vi.fn() },

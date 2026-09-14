@@ -70,6 +70,12 @@ describe.skipIf(!enabled)(
           'utf8',
         ),
       )
+      await pool.query(
+        await readFile(
+          'prisma/migrations/20260914080000_catalog_brands/migration.sql',
+          'utf8',
+        ),
+      )
       state.client = new PrismaClient({
         adapter: new PrismaPg(pool, { schema }),
       })
@@ -90,6 +96,16 @@ describe.skipIf(!enabled)(
       ])
       expect(a.id).toBe(b.id)
       expect((await resolveProduct('Quark-Elec', 'QK-A026')).id).not.toBe(a.id)
+      const brand = await state.client.brand.findUniqueOrThrow({
+        where: { id: 'quark-elec' },
+      })
+      expect(brand).toMatchObject({
+        canonicalName: 'Quark-Elec',
+        aliases: ['Quark Elec', 'QuarkElec'],
+        source: 'catalog',
+        reviewStatus: 'verified',
+      })
+      expect(a.brandKey).toBe(brand.id)
     })
     it('runs AI once across concurrent workers, then serves the persisted result', async () => {
       const product = await resolveProduct('Garmin', 'GPSMAP 923')
@@ -229,6 +245,13 @@ describe.skipIf(!enabled)(
       })
     }
     it('finds products beyond the first hundred, including aliases and localized text', async () => {
+      await state.client.brand.create({
+        data: {
+          id: 'pagination',
+          canonicalName: 'Pagination',
+          source: 'user',
+        },
+      })
       await state.client.catalogProduct.createMany({
         data: Array.from({ length: 105 }, (_, index) => ({
           brand: 'Pagination',

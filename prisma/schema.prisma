@@ -1251,11 +1251,48 @@ model TranslationOverride {
   @@map("translation_override")
 }
 
+// Canonical manufacturer identity for the shared catalog. Products point here
+// through brandKey so "Quark Elec" and "Quark-Elec" cannot diverge.
+model Brand {
+  id             String   @id
+  canonicalName  String
+  aliases        String[] @default([])
+  website        String?
+  source         String?
+  reviewStatus   String   @default("candidate")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  logos          BrandLogo[]
+  products       CatalogProduct[]
+
+  @@unique([canonicalName])
+  @@map("brand")
+}
+
+model BrandLogo {
+  id            String    @id @default(cuid())
+  brandId       String
+  brand         Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  sourceUrl     String
+  localAssetKey String?
+  source        String?
+  license       String?
+  reviewStatus  String    @default("candidate")
+  fetchedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([brandId, sourceUrl])
+  @@index([brandId])
+  @@map("brand_logo")
+}
+
 // Only public manufacturer/model research belongs here. Never copy boat context
 // or private photos/documents into the shared catalog.
 model CatalogProduct {
   id               String            @id @default(cuid())
   brandKey         String
+  catalogBrand     Brand             @relation(fields: [brandKey], references: [id], onDelete: Restrict)
   modelKey         String
   brand            String
   modelNumber      String

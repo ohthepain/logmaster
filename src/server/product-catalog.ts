@@ -7,6 +7,7 @@ import {
 } from './product-research'
 import type { ProductResearch } from './product-research'
 import {
+  catalogBrandIdentity,
   languageRank,
   hasLocalizedDocuments,
   normalizeProductLanguage,
@@ -20,6 +21,25 @@ export class ProductResearchBusy extends Error {
     super('Product research is already running.')
     this.name = 'ProductResearchBusy'
   }
+}
+
+export async function ensureCatalogBrand(
+  brand: string,
+  db: Pick<typeof prisma, 'brand'> = prisma,
+) {
+  const identity = catalogBrandIdentity(brand)
+  if (!identity.id) throw new Error('Brand is required for the product catalog.')
+  return db.brand.upsert({
+    where: { id: identity.id },
+    create: {
+      id: identity.id,
+      canonicalName: identity.canonicalName,
+      aliases: identity.aliases,
+      source: identity.source,
+      reviewStatus: identity.reviewStatus,
+    },
+    update: {},
+  })
 }
 
 export async function findProduct(brand: string, modelNumber: string) {
@@ -52,6 +72,7 @@ export async function resolveProduct(
       'The selected product does not match this brand and model. Please check the variant.',
     )
   if (existing) return existing
+  await ensureCatalogBrand(identity.brand)
   const product = await prisma.catalogProduct
     .upsert({
       where: {

@@ -1,13 +1,29 @@
 import { expect, it } from 'vitest'
 import {
+  catalogBrandIdentity,
   languageRank,
   productIdentity,
   productModelKey,
 } from './product-catalog'
 
 it('matches formatting and known brand aliases without collapsing product variants', () => {
+  expect(catalogBrandIdentity('Quark Elec')).toMatchObject({
+    id: 'quark-elec',
+    canonicalName: 'Quark-Elec',
+    aliases: ['Quark Elec', 'QuarkElec'],
+    source: 'catalog',
+    reviewStatus: 'verified',
+  })
+  expect(catalogBrandIdentity('Acme Pumps')).toMatchObject({
+    id: 'acme pumps',
+    canonicalName: 'Acme Pumps',
+    aliases: [],
+    source: 'user',
+    reviewStatus: 'candidate',
+  })
   expect(productIdentity('Quark Elec', 'Quark-Elec QK-A026+')).toMatchObject({
     brandKey: 'quark-elec',
+    brand: 'Quark-Elec',
     modelKey: productIdentity('Quark-Elec', 'QK A026+').modelKey,
   })
   for (const other of [

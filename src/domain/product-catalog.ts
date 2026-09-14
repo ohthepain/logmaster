@@ -1,6 +1,28 @@
 import { findAssetBrand, getAssetIdentity } from './asset-brands'
 import type { AssetCategory } from './asset-intelligence'
 
+export type CatalogBrandIdentity = {
+  id: string
+  canonicalName: string
+  aliases: string[]
+  source: 'catalog' | 'user'
+  reviewStatus: 'verified' | 'candidate'
+}
+
+// Stable manufacturer identity: known catalog ids win; otherwise the trimmed
+// lowercase name. Aliases stay on Brand so products do not fork spellings.
+export function catalogBrandIdentity(brand: string): CatalogBrandIdentity {
+  const known = findAssetBrand(brand)
+  const canonicalName = known?.name ?? brand.trim()
+  return {
+    id: known?.id ?? canonicalName.normalize('NFKC').toLowerCase(),
+    canonicalName,
+    aliases: known?.aliases ?? [],
+    source: known ? 'catalog' : 'user',
+    reviewStatus: known ? 'verified' : 'candidate',
+  }
+}
+
 // Formatting differences can match; meaningful punctuation (+, /, .) survives.
 // "Plus" and abbreviated models require an explicitly reviewed alias.
 export function productModelKey(value: string) {
@@ -11,17 +33,16 @@ export function productModelKey(value: string) {
     .replace(/[\s\-–—_]+/g, '')
 }
 export function productIdentity(brand: string, modelNumber: string) {
-  const known = findAssetBrand(brand)
-  const canonicalBrand = known?.name ?? brand.trim()
+  const catalogBrand = catalogBrandIdentity(brand)
   const identity = getAssetIdentity({
     name: '',
-    brand: canonicalBrand,
+    brand: catalogBrand.canonicalName,
     modelNumber,
   })
   return {
-    brand: canonicalBrand,
+    brand: catalogBrand.canonicalName,
     modelNumber: identity.modelNumber ?? '',
-    brandKey: known?.id ?? canonicalBrand.normalize('NFKC').toLowerCase(),
+    brandKey: catalogBrand.id,
     modelKey: productModelKey(identity.modelNumber ?? ''),
   }
 }

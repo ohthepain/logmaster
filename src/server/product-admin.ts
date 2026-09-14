@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { prisma } from './db'
+import { ensureCatalogBrand } from './product-catalog'
 import { productIdentity, productModelKey } from '../domain/product-catalog'
 import type { ProductAdminDetail } from '../domain/product-admin'
 import { productResearchSchema } from './product-research'
@@ -294,6 +295,7 @@ export async function editAdminProduct(
         'This model or alias already belongs to another product.',
         409,
       )
+    await ensureCatalogBrand(identity.brand, tx)
     if (
       current.locales.some(
         (locale) =>
