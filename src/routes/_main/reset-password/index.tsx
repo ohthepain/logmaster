@@ -61,9 +61,9 @@ function ResetPassword() {
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-10">
           <img
-            src="/logmaster_logo_transparent.png"
+            src="/logo_trans_512.png"
             alt=""
-            className="w-10 h-10 rounded-xl"
+            className="size-10 object-contain"
             width={40}
             height={40}
           />

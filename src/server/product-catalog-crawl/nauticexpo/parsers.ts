@@ -50,6 +50,26 @@ function uniqueImageUrls($: CheerioAPI, pageUrl: string) {
   return [...urls]
 }
 
+function brandFromProductSlug(url: string) {
+  const match = url.match(/\/prod\/([^/]+)\/product-/i)
+  if (!match) return ''
+  return match[1]
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function parseOpenGraphProductTitle(content: string | undefined) {
+  if (!content) return null
+  const byMatch = content.match(/^(.+?)\s+by\s+(.+?)(?:\s*\|\s*NauticExpo)?$/i)
+  if (!byMatch) return null
+  return {
+    modelNumber: byMatch[1].trim(),
+    brand: byMatch[2].trim(),
+  }
+}
+
 function readBrand($: CheerioAPI, pageUrl: string) {
   let brand = ''
   let logoUrl: string | null = null
@@ -81,12 +101,14 @@ export function parseProductPage(
   if (isCloudflareChallenge(body)) return null
 
   const ids = parseProductUrl(url)
-  const title =
-    $('h1').first().text().replace(/\s+/g, ' ').trim() ||
-    $('meta[property="og:title"]').attr('content')?.trim() ||
-    null
-  const { brand, logoUrl } = readBrand($, url)
-  if (!title || !brand) return null
+  const ogTitle = $('meta[property="og:title"]').attr('content')?.trim()
+  const fromOg = parseOpenGraphProductTitle(ogTitle)
+  const heading = $('h1').first().text().replace(/\s+/g, ' ').trim()
+  const { brand: brandFromLogo, logoUrl } = readBrand($, url)
+  const brand =
+    brandFromLogo || fromOg?.brand || brandFromProductSlug(url) || ''
+  const modelNumber = fromOg?.modelNumber || heading || ogTitle || ''
+  if (!brand || !modelNumber) return null
 
   const manufacturerId =
     ids?.manufacturerId ?? parseLogoManufacturerId(logoUrl) ?? null
@@ -94,11 +116,11 @@ export function parseProductPage(
 
   return {
     brand,
-    modelNumber: title,
+    modelNumber,
     manufacturerId,
     productId,
     logoUrl,
     imageUrls: uniqueImageUrls($, url),
-    title,
+    title: modelNumber,
   }
 }

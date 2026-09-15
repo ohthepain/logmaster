@@ -413,6 +413,9 @@ boatsRoutes.post('/', async (c) => {
     },
   })
 
+  const { ensureBoatNetworkAssets } = await import('../boat-network-assets')
+  await ensureBoatNetworkAssets(boat.id)
+
   return c.json({ boat: serializeBoat(boat) }, 201)
 })
 

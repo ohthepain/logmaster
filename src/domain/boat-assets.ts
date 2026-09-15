@@ -67,6 +67,13 @@ export type BoatAsset = {
   productImageUrl?: string | null
   id: string
   boatId: string
+  kind?: 'equipment' | 'system_network'
+  networkKey?:
+    | 'nmea_2000'
+    | 'seatal_k1'
+    | 'seatal_kng'
+    | 'ethernet'
+    | null
   name: string
   description: string | null
   brand: string | null

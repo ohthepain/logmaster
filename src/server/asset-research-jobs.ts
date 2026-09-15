@@ -10,7 +10,7 @@ import { ASSET_RESEARCH_QUEUE } from './jobs/asset-research'
 export async function loadBoatResearchContext(boatId: string) {
   const [assets, connections] = await Promise.all([
     prisma.boatAsset.findMany({
-      where: { boatId },
+      where: { boatId, kind: 'equipment' },
       select: {
         id: true,
         name: true,
@@ -223,36 +223,45 @@ export async function confirmAssetResearchConnections(
   boatId: string,
   assetId: string,
   userId: string,
-  connections: Array<{ assetId: string; reason: string }>,
+  connections: Array<{
+    assetId: string
+    reason: string
+    connectionType?: 'cable' | 'wifi' | 'bluetooth' | 'nmea0183'
+  }>,
   researchJobId?: string,
 ) {
   const unique = [
     ...new Map(connections.map((item) => [item.assetId, item])).values(),
   ]
-  const count = await prisma.boatAsset.count({
-    where: { boatId, id: { in: unique.map((item) => item.assetId) } },
-  })
+  const peerIds = unique.map((item) => item.assetId)
+  const count = peerIds.length
+    ? await prisma.boatAsset.count({
+        where: {
+          boatId,
+          id: { in: peerIds },
+          OR: [{ kind: 'equipment' }, { kind: 'system_network' }],
+        },
+      })
+    : 0
   if (count !== unique.length) {
     throw new Error(
       'A connected asset no longer exists on this boat. Review the connections and try again.',
     )
   }
 
+  const { createAssetConnectionInTx } = await import('./asset-connection-create')
+
   await prisma.$transaction(async (tx) => {
     for (const connection of unique) {
-      const [fromAssetId, toAssetId] = [assetId, connection.assetId].sort()
-      await tx.assetConnection.upsert({
-        where: {
-          fromAssetId_toAssetId: { fromAssetId, toAssetId },
-        },
-        create: {
-          fromAssetId,
-          toAssetId,
-          reason: connection.reason,
-          confirmedBy: userId,
-        },
-        update: {},
-      })
+      await createAssetConnectionInTx(
+        tx,
+        boatId,
+        userId,
+        assetId,
+        connection.assetId,
+        connection.connectionType ?? 'cable',
+        connection.reason,
+      )
     }
     if (researchJobId) {
       await tx.assetResearchJob.updateMany({

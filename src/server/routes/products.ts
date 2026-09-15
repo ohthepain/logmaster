@@ -5,20 +5,29 @@ import { getSessionUserId } from '../session'
 import { isAdminRequest } from '../admin-auth'
 import {
   findProduct,
+  searchCatalogProducts,
   resolveProduct,
   ensureProductResearch,
+  ensureProductPhotoResearch,
+  ensureProductPhotoFromDirectUrl,
+  ensureProductPhotoFromSourcePage,
+  catalogProductHasPhoto,
   getProduct,
   ProductResearchBusy,
+  ensureProductPhotoFromManufacturerPage,
 } from '../product-catalog'
+import { httpsPublicUrl } from '../asset-intelligence-schema'
 import { storeProductResource } from '../product-media'
 import { getPhotoObject } from '../s3-photos'
-import { productIdentity } from '../../domain/product-catalog'
+import { productIdentity, productModelKey } from '../../domain/product-catalog'
+import { suggestEquipmentModelOptions } from '../product-model-suggest'
 import { ASSET_BRANDS, findAssetBrand } from '../../domain/asset-brands'
 import {
   editAdminProduct,
   getAdminProduct,
   productAdminEditSchema,
   ProductAdminError,
+  regenerateAdminProductResearch,
   searchAdminProducts,
 } from '../product-admin'
 
@@ -61,15 +70,54 @@ productsRoutes.post('/resolve', async (c) => {
       brand: z.string().trim().min(1).max(100),
       model: z.string().trim().min(1).max(200),
       language: z.string().max(35).default('en'),
+      productId: z.string().trim().min(1).max(200).optional(),
+      sourceUrl: httpsPublicUrl.optional(),
+      photoUrl: httpsPublicUrl.nullable().optional(),
     })
     .safeParse(await c.req.json().catch(() => null))
   if (!input.success) return c.json({ error: 'Enter a brand and model.' }, 400)
   try {
-    const row = await resolveProduct(input.data.brand, input.data.model)
+    const row = await resolveProduct(
+      input.data.brand,
+      input.data.model,
+      input.data.productId,
+    )
     let product = await getProduct(row.id, input.data.language)
     let pending = false
     let notice = ''
-    if (!product?.info) {
+    if (input.data.photoUrl || input.data.sourceUrl) {
+      try {
+        if (input.data.photoUrl) {
+          await ensureProductPhotoFromDirectUrl(row.id, input.data.photoUrl, {
+            sourcePageUrl: input.data.sourceUrl,
+          })
+        }
+        product = await getProduct(row.id, input.data.language)
+        if (!catalogProductHasPhoto(product) && input.data.sourceUrl) {
+          await ensureProductPhotoFromManufacturerPage(row.id, input.data.sourceUrl)
+        }
+        product = await getProduct(row.id, input.data.language)
+        if (!catalogProductHasPhoto(product) && input.data.sourceUrl) {
+          await ensureProductPhotoFromSourcePage(row.id, input.data.sourceUrl)
+        }
+        product = await getProduct(row.id, input.data.language)
+      } catch (error) {
+        if (!(error instanceof ProductResearchBusy)) {
+          console.warn(
+            JSON.stringify({
+              action: 'product.resolve.link_photo',
+              productId: row.id,
+              outcome: 'error',
+              errorCode: error instanceof Error ? error.name : 'unknown',
+            }),
+          )
+        }
+      }
+    }
+    const needsInfo = !product?.info
+    const needsPhoto = !catalogProductHasPhoto(product)
+
+    if (needsInfo) {
       try {
         await ensureProductResearch(row.id, 'en', true)
       } catch (error) {
@@ -78,8 +126,20 @@ productsRoutes.post('/resolve', async (c) => {
           notice =
             'We could not find a product photo. Check the model or continue with your details.'
       }
-      product = await getProduct(row.id, input.data.language)
+    } else if (needsPhoto) {
+      try {
+        const found = await ensureProductPhotoResearch(row.id)
+        if (!found)
+          notice =
+            'We searched online but could not verify a product photo for this model yet.'
+      } catch (error) {
+        pending = error instanceof ProductResearchBusy
+        if (!pending)
+          notice =
+            'We could not search for a product photo right now. Check the model or continue with your details.'
+      }
     }
+    product = await getProduct(row.id, input.data.language)
     return c.json({ product, pending, notice })
   } catch {
     return c.json(
@@ -94,26 +154,49 @@ productsRoutes.post('/resolve', async (c) => {
 productsRoutes.get('/', async (c) => {
   const brand = c.req.query('brand')?.trim().slice(0, 100) ?? ''
   const model = c.req.query('model')?.trim().slice(0, 200) ?? ''
-  if (!brand) return c.json({ products: [], exact: false })
-  const exact = await findProduct(brand, model)
-  const { brandKey, modelKey } = productIdentity(brand, model)
+  if (!brand) return c.json({ products: [], exact: false, ambiguous: false })
+  const exact = model ? await findProduct(brand, model) : null
   const candidates = exact
     ? [exact]
-    : await prisma.catalogProduct.findMany({
-        where: {
-          brandKey,
-          modelKey: { startsWith: modelKey },
-          reviewStatus: { not: 'rejected' },
-        },
-        take: 8,
-        orderBy: { modelNumber: 'asc' },
-      })
+    : await searchCatalogProducts(brand, model)
+  const serialized = await Promise.all(
+    candidates.map((p) => getProduct(p.id, c.req.query('language'))),
+  )
   return c.json({
-    products: await Promise.all(
-      candidates.map((p) => getProduct(p.id, c.req.query('language'))),
-    ),
+    products: serialized,
     exact: !!exact,
+    ambiguous:
+      !exact &&
+      (serialized.length > 1 ||
+        (serialized.length === 1 &&
+          !!model &&
+          productModelKey(serialized[0]!.modelNumber) !==
+            productModelKey(model))),
   })
+})
+productsRoutes.post('/model-options', async (c) => {
+  const parsed = z
+    .object({
+      brand: z.string().trim().min(1).max(100),
+      query: z.string().trim().min(1).max(200),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) return c.json({ error: 'Enter a brand and model.' }, 400)
+  try {
+    return c.json(
+      await suggestEquipmentModelOptions(parsed.data.brand, parsed.data.query),
+    )
+  } catch (error) {
+    return c.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Could not suggest model numbers.',
+      },
+      503,
+    )
+  }
 })
 productsRoutes.get('/review', async (c) => {
   if (!(await isAdminRequest(c.req.raw.headers)))
@@ -192,6 +275,34 @@ productsRoutes.patch('/admin/:productId', async (c) => {
       {
         error:
           'Could not save the shared asset information. Check the selected photo and retry.',
+      },
+      400,
+    )
+  }
+})
+productsRoutes.post('/admin/:productId/research', async (c) => {
+  if (!(await isAdminRequest(c.req.raw.headers)))
+    return c.json({ error: 'Forbidden' }, 403)
+  const parsed = z
+    .object({
+      language: z.string().trim().max(35).default('en'),
+    })
+    .safeParse((await c.req.json().catch(() => null)) ?? {})
+  if (!parsed.success) return c.json({ error: 'Invalid language.' }, 400)
+  try {
+    return c.json({
+      product: await regenerateAdminProductResearch(
+        c.req.param('productId'),
+        parsed.data.language,
+      ),
+    })
+  } catch (error) {
+    if (error instanceof ProductAdminError)
+      return c.json({ error: error.message }, error.status)
+    return c.json(
+      {
+        error:
+          'Could not regenerate AI information. Check the model and retry.',
       },
       400,
     )

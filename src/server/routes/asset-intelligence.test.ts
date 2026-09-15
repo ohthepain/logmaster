@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   normalize: vi.fn(),
   research: vi.fn(),
   connectionResearch: vi.fn(),
+  networkSuggestions: vi.fn(),
   attach: vi.fn(),
   assets: vi.fn(),
   connections: vi.fn(),
@@ -22,10 +23,20 @@ vi.mock('../asset-intelligence', () => ({
   researchAssetConnections: mocks.connectionResearch,
 }))
 vi.mock('../asset-storage', () => ({ attachSuggestedDownload: mocks.attach }))
+vi.mock('../asset-research-jobs', () => ({
+  loadBoatResearchContext: vi.fn(async () => ({
+    assets: await mocks.assets(),
+    connections: await mocks.connections(),
+  })),
+  createAndEnqueueAssetResearchJob: vi.fn(),
+  confirmAssetResearchConnections: vi.fn(),
+  serializeResearchJobForClient: vi.fn(),
+}))
+vi.mock('../product-network-suggestions', () => ({
+  suggestProductNetworkConnections: mocks.networkSuggestions,
+}))
 vi.mock('../db', () => ({
   prisma: {
-    boatAsset: { findMany: mocks.assets },
-    assetConnection: { findMany: mocks.connections },
     assetSuggestedDownload: { deleteMany: mocks.dismiss },
   },
 }))
@@ -37,14 +48,15 @@ beforeEach(() => {
   mocks.assets.mockResolvedValue([])
   mocks.connections.mockResolvedValue([])
   mocks.connectionResearch.mockResolvedValue([])
+  mocks.networkSuggestions.mockResolvedValue([])
 })
 
 describe('asset AI authorization and validation', () => {
-  it('uses every same-category asset for connections and does not search documents', async () => {
+  it('uses every boat asset for connection search and does not search documents', async () => {
     const assets = Array.from({ length: 501 }, (_, i) => ({
       id: String(i),
       name: 'Display',
-      category: 'Navigation',
+      category: i % 2 ? 'Navigation' : 'Instrumentation',
       description: null,
       modelNumber: null,
     }))
@@ -57,21 +69,52 @@ describe('asset AI authorization and validation', () => {
         body: JSON.stringify({
           name: 'Plotter',
           modelNumber: '923',
-          category: 'Navigation',
         }),
       },
     )
     expect(response.status).toBe(200)
-    expect(mocks.assets).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { boatId: 'boat', category: 'Navigation' },
-      }),
-    )
-    expect(mocks.assets.mock.calls[0][0]).not.toHaveProperty('take')
+    expect(mocks.assets).toHaveBeenCalled()
     expect(mocks.connectionResearch.mock.calls[0][1]).toHaveLength(501)
     expect(mocks.research).not.toHaveBeenCalled()
   })
-  it('does not infer cross-category connections when no category is selected', async () => {
+  it('returns catalog network suggestions when the boat has no other equipment', async () => {
+    mocks.networkSuggestions.mockResolvedValue([
+      {
+        assetId: 'net_boat_seatal_kng',
+        name: 'SeaTalkNG',
+        kind: 'network',
+        connectionType: 'cable',
+        reason: 'Product has 2 × SeaTalkNG connections',
+      },
+    ])
+    const response = await assetIntelligenceRoutes.request(
+      '/boat/assets/connections/search',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'i50',
+          brand: 'Raymarine',
+          modelNumber: 'i50',
+        }),
+      },
+    )
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      connections: [
+        {
+          assetId: 'net_boat_seatal_kng',
+          name: 'SeaTalkNG',
+          kind: 'network',
+          connectionType: 'cable',
+          reason: 'Product has 2 × SeaTalkNG connections',
+        },
+      ],
+    })
+    expect(mocks.connectionResearch).not.toHaveBeenCalled()
+  })
+  it('returns no connections when the boat has no assets yet', async () => {
+    mocks.assets.mockResolvedValue([])
     const response = await assetIntelligenceRoutes.request(
       '/boat/assets/connections/search',
       {
@@ -80,7 +123,6 @@ describe('asset AI authorization and validation', () => {
         body: JSON.stringify({
           name: 'Pump',
           modelNumber: null,
-          category: null,
         }),
       },
     )
@@ -146,14 +188,8 @@ describe('asset AI authorization and validation', () => {
       },
     )
     expect(response.status).toBe(200)
-    expect(mocks.assets).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { boatId: 'boat' } }),
-    )
-    expect(mocks.connections).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { fromAsset: { boatId: 'boat' }, toAsset: { boatId: 'boat' } },
-      }),
-    )
+    expect(mocks.assets).toHaveBeenCalled()
+    expect(mocks.connections).toHaveBeenCalled()
     expect(mocks.research).toHaveBeenCalledWith(
       { name: 'Pump', description: '', modelNumber: null },
       [],

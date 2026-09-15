@@ -1,7 +1,20 @@
 import { z } from 'zod'
 import { ASSET_CATEGORIES } from '../domain/asset-intelligence'
+import { validateDownloadUrl } from './asset-download'
 
 export const categorySchema = z.enum(ASSET_CATEGORIES).nullable()
+export const httpsPublicUrl = z
+  .string()
+  .url()
+  .max(2048)
+  .refine((value) => {
+    try {
+      validateDownloadUrl(value)
+      return true
+    } catch {
+      return false
+    }
+  }, 'A public HTTPS URL is required')
 export const identificationSchema = z.object({
   name: z.string().max(200),
   brand: z.string().max(100).nullable(),
@@ -9,6 +22,7 @@ export const identificationSchema = z.object({
   modelNumber: z.string().max(200).nullable(),
   confidence: z.enum(['high', 'medium', 'low']),
   category: categorySchema,
+  photoUrl: httpsPublicUrl.nullable().optional(),
 })
 export const downloadSchema = z.object({
   title: z.string().trim().min(1).max(300),
@@ -27,6 +41,9 @@ export const downloadSchema = z.object({
 export const connectionSchema = z.object({
   assetId: z.string().min(1).max(200),
   reason: z.string().trim().min(1).max(1000),
+  connectionType: z
+    .enum(['cable', 'wifi', 'bluetooth', 'nmea0183'])
+    .optional(),
 })
 export const researchSchema = z.object({
   category: categorySchema,

@@ -1,11 +1,23 @@
 import { z } from 'zod'
 import { prisma } from './db'
-import { ensureCatalogBrand } from './product-catalog'
+import {
+  ensureCatalogBrand,
+  ensureProductResearch,
+  ProductResearchBusy,
+} from './product-catalog'
+import { logServerEvent } from './lib/server-log'
 import { productIdentity, productModelKey } from '../domain/product-catalog'
 import type { ProductAdminDetail } from '../domain/product-admin'
 import { productResearchSchema } from './product-research'
 import { storeProductResource } from './product-media'
 import type { Prisma } from '../../generated/prisma/client'
+import { BOAT_NETWORK_KEYS } from '../domain/asset-connections'
+import { parseProductNetworkConnections } from '../domain/product-networks'
+import {
+  ensureProductNetworksFromSpecs,
+  loadProductNetworks,
+  replaceProductNetworks,
+} from './product-networks'
 
 const reviewStatus = z.enum(['candidate', 'verified', 'rejected'])
 const language = z
@@ -15,7 +27,7 @@ const language = z
   .regex(/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/)
   .max(35)
 const infoSchema = productResearchSchema
-  .omit({ documents: true })
+  .omit({ documents: true, networkConnections: true })
   .extend({ name: z.string().trim().min(1).max(200) })
 const resourceSchema = productResearchSchema.shape.documents.element
   .omit({ url: true })
@@ -34,6 +46,15 @@ export const productAdminEditSchema = z
     reviewStatus,
     canonicalImageId: z.string().min(1).nullable(),
     aliases: z.array(z.string().trim().min(1).max(200)).max(100),
+    networkConnections: z
+      .array(
+        z.object({
+          networkKey: z.enum(BOAT_NETWORK_KEYS),
+          portCount: z.number().int().positive().max(32).nullable(),
+        }),
+      )
+      .max(4)
+      .default([]),
     locales: z
       .array(
         z.object({
@@ -158,9 +179,19 @@ export async function getAdminProduct(
       aliases: { orderBy: { label: 'asc' } },
       locales: { orderBy: { language: 'asc' } },
       resources: { orderBy: { createdAt: 'asc' } },
+      networks: true,
     },
   })
   if (!product) return null
+  const english =
+    product.locales.find((item) => item.language === 'en') ?? product.locales[0]
+  const englishInfo = productResearchSchema.safeParse(english?.result)
+  const networkConnections = product.networks.length
+    ? await loadProductNetworks(id)
+    : await ensureProductNetworksFromSpecs(
+        id,
+        englishInfo.success ? englishInfo.data.specifications : [],
+      )
   return {
     id,
     brand: product.brand,
@@ -172,6 +203,7 @@ export async function getAdminProduct(
     updatedAt: product.updatedAt.toISOString(),
     reviewedAt: product.reviewedAt?.toISOString() ?? null,
     reviewedBy: product.reviewedBy,
+    networkConnections,
     locales: product.locales.map((locale) => {
       const parsed = productResearchSchema.safeParse(locale.result)
       return {
@@ -409,6 +441,65 @@ export async function editAdminProduct(
         reviewedBy: userId,
       },
     })
+    await replaceProductNetworks(
+      id,
+      parseProductNetworkConnections([], input.networkConnections),
+      tx,
+    )
   })
   return getAdminProduct(id)
+}
+
+export async function regenerateAdminProductResearch(
+  productId: string,
+  requestedLanguage = 'en',
+): Promise<ProductAdminDetail> {
+  const locale = language.safeParse(requestedLanguage).success
+    ? language.parse(requestedLanguage)
+    : 'en'
+  const product = await prisma.catalogProduct.findUnique({
+    where: { id: productId },
+    select: { id: true },
+  })
+  if (!product) throw new ProductAdminError('Product not found.', 404)
+  try {
+    await ensureProductResearch(productId, locale, false, false, true)
+  } catch (error) {
+    if (error instanceof ProductResearchBusy) {
+      logServerEvent({
+        action: 'product.admin.research_regenerate',
+        resourceType: 'catalog_product',
+        resourceId: productId,
+        outcome: 'conflict',
+      })
+      throw new ProductAdminError(
+        'Product research is already running. Wait for it to finish, then retry.',
+        409,
+      )
+    }
+    logServerEvent({
+      action: 'product.admin.research_regenerate',
+      resourceType: 'catalog_product',
+      resourceId: productId,
+      outcome: 'error',
+      errorCode: error instanceof Error ? error.name : 'unknown',
+    })
+    throw new ProductAdminError(
+      error instanceof Error &&
+        (error.message.startsWith('Product research') ||
+          error.message.startsWith('This catalog product'))
+        ? error.message
+        : 'Could not regenerate AI information. Check the model and retry.',
+      400,
+    )
+  }
+  logServerEvent({
+    action: 'product.admin.research_regenerate',
+    resourceType: 'catalog_product',
+    resourceId: productId,
+    outcome: 'success',
+  })
+  const updated = await getAdminProduct(productId)
+  if (!updated) throw new ProductAdminError('Product not found.', 404)
+  return updated
 }

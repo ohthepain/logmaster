@@ -8,7 +8,7 @@ export type NauticExpoPageType =
   | 'other'
 
 const EXCLUDED_CATEGORY_PATH =
-  /\/cat\/(?:monohull|multihull|inflatable-boats|motor-boats|sailing-|yacht-|catamaran|RIB|ship-and-boat)/i
+  /\/cat\/(?:monohull|multihull|inflatable-boats|motor-boats|open-motor|electric-hybrid-boats|offshore-powerboats|dinghy-sailing|sailing-|yacht-|catamaran|RIB|ship-and-boat|service-work-boats|tourist-recreational-boats|harbor-work-boats|board-water-sports)/i
 
 const EXCLUDED_MANUFACTURER_LIST =
   /\/boat-manufacturer\/(?:monohull|multihull|inflatable-boat|catamaran|sailing-yacht|motor-yacht|sport-fishing-boat)/i

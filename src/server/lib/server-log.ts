@@ -37,6 +37,7 @@ export type HttpRequestLog = ServerLogBase & {
 
 export type ServerEventLog = ServerLogBase & {
   kind: 'server_event'
+  aiResponse?: unknown
 }
 
 export type ServerLogLine = HttpRequestLog | ServerEventLog
@@ -103,4 +104,47 @@ export function logServerEvent(
     level,
     ...fields,
   })
+}
+
+export function logAiResponse(
+  action: string,
+  response: unknown,
+  extra?: {
+    durationMs?: number
+    outcome?: LogOutcome
+    errorCode?: string
+  },
+) {
+  logServerEvent({
+    action,
+    outcome: extra?.outcome ?? 'success',
+    durationMs: extra?.durationMs,
+    errorCode: extra?.errorCode,
+    aiResponse: response,
+  })
+}
+
+export async function withAiResponseLog<T>(
+  action: string,
+  run: () => Promise<T>,
+): Promise<T> {
+  const started = Date.now()
+  try {
+    const result = await run()
+    logAiResponse(action, result, { durationMs: Date.now() - started })
+    return result
+  } catch (error) {
+    logAiResponse(
+      action,
+      {
+        error: error instanceof Error ? error.message : 'unknown',
+      },
+      {
+        durationMs: Date.now() - started,
+        outcome: 'error',
+        errorCode: error instanceof Error ? error.name : 'unknown',
+      },
+    )
+    throw error
+  }
 }

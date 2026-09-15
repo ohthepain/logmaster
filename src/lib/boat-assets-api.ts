@@ -8,6 +8,8 @@ import type {
   BoatPurchase,
   DocumentPurpose,
 } from '../domain/boat-assets'
+import type { BoatNetworkDiagram } from '../domain/boat-network-diagram'
+import type { NetworkConnectionCandidates } from '../domain/network-connection-candidates'
 import { apiJson } from './api-client'
 import type {
   AssetCategory,
@@ -15,6 +17,7 @@ import type {
   AssetIdentification,
   AssetResearch,
 } from '../domain/asset-intelligence'
+import type { AssetConnectionType } from '../domain/asset-connections'
 import {
   createBoatDocumentUpload,
   createBoatDocumentLink,
@@ -32,6 +35,40 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 export async function fetchBoatAssets(boatId: string): Promise<BoatAsset[]> {
   const data = await api<{ assets: BoatAsset[] }>(`/api/boats/${boatId}/assets`)
   return data.assets
+}
+
+export async function fetchBoatNetworkDiagrams(
+  boatId: string,
+): Promise<BoatNetworkDiagram[]> {
+  const data = await api<{ networks: BoatNetworkDiagram[] }>(
+    `/api/boats/${boatId}/networks`,
+  )
+  return data.networks
+}
+
+export async function fetchNetworkConnectionCandidates(
+  boatId: string,
+  networkAssetId: string,
+) {
+  const data = await api<{ candidates: NetworkConnectionCandidates }>(
+    `/api/boats/${boatId}/networks/${networkAssetId}/connection-candidates`,
+  )
+  return data.candidates
+}
+
+export async function createNetworkEquipmentConnection(
+  boatId: string,
+  networkAssetId: string,
+  equipmentAssetId: string,
+) {
+  const data = await api<{ networks: BoatNetworkDiagram[] }>(
+    `/api/boats/${boatId}/networks/${networkAssetId}/connections`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ equipmentAssetId, connectionType: 'cable' }),
+    },
+  )
+  return data.networks
 }
 
 export async function fetchBoatAsset(
@@ -120,6 +157,18 @@ export async function identifyAssetPhoto(
   return data.identification
 }
 
+export async function identifyEquipmentLink(
+  boatId: string,
+  url: string,
+  signal?: AbortSignal,
+): Promise<AssetIdentification> {
+  const data = await api<{ identification: AssetIdentification }>(
+    `/api/boats/${boatId}/assets/identify-link`,
+    { method: 'POST', body: JSON.stringify({ url }), signal },
+  )
+  return data.identification
+}
+
 export async function findEquipmentConnections(
   boatId: string,
   input: {
@@ -128,6 +177,7 @@ export async function findEquipmentConnections(
     modelNumber: string | null
     description: string
     category: AssetCategory | null
+    productId?: string
   },
   signal?: AbortSignal,
 ) {
@@ -251,6 +301,44 @@ export async function removeAssetConnection(
     `/api/boats/${boatId}/assets/${assetId}/connections/${connectionId}`,
     { method: 'DELETE' },
   )
+}
+
+export type ConnectionPeerOption = {
+  equipment: Array<{
+    id: string
+    name: string
+    brand: string | null
+    modelNumber: string | null
+  }>
+  networks: Array<{
+    id: string
+    name: string
+    networkKey: string
+  }>
+}
+
+export async function fetchConnectionPeers(
+  boatId: string,
+): Promise<ConnectionPeerOption> {
+  return api<ConnectionPeerOption>(
+    `/api/boats/${boatId}/assets/connection-peers`,
+  )
+}
+
+export async function createAssetConnectionLink(
+  boatId: string,
+  assetId: string,
+  input: {
+    connectionType: AssetConnectionType
+    peerAssetId: string
+    reason?: string
+  },
+): Promise<BoatAsset> {
+  const data = await api<{ asset: BoatAsset }>(
+    `/api/boats/${boatId}/assets/${assetId}/connections`,
+    { method: 'POST', body: JSON.stringify(input) },
+  )
+  return data.asset
 }
 
 export async function deleteBoatAsset(

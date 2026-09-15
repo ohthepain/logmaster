@@ -6,12 +6,12 @@ import { getSessionUserId } from '../session'
 import { canAccessBoatResource } from '../contact-utils'
 import {
   identifyAsset,
+  identifyAssetFromLink,
   normalizeAssetPhoto,
   researchAssetConnections,
 } from '../asset-intelligence'
 import {
   connectionSchema,
-  categorySchema,
   researchInputSchema,
 } from '../asset-intelligence-schema'
 import {
@@ -20,6 +20,7 @@ import {
   loadBoatResearchContext,
   serializeResearchJobForClient,
 } from '../asset-research-jobs'
+import { suggestProductNetworkConnections } from '../product-network-suggestions'
 import { attachSuggestedDownload } from '../asset-storage'
 import { z } from 'zod'
 
@@ -70,43 +71,81 @@ assetIntelligenceRoutes.post('/:boatId/assets/identify', async (c) => {
   }
 })
 
+assetIntelligenceRoutes.post('/:boatId/assets/identify-link', async (c) => {
+  const parsed = z
+    .object({
+      url: z
+        .string()
+        .trim()
+        .max(2048)
+        .refine((value) => {
+          try {
+            const link = new URL(value)
+            return (
+              link.protocol === 'https:' &&
+              !link.username &&
+              !link.password
+            )
+          } catch {
+            return false
+          }
+        }, 'Enter a public HTTPS product link.'),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!parsed.success) {
+    return c.json(
+      { error: parsed.error.issues[0]?.message ?? 'Enter a product link.' },
+      400,
+    )
+  }
+  try {
+    return c.json({
+      identification: await identifyAssetFromLink(parsed.data.url),
+    })
+  } catch {
+    return c.json(
+      {
+        error:
+          'Link identification is unavailable. Check the URL or enter brand and model manually.',
+      },
+      503,
+    )
+  }
+})
+
 assetIntelligenceRoutes.post(
   '/:boatId/assets/connections/search',
   async (c) => {
-    const parsed = researchInputSchema
-      .extend({ category: categorySchema })
-      .safeParse(await c.req.json().catch(() => null))
+    const parsed = researchInputSchema.safeParse(
+      await c.req.json().catch(() => null),
+    )
     if (!parsed.success)
-      return c.json({ error: 'Check the equipment details and category.' }, 400)
-    if (!parsed.data.category) return c.json({ connections: [] })
+      return c.json({ error: 'Check the equipment details.' }, 400)
     const boatId = c.req.param('boatId')
-    const assets = await prisma.boatAsset.findMany({
-      where: { boatId, category: parsed.data.category },
-      select: {
-        id: true,
-        name: true,
-        brand: true,
-        description: true,
-        modelNumber: true,
-        category: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    })
-    const ids = assets.map((asset) => asset.id)
-    const connections = ids.length
-      ? await prisma.assetConnection.findMany({
-          where: { fromAssetId: { in: ids }, toAssetId: { in: ids } },
-          select: { fromAssetId: true, toAssetId: true, reason: true },
-        })
-      : []
     try {
-      return c.json({
-        connections: await researchAssetConnections(
-          parsed.data,
-          assets,
-          connections,
-        ),
-      })
+      const networkSuggestions = await suggestProductNetworkConnections(
+        boatId,
+        parsed.data,
+      )
+      const { assets, connections } = await loadBoatResearchContext(boatId)
+      if (!assets.length && !networkSuggestions.length)
+        return c.json({ connections: [] })
+      try {
+        const equipmentSuggestions = assets.length
+          ? await researchAssetConnections(parsed.data, assets, connections)
+          : []
+        const seen = new Set(networkSuggestions.map((item) => item.assetId))
+        return c.json({
+          connections: [
+            ...networkSuggestions,
+            ...equipmentSuggestions.filter((item) => !seen.has(item.assetId)),
+          ],
+        })
+      } catch {
+        if (networkSuggestions.length)
+          return c.json({ connections: networkSuggestions })
+        throw new Error('equipment search failed')
+      }
     } catch {
       return c.json(
         {
@@ -273,18 +312,3 @@ assetIntelligenceRoutes.delete(
   },
 )
 
-assetIntelligenceRoutes.delete(
-  '/:boatId/assets/:assetId/connections/:connectionId',
-  async (c) => {
-    const { boatId, assetId, connectionId } = c.req.param()
-    await prisma.assetConnection.deleteMany({
-      where: {
-        id: connectionId,
-        fromAsset: { boatId },
-        toAsset: { boatId },
-        OR: [{ fromAssetId: assetId }, { toAssetId: assetId }],
-      },
-    })
-    return c.json({ ok: true })
-  },
-)

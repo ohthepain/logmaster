@@ -8,6 +8,7 @@ import { openBoatDocument } from '../lib/boat-document-open'
 import type { BoatDocumentViewerPayload } from '../lib/boat-document-open'
 import type { CatalogProduct } from '../domain/product-catalog'
 import { BoatDocumentViewerModal } from './BoatDocumentViewerModal'
+import { ProductNetworkPorts } from './ProductNetworkPorts'
 
 export function ProductCatalogPanel({
   productId,
@@ -102,6 +103,10 @@ export function ProductCatalogPanel({
           <p className="whitespace-pre-line text-sm">
             {product.info.description}
           </p>
+          <ProductNetworkPorts
+            connections={product.networkConnections}
+            label={t('equipmentProductNetworks')}
+          />
           {!!product.info.specifications.length && (
             <dl className="grid grid-cols-2 gap-2 text-sm">
               {product.info.specifications.map((spec, i) => (

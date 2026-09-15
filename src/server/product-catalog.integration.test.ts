@@ -76,6 +76,15 @@ describe.skipIf(!enabled)(
           'utf8',
         ),
       )
+      await pool.query(`
+        CREATE TYPE "BoatNetworkKey" AS ENUM ('nmea_2000', 'seatal_k1', 'seatal_kng', 'ethernet');
+      `)
+      await pool.query(
+        await readFile(
+          'prisma/migrations/20260915120000_catalog_product_network/migration.sql',
+          'utf8',
+        ),
+      )
       state.client = new PrismaClient({
         adapter: new PrismaPg(pool, { schema }),
       })
@@ -133,6 +142,7 @@ describe.skipIf(!enabled)(
         specifications: [],
         sources: [{ title: 'Garmin', url: 'https://www.garmin.com/' }],
         documents: [],
+        networkConnections: [],
       }
       finish(result)
       await first

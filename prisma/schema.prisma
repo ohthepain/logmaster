@@ -548,6 +548,25 @@ enum DocumentPurpose {
   other
 }
 
+enum BoatAssetKind {
+  equipment
+  system_network
+}
+
+enum BoatNetworkKey {
+  nmea_2000
+  seatal_k1
+  seatal_kng
+  ethernet
+}
+
+enum AssetConnectionType {
+  cable
+  wifi
+  bluetooth
+  nmea0183
+}
+
 enum AssetOwnership {
   BOAT
   ORG
@@ -961,6 +980,8 @@ model BoatAsset {
   product          CatalogProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
   id               String         @id @default(cuid())
   boatId           String
+  kind             BoatAssetKind  @default(equipment)
+  networkKey       BoatNetworkKey?
   name             String
   description      String?
   brand            String?
@@ -985,8 +1006,10 @@ model BoatAsset {
   connectionsTo AssetConnection[] @relation("ConnectionTo")
   researchJobs AssetResearchJob[]
 
+  @@unique([boatId, networkKey])
   @@index([boatId, sortOrder])
   @@index([productId])
+  @@index([boatId, kind])
   @@map("boat_asset")
 }
 
@@ -1037,17 +1060,20 @@ model AssetSuggestedDownload {
 }
 
 model AssetConnection {
-  id           String @id @default(cuid())
-  fromAssetId  String
-  toAssetId    String
-  fromAsset    BoatAsset @relation("ConnectionFrom", fields: [fromAssetId], references: [id], onDelete: Cascade)
-  toAsset      BoatAsset @relation("ConnectionTo", fields: [toAssetId], references: [id], onDelete: Cascade)
-  reason       String
-  confirmedBy  String
-  confirmedAt  DateTime @default(now())
+  id             String              @id @default(cuid())
+  boatId         String
+  fromAssetId    String
+  toAssetId      String
+  connectionType AssetConnectionType @default(cable)
+  fromAsset      BoatAsset @relation("ConnectionFrom", fields: [fromAssetId], references: [id], onDelete: Cascade)
+  toAsset        BoatAsset @relation("ConnectionTo", fields: [toAssetId], references: [id], onDelete: Cascade)
+  reason         String
+  confirmedBy    String
+  confirmedAt    DateTime @default(now())
 
   @@unique([fromAssetId, toAssetId])
   @@index([toAssetId])
+  @@index([boatId])
   @@map("asset_connection")
 }
 
@@ -1310,9 +1336,20 @@ model CatalogProduct {
   resources        ProductResource[]
   aliases          ProductAlias[]
   sourceLinks      CatalogSourceLink[]
+  networks         CatalogProductNetwork[]
 
   @@unique([brandKey, modelKey])
   @@map("catalog_product")
+}
+
+model CatalogProductNetwork {
+  productId  String
+  product    CatalogProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  networkKey BoatNetworkKey
+  portCount  Int?
+
+  @@id([productId, networkKey])
+  @@map("catalog_product_network")
 }
 
 model ProductAlias {

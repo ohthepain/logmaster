@@ -1,4 +1,5 @@
 import type { ProductInfo, ProductResource } from './product-catalog'
+import type { ProductNetworkConnection } from './product-networks'
 
 export type ProductAdminSummary = {
   id: string
@@ -22,6 +23,7 @@ export type ProductAdminDetail = {
   updatedAt: string
   reviewedAt: string | null
   reviewedBy: string | null
+  networkConnections: ProductNetworkConnection[]
   locales: Array<{
     language: string
     status: string
@@ -49,6 +51,7 @@ export type ProductAdminEdit = {
   reviewStatus: string
   canonicalImageId: string | null
   aliases: string[]
+  networkConnections: ProductNetworkConnection[]
   locales: Array<{
     language: string
     updatedAt: string | null

@@ -9,7 +9,8 @@ import {
 } from './s3-photos'
 import type { createAssetSchema } from './asset-intelligence-schema'
 import { prepareOriginalAssetPhoto } from './asset-original-photo'
-import { resolveProduct } from './product-catalog'
+import { adoptPrimaryCatalogPhoto, resolveProduct } from './product-catalog'
+import { createAssetConnectionInTx } from './asset-connection-create'
 import { downloadAssetDocument } from './asset-download'
 
 export async function createAssetWithAttachments(
@@ -52,9 +53,16 @@ export async function createAssetWithAttachments(
           input.confirmedConnections.map((item) => [item.assetId, item]),
         ).values(),
       ]
-      const count = await tx.boatAsset.count({
-        where: { boatId, id: { in: connections.map((item) => item.assetId) } },
-      })
+      const peerIds = connections.map((item) => item.assetId)
+      const count = peerIds.length
+        ? await tx.boatAsset.count({
+            where: {
+              boatId,
+              id: { in: peerIds },
+              OR: [{ kind: 'equipment' }, { kind: 'system_network' }],
+            },
+          })
+        : 0
       if (count !== connections.length)
         throw new Error(
           'A connected asset no longer exists on this boat. Review the connections and try again.',
@@ -93,15 +101,15 @@ export async function createAssetWithAttachments(
         },
       })
       for (const connection of connections) {
-        const [fromAssetId, toAssetId] = [id, connection.assetId].sort()
-        await tx.assetConnection.create({
-          data: {
-            fromAssetId,
-            toAssetId,
-            reason: connection.reason,
-            confirmedBy: userId,
-          },
-        })
+        await createAssetConnectionInTx(
+          tx,
+          boatId,
+          userId,
+          id,
+          connection.assetId,
+          connection.connectionType ?? 'cable',
+          connection.reason,
+        )
       }
       if (photo) {
         const category = await tx.boatDocumentCategory.upsert({
@@ -132,6 +140,7 @@ export async function createAssetWithAttachments(
         })
       }
     })
+    if (product?.id) await adoptPrimaryCatalogPhoto(product.id)
     return id
   } catch (error) {
     if (photo)

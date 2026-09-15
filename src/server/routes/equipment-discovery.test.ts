@@ -5,9 +5,14 @@ const mocks = vi.hoisted(() => ({
   session: vi.fn(),
   resolve: vi.fn(),
   research: vi.fn(),
+  photo: vi.fn(),
+  linkPhoto: vi.fn(),
+  pagePhoto: vi.fn(),
+  manufacturerPhoto: vi.fn(),
   get: vi.fn(),
   find: vi.fn(),
   rows: vi.fn(),
+  search: vi.fn(),
 }))
 vi.mock('../session', () => ({ getSessionUserId: mocks.session }))
 vi.mock('../db', () => ({
@@ -16,6 +21,16 @@ vi.mock('../db', () => ({
 vi.mock('../product-catalog', () => ({
   resolveProduct: mocks.resolve,
   ensureProductResearch: mocks.research,
+  ensureProductPhotoResearch: mocks.photo,
+  ensureProductPhotoFromDirectUrl: mocks.linkPhoto,
+  ensureProductPhotoFromSourcePage: mocks.pagePhoto,
+  ensureProductPhotoFromManufacturerPage: mocks.manufacturerPhoto,
+  persistSuggestedCatalogProducts: vi.fn(),
+  searchCatalogProducts: mocks.search,
+  catalogProductHasPhoto: (product: {
+    imageUrl?: string | null
+    previewImageUrl?: string | null
+  } | null) => !!(product?.imageUrl || product?.previewImageUrl),
   getProduct: mocks.get,
   findProduct: mocks.find,
   ProductResearchBusy: class extends Error {},
@@ -25,6 +40,7 @@ const p = {
   brand: 'Garmin',
   modelNumber: '923',
   info: { name: 'Plotter' },
+  imageUrl: '/photo',
   resources: [],
 }
 const request = () =>
@@ -39,6 +55,7 @@ beforeEach(() => {
   mocks.resolve.mockResolvedValue({ id: 'p' })
   mocks.get.mockResolvedValue(p)
   mocks.rows.mockResolvedValue([])
+  mocks.search.mockResolvedValue([{ id: 'p' }])
   mocks.find.mockResolvedValue(null)
 })
 it('requires login for discovery before using AI or the catalog', async () => {
@@ -49,9 +66,47 @@ it('requires login for discovery before using AI or the catalog', async () => {
 it('automatically reuses an exact existing product without research', async () => {
   const response = await request()
   expect(response.status).toBe(200)
-  expect(mocks.resolve).toHaveBeenCalledWith('Garmin', '923')
+  expect(mocks.resolve).toHaveBeenCalledWith('Garmin', '923', undefined)
   expect(mocks.research).not.toHaveBeenCalled()
+  expect(mocks.photo).not.toHaveBeenCalled()
   expect(await response.json()).toMatchObject({ product: p, pending: false })
+})
+it('uses manufacturer page images before generic photo search', async () => {
+  mocks.get.mockImplementation(async () => ({
+    ...p,
+    imageUrl: mocks.manufacturerPhoto.mock.calls.length ? '/photo' : null,
+    previewImageUrl: null,
+  }))
+  mocks.manufacturerPhoto.mockResolvedValue(true)
+  const response = await productsRoutes.request('/resolve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      brand: 'Garmin',
+      model: '923',
+      language: 'en',
+      sourceUrl: 'https://example.com/garmin-923',
+    }),
+  })
+  expect(response.status).toBe(200)
+  expect(mocks.manufacturerPhoto).toHaveBeenCalledWith(
+    'p',
+    'https://example.com/garmin-923',
+  )
+  expect(mocks.pagePhoto).not.toHaveBeenCalled()
+  expect(mocks.photo).not.toHaveBeenCalled()
+})
+it('searches for a photo when catalog info exists but no image is stored', async () => {
+  mocks.get.mockResolvedValue({
+    ...p,
+    imageUrl: null,
+    previewImageUrl: null,
+  })
+  mocks.photo.mockResolvedValue(false)
+  const response = await request()
+  expect(mocks.photo).toHaveBeenCalledWith('p')
+  expect(mocks.research).not.toHaveBeenCalled()
+  expect((await response.json()).notice).toContain('searched online')
 })
 it('only researches the photo when catalog information is missing', async () => {
   mocks.get.mockResolvedValueOnce({ ...p, info: null })
@@ -84,12 +139,7 @@ it('includes brands stored in the database as well as known manufacturer logos',
   )
 })
 it('returns model autocomplete even when only a brand is entered', async () => {
-  mocks.rows.mockResolvedValue([{ id: 'p' }])
   const response = await productsRoutes.request('/?brand=Garmin&model=')
   expect((await response.json()).products).toEqual([p])
-  expect(mocks.rows).toHaveBeenCalledWith(
-    expect.objectContaining({
-      where: expect.objectContaining({ brandKey: 'garmin' }),
-    }),
-  )
+  expect(mocks.search).toHaveBeenCalledWith('Garmin', '')
 })

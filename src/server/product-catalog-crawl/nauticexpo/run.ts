@@ -3,11 +3,16 @@ import { prisma } from '../../db'
 import { crawlNauticExpo } from './crawlers'
 import { NAUTICEXPO_SOURCE } from './constants'
 import { importStagedProducts, type ImportStats } from './upsert'
+import { crawlNauticExpoViaApify } from './run-apify'
+import { apifyToken } from './apify'
 
 export type NauticExpoSeedProfile = 'equipment'
+export type NauticExpoCrawlProvider = 'apify' | 'local'
 
 export type NauticExpoCrawlConfig = {
   seedProfile: NauticExpoSeedProfile
+  provider?: NauticExpoCrawlProvider
+  apifyRunId?: string | null
   maxProducts?: number | null
   maxPages?: number | null
   dryRun?: boolean
@@ -27,6 +32,8 @@ export type NauticExpoCrawlResult = {
   }
   import: ImportStats | null
   dryRun: boolean
+  provider: NauticExpoCrawlProvider
+  apifyRunId?: string | null
 }
 
 const DEFAULT_MAX_PAGES = 500
@@ -44,6 +51,19 @@ export async function runNauticExpoCatalogCrawl(
   const maxProducts = config.maxProducts ?? DEFAULT_MAX_PRODUCTS
   const dryRun = config.dryRun ?? false
   const delayMs = config.delayMs ?? 750
+  const provider: NauticExpoCrawlProvider =
+    config.provider ??
+    (config.apifyRunId || process.env.APIFY_TOKEN?.trim()
+      ? 'apify'
+      : 'local')
+
+  if (provider === 'apify') {
+    apifyToken()
+  }
+
+  if (dryRun) {
+    log('[nauticexpo] dry-run: staging only — no CatalogProduct import')
+  }
 
   let runId = config.resumeRunId ?? null
   let storageDir = config.storageDir ?? null
@@ -82,14 +102,33 @@ export async function runNauticExpoCatalogCrawl(
   log(`[nauticexpo] run ${runId} storage=${storageDir}`)
 
   try {
-    const { staged, progress } = await crawlNauticExpo({
-      runId,
-      storageDir,
-      limits: { maxPages, maxProducts, delayMs },
-      resume: Boolean(config.resumeRunId),
-      log,
-      signal: options.signal,
-    })
+    let staged: Awaited<ReturnType<typeof crawlNauticExpo>>['staged']
+    let progress: Awaited<ReturnType<typeof crawlNauticExpo>>['progress']
+    let apifyRunId: string | null = config.apifyRunId ?? null
+
+    if (provider === 'apify') {
+      const apify = await crawlNauticExpoViaApify({
+        runId,
+        maxProducts,
+        maxPages,
+        apifyRunId: config.apifyRunId,
+        log,
+      })
+      staged = apify.staged
+      progress = apify.progress
+      apifyRunId = apify.apifyRunId
+    } else {
+      const local = await crawlNauticExpo({
+        runId,
+        storageDir,
+        limits: { maxPages, maxProducts, delayMs },
+        resume: Boolean(config.resumeRunId),
+        log,
+        signal: options.signal,
+      })
+      staged = local.staged
+      progress = local.progress
+    }
 
     let importStats: ImportStats | null = null
     if (!dryRun && staged.length > 0) {
@@ -113,9 +152,17 @@ export async function runNauticExpoCatalogCrawl(
           staged: staged.length,
           import: importStats,
           dryRun,
+          provider,
+          apifyRunId,
         },
       },
     })
+
+    if (!dryRun && importStats) {
+      log(
+        `[nauticexpo] imported ${importStats.products} new products (${importStats.resources} resources)`,
+      )
+    }
 
     return {
       runId,
@@ -123,6 +170,8 @@ export async function runNauticExpoCatalogCrawl(
       progress,
       import: importStats,
       dryRun,
+      provider,
+      apifyRunId,
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)

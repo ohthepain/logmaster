@@ -36,10 +36,22 @@ Candidate brands, logos, and products can be imported from NauticExpo equipment 
 
 **Local / operator CLI**
 
+**Recommended — Apify** ([crawloop/nauticexpo-scraper](https://apify.com/crawloop/nauticexpo-scraper), residential proxy):
+
+```bash
+# .env: APIFY_TOKEN=...
+pnpm catalog:nauticexpo --max-products 50 --max-pages 10
+# Import an existing Apify run (no re-scrape):
+pnpm catalog:nauticexpo --apify-run-id 7WdSy5i3ONC6PjXpk --max-products 50
+```
+
+`--dry-run` stages rows in `catalog_crawl_page` only — it does **not** upsert `catalog_product`. Omit `--dry-run` to write candidate catalog rows.
+
+**Local fallback** (often blocked by Cloudflare without residential proxy):
+
 ```bash
 npx playwright install chromium
-pnpm catalog:nauticexpo --dry-run --max-products 20 --max-pages 200
-pnpm catalog:nauticexpo --max-products 50
+pnpm catalog:nauticexpo --local --max-products 20 --max-pages 200
 ```
 
 Flags: `--dry-run` (crawl and stage only), `--max-products`, `--max-pages`, `--resume <runId>`, `--storage-dir`, `--mark-missing-removed`.

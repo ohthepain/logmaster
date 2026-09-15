@@ -12,6 +12,7 @@ import {
 import { AssetCoverPhoto } from '../../../../../components/AssetCoverPhoto'
 import { AssetDocumentsSection } from '../../../../../components/AssetDocumentsSection'
 import { AssetResearchConnectionsSection } from '../../../../../components/AssetResearchConnectionsSection'
+import { AssetConnectionsSection } from '../../../../../components/AssetConnectionsSection'
 import { AssetSuggestionsSection } from '../../../../../components/AssetSuggestionsSection'
 import type {
   AssetWork,
@@ -336,6 +337,10 @@ function BoatAssetDetailPage() {
               />
             </div>
           ) : null}
+          <AssetConnectionsSection
+            asset={asset}
+            onChange={() => load({ background: true })}
+          />
           <AssetSuggestionsSection
             asset={asset}
             onChange={() => load({ background: true })}

@@ -23,13 +23,20 @@ function readStringFlag(name: string) {
 async function main() {
   const dryRun = readFlag('--dry-run')
   const markMissingRemoved = readFlag('--mark-missing-removed')
+  const useLocal = readFlag('--local')
+  const useApify = readFlag('--apify')
   const maxProducts = readNumberFlag('--max-products')
   const maxPages = readNumberFlag('--max-pages')
   const resumeRunId = readStringFlag('--resume')
   const storageDir = readStringFlag('--storage-dir')
+  const apifyRunId = readStringFlag('--apify-run-id')
+
+  const provider = useLocal ? 'local' : useApify || apifyRunId ? 'apify' : undefined
 
   const result = await runNauticExpoCatalogCrawl({
     seedProfile: 'equipment',
+    provider,
+    apifyRunId,
     dryRun,
     markMissingRemoved,
     maxProducts,

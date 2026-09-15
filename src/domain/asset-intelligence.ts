@@ -21,11 +21,15 @@ export type AssetIdentification = {
   modelNumber: string | null
   confidence: 'high' | 'medium' | 'low'
   category: AssetCategory | null
+  photoUrl?: string | null
 }
 
 export type AssetConnectionSuggestion = {
   assetId: string
   reason: string
+  connectionType?: 'cable' | 'wifi' | 'bluetooth' | 'nmea0183'
+  name?: string
+  kind?: 'equipment' | 'network'
 }
 
 export type AssetDownloadSuggestion = {
@@ -37,12 +41,7 @@ export type AssetDownloadSuggestion = {
   documentId: string | null
 }
 
-export type AssetConnection = {
-  id: string
-  assetId: string
-  name: string
-  reason: string
-}
+export type { AssetConnectionDetail as AssetConnection } from './asset-connections'
 
 export type AssetResearch = {
   productId?: string

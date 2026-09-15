@@ -22,6 +22,8 @@ const mocks = vi.hoisted(() => {
     normalize: vi.fn(),
     download: vi.fn(),
     suggestion: vi.fn(),
+    adoptPrimaryCatalogPhoto: vi.fn(async () => null),
+    createConnectionInTx: vi.fn(),
   }
 })
 vi.mock('./db', () => ({
@@ -40,6 +42,10 @@ vi.mock('./asset-original-photo', () => ({
 }))
 vi.mock('./product-catalog', () => ({
   resolveProduct: vi.fn(async () => ({ id: 'shared-product' })),
+  adoptPrimaryCatalogPhoto: mocks.adoptPrimaryCatalogPhoto,
+}))
+vi.mock('./asset-connection-create', () => ({
+  createAssetConnectionInTx: mocks.createConnectionInTx,
 }))
 vi.mock('./asset-download', () => ({ downloadAssetDocument: mocks.download }))
 
@@ -56,6 +62,7 @@ beforeEach(() => {
     extension: 'jpg',
   })
   mocks.remove.mockResolvedValue(undefined)
+  mocks.adoptPrimaryCatalogPhoto.mockClear()
 })
 
 describe('asset creation', () => {
@@ -89,7 +96,7 @@ describe('asset creation', () => {
         }),
       }),
     )
-    expect(mocks.tx.assetConnection.create).not.toHaveBeenCalled()
+    expect(mocks.createConnectionInTx).not.toHaveBeenCalled()
   })
   it('rejects cross-boat connections and removes the staged photo', async () => {
     const data = createAssetSchema.parse({
@@ -118,15 +125,46 @@ describe('asset creation', () => {
       confirmedConnections: [{ assetId: 'existing', reason: 'Supplies water' }],
     })
     const id = await createAssetWithAttachments('boat', 'user', data)
-    const [fromAssetId, toAssetId] = [id, 'existing'].sort()
-    expect(mocks.tx.assetConnection.create).toHaveBeenCalledWith({
-      data: {
-        fromAssetId,
-        toAssetId,
-        reason: 'Supplies water',
-        confirmedBy: 'user',
+    expect(mocks.createConnectionInTx).toHaveBeenCalledWith(
+      mocks.tx,
+      'boat',
+      'user',
+      id,
+      'existing',
+      'cable',
+      'Supplies water',
+    )
+  })
+  it('allows confirming a boat network peer', async () => {
+    mocks.tx.boatAsset.count.mockResolvedValue(1)
+    const data = createAssetSchema.parse({
+      name: 'i50',
+      ownership: 'BOAT',
+      confirmedConnections: [
+        {
+          assetId: 'net_boat_seatal_kng',
+          reason: 'Product has 2 × SeaTalkNG connections',
+          connectionType: 'cable',
+        },
+      ],
+    })
+    await createAssetWithAttachments('boat', 'user', data)
+    expect(mocks.tx.boatAsset.count).toHaveBeenCalledWith({
+      where: {
+        boatId: 'boat',
+        id: { in: ['net_boat_seatal_kng'] },
+        OR: [{ kind: 'equipment' }, { kind: 'system_network' }],
       },
     })
+    expect(mocks.createConnectionInTx).toHaveBeenCalledWith(
+      mocks.tx,
+      'boat',
+      'user',
+      expect.any(String),
+      'net_boat_seatal_kng',
+      'cable',
+      'Product has 2 × SeaTalkNG connections',
+    )
   })
 })
 
@@ -180,4 +218,5 @@ it('persists canonical brands with clean model and product names', async () => {
       }),
     }),
   )
+  expect(mocks.adoptPrimaryCatalogPhoto).toHaveBeenCalledWith('shared-product')
 })

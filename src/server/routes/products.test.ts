@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   search: vi.fn(),
   detail: vi.fn(),
   edit: vi.fn(),
+  regenerate: vi.fn(),
 }))
 vi.mock('../session', () => ({ getSessionUserId: mocks.session }))
 vi.mock('../admin-auth', () => ({ isAdminRequest: mocks.admin }))
@@ -24,6 +25,7 @@ vi.mock('../product-admin', async (original) => ({
   searchAdminProducts: mocks.search,
   getAdminProduct: mocks.detail,
   editAdminProduct: mocks.edit,
+  regenerateAdminProductResearch: mocks.regenerate,
 }))
 beforeEach(() => {
   vi.resetAllMocks()
@@ -77,6 +79,34 @@ it('protects edits even when the client submits valid-looking data', async () =>
       .status,
   ).toBe(403)
   expect(mocks.edit).not.toHaveBeenCalled()
+})
+it('protects AI regeneration', async () => {
+  expect(
+    (
+      await productsRoutes.request('/admin/p/research', {
+        method: 'POST',
+        body: '{}',
+      })
+    ).status,
+  ).toBe(403)
+  expect(mocks.regenerate).not.toHaveBeenCalled()
+})
+it('regenerates completed AI information for an admin', async () => {
+  mocks.admin.mockResolvedValue(true)
+  mocks.regenerate.mockResolvedValue({
+    id: 'p',
+    networkConnections: [{ networkKey: 'seatal_kng', portCount: 2 }],
+  })
+  const response = await productsRoutes.request('/admin/p/research', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ language: 'en' }),
+  })
+  expect(response.status).toBe(200)
+  expect(mocks.regenerate).toHaveBeenCalledWith('p', 'en')
+  expect((await response.json()).product.networkConnections).toEqual([
+    { networkKey: 'seatal_kng', portCount: 2 },
+  ])
 })
 it('searches across all shared records with bounded pagination', async () => {
   mocks.admin.mockResolvedValue(true)

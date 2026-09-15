@@ -5,6 +5,7 @@ import { BoatDocumentsTab } from '../../../../components/BoatDocumentsTab'
 import { BoatPhotosTab } from '../../../../components/BoatPhotosTab'
 import { BoatSharesTab } from '../../../../components/BoatSharesTab'
 import { BoatAssetsTab } from '../../../../components/BoatAssetsTab'
+import { BoatNetworksTab } from '../../../../components/BoatNetworksTab'
 import { BoatAccountingTab } from '../../../../components/BoatAccountingTab'
 import { BoatIconSelector } from '../../../../components/BoatIconSelector'
 import {
@@ -53,6 +54,7 @@ type BoatDetailTab =
   | 'photos'
   | 'documents'
   | 'assets'
+  | 'networks'
   | 'accounting'
   | 'members'
   | 'shares'
@@ -62,6 +64,7 @@ const BOAT_TAB_AREAS: Partial<Record<BoatDetailTab, ContactResourceArea>> = {
   photos: 'PHOTOS',
   documents: 'DOCUMENTS',
   assets: 'ASSETS',
+  networks: 'ASSETS',
   accounting: 'ACCOUNTING',
 }
 
@@ -76,6 +79,7 @@ export const Route = createFileRoute('/_main/boats/$boatId/')({
       tab === 'photos' ||
       tab === 'documents' ||
       tab === 'assets' ||
+      tab === 'networks' ||
       tab === 'accounting' ||
       tab === 'members' ||
       tab === 'shares' ||
@@ -227,7 +231,7 @@ function BoatDetailPage() {
   const tabRaw = tabFromSearch ?? 'photos'
   const isGuestContact = contactGrants !== null && contactGrants.length > 0
   const tabCandidates: BoatDetailTab[] = isGuestContact
-    ? (['photos', 'documents', 'assets', 'accounting'] as const).filter(
+    ? (['photos', 'documents', 'assets', 'networks', 'accounting'] as const).filter(
         (value) => {
           const area = BOAT_TAB_AREAS[value]
           return area ? contactGrants.includes(area) : false
@@ -237,6 +241,7 @@ function BoatDetailPage() {
         'photos',
         'documents',
         'assets',
+        'networks',
         'accounting',
         ...(boat.orgId ? (['shares'] as const) : []),
         'contacts',
@@ -249,6 +254,7 @@ function BoatDetailPage() {
     photos: 'photos',
     documents: 'documents',
     assets: 'assets',
+    networks: 'networks',
     accounting: 'accounting',
     shares: 'shares',
     contacts: 'contacts',
@@ -340,6 +346,7 @@ function BoatDetailPage() {
             members={members}
           />
         ) : null}
+        {tab === 'networks' ? <BoatNetworksTab boatId={boat.id} /> : null}
         {tab === 'accounting' ? (
           <BoatAccountingTab boatId={boat.id} orgId={boat.orgId} />
         ) : null}

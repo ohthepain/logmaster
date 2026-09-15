@@ -15,11 +15,13 @@ const mocks = vi.hoisted(() => ({
   search: vi.fn(),
   detail: vi.fn(),
   save: vi.fn(),
+  regenerate: vi.fn(),
 }))
 vi.mock('../lib/product-catalog-api', () => ({
   searchSharedProducts: mocks.search,
   fetchAdminProduct: mocks.detail,
   saveAdminProduct: mocks.save,
+  regenerateAdminProduct: mocks.regenerate,
 }))
 vi.mock('./DevComponentLabel', () => ({ DevComponentLabel: () => null }))
 
@@ -34,6 +36,7 @@ const product: ProductAdminDetail = {
   updatedAt: '2026-09-13T00:00:00.000Z',
   reviewedAt: null,
   reviewedBy: null,
+  networkConnections: [],
   locales: [
     {
       language: 'en',
@@ -223,4 +226,51 @@ it('ignores stale searches and resets pagination when filters change', async () 
     ),
   )
   expect(screen.queryByText('999 products found')).toBeNull()
+})
+it('regenerates AI information including boat network connections', async () => {
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+  mocks.regenerate.mockResolvedValue({
+    ...structuredClone(product),
+    networkConnections: [{ networkKey: 'seatal_kng', portCount: 2 }],
+    locales: product.locales.map((locale) =>
+      locale.language === 'en'
+        ? {
+            ...locale,
+            info: {
+              ...locale.info!,
+              description: 'Regenerated description',
+            },
+          }
+        : locale,
+    ),
+  })
+  render(
+    <SharedAssetPanel productId="pump" onClose={vi.fn()} onSaved={vi.fn()} />,
+  )
+  await screen.findByLabelText('Description')
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Regenerate AI information' }),
+  )
+  expect(confirm).toHaveBeenCalled()
+  await waitFor(() =>
+    expect(mocks.regenerate).toHaveBeenCalledWith('pump', 'en'),
+  )
+  await screen.findByText(
+    'AI information regenerated, including boat network connections.',
+  )
+  expect(screen.getByLabelText<HTMLTextAreaElement>('Description').value).toBe(
+    'Regenerated description',
+  )
+  expect(screen.getByRole('checkbox', { name: 'SeaTalkNG' })).toBeChecked()
+  expect(screen.getByLabelText<HTMLInputElement>('Ports').value).toBe('2')
+  confirm.mockRestore()
+})
+it('does not regenerate AI information when the prompt is cancelled', async () => {
+  vi.spyOn(window, 'confirm').mockReturnValue(false)
+  render(
+    <SharedAssetPanel productId="pump" onClose={vi.fn()} onSaved={vi.fn()} />,
+  )
+  await screen.findByLabelText('Description')
+  fireEvent.click(screen.getByRole('button', { name: /^Regenerate AI$/ }))
+  expect(mocks.regenerate).not.toHaveBeenCalled()
 })

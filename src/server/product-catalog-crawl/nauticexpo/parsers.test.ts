@@ -8,7 +8,24 @@ import { parseProductHtml } from './parsers'
 const fixtureDir = dirname(fileURLToPath(import.meta.url))
 
 describe('nauticexpo parsers', () => {
-  it('parses a product page fixture', () => {
+  it('parses a product detail page from og:title when logo is absent', () => {
+    const html = readFileSync(
+      join(fixtureDir, 'fixtures/product-detail.html'),
+      'utf8',
+    )
+    const parsed = parseProductHtml(
+      html,
+      'https://www.nauticexpo.com/prod/mercury-marine/product-21281-619551.html',
+    )
+    expect(parsed).toMatchObject({
+      brand: 'Mercury Marine',
+      modelNumber: 'Boat control panel',
+      manufacturerId: '21281',
+      productId: '619551',
+    })
+  })
+
+  it('parses a product listing fixture with logo', () => {
     const html = readFileSync(
       join(fixtureDir, 'fixtures/product-page.html'),
       'utf8',

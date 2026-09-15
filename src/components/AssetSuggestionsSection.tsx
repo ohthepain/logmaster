@@ -1,5 +1,4 @@
-import { Link } from '@tanstack/react-router'
-import { MoreHorizontal, Trash2 } from 'lucide-react'
+import { MoreHorizontal } from 'lucide-react'
 import { useId, useState } from 'react'
 import { toast } from 'sonner'
 import type { AssetDownloadSuggestion } from '../domain/asset-intelligence'
@@ -7,7 +6,6 @@ import type { BoatAsset } from '../domain/boat-assets'
 import {
   dismissAssetSuggestion,
   downloadAssetSuggestion,
-  removeAssetConnection,
 } from '../lib/boat-assets-api'
 import { cn } from '../lib/cn'
 import { useTranslation } from '../lib/i18n'
@@ -22,7 +20,7 @@ export function AssetSuggestionsSection({
   asset,
   onChange,
 }: {
-  asset: Pick<BoatAsset, 'id' | 'boatId' | 'suggestedDownloads' | 'connections'>
+  asset: Pick<BoatAsset, 'id' | 'boatId' | 'suggestedDownloads'>
   onChange: () => Promise<unknown>
 }) {
   const { t } = useTranslation()
@@ -80,47 +78,6 @@ export function AssetSuggestionsSection({
                     )
                   }}
                 />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {!!asset.connections.length && (
-        <section>
-          <h3 className="text-sm font-semibold">Confirmed connections</h3>
-          <ul className="list-none space-y-2 p-0">
-            {asset.connections.map((item) => (
-              <li
-                key={item.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] p-3 text-sm"
-              >
-                <Link
-                  to="/boats/$boatId/assets/$assetId"
-                  params={{ boatId: asset.boatId, assetId: item.assetId }}
-                  className="min-w-0 flex-1 font-semibold underline"
-                >
-                  {item.name}
-                </Link>
-                <button
-                  type="button"
-                  disabled={!!busy}
-                  className="shrink-0 rounded-full border border-[var(--chip-line)] p-2 disabled:opacity-50"
-                  aria-label={`Remove connection to ${item.name}`}
-                  onClick={() => {
-                    if (
-                      !window.confirm(
-                        t('removeAssetConnectionConfirm', { name: item.name }),
-                      )
-                    ) {
-                      return
-                    }
-                    void act(item.id, () =>
-                      removeAssetConnection(asset.boatId, asset.id, item.id),
-                    )
-                  }}
-                >
-                  <Trash2 className="size-4" />
-                </button>
               </li>
             ))}
           </ul>

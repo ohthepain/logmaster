@@ -23,6 +23,8 @@ export default defineConfig(({ mode }) => ({
         'apple-touch-icon.png',
         'logo192.png',
         'logo512.png',
+        'logo512-maskable.png',
+        'logo_trans_512.png',
         'offline.html',
         'logmaster_logo_transparent.png',
       ],
@@ -49,7 +51,7 @@ export default defineConfig(({ mode }) => ({
             purpose: 'any',
           },
           {
-            src: 'logo512.png',
+            src: 'logo512-maskable.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',

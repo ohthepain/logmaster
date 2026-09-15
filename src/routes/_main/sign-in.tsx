@@ -98,9 +98,9 @@ function SignInPage() {
         >
           <div className="flex items-center gap-3">
             <img
-              src="/logmaster_logo_transparent.png"
+              src="/logo_trans_512.png"
               alt=""
-              className="w-10 h-10 rounded-xl"
+              className="size-10 object-contain"
               width={40}
               height={40}
             />
@@ -152,9 +152,9 @@ function SignInPage() {
             <div className="flex lg:hidden items-center justify-between gap-3 py-4 shrink-0">
               <div className="flex items-center gap-3">
                 <img
-                  src="/logmaster_logo_transparent.png"
+                  src="/logo_trans_512.png"
                   alt=""
-                  className="w-9 h-9 rounded-xl"
+                  className="size-9 object-contain"
                   width={36}
                   height={36}
                 />

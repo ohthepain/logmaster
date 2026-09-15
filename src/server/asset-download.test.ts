@@ -3,6 +3,7 @@ import { PassThrough } from 'node:stream'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   downloadAssetDocument,
+  downloadPublicHtml,
   isPublicAddress,
   validateDownloadUrl,
 } from './asset-download'
@@ -74,10 +75,13 @@ describe('public document downloads', () => {
       return request
     })
   }
-  it('pins DNS and downloads a PDF by its contents', async () => {
+  it('pins DNS, downloads a PDF, and sends a same-origin Referer', async () => {
     serve('%PDF-1.7\nmanual')
     const file = await downloadAssetDocument('https://example.com/manual')
     expect(file.mimeType).toBe('application/pdf')
+    expect(mocks.request.mock.calls[0][1].headers.Referer).toBe(
+      'https://example.com/',
+    )
   })
   it('does not attach HTML masquerading as a PDF', async () => {
     serve('<html>Sign in</html>', 200, { 'content-type': 'application/pdf' })
@@ -106,5 +110,13 @@ describe('public document downloads', () => {
     await expect(
       downloadAssetDocument('https://example.com/manual.pdf'),
     ).rejects.toThrow('Invalid download redirect')
+  })
+  it('downloads HTML from a public HTTPS page', async () => {
+    serve('<html><body>product</body></html>', 200, {
+      'content-type': 'text/html; charset=utf-8',
+    })
+    await expect(downloadPublicHtml('https://example.com/product')).resolves.toContain(
+      'product',
+    )
   })
 })

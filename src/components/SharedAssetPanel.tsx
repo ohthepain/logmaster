@@ -1,13 +1,18 @@
 import { useEffect, useId, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Modal } from './Modal'
-import { fetchAdminProduct, saveAdminProduct } from '../lib/product-catalog-api'
+import {
+  fetchAdminProduct,
+  regenerateAdminProduct,
+  saveAdminProduct,
+} from '../lib/product-catalog-api'
 import type {
   ProductAdminDetail,
   ProductAdminEdit,
 } from '../domain/product-admin'
 import type { ProductInfo } from '../domain/product-catalog'
 import { ASSET_CATEGORIES } from '../domain/asset-intelligence'
+import { BOAT_NETWORK_DEFINITIONS } from '../domain/asset-connections'
 import { apiUrl } from '../lib/app-origin'
 
 const inputClass =
@@ -29,6 +34,7 @@ function makeDraft(product: ProductAdminDetail): ProductAdminEdit {
     reviewStatus: product.reviewStatus,
     canonicalImageId: product.canonicalImageId,
     aliases: product.aliases,
+    networkConnections: product.networkConnections ?? [],
     locales: product.locales.flatMap((locale) =>
       locale.info
         ? [
@@ -100,6 +106,7 @@ export function SharedAssetPanel({
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [reload, setReload] = useState(0)
   const [language, setLanguage] = useState('en')
@@ -140,9 +147,40 @@ export function SharedAssetPanel({
   function close() {
     if (
       !busy &&
+      !regenerating &&
       (!dirty || window.confirm('Discard unsaved shared asset changes?'))
     )
       onClose()
+  }
+  function regenerate() {
+    if (!product || busy || regenerating) return
+    const confirmed = window.confirm(
+      dirty
+        ? 'Discard unsaved edits and regenerate AI information? This replaces researched text, specifications, sources, and boat network connections.'
+        : 'Regenerate AI information? This replaces researched text, specifications, sources, and boat network connections.',
+    )
+    if (!confirmed) return
+    setRegenerating(true)
+    setError('')
+    setNotice('')
+    void regenerateAdminProduct(product.id, language)
+      .then((saved) => {
+        setProduct(saved)
+        setDraft(makeDraft(saved))
+        setDirty(false)
+        setNotice(
+          'AI information regenerated, including boat network connections.',
+        )
+        onSaved()
+      })
+      .catch((e) =>
+        setError(
+          e instanceof Error
+            ? e.message
+            : 'Could not regenerate AI information.',
+        ),
+      )
+      .finally(() => setRegenerating(false))
   }
   const locale = draft?.locales.find((item) => item.language === language)
   const info = locale?.info
@@ -179,14 +217,24 @@ export function SharedAssetPanel({
       onClose={close}
       headerActions={
         draft && !loading ? (
-          <button
-            type="submit"
-            form={formId}
-            disabled={busy || !dirty}
-            className="rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-50"
-          >
-            {busy ? 'Saving…' : 'Save changes'}
-          </button>
+          <>
+            <button
+              type="button"
+              disabled={busy || regenerating}
+              className={buttonClass}
+              onClick={() => regenerate()}
+            >
+              {regenerating ? 'Regenerating…' : 'Regenerate AI'}
+            </button>
+            <button
+              type="submit"
+              form={formId}
+              disabled={busy || regenerating || !dirty}
+              className="rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-50"
+            >
+              {busy ? 'Saving…' : 'Save changes'}
+            </button>
+          </>
         ) : undefined
       }
       headerBelow={
@@ -219,7 +267,7 @@ export function SharedAssetPanel({
           id={formId}
           onSubmit={(event) => {
             event.preventDefault()
-            if (busy) return
+            if (busy || regenerating) return
             setBusy(true)
             setError('')
             setNotice('')
@@ -253,7 +301,7 @@ export function SharedAssetPanel({
             Private photos, notes and installations are separate.
           </p>
           <fieldset
-            disabled={busy}
+            disabled={busy || regenerating}
             className="m-0 min-w-0 space-y-6 border-0 p-0 disabled:opacity-60"
           >
             <section className="space-y-3">
@@ -303,6 +351,81 @@ export function SharedAssetPanel({
                   />
                 </Field>
               </div>
+            </section>
+            <section className="space-y-3 border-t border-[var(--line)] pt-3">
+              <h2 className="text-lg font-semibold">Boat network connections</h2>
+              <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
+                Only known boat networks. Transducers, NMEA 0183, Wi-Fi and
+                Bluetooth stay in specifications.
+              </p>
+              {BOAT_NETWORK_DEFINITIONS.map((network) => {
+                const current = draft.networkConnections.find(
+                  (item) => item.networkKey === network.key,
+                )
+                return (
+                  <div
+                    key={network.key}
+                    className="flex flex-wrap items-end gap-3"
+                  >
+                    <label className="flex min-h-10 items-center gap-2 text-sm font-semibold">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-[var(--sea-ink)]"
+                        checked={!!current}
+                        onChange={(event) =>
+                          change({
+                            ...draft,
+                            networkConnections: event.target.checked
+                              ? [
+                                  ...draft.networkConnections,
+                                  {
+                                    networkKey: network.key,
+                                    portCount: null,
+                                  },
+                                ]
+                              : draft.networkConnections.filter(
+                                  (item) => item.networkKey !== network.key,
+                                ),
+                          })
+                        }
+                      />
+                      {network.name}
+                    </label>
+                    {current ? (
+                      <Field label="Ports">
+                        <input
+                          type="number"
+                          min={1}
+                          max={32}
+                          className={inputClass}
+                          value={current.portCount ?? ''}
+                          onChange={(event) => {
+                            const raw = event.target.value
+                            const portCount = raw
+                              ? Number.parseInt(raw, 10)
+                              : null
+                            change({
+                              ...draft,
+                              networkConnections: draft.networkConnections.map(
+                                (item) =>
+                                  item.networkKey === network.key
+                                    ? {
+                                        ...item,
+                                        portCount:
+                                          portCount && portCount > 0
+                                            ? portCount
+                                            : null,
+                                      }
+                                    : item,
+                              ),
+                            })
+                          }}
+                        />
+                      </Field>
+                    ) : null}
+                  </div>
+                )
+              })}
             </section>
             <section className="space-y-3 border-t border-[var(--line)] pt-3">
               <h2 className="text-lg font-semibold">
@@ -369,13 +492,25 @@ export function SharedAssetPanel({
                   Add language
                 </button>
               </div>
-              <p className="text-xs text-[var(--sea-ink-soft)]">
-                Research: {localeMeta?.status ?? 'Not researched'}
-                {localeMeta?.researchedAt
-                  ? ` · ${new Date(localeMeta.researchedAt).toLocaleString()}`
-                  : ''}
-                {localeMeta?.error ? ` · ${localeMeta.error}` : ''}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
+                  Research: {localeMeta?.status ?? 'Not researched'}
+                  {localeMeta?.researchedAt
+                    ? ` · ${new Date(localeMeta.researchedAt).toLocaleString()}`
+                    : ''}
+                  {localeMeta?.error ? ` · ${localeMeta.error}` : ''}
+                </p>
+                <button
+                  type="button"
+                  className={buttonClass}
+                  disabled={busy || regenerating}
+                  onClick={() => regenerate()}
+                >
+                  {regenerating
+                    ? 'Regenerating…'
+                    : 'Regenerate AI information'}
+                </button>
+              </div>
               {!info ? (
                 <button
                   type="button"

@@ -1,11 +1,16 @@
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { CheerioCrawler } from '@crawlee/cheerio'
 import { Configuration, RequestQueue } from '@crawlee/core'
 import { PlaywrightCrawler } from '@crawlee/playwright'
 import type { Prisma } from '../../../../generated/prisma/client'
 import { prisma } from '../../db'
-import { CATALOG_CRAWL_USER_AGENT } from './constants'
+import {
+  applyStealthInitScript,
+  PLAYWRIGHT_LAUNCH_ARGS,
+  PLAYWRIGHT_USER_AGENT,
+  waitForNauticExpoContent,
+} from './browser'
+import { NAUTICEXPO_ORIGIN } from './constants'
 import {
   extractNauticExpoLinksFromHtml,
   isCloudflareChallenge,
@@ -107,6 +112,90 @@ async function handleParsedProduct(
   })
 }
 
+async function processNauticExpoHtml(options: {
+  runId: string
+  url: string
+  html: string
+  httpStatus: number | null
+  progress: CrawlProgress
+  staged: StagedProduct[]
+  addUrl: (urls: string | string[]) => Promise<void>
+  limits: CrawlLimits
+}) {
+  const { url, html, httpStatus, progress, staged, addUrl, limits, runId } =
+    options
+  const pageType = classifyNauticExpoUrl(url)
+
+  // Playwright may keep response.status() === 403 after CF clears; trust page HTML.
+  if (isCloudflareChallenge(html)) {
+    await stageCrawlPage({
+      runId,
+      url,
+      pageType,
+      httpStatus,
+      raw: { blocked: true },
+      normalized: null,
+      error: 'Blocked by origin (Cloudflare challenge)',
+    })
+    return
+  }
+
+  if (pageType === 'product') {
+    if (progress.productsParsed >= limits.maxProducts) return
+    const parsed = parseProductHtml(html, url)
+    if (!parsed) {
+      await stageCrawlPage({
+        runId,
+        url,
+        pageType: 'product',
+        httpStatus,
+        raw: { parseFailed: true },
+        normalized: null,
+        error: 'Product parse failed',
+      })
+      return
+    }
+    await handleParsedProduct(runId, url, httpStatus, parsed, progress, staged)
+    return
+  }
+
+  const links = extractNauticExpoLinksFromHtml(html, url).filter(
+    shouldCrawlEquipmentUrl,
+  )
+  const productLinks = links.filter(
+    (link) => classifyNauticExpoUrl(link) === 'product',
+  )
+  const otherLinks = links.filter((link) => {
+    const linkType = classifyNauticExpoUrl(link)
+    return linkType !== 'product' && linkType !== 'other'
+  })
+  const ordered = [...productLinks, ...otherLinks]
+  const toEnqueue: string[] = []
+  for (const link of ordered) {
+    const linkType = classifyNauticExpoUrl(link)
+    if (
+      linkType === 'product' &&
+      progress.productsParsed >= limits.maxProducts
+    ) {
+      continue
+    }
+    toEnqueue.push(link)
+  }
+  if (toEnqueue.length > 0) {
+    await addUrl(toEnqueue)
+  }
+
+  await stageCrawlPage({
+    runId,
+    url,
+    pageType,
+    httpStatus,
+    raw: { linkCount: links.length },
+    normalized: null,
+    error: null,
+  })
+}
+
 export async function crawlNauticExpo(options: {
   runId: string
   storageDir: string
@@ -128,173 +217,113 @@ export async function crawlNauticExpo(options: {
     playwrightRetries: 0,
   }
   const staged: StagedProduct[] = []
-  const playwrightUrls = new Set<string>()
 
   const discoveryQueue = await RequestQueue.open('nauticexpo-discovery', {
     config,
   })
 
   if (!options.resume) {
+    await discoveryQueue.addRequest({
+      url: `${NAUTICEXPO_ORIGIN}/`,
+      label: 'bootstrap',
+    })
     for (const url of EQUIPMENT_CATEGORY_SEEDS) {
       await discoveryQueue.addRequest({ url, label: 'seed' })
     }
   }
 
-  const cheerio = new CheerioCrawler(
+  const playwright = new PlaywrightCrawler(
     {
-    requestQueue: discoveryQueue,
-    maxConcurrency: 3,
-    maxRequestsPerCrawl: options.limits.maxPages,
-    minConcurrency: 1,
-    requestHandlerTimeoutSecs: 90,
-    useSessionPool: true,
-    preNavigationHooks: [
-      async ({ request }) => {
-        request.headers = {
-          ...request.headers,
-          'user-agent': CATALOG_CRAWL_USER_AGENT,
-          'accept-language': 'en',
-        }
-      },
-    ],
-    async requestHandler({ request, $, response, addRequests }) {
-      if (options.signal?.aborted) return
-      if (progress.pagesCrawled >= options.limits.maxPages) return
-      progress.pagesCrawled += 1
-
-      const url = request.url
-      const pageType = classifyNauticExpoUrl(url)
-      const html = $.html()
-
-      if (pageType === 'product') {
-        if (progress.productsParsed >= options.limits.maxProducts) return
-        const parsed = parseProductHtml(html, url)
-        if (!parsed) {
-          playwrightUrls.add(url)
-          return
-        }
-        await handleParsedProduct(
-          options.runId,
-          url,
-          response.statusCode ?? null,
-          parsed,
-          progress,
-          staged,
-        )
-        return
-      }
-
-      if (isCloudflareChallenge(html)) {
-        playwrightUrls.add(url)
-        return
-      }
-
-      const links = extractNauticExpoLinksFromHtml(html, url).filter(
-        shouldCrawlEquipmentUrl,
-      )
-      for (const link of links) {
-        if (progress.pagesCrawled >= options.limits.maxPages) break
-        const linkType = classifyNauticExpoUrl(link)
-        if (linkType === 'other') continue
-        if (
-          linkType === 'product' &&
-          progress.productsParsed >= options.limits.maxProducts
-        ) {
-          continue
-        }
-        await addRequests([{ url: link }])
-      }
-
-      await stageCrawlPage({
-        runId: options.runId,
-        url,
-        pageType,
-        httpStatus: response.statusCode ?? null,
-        raw: { linkCount: links.length },
-        normalized: null,
-        error: null,
-      })
-
-      if (options.limits.delayMs > 0) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, options.limits.delayMs),
-        )
-      }
-    },
-  },
-    config,
-  )
-
-  options.log('[nauticexpo] starting Cheerio discovery crawl')
-  await cheerio.run()
-
-  if (
-    playwrightUrls.size > 0 &&
-    progress.productsParsed < options.limits.maxProducts &&
-    !options.signal?.aborted
-  ) {
-    const playwrightQueue = await RequestQueue.open('nauticexpo-playwright', {
-      config,
-    })
-    for (const url of playwrightUrls) {
-      if (classifyNauticExpoUrl(url) === 'product') {
-        await playwrightQueue.addRequest({ url })
-      }
-    }
-
-    options.log(
-      `[nauticexpo] Playwright fallback for ${playwrightUrls.size} URL(s)`,
-    )
-
-    const playwright = new PlaywrightCrawler(
-      {
-      requestQueue: playwrightQueue,
+      requestQueue: discoveryQueue,
       maxConcurrency: 1,
-      maxRequestsPerCrawl: options.limits.maxProducts - progress.productsParsed,
+      maxRequestsPerCrawl: options.limits.maxPages,
+      maxRequestRetries: 5,
+      retryOnBlocked: true,
+      persistCookiesPerSession: true,
+      requestHandlerTimeoutSecs: 120,
+      navigationTimeoutSecs: 90,
       launchContext: {
-        launchOptions: { headless: true },
+        useIncognitoPages: false,
+        launchOptions: {
+          headless: true,
+          args: [...PLAYWRIGHT_LAUNCH_ARGS],
+        },
+        userAgent: PLAYWRIGHT_USER_AGENT,
       },
       preNavigationHooks: [
-        async ({ page }) => {
+        async ({ page, gotoOptions }) => {
+          await applyStealthInitScript(page)
           await page.setExtraHTTPHeaders({
-            'accept-language': 'en',
+            'accept-language': 'en-US,en;q=0.9',
           })
+          if (gotoOptions && typeof gotoOptions === 'object') {
+            ;(gotoOptions as { waitUntil?: string }).waitUntil =
+              'domcontentloaded'
+          }
         },
       ],
-      async requestHandler({ page, request, response }) {
+      async requestHandler({ page, request, response, addRequests }) {
         if (options.signal?.aborted) return
-        if (progress.productsParsed >= options.limits.maxProducts) return
+        if (progress.pagesCrawled >= options.limits.maxPages) return
+        progress.pagesCrawled += 1
         progress.playwrightRetries += 1
-        await page.waitForLoadState('domcontentloaded')
-        const html = await page.content()
-        const parsed = parseProductHtml(html, request.url)
-        if (!parsed) {
+
+        let ready = await waitForNauticExpoContent(page)
+        let html = await page.content()
+        let httpStatus = response?.status() ?? null
+
+        if (
+          !ready ||
+          httpStatus === 403 ||
+          isCloudflareChallenge(html)
+        ) {
+          await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {})
+          ready = await waitForNauticExpoContent(page)
+          html = await page.content()
+          httpStatus = page.url() ? 200 : httpStatus
+        }
+
+        if (!ready) {
           await stageCrawlPage({
             runId: options.runId,
             url: request.url,
-            pageType: 'product',
-            httpStatus: response?.status() ?? null,
-            raw: { playwright: true },
+            pageType: classifyNauticExpoUrl(request.url),
+            httpStatus,
+            raw: { cloudflareTimeout: true },
             normalized: null,
-            error: 'Playwright parse failed',
+            error: 'Timed out waiting for Cloudflare / page content',
           })
           return
         }
-        await handleParsedProduct(
-          options.runId,
-          request.url,
-          response?.status() ?? null,
-          parsed,
+
+        await processNauticExpoHtml({
+          runId: options.runId,
+          url: request.url,
+          html,
+          httpStatus,
           progress,
           staged,
-        )
+          limits: options.limits,
+          addUrl: async (urls) => {
+            const list = Array.isArray(urls) ? urls : [urls]
+            await addRequests(list.map((url) => ({ url, uniqueKey: url })))
+          },
+        })
+
+        if (options.limits.delayMs > 0) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, options.limits.delayMs),
+          )
+        }
       },
     },
-      config,
-    )
+    config,
+  )
 
-    await playwright.run()
-  }
+  options.log(
+    '[nauticexpo] starting Playwright crawl (Cloudflare; retryOnBlocked enabled — initial 403s are retried, not fatal)',
+  )
+  await playwright.run()
 
   options.log(
     `[nauticexpo] crawl finished pages=${progress.pagesCrawled} products=${progress.productsParsed}`,

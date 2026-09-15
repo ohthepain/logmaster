@@ -34,14 +34,11 @@ export function AppHeaderBrand({
       aria-label={t('home')}
     >
       <img
-        src="/logmaster_logo_trans_crop.png"
+        src="/logo_trans_512.png"
         alt=""
         width={36}
         height={36}
-        className={cn(
-          'size-9 shrink-0 object-contain',
-          mapOverlay && 'brightness-0 invert',
-        )}
+        className="size-9 shrink-0 object-contain"
         decoding="async"
       />
     </Link>

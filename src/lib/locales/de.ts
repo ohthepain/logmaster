@@ -148,6 +148,16 @@ const catalog: TranslationCatalog = {
   photos: 'Fotos',
   documents: 'Dokumente',
   assets: 'Inventar',
+  networks: 'Networks',
+  boatNetworksEmpty: 'No onboard networks yet',
+  boatNetworksEmptyHelp:
+    'When you connect equipment to NMEA 2000, SeaTalk, or Ethernet network assets, diagrams will appear here.',
+  boatNetworkDetails: 'Network asset',
+  equipmentPickModel: 'Choose the exact model',
+  equipmentPickModelHelp:
+    'Your search matched more than one product. Select the model number that matches your unit — specs and capabilities come from the catalog.',
+  equipmentPickModelRequired:
+    'Select a model from the list before continuing.',
   accounting: 'Buchhaltung',
   shares: 'Anteile',
   contacts: 'Kontakte',

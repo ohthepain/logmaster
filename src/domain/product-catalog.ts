@@ -1,5 +1,6 @@
 import { findAssetBrand, getAssetIdentity } from './asset-brands'
 import type { AssetCategory } from './asset-intelligence'
+import type { ProductNetworkConnection } from './product-networks'
 
 export type CatalogBrandIdentity = {
   id: string
@@ -86,6 +87,7 @@ export type CatalogProduct = {
   requestedLanguage: string
   researchStatus: string
   info: ProductInfo | null
+  networkConnections: ProductNetworkConnection[]
   imageUrl: string | null
   previewImageUrl?: string | null
   resources: ProductResource[]

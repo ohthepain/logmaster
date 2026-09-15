@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   httpStatusToErrorCode,
+  logAiResponse,
   logHttpRequest,
   logServerEvent,
 } from './server-log'
@@ -62,6 +63,26 @@ describe('server-log', () => {
     expect(line.kind).toBe('server_event')
     expect(line.action).toBe('logbook.sync')
     expect(line.tripsUpserted).toBe(2)
+    spy.mockRestore()
+  })
+
+  it('writes AI responses on server_event lines', () => {
+    const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    logAiResponse(
+      'product.research',
+      { name: 'i50 Tridata', networkConnections: [{ networkKey: 'seatal_kng', portCount: 2 }] },
+      { durationMs: 1200 },
+    )
+    expect(spy).toHaveBeenCalledOnce()
+    const line = JSON.parse(String(spy.mock.calls[0][0]))
+    expect(line.kind).toBe('server_event')
+    expect(line.action).toBe('product.research')
+    expect(line.outcome).toBe('success')
+    expect(line.durationMs).toBe(1200)
+    expect(line.aiResponse).toEqual({
+      name: 'i50 Tridata',
+      networkConnections: [{ networkKey: 'seatal_kng', portCount: 2 }],
+    })
     spy.mockRestore()
   })
 })

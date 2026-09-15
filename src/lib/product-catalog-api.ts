@@ -1,5 +1,6 @@
 import { apiJson } from './api-client'
 import type { CatalogProduct } from '../domain/product-catalog'
+import type { EquipmentModelSuggestResult } from '../domain/equipment-model-option'
 import type {
   ProductAdminDetail,
   ProductAdminEdit,
@@ -39,6 +40,14 @@ export async function saveAdminProduct(id: string, input: ProductAdminEdit) {
     )
   ).product
 }
+export async function regenerateAdminProduct(id: string, language: string) {
+  return (
+    await productApi<{ product: ProductAdminDetail }>(
+      `/admin/${encodeURIComponent(id)}/research`,
+      { method: 'POST', body: JSON.stringify({ language }) },
+    )
+  ).product
+}
 
 export async function productApi<T>(
   path: string,
@@ -59,6 +68,11 @@ export function resolveEquipmentProduct(
   model: string,
   language: string,
   signal?: AbortSignal,
+  hints?: {
+    sourceUrl?: string
+    photoUrl?: string | null
+    productId?: string
+  },
 ) {
   return productApi<{
     product: CatalogProduct
@@ -66,7 +80,25 @@ export function resolveEquipmentProduct(
     notice: string
   }>('/resolve', {
     method: 'POST',
-    body: JSON.stringify({ brand, model, language }),
+    body: JSON.stringify({
+      brand,
+      model,
+      language,
+      ...(hints?.productId ? { productId: hints.productId } : {}),
+      ...(hints?.sourceUrl ? { sourceUrl: hints.sourceUrl } : {}),
+      ...(hints?.photoUrl ? { photoUrl: hints.photoUrl } : {}),
+    }),
+    signal,
+  })
+}
+export async function fetchEquipmentModelOptions(
+  brand: string,
+  query: string,
+  signal?: AbortSignal,
+) {
+  return productApi<EquipmentModelSuggestResult>('/model-options', {
+    method: 'POST',
+    body: JSON.stringify({ brand, query }),
     signal,
   })
 }
@@ -77,10 +109,11 @@ export async function findCatalogProducts(
   signal?: AbortSignal,
 ) {
   const params = new URLSearchParams({ brand, model, language })
-  return productApi<{ products: CatalogProduct[]; exact: boolean }>(
-    `?${params}`,
-    { signal },
-  )
+  return productApi<{
+    products: CatalogProduct[]
+    exact: boolean
+    ambiguous: boolean
+  }>(`?${params}`, { signal })
 }
 export async function fetchCatalogProduct(
   id: string,

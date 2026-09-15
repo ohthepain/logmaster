@@ -7,7 +7,19 @@ export const productUiCopy = {
   equipmentConnections: 'Connections',
   equipmentFindModel: 'Find your equipment',
   equipmentFindHelp:
-    'Take a photo of the equipment or its label, or enter the brand and model below.',
+    'Choose how to identify your equipment, then tap Search.',
+  equipmentFindModePhoto: 'Photo',
+  equipmentFindModeModel: 'Model',
+  equipmentFindModeLink: 'Link',
+  equipmentFindHelpPhoto:
+    'Take a photo of the equipment or its label, then tap Search.',
+  equipmentFindHelpModel:
+    'Enter the brand and model, then tap Search.',
+  equipmentFindHelpLink:
+    'Paste a manufacturer product page or datasheet link, then tap Search.',
+  equipmentLinkLabel: 'Product link',
+  equipmentLinkPlaceholder: 'https://example.com/product',
+  equipmentSearch: 'Search',
   equipmentCamera: 'Take or choose a photo',
   equipmentCameraHint: 'A clear model label works best',
   equipmentBrand: 'Brand',
@@ -43,7 +55,8 @@ export const productUiCopy = {
   equipmentEnglishFallback: 'English documents shown as a fallback.',
   equipmentConnectionsPrompt: 'Search for connections?',
   equipmentConnectionsHelp:
-    'Look for likely connections to equipment in the same category on this boat. You will review every suggestion.',
+    'Look for likely connections to any equipment on this boat. You will review every suggestion.',
+  equipmentConnectionBoatAssets: '{count} assets on this boat',
   equipmentConnectionsSearching: 'Finding likely connections…',
   equipmentConnectionsReview: 'Review connections',
   equipmentConnectionsReviewHelp:
@@ -52,10 +65,31 @@ export const productUiCopy = {
     'No connections selected. You can add one yourself, or finish adding the equipment.',
   equipmentAddConnection: 'Add connection',
   equipmentChooseConnection: 'Choose equipment',
-  equipmentChooseConnectionHelp: 'Equipment in the same category on this boat.',
+  equipmentChooseConnectionHelp:
+    'Other equipment and boat networks already on this boat.',
   equipmentNoConnectionCandidates:
-    'There is no other equipment in this category to connect yet.',
+    'There is no other equipment or boat network to connect yet.',
   equipmentManualConnection: 'Connection selected by the user.',
+  equipmentProductNetworks: 'Boat networks',
+  assetConnections: 'Connections',
+  assetConnectionsEmpty:
+    'No connections yet. Add a link to another device or a boat network.',
+  assetConnectionAdd: 'Add connection',
+  assetConnectionType: 'Connection type',
+  assetConnectionPeer: 'Connected to',
+  assetConnectionReason: 'Notes (optional)',
+  assetConnectionTypeCable: 'Cable',
+  assetConnectionTypeWifi: 'Wi‑Fi',
+  assetConnectionTypeBluetooth: 'Bluetooth',
+  assetConnectionTypeNmea0183: 'NMEA 0183',
+  assetConnectionNetworkGroup: 'Boat networks',
+  assetConnectionEquipmentGroup: 'Equipment',
+  boatNetworkAddConnectionHelp:
+    'Choose equipment to attach to this network. Other boat networks listed here do not share any equipment with this backbone yet.',
+  boatNetworkOtherNetworks: 'Other networks (not linked yet)',
+  boatNetworkCompatibleEquipment: 'Equipment for this network',
+  boatNetworkNoConnectionCandidates:
+    'No equipment can be added to this network yet. Add equipment to the boat or link products with network ports in the catalog.',
   equipmentFinish: 'Add equipment',
   equipmentCloseConfirm:
     'Discard this equipment? It has not been added to the boat yet.',
@@ -70,6 +104,14 @@ export const productUiCopy = {
   productLookupUnavailable:
     'Catalog lookup unavailable. You can still save this asset.',
   productMatches: 'Matching products — check the exact model and variant',
+  equipmentPickModel: 'Choose the exact model',
+  equipmentPickModelHelp:
+    'Your search matched more than one product. Select the one that matches your unit, or correct the brand and model and search again.',
+  equipmentPickModelRequired:
+    'Select a model from the list before continuing.',
+  equipmentBrandMismatch:
+    'This does not look like a {brand} product. Did you mean one of these brands?',
+  equipmentSearchAgain: 'Search again',
   productPending: 'Product information pending',
   productSelected: 'Selected',
   productUse: 'Use this product',

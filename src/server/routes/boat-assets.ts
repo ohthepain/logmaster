@@ -16,6 +16,19 @@ import {
   serializeResearchJobForClient,
 } from '../asset-research-jobs'
 import { createAssetWithAttachments } from '../asset-storage'
+import { createAssetConnection } from '../asset-connection-create'
+import {
+  connectionPeerKind,
+  type AssetConnectionDetail,
+} from '../../domain/asset-connections'
+import {
+  ensureBoatNetworkAssets,
+  isSystemNetworkVisible,
+  listableBoatAssetsWhere,
+} from '../boat-network-assets'
+import { loadBoatNetworkDiagrams } from '../load-boat-network-diagrams'
+import { z } from 'zod'
+import { ASSET_CONNECTION_TYPES } from '../../domain/asset-connections'
 import type { AssetDownloadSuggestion } from '../../domain/asset-intelligence'
 import type {
   AssetOwnership,
@@ -144,6 +157,39 @@ function serializeLinkedDocumentDetail(document: {
   }
 }
 
+function serializeConnectionPeer(asset: {
+  id: string
+  name: string
+  kind: 'equipment' | 'system_network'
+  networkKey: 'nmea_2000' | 'seatal_k1' | 'seatal_kng' | 'ethernet' | null
+}) {
+  const kind = connectionPeerKind(asset)
+  return {
+    kind,
+    assetId: asset.id,
+    name: asset.name,
+    ...(kind === 'network' && asset.networkKey
+      ? { networkKey: asset.networkKey }
+      : {}),
+  }
+}
+
+function serializeAssetConnection(
+  item: {
+    id: string
+    connectionType: AssetConnectionDetail['connectionType']
+    reason: string
+  },
+  peer: ReturnType<typeof serializeConnectionPeer>,
+): AssetConnectionDetail {
+  return {
+    id: item.id,
+    connectionType: item.connectionType,
+    reason: item.reason,
+    peer,
+  }
+}
+
 function serializeAsset(asset: {
   productId?: string | null
   product?: {
@@ -157,6 +203,13 @@ function serializeAsset(asset: {
   } | null
   id: string
   boatId: string
+  kind?: 'equipment' | 'system_network'
+  networkKey?:
+    | 'nmea_2000'
+    | 'seatal_k1'
+    | 'seatal_kng'
+    | 'ethernet'
+    | null
   name: string
   description: string | null
   brand: string | null
@@ -165,13 +218,25 @@ function serializeAsset(asset: {
   suggestedDownloads?: AssetDownloadSuggestion[]
   connectionsFrom?: Array<{
     id: string
+    connectionType: AssetConnectionDetail['connectionType']
     reason: string
-    toAsset: { id: string; name: string }
+    toAsset: {
+      id: string
+      name: string
+      kind: 'equipment' | 'system_network'
+      networkKey: 'nmea_2000' | 'seatal_k1' | 'seatal_kng' | 'ethernet' | null
+    }
   }>
   connectionsTo?: Array<{
     id: string
+    connectionType: AssetConnectionDetail['connectionType']
     reason: string
-    fromAsset: { id: string; name: string }
+    fromAsset: {
+      id: string
+      name: string
+      kind: 'equipment' | 'system_network'
+      networkKey: 'nmea_2000' | 'seatal_k1' | 'seatal_kng' | 'ethernet' | null
+    }
   }>
   ownership: string
   ownedByUserId: string | null
@@ -207,6 +272,8 @@ function serializeAsset(asset: {
         ? `/api/products/${asset.productId}/resources/${asset.product.canonicalImageId}/content?display=1`
         : null,
     boatId: asset.boatId,
+    kind: asset.kind ?? 'equipment',
+    networkKey: asset.networkKey ?? null,
     name: asset.name,
     description: asset.description,
     brand: identity.brand,
@@ -214,18 +281,12 @@ function serializeAsset(asset: {
     category: asset.category,
     suggestedDownloads: asset.suggestedDownloads ?? [],
     connections: [
-      ...(asset.connectionsFrom ?? []).map((item) => ({
-        id: item.id,
-        assetId: item.toAsset.id,
-        name: item.toAsset.name,
-        reason: item.reason,
-      })),
-      ...(asset.connectionsTo ?? []).map((item) => ({
-        id: item.id,
-        assetId: item.fromAsset.id,
-        name: item.fromAsset.name,
-        reason: item.reason,
-      })),
+      ...(asset.connectionsFrom ?? []).map((item) =>
+        serializeAssetConnection(item, serializeConnectionPeer(item.toAsset)),
+      ),
+      ...(asset.connectionsTo ?? []).map((item) =>
+        serializeAssetConnection(item, serializeConnectionPeer(item.fromAsset)),
+      ),
     ],
     ownership: asset.ownership as AssetOwnership,
     ownedByUserId: asset.ownedByUserId,
@@ -406,10 +467,18 @@ const assetInclude = {
   },
   suggestedDownloads: { orderBy: { createdAt: 'asc' } },
   connectionsFrom: {
-    include: { toAsset: { select: { id: true, name: true } } },
+    include: {
+      toAsset: {
+        select: { id: true, name: true, kind: true, networkKey: true },
+      },
+    },
   },
   connectionsTo: {
-    include: { fromAsset: { select: { id: true, name: true } } },
+    include: {
+      fromAsset: {
+        select: { id: true, name: true, kind: true, networkKey: true },
+      },
+    },
   },
   boat: {
     select: {
@@ -483,12 +552,135 @@ boatAssetsRoutes.get('/:boatId/assets', async (c) => {
   if (!boat) return c.json({ error: 'Boat not found' }, 404)
 
   const assets = await db.boatAsset.findMany({
-    where: { boatId },
+    where: listableBoatAssetsWhere(boatId),
     orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     include: assetInclude,
   })
 
   return c.json({ assets: assets.map(serializeAsset) })
+})
+
+boatAssetsRoutes.get('/:boatId/networks', async (c) => {
+  const userId = await requireUserId(c)
+  if (!userId) return unauthorized()
+
+  const boatId = c.req.param('boatId')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'view')
+  if (!boat) return c.json({ error: 'Boat not found' }, 404)
+
+  const networks = await loadBoatNetworkDiagrams(boatId)
+  return c.json({ networks })
+})
+
+boatAssetsRoutes.get(
+  '/:boatId/networks/:networkAssetId/connection-candidates',
+  async (c) => {
+    const userId = await requireUserId(c)
+    if (!userId) return unauthorized()
+
+    const boatId = c.req.param('boatId')
+    const networkAssetId = c.req.param('networkAssetId')
+    const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'view')
+    if (!boat) return c.json({ error: 'Boat not found' }, 404)
+
+    const { loadNetworkConnectionCandidates } = await import(
+      '../load-network-connection-candidates'
+    )
+    const candidates = await loadNetworkConnectionCandidates(
+      boatId,
+      networkAssetId,
+    )
+    if (!candidates) return c.json({ error: 'Network not found.' }, 404)
+    return c.json({ candidates })
+  },
+)
+
+boatAssetsRoutes.post(
+  '/:boatId/networks/:networkAssetId/connections',
+  async (c) => {
+    const userId = await requireUserId(c)
+    if (!userId) return unauthorized()
+
+    const boatId = c.req.param('boatId')
+    const networkAssetId = c.req.param('networkAssetId')
+    const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
+    if (!boat) return c.json({ error: 'Boat not found' }, 404)
+
+    const parsed = z
+      .object({
+        equipmentAssetId: z.string().min(1).max(200),
+        connectionType: z.enum(ASSET_CONNECTION_TYPES).default('cable'),
+        reason: z.string().trim().max(1000).optional(),
+      })
+      .safeParse(await c.req.json().catch(() => null))
+    if (!parsed.success) {
+      return c.json({ error: 'Check the connection details.' }, 400)
+    }
+
+    const network = await db.boatAsset.findFirst({
+      where: { id: networkAssetId, boatId, kind: 'system_network' },
+      select: { id: true },
+    })
+    if (!network) return c.json({ error: 'Network not found.' }, 404)
+
+    const equipment = await db.boatAsset.findFirst({
+      where: { id: parsed.data.equipmentAssetId, boatId, kind: 'equipment' },
+      select: { id: true },
+    })
+    if (!equipment) return c.json({ error: 'Asset not found' }, 404)
+
+    try {
+      await createAssetConnection(
+        boatId,
+        userId,
+        parsed.data.equipmentAssetId,
+        networkAssetId,
+        parsed.data.connectionType,
+        parsed.data.reason?.trim() || 'Connection added from the network view.',
+      )
+    } catch (error) {
+      return c.json(
+        {
+          error:
+            error instanceof Error ? error.message : 'Could not save connection.',
+        },
+        400,
+      )
+    }
+
+    const networks = await loadBoatNetworkDiagrams(boatId)
+    return c.json({ networks })
+  },
+)
+
+const createConnectionSchema = z.object({
+  connectionType: z.enum(ASSET_CONNECTION_TYPES).default('cable'),
+  peerAssetId: z.string().min(1).max(200),
+  reason: z.string().trim().max(1000).optional(),
+})
+
+boatAssetsRoutes.get('/:boatId/assets/connection-peers', async (c) => {
+  const userId = await requireUserId(c)
+  if (!userId) return unauthorized()
+
+  const boatId = c.req.param('boatId')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'view')
+  if (!boat) return c.json({ error: 'Boat not found' }, 404)
+
+  await ensureBoatNetworkAssets(boatId)
+  const [equipment, networks] = await Promise.all([
+    db.boatAsset.findMany({
+      where: { boatId, kind: 'equipment' },
+      select: { id: true, name: true, brand: true, modelNumber: true },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    }),
+    db.boatAsset.findMany({
+      where: { boatId, kind: 'system_network' },
+      select: { id: true, name: true, networkKey: true },
+      orderBy: { sortOrder: 'asc' },
+    }),
+  ])
+  return c.json({ equipment, networks })
 })
 
 boatAssetsRoutes.get('/:boatId/assets/:assetId', async (c) => {
@@ -505,6 +697,12 @@ boatAssetsRoutes.get('/:boatId/assets/:assetId', async (c) => {
     include: assetDetailInclude,
   })
   if (!asset) return c.json({ error: 'Asset not found' }, 404)
+  if (
+    asset.kind === 'system_network' &&
+    !(await isSystemNetworkVisible(boatId, assetId))
+  ) {
+    return c.json({ error: 'Asset not found' }, 404)
+  }
 
   const workRecords = await db.assetWork.findMany({
     where: { assetId, boatId },
@@ -547,6 +745,77 @@ boatAssetsRoutes.get('/:boatId/assets/:assetId', async (c) => {
     boat: { id: asset.boat.id, name: asset.boat.name },
   })
 })
+
+boatAssetsRoutes.post('/:boatId/assets/:assetId/connections', async (c) => {
+  const userId = await requireUserId(c)
+  if (!userId) return unauthorized()
+
+  const boatId = c.req.param('boatId')
+  const assetId = c.req.param('assetId')
+  const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
+  if (!boat) return c.json({ error: 'Boat not found' }, 404)
+
+  const parsed = createConnectionSchema.safeParse(
+    await c.req.json().catch(() => null),
+  )
+  if (!parsed.success) {
+    return c.json({ error: 'Check the connection details.' }, 400)
+  }
+
+  const asset = await db.boatAsset.findFirst({
+    where: { id: assetId, boatId, kind: 'equipment' },
+    select: { id: true },
+  })
+  if (!asset) return c.json({ error: 'Asset not found' }, 404)
+
+  try {
+    await createAssetConnection(
+      boatId,
+      userId,
+      assetId,
+      parsed.data.peerAssetId,
+      parsed.data.connectionType,
+      parsed.data.reason?.trim() || 'Connection added by the user.',
+    )
+  } catch (error) {
+    return c.json(
+      {
+        error:
+          error instanceof Error ? error.message : 'Could not save connection.',
+      },
+      400,
+    )
+  }
+
+  const updated = await db.boatAsset.findFirst({
+    where: { id: assetId, boatId },
+    include: assetInclude,
+  })
+  if (!updated) return c.json({ error: 'Asset not found' }, 404)
+  return c.json({ asset: serializeAsset(updated) })
+})
+
+boatAssetsRoutes.delete(
+  '/:boatId/assets/:assetId/connections/:connectionId',
+  async (c) => {
+    const userId = await requireUserId(c)
+    if (!userId) return unauthorized()
+
+    const { boatId, assetId, connectionId } = c.req.param()
+    const boat = await getBoatForAccess(userId, boatId, 'ASSETS', 'edit')
+    if (!boat) return c.json({ error: 'Boat not found' }, 404)
+
+    const deleted = await db.assetConnection.deleteMany({
+      where: {
+        id: connectionId,
+        boatId,
+        OR: [{ fromAssetId: assetId }, { toAssetId: assetId }],
+      },
+    })
+    if (!deleted.count) return c.json({ error: 'Connection not found' }, 404)
+    return c.json({ ok: true })
+  },
+)
 
 boatAssetsRoutes.post(
   '/:boatId/assets',
@@ -672,6 +941,9 @@ boatAssetsRoutes.patch('/:boatId/assets/:assetId', async (c) => {
     where: { id: assetId, boatId },
   })
   if (!existing) return c.json({ error: 'Asset not found' }, 404)
+  if (existing.kind === 'system_network') {
+    return c.json({ error: 'This asset cannot be edited.' }, 400)
+  }
 
   const body = (await c.req.json().catch(() => ({}))) as {
     name?: string
@@ -801,6 +1073,9 @@ boatAssetsRoutes.delete('/:boatId/assets/:assetId', async (c) => {
     where: { id: assetId, boatId },
   })
   if (!existing) return c.json({ error: 'Asset not found' }, 404)
+  if (existing.kind === 'system_network') {
+    return c.json({ error: 'This asset cannot be removed.' }, 400)
+  }
 
   await db.boatAsset.delete({ where: { id: assetId } })
   fireBoatAssetsNotification(userId, boat, `removed asset “${existing.name}”.`)

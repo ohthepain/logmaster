@@ -33,7 +33,9 @@ export async function storeProductResource(
   if (!claim.count) throw new ProductResearchBusy()
   const staged: string[] = []
   try {
-    const file = await downloadAssetDocument(resource.sourceUrl)
+    const file = await downloadAssetDocument(resource.sourceUrl, 0, {
+      referer: `${new URL(resource.sourceUrl).origin}/`,
+    })
     if (resource.purpose !== 'photo' && file.mimeType !== 'application/pdf')
       throw new Error('The document source did not return a PDF.')
     const originalS3Key = `products/${productId}/${resource.id}/${token}/original.${file.extension}`
