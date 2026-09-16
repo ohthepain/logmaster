@@ -31,7 +31,7 @@ export const ADMIN_JOB_CATALOG = [
     id: 'product-catalog-nauticexpo',
     title: 'Product catalog',
     description:
-      'NauticExpo equipment crawl → candidate brands, logos, and catalog products (Playwright locally until worker image supports Chromium).',
+      'NauticExpo crawl via Apify → candidate brands, logos, and catalog products (worker needs APIFY_TOKEN).',
     queue: PRODUCT_CATALOG_NAUTICEXPO_QUEUE,
   },
 ] as const
@@ -183,7 +183,14 @@ export function formatMarinasRunResult(
 export function formatProductCatalogNauticExpoRunInput(
   data: Record<string, unknown>,
 ): string {
-  const parts = ['NauticExpo equipment']
+  const seed =
+    typeof data.seedProfile === 'string' && data.seedProfile !== 'equipment'
+      ? data.seedProfile
+      : 'equipment'
+  const parts = [
+    seed === 'equipment' ? 'NauticExpo equipment' : `NauticExpo ${seed}`,
+  ]
+  if (data.apifyRunId) parts.push(`Apify ${String(data.apifyRunId)}`)
   if (data.dryRun) parts.push('dry run')
   if (data.maxProducts != null) parts.push(`${String(data.maxProducts)} products`)
   if (data.maxPages != null) parts.push(`${String(data.maxPages)} pages`)

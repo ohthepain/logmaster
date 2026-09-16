@@ -369,5 +369,38 @@ describe.skipIf(!enabled)(
       expect(resource.originalS3Key).toBeNull()
       expect(resource.mimeType).toBeNull()
     })
+    it('deletes omitted documents and photos from the shared catalog', async () => {
+      const product = await editableProduct('Delete-100')
+      await state.client.productResource.create({
+        data: {
+          productId: product.id,
+          title: 'Old photo',
+          sourceUrl: 'https://example.com/photo.jpg',
+          purpose: 'photo',
+          languages: [],
+          modelNumbers: [],
+          reason: '',
+          reviewStatus: 'verified',
+          displayS3Key: 'products/photo.webp',
+        },
+      })
+      const loaded = (await getAdminProduct(product.id))!
+      await state.client.catalogProduct.update({
+        where: { id: product.id },
+        data: { canonicalImageId: loaded.resources[0]!.id },
+      })
+      const withPhoto = (await getAdminProduct(product.id))!
+      const input = editInput(withPhoto)
+      input.canonicalImageId = withPhoto.resources[0]!.id
+      input.resources = []
+      const saved = (await editAdminProduct(product.id, input, 'admin'))!
+      expect(saved.resources).toEqual([])
+      expect(saved.canonicalImageId).toBeNull()
+      expect(
+        await state.client.productResource.count({
+          where: { productId: product.id },
+        }),
+      ).toBe(0)
+    })
   },
 )

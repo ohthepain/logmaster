@@ -90,6 +90,9 @@ export const productUiCopy = {
   boatNetworkCompatibleEquipment: 'Equipment for this network',
   boatNetworkNoConnectionCandidates:
     'No equipment can be added to this network yet. Add equipment to the boat or link products with network ports in the catalog.',
+  boatNetworkLinkedNetworks: 'Linked networks',
+  boatNetworkConnectDevice: 'Connect',
+  boatNetworkPossibleVia: 'Via {network}',
   equipmentFinish: 'Add equipment',
   equipmentCloseConfirm:
     'Discard this equipment? It has not been added to the boat yet.',

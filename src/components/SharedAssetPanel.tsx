@@ -204,6 +204,28 @@ export function SharedAssetPanel({
           ],
     })
   }
+  function removeResource(index: number) {
+    if (!draft) return
+    const resource = draft.resources[index]
+    if (!resource) return
+    if (resource.id) {
+      const kind = resource.purpose === 'photo' ? 'photo' : 'document'
+      if (
+        !window.confirm(
+          `Delete this ${kind} from the shared catalog? Save to apply.`,
+        )
+      )
+        return
+    }
+    change({
+      ...draft,
+      canonicalImageId:
+        resource.id && draft.canonicalImageId === resource.id
+          ? null
+          : draft.canonicalImageId,
+      resources: draft.resources.filter((_, i) => i !== index),
+    })
+  }
   const localeMeta = product?.locales.find((item) => item.language === language)
   return (
     <Modal
@@ -353,7 +375,9 @@ export function SharedAssetPanel({
               </div>
             </section>
             <section className="space-y-3 border-t border-[var(--line)] pt-3">
-              <h2 className="text-lg font-semibold">Boat network connections</h2>
+              <h2 className="text-lg font-semibold">
+                Boat network connections
+              </h2>
               <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
                 Only known boat networks. Transducers, NMEA 0183, Wi-Fi and
                 Bluetooth stay in specifications.
@@ -506,9 +530,7 @@ export function SharedAssetPanel({
                   disabled={busy || regenerating}
                   onClick={() => regenerate()}
                 >
-                  {regenerating
-                    ? 'Regenerating…'
-                    : 'Regenerate AI information'}
+                  {regenerating ? 'Regenerating…' : 'Regenerate AI information'}
                 </button>
               </div>
               {!info ? (
@@ -762,7 +784,8 @@ export function SharedAssetPanel({
               <p className="text-xs text-[var(--sea-ink-soft)]">
                 Approve and save a photo source before selecting it here.
                 Replacing a source URL clears its cached file; clear the
-                selected photo first if replacing it.
+                selected photo first if replacing it. Delete removes a document
+                or photo from the shared catalog when you save.
               </p>
               {draft.resources.map((resource, index) => {
                 const stored = product.resources.find(
@@ -775,168 +798,166 @@ export function SharedAssetPanel({
                       i === index ? { ...item, ...patch } : item,
                     ),
                   })
+                const deleteLabel =
+                  resource.purpose === 'photo'
+                    ? 'Delete photo'
+                    : 'Delete document'
                 return (
-                  <details
+                  <div
                     key={resource.id ?? `new-${index}`}
-                    open={!resource.id}
-                    className="rounded-xl border border-[var(--line)] p-3"
+                    className="flex items-start gap-2 rounded-xl border border-[var(--line)] p-3"
                   >
-                    <summary className="cursor-pointer text-sm font-semibold">
-                      {resource.title || 'New shared resource'} ·{' '}
-                      {resource.purpose} · {resource.reviewStatus}
-                    </summary>
-                    <div className="mt-3 space-y-3">
-                      {stored?.imageUrl && (
-                        <img
-                          src={apiUrl(stored.imageUrl)}
-                          alt={stored.title}
-                          className="h-40 w-full object-contain"
-                          loading="lazy"
-                        />
-                      )}
-                      <Field label={`Resource title ${index + 1}`}>
-                        <input
-                          required
-                          maxLength={300}
-                          className={inputClass}
-                          value={resource.title}
-                          onChange={(e) => update({ title: e.target.value })}
-                        />
-                      </Field>
-                      <Field label={`Resource URL ${index + 1}`}>
-                        <input
-                          required
-                          type="url"
-                          maxLength={2048}
-                          className={inputClass}
-                          value={resource.sourceUrl}
-                          onChange={(e) =>
-                            update({ sourceUrl: e.target.value })
-                          }
-                        />
-                      </Field>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <Field label={`Resource purpose ${index + 1}`}>
-                          <select
-                            className={inputClass}
-                            value={resource.purpose}
-                            onChange={(e) =>
-                              update({ purpose: e.target.value })
-                            }
-                          >
-                            <option value="manual">
-                              Instructions / manual
-                            </option>
-                            <option value="photo">Photo</option>
-                            <option value="warranty">Warranty</option>
-                            <option value="other">Other</option>
-                          </select>
-                        </Field>
-                        <Field label={`Resource review status ${index + 1}`}>
-                          <select
-                            className={inputClass}
-                            value={resource.reviewStatus}
-                            onChange={(e) =>
-                              update({ reviewStatus: e.target.value })
-                            }
-                          >
-                            <StatusOptions />
-                          </select>
-                        </Field>
-                        <Field
-                          label={`Resource languages ${index + 1} (one per line)`}
-                        >
-                          <textarea
-                            className={inputClass}
-                            value={resource.languages.join('\n')}
-                            onChange={(e) =>
-                              update({ languages: e.target.value.split('\n') })
-                            }
+                    <details open={!resource.id} className="min-w-0 flex-1">
+                      <summary className="cursor-pointer text-sm font-semibold">
+                        {resource.title || 'New shared resource'} ·{' '}
+                        {resource.purpose} · {resource.reviewStatus}
+                      </summary>
+                      <div className="mt-3 space-y-3">
+                        {stored?.imageUrl && (
+                          <img
+                            src={apiUrl(stored.imageUrl)}
+                            alt={stored.title}
+                            className="h-40 w-full object-contain"
+                            loading="lazy"
                           />
-                        </Field>
-                        <Field
-                          label={`Applicable models ${index + 1} (one per line)`}
-                        >
-                          <textarea
-                            className={inputClass}
-                            value={resource.modelNumbers.join('\n')}
-                            onChange={(e) =>
-                              update({
-                                modelNumbers: e.target.value.split('\n'),
-                              })
-                            }
-                          />
-                        </Field>
-                        <Field label={`Revision ${index + 1}`}>
-                          <input
-                            className={inputClass}
-                            maxLength={100}
-                            value={resource.revision ?? ''}
-                            onChange={(e) =>
-                              update({ revision: e.target.value || null })
-                            }
-                          />
-                        </Field>
-                      </div>
-                      <Field label={`Relevance / notes ${index + 1}`}>
-                        <textarea
-                          maxLength={1000}
-                          className={inputClass}
-                          value={resource.reason}
-                          onChange={(e) => update({ reason: e.target.value })}
-                        />
-                      </Field>
-                      <div className="flex flex-wrap gap-3 text-sm">
-                        {resource.sourceUrl.startsWith('https://') && (
-                          <a
-                            href={resource.sourceUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="underline"
-                          >
-                            Open public source
-                          </a>
                         )}
-                        {stored &&
-                          stored.reviewStatus !== 'rejected' &&
-                          product.reviewStatus !== 'rejected' && (
+                        <Field label={`Resource title ${index + 1}`}>
+                          <input
+                            required
+                            maxLength={300}
+                            className={inputClass}
+                            value={resource.title}
+                            onChange={(e) => update({ title: e.target.value })}
+                          />
+                        </Field>
+                        <Field label={`Resource URL ${index + 1}`}>
+                          <input
+                            required
+                            type="url"
+                            maxLength={2048}
+                            className={inputClass}
+                            value={resource.sourceUrl}
+                            onChange={(e) =>
+                              update({ sourceUrl: e.target.value })
+                            }
+                          />
+                        </Field>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <Field label={`Resource purpose ${index + 1}`}>
+                            <select
+                              className={inputClass}
+                              value={resource.purpose}
+                              onChange={(e) =>
+                                update({ purpose: e.target.value })
+                              }
+                            >
+                              <option value="manual">
+                                Instructions / manual
+                              </option>
+                              <option value="photo">Photo</option>
+                              <option value="warranty">Warranty</option>
+                              <option value="other">Other</option>
+                            </select>
+                          </Field>
+                          <Field label={`Resource review status ${index + 1}`}>
+                            <select
+                              className={inputClass}
+                              value={resource.reviewStatus}
+                              onChange={(e) =>
+                                update({ reviewStatus: e.target.value })
+                              }
+                            >
+                              <StatusOptions />
+                            </select>
+                          </Field>
+                          <Field
+                            label={`Resource languages ${index + 1} (one per line)`}
+                          >
+                            <textarea
+                              className={inputClass}
+                              value={resource.languages.join('\n')}
+                              onChange={(e) =>
+                                update({
+                                  languages: e.target.value.split('\n'),
+                                })
+                              }
+                            />
+                          </Field>
+                          <Field
+                            label={`Applicable models ${index + 1} (one per line)`}
+                          >
+                            <textarea
+                              className={inputClass}
+                              value={resource.modelNumbers.join('\n')}
+                              onChange={(e) =>
+                                update({
+                                  modelNumbers: e.target.value.split('\n'),
+                                })
+                              }
+                            />
+                          </Field>
+                          <Field label={`Revision ${index + 1}`}>
+                            <input
+                              className={inputClass}
+                              maxLength={100}
+                              value={resource.revision ?? ''}
+                              onChange={(e) =>
+                                update({ revision: e.target.value || null })
+                              }
+                            />
+                          </Field>
+                        </div>
+                        <Field label={`Relevance / notes ${index + 1}`}>
+                          <textarea
+                            maxLength={1000}
+                            className={inputClass}
+                            value={resource.reason}
+                            onChange={(e) => update({ reason: e.target.value })}
+                          />
+                        </Field>
+                        <div className="flex flex-wrap gap-3 text-sm">
+                          {resource.sourceUrl.startsWith('https://') && (
                             <a
-                              href={apiUrl(stored.contentUrl)}
+                              href={resource.sourceUrl}
                               target="_blank"
                               rel="noreferrer"
                               className="underline"
                             >
-                              Open file
+                              Open public source
                             </a>
                           )}
-                        {!resource.id && (
-                          <button
-                            type="button"
-                            className="underline"
-                            onClick={() =>
-                              change({
-                                ...draft,
-                                resources: draft.resources.filter(
-                                  (_, i) => i !== index,
-                                ),
-                              })
-                            }
-                          >
-                            Remove new resource
-                          </button>
+                          {stored &&
+                            stored.reviewStatus !== 'rejected' &&
+                            product.reviewStatus !== 'rejected' && (
+                              <a
+                                href={apiUrl(stored.contentUrl)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline"
+                              >
+                                Open file
+                              </a>
+                            )}
+                        </div>
+                        {stored && (
+                          <p className="text-xs text-[var(--sea-ink-soft)]">
+                            {stored.cached ? 'Cached file' : 'Not downloaded'} ·{' '}
+                            {stored.mimeType ?? 'File type unknown'} · Updated{' '}
+                            {new Date(stored.updatedAt).toLocaleString()}
+                            <br />
+                            Resource ID: {stored.id}
+                          </p>
                         )}
                       </div>
-                      {stored && (
-                        <p className="text-xs text-[var(--sea-ink-soft)]">
-                          {stored.cached ? 'Cached file' : 'Not downloaded'} ·{' '}
-                          {stored.mimeType ?? 'File type unknown'} · Updated{' '}
-                          {new Date(stored.updatedAt).toLocaleString()}
-                          <br />
-                          Resource ID: {stored.id}
-                        </p>
-                      )}
-                    </div>
-                  </details>
+                    </details>
+                    <button
+                      type="button"
+                      className="mt-0.5 shrink-0 rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-red-700 dark:text-red-300"
+                      onClick={() => removeResource(index)}
+                    >
+                      {resource.id ? deleteLabel : 'Remove'}
+                    </button>
+                  </div>
                 )
               })}
               <button

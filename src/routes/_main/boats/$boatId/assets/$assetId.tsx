@@ -32,6 +32,8 @@ import {
 } from '../../../../../lib/boat-assets-api'
 import { fetchBoat, fetchBoatMembers } from '../../../../../lib/boats-api'
 import { useTranslation } from '../../../../../lib/i18n'
+import { BoatNetworkSoapBars } from '../../../../../components/BoatNetworkSoapBar'
+import { connectedBoatNetworks } from '../../../../../domain/asset-connections'
 
 export const Route = createFileRoute('/_main/boats/$boatId/assets/$assetId')({
   component: BoatAssetDetailPage,
@@ -234,6 +236,10 @@ function BoatAssetDetailPage() {
               <span className="rounded-full bg-[var(--chip-bg)] px-2.5 py-0.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
                 {asset.ownerLabel}
               </span>
+              <BoatNetworkSoapBars
+                boatId={boatId}
+                networks={connectedBoatNetworks(asset.connections)}
+              />
               <span className="text-sm text-[var(--sea-ink-soft)]">
                 {asset.category ?? 'Uncategorized'}
               </span>

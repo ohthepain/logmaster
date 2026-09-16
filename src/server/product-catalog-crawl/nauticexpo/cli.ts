@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import { resolveSeedProfile } from './manufacturers'
 import { runNauticExpoCatalogCrawl } from './run'
 
 function readFlag(name: string) {
@@ -20,6 +21,16 @@ function readStringFlag(name: string) {
   return process.argv[index + 1] ?? null
 }
 
+function readRepeatedStringFlag(name: string) {
+  const values: string[] = []
+  for (let i = 0; i < process.argv.length; i++) {
+    if (process.argv[i] !== name) continue
+    const value = process.argv[i + 1]
+    if (value && !value.startsWith('--')) values.push(value)
+  }
+  return values.length > 0 ? values : null
+}
+
 async function main() {
   const dryRun = readFlag('--dry-run')
   const markMissingRemoved = readFlag('--mark-missing-removed')
@@ -30,11 +41,16 @@ async function main() {
   const resumeRunId = readStringFlag('--resume')
   const storageDir = readStringFlag('--storage-dir')
   const apifyRunId = readStringFlag('--apify-run-id')
+  const seedProfile = resolveSeedProfile(readStringFlag('--seed'))
+  const manufacturerUrls = readRepeatedStringFlag('--manufacturer-url')
+  const searchKeywords = readRepeatedStringFlag('--keyword')
 
   const provider = useLocal ? 'local' : useApify || apifyRunId ? 'apify' : undefined
 
   const result = await runNauticExpoCatalogCrawl({
-    seedProfile: 'equipment',
+    seedProfile,
+    manufacturerUrls,
+    searchKeywords,
     provider,
     apifyRunId,
     dryRun,

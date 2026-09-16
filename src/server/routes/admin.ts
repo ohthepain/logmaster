@@ -25,6 +25,7 @@ import {
   parseMarinasRegionId,
 } from '../jobs/marina-queue'
 import { enqueueOsmPointsBuild } from '../jobs/osm-points-queue'
+import { parseProductCatalogCrawlBody } from '../jobs/product-catalog-crawl-parse'
 import { enqueueProductCatalogNauticExpo } from '../jobs/product-catalog-crawl-queue'
 import type { OsmPointDatasetId } from '../../lib/map-data-layers'
 import { isMapRegionId } from '../../lib/map-regions'
@@ -491,41 +492,33 @@ function parseOsmPointDataset(value: unknown): OsmPointDatasetId | null {
 
 adminRoutes.post('/jobs/product-catalog-nauticexpo/runs', async (c) => {
   const body = await c.req.json().catch(() => ({}))
-  const dryRun =
-    typeof body === 'object' &&
-    body !== null &&
-    !Array.isArray(body) &&
-    (body as Record<string, unknown>).dryRun === true
-  const maxProductsRaw = (body as Record<string, unknown>).maxProducts
-  const maxPagesRaw = (body as Record<string, unknown>).maxPages
-  const maxProducts =
-    typeof maxProductsRaw === 'number' && Number.isInteger(maxProductsRaw)
-      ? maxProductsRaw
-      : null
-  const maxPages =
-    typeof maxPagesRaw === 'number' && Number.isInteger(maxPagesRaw)
-      ? maxPagesRaw
-      : null
-  const resumeRunIdRaw = (body as Record<string, unknown>).resumeRunId
-  const resumeRunId =
-    typeof resumeRunIdRaw === 'string' && resumeRunIdRaw.trim()
-      ? resumeRunIdRaw.trim()
-      : null
-  const id = await enqueueProductCatalogNauticExpo({
-    dryRun,
-    maxProducts,
-    maxPages,
-    resumeRunId,
-  })
+  const parsed = parseProductCatalogCrawlBody(body)
+  if (!parsed.ok) {
+    return c.json({ ok: false, error: parsed.error }, 400)
+  }
+  const id = await enqueueProductCatalogNauticExpo(parsed.payload)
+  console.log(
+    JSON.stringify({
+      service: 'logmaster',
+      kind: 'server_event',
+      level: 'info',
+      action: 'product_catalog.nauticexpo.enqueue',
+      resourceType: 'pgboss_job',
+      resourceId: id,
+      outcome: 'success',
+      seedProfile: parsed.payload.seedProfile,
+      dryRun: parsed.payload.dryRun ?? false,
+      maxProducts: parsed.payload.maxProducts,
+      maxPages: parsed.payload.maxPages,
+      apifyRunId: parsed.payload.apifyRunId ?? undefined,
+    }),
+  )
   return c.json(
     {
       ok: true,
       jobId: id,
       queued: true,
-      dryRun,
-      maxProducts,
-      maxPages,
-      resumeRunId,
+      ...parsed.payload,
     },
     202,
   )

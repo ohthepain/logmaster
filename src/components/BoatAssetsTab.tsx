@@ -2,10 +2,15 @@ import { AssetBrandLogo } from './AssetBrandLogo'
 import { getAssetIdentity } from '../domain/asset-brands'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { ChevronRight, Plus } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { AddAssetModal } from './AddAssetModal'
 import { AssetCoverPhoto } from './AssetCoverPhoto'
+import { BoatNetworkSoapBars } from './BoatNetworkSoapBar'
+import {
+  connectedBoatNetworks,
+  listedBoatNetworks,
+} from '../domain/asset-connections'
 import { ASSET_CATEGORIES } from '../domain/asset-intelligence'
 import type { BoatAsset } from '../domain/boat-assets'
 import type { ResourceMember } from '../domain/member-invite'
@@ -39,7 +44,12 @@ export function BoatAssetsTab({
     mode: 'closed',
   })
   const [categoryFilter, setCategoryFilter] = useState('All')
-  const visibleAssets = assets.filter(
+  const equipmentAssets = useMemo(
+    () => assets.filter((asset) => asset.kind !== 'system_network'),
+    [assets],
+  )
+  const networkSoapBars = useMemo(() => listedBoatNetworks(assets), [assets])
+  const visibleAssets = equipmentAssets.filter(
     (asset) =>
       categoryFilter === 'All' ||
       (asset.category ?? 'Uncategorized') === categoryFilter,
@@ -78,6 +88,9 @@ export function BoatAssetsTab({
           title={t('assets')}
           topic="BOAT_ASSETS"
           boatId={boatId}
+          titleExtras={
+            <BoatNetworkSoapBars boatId={boatId} networks={networkSoapBars} />
+          }
           onRefresh={() => load()}
           refreshing={refreshing}
         />
@@ -92,6 +105,9 @@ export function BoatAssetsTab({
         title={t('assets')}
         topic="BOAT_ASSETS"
         boatId={boatId}
+        titleExtras={
+          <BoatNetworkSoapBars boatId={boatId} networks={networkSoapBars} />
+        }
         onRefresh={() => load({ background: true })}
         refreshing={refreshing}
         actions={
@@ -126,7 +142,7 @@ export function BoatAssetsTab({
           >
             {category} (
             {
-              assets.filter(
+              equipmentAssets.filter(
                 (asset) =>
                   category === 'All' ||
                   (asset.category ?? 'Uncategorized') === category,
@@ -139,7 +155,7 @@ export function BoatAssetsTab({
 
       {visibleAssets.length === 0 ? (
         <p className="text-sm text-[var(--sea-ink-soft)]">
-          {assets.length
+          {equipmentAssets.length
             ? 'No assets in this category.'
             : 'No assets recorded yet.'}
         </p>
@@ -147,33 +163,50 @@ export function BoatAssetsTab({
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           {visibleAssets.map((asset) => {
             const identity = getAssetIdentity(asset)
+            const hasCover = Boolean(asset.coverPhoto || asset.productImageUrl)
             return (
               <li key={asset.id}>
-                <Link
-                  to="/boats/$boatId/assets/$assetId"
-                  params={{ boatId, assetId: asset.id }}
-                  className="flex items-center gap-3 border-b border-[var(--line)] py-5 text-left no-underline"
-                >
-                  <AssetCoverPhoto
-                    cover={asset.coverPhoto}
-                    productImageUrl={asset.productImageUrl}
-                    alt=""
-                    variant="list"
-                  />
+                <div className="flex items-center gap-3 border-b border-[var(--line)] py-5">
+                  {hasCover ? (
+                    <Link
+                      to="/boats/$boatId/assets/$assetId"
+                      params={{ boatId, assetId: asset.id }}
+                      tabIndex={-1}
+                      aria-hidden
+                      className="shrink-0"
+                    >
+                      <AssetCoverPhoto
+                        cover={asset.coverPhoto}
+                        productImageUrl={asset.productImageUrl}
+                        alt=""
+                        variant="list"
+                      />
+                    </Link>
+                  ) : null}
                   <div className="min-w-0 flex-1">
-                    <AssetBrandLogo brand={identity.brand} />
-                    <p className="m-0 mt-2 break-words text-lg font-semibold text-[var(--sea-ink)]">
-                      {identity.title}
-                    </p>
-                    {identity.subtitle && (
-                      <p className="mb-0 mt-1 break-words text-sm text-[var(--sea-ink-soft)]">
-                        {identity.subtitle}
+                    <Link
+                      to="/boats/$boatId/assets/$assetId"
+                      params={{ boatId, assetId: asset.id }}
+                      className="block text-left no-underline"
+                    >
+                      <AssetBrandLogo brand={identity.brand} />
+                      <p className="m-0 mt-2 break-words text-lg font-semibold text-[var(--sea-ink)]">
+                        {identity.title}
                       </p>
-                    )}
-                    <div className="mt-2 flex flex-wrap gap-2">
+                      {identity.subtitle && (
+                        <p className="mb-0 mt-1 break-words text-sm text-[var(--sea-ink-soft)]">
+                          {identity.subtitle}
+                        </p>
+                      )}
+                    </Link>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       <span className="rounded-full bg-[var(--chip-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
                         {asset.ownerLabel}
                       </span>
+                      <BoatNetworkSoapBars
+                        boatId={boatId}
+                        networks={connectedBoatNetworks(asset.connections)}
+                      />
                       <span className="text-xs text-[var(--sea-ink-soft)]">
                         {asset.category ?? 'Uncategorized'}
                       </span>
@@ -191,11 +224,19 @@ export function BoatAssetsTab({
                       </p>
                     ) : null}
                   </div>
-                  <ChevronRight
-                    className="size-5 shrink-0 text-[var(--sea-ink-soft)]"
+                  <Link
+                    to="/boats/$boatId/assets/$assetId"
+                    params={{ boatId, assetId: asset.id }}
+                    tabIndex={-1}
                     aria-hidden
-                  />
-                </Link>
+                    className="shrink-0"
+                  >
+                    <ChevronRight
+                      className="size-5 text-[var(--sea-ink-soft)]"
+                      aria-hidden
+                    />
+                  </Link>
+                </div>
               </li>
             )
           })}
@@ -208,7 +249,7 @@ export function BoatAssetsTab({
           boatName={boatName}
           orgName={orgName}
           members={members}
-          assets={assets}
+          assets={equipmentAssets}
           onClose={() => setAssetModal({ mode: 'closed' })}
           onCreated={(asset) => {
             setAssetModal({ mode: 'closed' })

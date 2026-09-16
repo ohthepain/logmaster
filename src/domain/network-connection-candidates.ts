@@ -36,8 +36,7 @@ export function equipmentSupportsBoatNetwork(
   productNetworkKeys: Set<BoatNetworkKey> | null,
   target: BoatNetworkKey,
 ): boolean {
-  if (!productNetworkKeys || productNetworkKeys.size === 0) return true
-  return productNetworkKeys.has(target)
+  return !!productNetworkKeys?.has(target)
 }
 
 export function buildNetworkConnectionCandidates(input: {

@@ -272,14 +272,21 @@ export async function editAdminProduct(
     throw new ProductAdminError(
       'Each resource and source URL can only appear once.',
     )
+  const keepResourceIds = new Set(
+    input.resources.flatMap((item) => (item.id ? [item.id] : [])),
+  )
+  const canonicalImageId =
+    input.canonicalImageId && keepResourceIds.has(input.canonicalImageId)
+      ? input.canonicalImageId
+      : null
   // A canonical image must be an existing public resource whose bytes have been
   // validated. A new/replaced URL must first be saved before selecting it.
-  if (input.canonicalImageId) {
+  if (canonicalImageId) {
     const candidate = input.resources.find(
-      (item) => item.id === input.canonicalImageId,
+      (item) => item.id === canonicalImageId,
     )
     const stored = await prisma.productResource.findFirst({
-      where: { id: input.canonicalImageId, productId: id },
+      where: { id: canonicalImageId, productId: id },
     })
     if (
       !candidate ||
@@ -340,15 +347,14 @@ export async function editAdminProduct(
         'Product research is running. Wait for it to finish, then reopen the panel.',
         409,
       )
-    if (
-      current.resources.some(
-        (resource) => !input.resources.some((item) => item.id === resource.id),
-      )
-    )
-      throw new ProductAdminError(
-        'A resource is missing or was added meanwhile. Reopen the panel. To hide a source, mark it rejected.',
-        409,
-      )
+    const removedIds = current.resources
+      .filter((resource) => !keepResourceIds.has(resource.id))
+      .map((resource) => resource.id)
+    if (removedIds.length) {
+      await tx.productResource.deleteMany({
+        where: { productId: id, id: { in: removedIds } },
+      })
+    }
     await tx.productAlias.deleteMany({ where: { productId: id } })
     if (input.aliases.length)
       await tx.productAlias.createMany({
@@ -408,7 +414,7 @@ export async function editAdminProduct(
       if (resourceId) {
         const changedFile =
           old!.sourceUrl !== data.sourceUrl || old!.purpose !== data.purpose
-        if (changedFile && input.canonicalImageId === resourceId)
+        if (changedFile && canonicalImageId === resourceId)
           throw new ProductAdminError(
             'Clear the shared photo before replacing its source.',
           )
@@ -436,7 +442,7 @@ export async function editAdminProduct(
       data: {
         ...identity,
         reviewStatus: input.reviewStatus,
-        canonicalImageId: input.canonicalImageId,
+        canonicalImageId,
         reviewedAt: new Date(),
         reviewedBy: userId,
       },

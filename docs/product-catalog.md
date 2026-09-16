@@ -45,6 +45,18 @@ pnpm catalog:nauticexpo --max-products 50 --max-pages 10
 pnpm catalog:nauticexpo --apify-run-id 7WdSy5i3ONC6PjXpk --max-products 50
 ```
 
+**Scrape one manufacturer (e.g. all Victron on NauticExpo)**
+
+Apify walks the manufacturer’s stand and product detail pages. Use a high page limit; `--max-products 0` tells Apify not to cap item count (still bounded by `--max-pages`, max 50 per run).
+
+```bash
+pnpm catalog:nauticexpo --seed victron-energy --max-products 0 --max-pages 50
+# same stand URL explicitly:
+pnpm catalog:nauticexpo --manufacturer-url https://www.nauticexpo.com/prod/victron-energy-22393.html --max-products 0 --max-pages 50
+```
+
+Imported rows are **candidates** in `/admin/products` (filter: candidates). They are not linked to boats until reviewed.
+
 `--dry-run` stages rows in `catalog_crawl_page` only — it does **not** upsert `catalog_product`. Omit `--dry-run` to write candidate catalog rows.
 
 **Local fallback** (often blocked by Cloudflare without residential proxy):
@@ -54,15 +66,19 @@ npx playwright install chromium
 pnpm catalog:nauticexpo --local --max-products 20 --max-pages 200
 ```
 
-Flags: `--dry-run` (crawl and stage only), `--max-products`, `--max-pages`, `--resume <runId>`, `--storage-dir`, `--mark-missing-removed`.
+Flags: `--dry-run` (crawl and stage only), `--max-products` (`0` = no Apify item cap), `--max-pages`, `--seed equipment` or a key from `NAUTICEXPO_MANUFACTURER_PRESETS` in `manufacturers.ts`, `--manufacturer-url` (repeatable), `--keyword` (repeatable), `--resume <runId>`, `--storage-dir`, `--mark-missing-removed`, `--apify-run-id`, `--local`.
 
-**Background job**
+**Background job (production)**
 
-- pg-boss queue: `product_catalog_nauticexpo`
-- Admin: **Background jobs → Product catalog**, or `POST /api/admin/jobs/product-catalog-nauticexpo/runs`
+- pg-boss queue: `product_catalog_nauticexpo` (processed by the **worker** service, not the web task)
+- Set **`APIFY_TOKEN`** on the worker (same as local `.env`)
+- Admin UI: [**/admin/jobs**](https://logmaster.live/admin/jobs) → **Product catalog** tab → **Queue crawl job** (seed, limits, optional Apify run id for re-import)
+- API: `POST /api/admin/jobs/product-catalog-nauticexpo/runs` with JSON body `{ "seedProfile": "victron-energy", "maxProducts": 0, "maxPages": 50 }`
 - Crawl staging tables: `catalog_crawl_run`, `catalog_crawl_page`, `catalog_source_link` (source URL, content hash, last seen)
 
-Production ECS worker images do **not** include Playwright Chromium yet. Run full crawls locally (or a Playwright-enabled worker host) until the runner Docker image is extended.
+Manufacturer presets for `--seed` / admin dropdown live in `src/lib/nauticexpo-manufacturer-presets.ts`.
+
+**Playwright (`--local`)** remains a dev fallback; production crawls use Apify only.
 
 ## Release and validation
 

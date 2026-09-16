@@ -274,3 +274,18 @@ it('does not regenerate AI information when the prompt is cancelled', async () =
   fireEvent.click(screen.getByRole('button', { name: /^Regenerate AI$/ }))
   expect(mocks.regenerate).not.toHaveBeenCalled()
 })
+
+it('deletes a saved document from the shared catalog on save', async () => {
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+  render(
+    <SharedAssetPanel productId="pump" onClose={vi.fn()} onSaved={vi.fn()} />,
+  )
+  await screen.findByText('Shared documents and photos (1)')
+  fireEvent.click(screen.getByRole('button', { name: 'Delete document' }))
+  expect(confirm).toHaveBeenCalled()
+  await screen.findByText('Shared documents and photos (0)')
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+  await waitFor(() => expect(mocks.save).toHaveBeenCalled())
+  expect(mocks.save.mock.calls[0][1].resources).toEqual([])
+  confirm.mockRestore()
+})

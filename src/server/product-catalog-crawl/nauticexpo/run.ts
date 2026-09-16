@@ -5,12 +5,14 @@ import { NAUTICEXPO_SOURCE } from './constants'
 import { importStagedProducts, type ImportStats } from './upsert'
 import { crawlNauticExpoViaApify } from './run-apify'
 import { apifyToken } from './apify'
-
-export type NauticExpoSeedProfile = 'equipment'
+export type { NauticExpoSeedProfile } from './manufacturers'
+import type { NauticExpoSeedProfile } from './manufacturers'
 export type NauticExpoCrawlProvider = 'apify' | 'local'
 
 export type NauticExpoCrawlConfig = {
   seedProfile: NauticExpoSeedProfile
+  manufacturerUrls?: string[] | null
+  searchKeywords?: string[] | null
   provider?: NauticExpoCrawlProvider
   apifyRunId?: string | null
   maxProducts?: number | null
@@ -112,6 +114,13 @@ export async function runNauticExpoCatalogCrawl(
         maxProducts,
         maxPages,
         apifyRunId: config.apifyRunId,
+        apifyInputOptions: {
+          maxProducts,
+          maxPages,
+          seedProfile: config.seedProfile,
+          manufacturerUrls: config.manufacturerUrls ?? undefined,
+          searchKeywords: config.searchKeywords ?? undefined,
+        },
         log,
       })
       staged = apify.staged

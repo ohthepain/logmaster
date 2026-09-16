@@ -2,9 +2,12 @@ import type { Prisma } from '../../../../generated/prisma/client'
 import { prisma } from '../../db'
 import {
   buildApifyInput,
+  describeApifyInputScope,
+  fetchApifyDatasetItems,
   fetchApifyRunItems,
-  startApifyNauticExpoRun,
+  startAndWaitForApifyNauticExpoRun,
   type ApifyNauticExpoInput,
+  type BuildApifyInputOptions,
 } from './apify'
 import { apifyItemsToStagedProducts } from './normalize-apify'
 import type { StagedProduct } from './normalize'
@@ -49,6 +52,7 @@ export async function crawlNauticExpoViaApify(options: {
   maxPages: number
   apifyRunId?: string | null
   apifyInput?: ApifyNauticExpoInput
+  apifyInputOptions?: BuildApifyInputOptions
   log: (message: string) => void
 }): Promise<{ staged: StagedProduct[]; progress: CrawlProgress; apifyRunId: string }> {
   let apifyRunId = options.apifyRunId ?? null
@@ -62,22 +66,43 @@ export async function crawlNauticExpoViaApify(options: {
       `[nauticexpo] Apify run status=${fetched.meta.status} items=${items.length}`,
     )
   } else {
-    const input = options.apifyInput ?? buildApifyInput(options)
+    const input =
+      options.apifyInput ??
+      buildApifyInput(
+        options.apifyInputOptions ?? {
+          maxProducts: options.maxProducts,
+          maxPages: options.maxPages,
+        },
+      )
     options.log(
-      `[nauticexpo] starting Apify actor ${input.maxItems} items, ${input.maxPages} listing pages`,
+      `[nauticexpo] starting Apify actor scope=${describeApifyInputScope(input)} maxItems=${input.maxItems ?? 'default'} maxPages=${input.maxPages}`,
     )
-    const started = await startApifyNauticExpoRun(input)
-    apifyRunId = started.apifyRunId
+    const meta = await startAndWaitForApifyNauticExpoRun(input, {
+      log: options.log,
+    })
+    apifyRunId = meta.id
     options.log(
-      `[nauticexpo] Apify run ${apifyRunId} finished with status ${started.status}`,
+      `[nauticexpo] Apify run ${apifyRunId} finished with status ${meta.status}`,
     )
-    const fetched = await fetchApifyRunItems(apifyRunId)
-    items = fetched.items
+    items = await fetchApifyDatasetItems(meta.defaultDatasetId)
   }
 
   await stageApifyItems(options.runId, items)
   const staged = apifyItemsToStagedProducts(items)
-  const capped = staged.slice(0, options.maxProducts)
+  const normalizeFailures = items.length - staged.length
+  if (items.length === 0) {
+    options.log('[nauticexpo] Apify dataset is empty — check run on Apify console')
+  } else if (staged.length === 0) {
+    options.log(
+      `[nauticexpo] 0 products normalized from ${items.length} Apify rows (${normalizeFailures} failed)`,
+    )
+  } else if (normalizeFailures > 0) {
+    options.log(
+      `[nauticexpo] ${normalizeFailures} Apify row(s) could not be normalized`,
+    )
+  }
+  const capped =
+    options.maxProducts <= 0 ? staged : staged.slice(0, options.maxProducts)
 
   return {
     apifyRunId,

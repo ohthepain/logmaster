@@ -13,9 +13,15 @@ describe('network connection candidates', () => {
     expect(networksShareEquipment(new Set(['a']), new Set(['b']))).toBe(false)
   })
 
-  it('allows equipment without catalog networks', () => {
-    expect(equipmentSupportsBoatNetwork(null, 'nmea_2000')).toBe(true)
-    expect(equipmentSupportsBoatNetwork(new Set(), 'nmea_2000')).toBe(true)
+  it('requires a catalog connector for the target network', () => {
+    expect(equipmentSupportsBoatNetwork(null, 'nmea_2000')).toBe(false)
+    expect(equipmentSupportsBoatNetwork(new Set(), 'nmea_2000')).toBe(false)
+    expect(
+      equipmentSupportsBoatNetwork(new Set(['ethernet']), 'nmea_2000'),
+    ).toBe(false)
+    expect(
+      equipmentSupportsBoatNetwork(new Set(['nmea_2000']), 'nmea_2000'),
+    ).toBe(true)
   })
 
   it('filters equipment by catalog network and existing links', () => {
@@ -65,7 +71,15 @@ describe('network connection candidates', () => {
           name: 'VHF',
           brand: 'Icom',
           modelNumber: '506',
-          productNetworkKeys: new Set(['wifi']),
+          productNetworkKeys: new Set(['ethernet']),
+          networkIds: new Set(),
+        },
+        {
+          id: 'unknown',
+          name: 'Unknown',
+          brand: null,
+          modelNumber: null,
+          productNetworkKeys: null,
           networkIds: new Set(),
         },
       ],

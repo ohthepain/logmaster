@@ -199,6 +199,7 @@ type ResourceSectionHeaderProps = {
   topic?: NotificationTopic
   boatId?: string
   orgId?: string
+  titleExtras?: ReactNode
   actions?: ReactNode
   onRefresh?: () => void | Promise<void>
   refreshing?: boolean
@@ -209,19 +210,21 @@ export function ResourceSectionHeader({
   topic,
   boatId,
   orgId,
+  titleExtras,
   actions,
   onRefresh,
   refreshing = false,
 }: ResourceSectionHeaderProps) {
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <h2 className="m-0 text-lg font-semibold text-[var(--sea-ink)]">
           {title}
         </h2>
         {topic ? (
           <NotificationBellToggle topic={topic} boatId={boatId} orgId={orgId} />
         ) : null}
+        {titleExtras}
       </div>
       {actions || onRefresh ? (
         <div className="flex items-center gap-2">

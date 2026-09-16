@@ -1,6 +1,7 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { AdminJobRunsPanel } from '../../../../components/admin/AdminJobRunsPanel'
+import { AdminProductCatalogCrawlPanel } from '../../../../components/admin/AdminProductCatalogCrawlPanel'
 import { AdminPageShell } from '../../../../components/admin/AdminPageShell'
 import {
   ADMIN_JOB_CATALOG,
@@ -43,6 +44,7 @@ function AdminJobsIndexPage() {
   const { tab: tabFromSearch } = Route.useSearch()
   const tab = tabFromSearch ?? 'geo-features'
   const navigate = useNavigate()
+  const [catalogRefreshToken, setCatalogRefreshToken] = useState(0)
 
   const setTab = useCallback(
     (next: AdminJobCatalogId) => {
@@ -133,17 +135,14 @@ function AdminJobsIndexPage() {
 
       {tab === 'product-catalog-nauticexpo' ? (
         <div role="tabpanel" className="flex flex-col gap-8">
-          <p className="text-sm text-[var(--sea-ink-soft)]">
-            Requires Playwright Chromium on the worker host (
-            <code className="text-xs">npx playwright install chromium</code>
-            ). Production ECS worker image does not include browsers yet — run{' '}
-            <code className="text-xs">pnpm catalog:nauticexpo</code> locally for
-            full crawls.
-          </p>
+          <AdminProductCatalogCrawlPanel
+            onQueued={() => setCatalogRefreshToken((value) => value + 1)}
+          />
           <AdminJobRunsPanel
             queue={PRODUCT_CATALOG_NAUTICEXPO_QUEUE}
             formatInput={formatProductCatalogNauticExpoRunInput}
             formatResult={formatProductCatalogNauticExpoRunResult}
+            refreshToken={catalogRefreshToken}
           />
         </div>
       ) : null}

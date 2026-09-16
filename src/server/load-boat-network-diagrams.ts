@@ -3,8 +3,17 @@ import type {
   BoatNetworkDiagram,
   BoatNetworkDiagramDevice,
 } from '../domain/boat-network-diagram'
-import type { AssetConnectionType } from '../domain/asset-connections'
+import type { AssetConnectionType, BoatNetworkKey } from '../domain/asset-connections'
+import {
+  directEquipmentOnNetwork,
+  linkedNetworksFor,
+  networkHasAnyActivity,
+  possibleEquipmentOnNetwork,
+  type BoatNetworkGraphConnection,
+  type BoatNetworkGraphEquipment,
+} from '../domain/boat-network-graph'
 import { ensureBoatNetworkAssets } from './boat-network-assets'
+import { loadProductNetworks } from './product-networks'
 import { prisma } from './db'
 
 const equipmentProductInclude = {
@@ -71,12 +80,24 @@ export function devicesOnNetworkFromConnections(
   const byId = new Map<string, BoatNetworkDiagramDevice>()
   for (const row of connectionsFrom) {
     if (row.toAsset.kind !== 'equipment') continue
-    byId.set(row.toAsset.id, serializeDevice(row.toAsset, row))
+    byId.set(
+      row.toAsset.id,
+      serializeDevice(row.toAsset, {
+        connectionId: row.id,
+        connectionType: row.connectionType,
+      }),
+    )
   }
   for (const row of connectionsTo) {
     if (row.fromAsset.kind !== 'equipment') continue
     if (!byId.has(row.fromAsset.id)) {
-      byId.set(row.fromAsset.id, serializeDevice(row.fromAsset, row))
+      byId.set(
+        row.fromAsset.id,
+        serializeDevice(row.fromAsset, {
+          connectionId: row.id,
+          connectionType: row.connectionType,
+        }),
+      )
     }
   }
   return [...byId.values()].sort((a, b) =>
@@ -86,7 +107,7 @@ export function devicesOnNetworkFromConnections(
 
 function serializeDevice(
   asset: EquipmentAsset,
-  connection: { id: string; connectionType: AssetConnectionType },
+  connection: { connectionId: string; connectionType: string },
 ): BoatNetworkDiagramDevice {
   const identity = getAssetIdentity(asset)
   return {
@@ -98,88 +119,129 @@ function serializeDevice(
       asset.productId,
       asset.product ?? null,
     ),
-    connectionId: connection.id,
-    connectionType: connection.connectionType,
+    connectionId: connection.connectionId,
+    connectionType: connection.connectionType as AssetConnectionType,
   }
 }
-
-const visibleNetworksWhere = (boatId: string) => ({
-  boatId,
-  kind: 'system_network' as const,
-  OR: [
-    {
-      connectionsFrom: {
-        some: { toAsset: { kind: 'equipment' as const, boatId } },
-      },
-    },
-    {
-      connectionsTo: {
-        some: { fromAsset: { kind: 'equipment' as const, boatId } },
-      },
-    },
-  ],
-})
 
 export async function loadBoatNetworkDiagrams(
   boatId: string,
 ): Promise<BoatNetworkDiagram[]> {
   await ensureBoatNetworkAssets(boatId)
 
-  const networks = await prisma.boatAsset.findMany({
-    where: visibleNetworksWhere(boatId),
-    orderBy: { sortOrder: 'asc' },
-    select: {
-      id: true,
-      name: true,
-      networkKey: true,
-      connectionsFrom: {
-        where: { toAsset: { kind: 'equipment', boatId } },
-        select: {
-          id: true,
-          connectionType: true,
-          toAsset: {
-            select: {
-              id: true,
-              name: true,
-              brand: true,
-              modelNumber: true,
-              productId: true,
-              kind: true,
-              ...equipmentProductInclude,
-            },
-          },
-        },
+  const [networkRows, equipmentRows, connectionRows] = await Promise.all([
+    prisma.boatAsset.findMany({
+      where: { boatId, kind: 'system_network' },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, name: true, networkKey: true },
+    }),
+    prisma.boatAsset.findMany({
+      where: { boatId, kind: 'equipment' },
+      select: {
+        id: true,
+        name: true,
+        brand: true,
+        modelNumber: true,
+        productId: true,
+        kind: true,
+        ...equipmentProductInclude,
       },
-      connectionsTo: {
-        where: { fromAsset: { kind: 'equipment', boatId } },
-        select: {
-          id: true,
-          connectionType: true,
-          fromAsset: {
-            select: {
-              id: true,
-              name: true,
-              brand: true,
-              modelNumber: true,
-              productId: true,
-              kind: true,
-              ...equipmentProductInclude,
-            },
-          },
-        },
+    }),
+    prisma.assetConnection.findMany({
+      where: { boatId },
+      select: {
+        id: true,
+        connectionType: true,
+        fromAsset: { select: { id: true, kind: true } },
+        toAsset: { select: { id: true, kind: true } },
       },
-    },
-  })
+    }),
+  ])
+
+  const equipmentById = new Map(equipmentRows.map((row) => [row.id, row]))
+  const graphConnections: BoatNetworkGraphConnection[] = connectionRows.map(
+    (row) => ({
+      id: row.id,
+      connectionType: row.connectionType,
+      fromAssetId: row.fromAsset.id,
+      fromKind: row.fromAsset.kind,
+      toAssetId: row.toAsset.id,
+      toKind: row.toAsset.kind,
+    }),
+  )
+
+  const productIds = [
+    ...new Set(
+      equipmentRows
+        .map((row) => row.productId)
+        .filter((id): id is string => !!id),
+    ),
+  ]
+  const productNetworkMap = new Map<string, Set<BoatNetworkKey>>()
+  await Promise.all(
+    productIds.map(async (productId) => {
+      const networks = await loadProductNetworks(productId)
+      productNetworkMap.set(
+        productId,
+        new Set(networks.map((item) => item.networkKey)),
+      )
+    }),
+  )
+
+  const graphEquipment: BoatNetworkGraphEquipment[] = equipmentRows.map(
+    (row) => ({
+      id: row.id,
+      name: row.name,
+      brand: row.brand,
+      modelNumber: row.modelNumber,
+      productNetworkKeys: row.productId
+        ? (productNetworkMap.get(row.productId) ?? null)
+        : null,
+    }),
+  )
+
+  const networks = networkRows
+    .filter((row) => row.networkKey != null)
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      networkKey: row.networkKey as BoatNetworkKey,
+    }))
 
   return networks
-    .filter((n) => n.networkKey != null)
-    .map((network) => ({
-      networkAssetId: network.id,
-      networkKey: network.networkKey!,
-      name: network.name,
-      devices: devicesOnNetworkFromConnections(
-        network.connectionsFrom,
-        network.connectionsTo,
-      ),
-    }))
+    .filter((network) => networkHasAnyActivity(network.id, graphConnections))
+    .map((network) => {
+      const direct = directEquipmentOnNetwork(network.id, graphConnections)
+      const devices = [...direct.entries()]
+        .map(([assetId, link]) => {
+          const asset = equipmentById.get(assetId)
+          if (!asset) return null
+          return serializeDevice(asset, {
+            connectionId: link.connectionId,
+            connectionType: link.connectionType,
+          })
+        })
+        .filter((item): item is BoatNetworkDiagramDevice => !!item)
+        .sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+        )
+
+      return {
+        networkAssetId: network.id,
+        networkKey: network.networkKey,
+        name: network.name,
+        devices,
+        linkedNetworks: linkedNetworksFor(
+          network.id,
+          networks,
+          graphConnections,
+        ),
+        possibleDevices: possibleEquipmentOnNetwork({
+          targetNetwork: network,
+          networks,
+          equipment: graphEquipment,
+          connections: graphConnections,
+        }),
+      }
+    })
 }

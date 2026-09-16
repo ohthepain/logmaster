@@ -49,6 +49,8 @@ import { cn } from '../../../../lib/cn'
 import { useTranslation } from '../../../../lib/i18n'
 import type { TranslationKey } from '../../../../lib/i18n'
 import { NotificationBellToggle } from '../../../../components/NotificationBellToggle'
+import { isBoatNetworkKey } from '../../../../domain/asset-connections'
+import type { BoatNetworkKey } from '../../../../domain/asset-connections'
 
 type BoatDetailTab =
   | 'photos'
@@ -70,11 +72,16 @@ const BOAT_TAB_AREAS: Partial<Record<BoatDetailTab, ContactResourceArea>> = {
 
 type BoatDetailSearch = {
   tab?: BoatDetailTab
+  network?: BoatNetworkKey
 }
 
 export const Route = createFileRoute('/_main/boats/$boatId/')({
   validateSearch: (search: Record<string, unknown>): BoatDetailSearch => {
     const tab = search.tab
+    const network = isBoatNetworkKey(search.network)
+      ? search.network
+      : undefined
+    const next: BoatDetailSearch = {}
     if (
       tab === 'photos' ||
       tab === 'documents' ||
@@ -85,9 +92,10 @@ export const Route = createFileRoute('/_main/boats/$boatId/')({
       tab === 'shares' ||
       tab === 'contacts'
     ) {
-      return { tab }
+      next.tab = tab
     }
-    return {}
+    if (network) next.network = network
+    return next
   },
   component: BoatDetailPage,
 })
@@ -95,7 +103,7 @@ export const Route = createFileRoute('/_main/boats/$boatId/')({
 function BoatDetailPage() {
   const { t } = useTranslation()
   const { boatId } = Route.useParams()
-  const { tab: tabFromSearch } = Route.useSearch()
+  const { tab: tabFromSearch, network: networkFromSearch } = Route.useSearch()
   const navigate = useNavigate()
   const [boat, setBoat] = useState<Boat | null>(null)
   const [members, setMembers] = useState<ResourceMember[]>([])
@@ -231,12 +239,12 @@ function BoatDetailPage() {
   const tabRaw = tabFromSearch ?? 'photos'
   const isGuestContact = contactGrants !== null && contactGrants.length > 0
   const tabCandidates: BoatDetailTab[] = isGuestContact
-    ? (['photos', 'documents', 'assets', 'networks', 'accounting'] as const).filter(
-        (value) => {
-          const area = BOAT_TAB_AREAS[value]
-          return area ? contactGrants.includes(area) : false
-        },
-      )
+    ? (
+        ['photos', 'documents', 'assets', 'networks', 'accounting'] as const
+      ).filter((value) => {
+        const area = BOAT_TAB_AREAS[value]
+        return area ? contactGrants.includes(area) : false
+      })
     : [
         'photos',
         'documents',
@@ -346,7 +354,12 @@ function BoatDetailPage() {
             members={members}
           />
         ) : null}
-        {tab === 'networks' ? <BoatNetworksTab boatId={boat.id} /> : null}
+        {tab === 'networks' ? (
+          <BoatNetworksTab
+            boatId={boat.id}
+            focusNetworkKey={networkFromSearch}
+          />
+        ) : null}
         {tab === 'accounting' ? (
           <BoatAccountingTab boatId={boat.id} orgId={boat.orgId} />
         ) : null}
