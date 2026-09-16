@@ -5,10 +5,11 @@ import {
   describeApifyInputScope,
   fetchApifyDatasetItems,
   fetchApifyRunItems,
-  startAndWaitForApifyNauticExpoRun,
-  type ApifyNauticExpoInput,
-  type BuildApifyInputOptions,
+  startAndWaitForApifyNauticExpoRun
+  
+  
 } from './apify'
+import type {ApifyNauticExpoInput, BuildApifyInputOptions} from './apify';
 import { apifyItemsToStagedProducts } from './normalize-apify'
 import type { StagedProduct } from './normalize'
 import type { CrawlProgress } from './crawlers'
@@ -35,13 +36,13 @@ async function stageApifyItems(
         url: sourceUrl,
         pageType: 'product',
         raw: item as Prisma.InputJsonValue,
-        normalized: (staged ?? undefined) as Prisma.InputJsonValue | undefined,
+        normalized: (staged ?? undefined),
         crawledAt,
         error: staged ? undefined : 'Could not normalize Apify row',
       },
       update: {
         raw: item as Prisma.InputJsonValue,
-        normalized: (staged ?? undefined) as Prisma.InputJsonValue | undefined,
+        normalized: (staged ?? undefined),
         crawledAt,
         error: staged ? null : 'Could not normalize Apify row',
       },

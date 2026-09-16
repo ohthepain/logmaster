@@ -18,9 +18,10 @@ import {
 import { createAssetWithAttachments } from '../asset-storage'
 import { createAssetConnection } from '../asset-connection-create'
 import {
-  connectionPeerKind,
-  type AssetConnectionDetail,
+  connectionPeerKind, ASSET_CONNECTION_TYPES 
+  
 } from '../../domain/asset-connections'
+import type {AssetConnectionDetail} from '../../domain/asset-connections';
 import {
   ensureBoatNetworkAssets,
   isSystemNetworkVisible,
@@ -28,7 +29,6 @@ import {
 } from '../boat-network-assets'
 import { loadBoatNetworkDiagrams } from '../load-boat-network-diagrams'
 import { z } from 'zod'
-import { ASSET_CONNECTION_TYPES } from '../../domain/asset-connections'
 import type { AssetDownloadSuggestion } from '../../domain/asset-intelligence'
 import type {
   AssetOwnership,

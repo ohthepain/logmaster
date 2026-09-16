@@ -1,7 +1,8 @@
 import {
-  manufacturerUrlForPreset,
-  type NauticExpoSeedProfile,
+  manufacturerUrlForPreset
+  
 } from './manufacturers'
+import type {NauticExpoSeedProfile} from './manufacturers';
 import { EQUIPMENT_CATEGORY_SEEDS } from './seeds'
 
 export const NAUTICEXPO_APIFY_ACTOR = 'crawloop~nauticexpo-scraper'

@@ -11,10 +11,11 @@ import {
   directEquipmentOnNetwork,
   linkedNetworksFor,
   networkHasAnyActivity,
-  possibleEquipmentOnNetwork,
-  type BoatNetworkGraphConnection,
-  type BoatNetworkGraphEquipment,
+  possibleEquipmentOnNetwork
+  
+  
 } from '../domain/boat-network-graph'
+import type {BoatNetworkGraphConnection, BoatNetworkGraphEquipment} from '../domain/boat-network-graph';
 import { ensureBoatNetworkAssets } from './boat-network-assets'
 import { loadProductNetworks } from './product-networks'
 import { prisma } from './db'

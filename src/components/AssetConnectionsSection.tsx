@@ -8,10 +8,12 @@ import type { BoatAsset } from '../domain/boat-assets'
 import {
   createAssetConnectionLink,
   fetchConnectionPeers,
-  removeAssetConnection,
-  type ConnectionPeerOption,
+  removeAssetConnection
+  
 } from '../lib/boat-assets-api'
-import { useTranslation, type TranslationKey } from '../lib/i18n'
+import type {ConnectionPeerOption} from '../lib/boat-assets-api';
+import { useTranslation  } from '../lib/i18n'
+import type {TranslationKey} from '../lib/i18n';
 
 const CONNECTION_TYPE_I18N: Record<AssetConnectionType, TranslationKey> = {
   cable: 'assetConnectionTypeCable',

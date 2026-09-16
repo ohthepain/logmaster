@@ -1,9 +1,10 @@
 import type { Job } from 'pg-boss'
 import {
-  runNauticExpoCatalogCrawl,
-  type NauticExpoCrawlConfig,
-  type NauticExpoCrawlResult,
+  runNauticExpoCatalogCrawl
+  
+  
 } from '../product-catalog-crawl/nauticexpo/run'
+import type {NauticExpoCrawlConfig, NauticExpoCrawlResult} from '../product-catalog-crawl/nauticexpo/run';
 import { createJobLogger } from './job-log'
 
 export const PRODUCT_CATALOG_NAUTICEXPO_QUEUE = 'product_catalog_nauticexpo'

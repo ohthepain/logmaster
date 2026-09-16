@@ -2,11 +2,13 @@ import { join } from 'node:path'
 import { prisma } from '../../db'
 import { crawlNauticExpo } from './crawlers'
 import { NAUTICEXPO_SOURCE } from './constants'
-import { importStagedProducts, type ImportStats } from './upsert'
+import { importStagedProducts  } from './upsert'
+import type {ImportStats} from './upsert';
 import { crawlNauticExpoViaApify } from './run-apify'
 import { apifyToken } from './apify'
-export type { NauticExpoSeedProfile } from './manufacturers'
 import type { NauticExpoSeedProfile } from './manufacturers'
+
+export type { NauticExpoSeedProfile } from './manufacturers'
 export type NauticExpoCrawlProvider = 'apify' | 'local'
 
 export type NauticExpoCrawlConfig = {
@@ -80,7 +82,7 @@ export async function runNauticExpoCatalogCrawl(
       data: {
         status: 'crawling',
         error: null,
-        config: config as object,
+        config: config,
       },
     })
   } else {
@@ -88,7 +90,7 @@ export async function runNauticExpoCatalogCrawl(
       data: {
         source: NAUTICEXPO_SOURCE,
         status: 'crawling',
-        config: config as object,
+        config: config,
         storagePath: storageDir ?? undefined,
       },
     })

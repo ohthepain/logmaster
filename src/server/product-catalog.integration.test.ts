@@ -387,11 +387,11 @@ describe.skipIf(!enabled)(
       const loaded = (await getAdminProduct(product.id))!
       await state.client.catalogProduct.update({
         where: { id: product.id },
-        data: { canonicalImageId: loaded.resources[0]!.id },
+        data: { canonicalImageId: loaded.resources[0].id },
       })
       const withPhoto = (await getAdminProduct(product.id))!
       const input = editInput(withPhoto)
-      input.canonicalImageId = withPhoto.resources[0]!.id
+      input.canonicalImageId = withPhoto.resources[0].id
       input.resources = []
       const saved = (await editAdminProduct(product.id, input, 'admin'))!
       expect(saved.resources).toEqual([])
