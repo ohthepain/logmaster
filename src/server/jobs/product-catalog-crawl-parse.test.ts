@@ -25,7 +25,9 @@ describe('parseProductCatalogCrawlBody', () => {
   })
 
   it('rejects unknown seed', () => {
-    const result = parseProductCatalogCrawlBody({ seedProfile: 'unknown-brand' })
+    const result = parseProductCatalogCrawlBody({
+      seedProfile: 'unknown-brand',
+    })
     expect(result.ok).toBe(false)
   })
 })

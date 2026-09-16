@@ -14,7 +14,10 @@ async function productNetworksForIdentity(input: {
   productId?: string
   brand?: string | null
   modelNumber?: string | null
-}): Promise<{ productId: string; networks: ProductNetworkConnection[] } | null> {
+}): Promise<{
+  productId: string
+  networks: ProductNetworkConnection[]
+} | null> {
   const row = input.productId
     ? await prisma.catalogProduct.findUnique({
         where: { id: input.productId },
@@ -67,7 +70,9 @@ export async function suggestProductNetworkConnections(
     select: { id: true, name: true, networkKey: true },
   })
   return resolved.networks.flatMap((connection) => {
-    const asset = assets.find((item) => item.networkKey === connection.networkKey)
+    const asset = assets.find(
+      (item) => item.networkKey === connection.networkKey,
+    )
     if (!asset) return []
     return [
       {

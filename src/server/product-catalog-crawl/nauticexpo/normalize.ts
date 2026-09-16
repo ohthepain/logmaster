@@ -19,9 +19,7 @@ export type StagedProduct = {
 }
 
 export function hashStagedPayload(payload: Record<string, unknown>) {
-  return createHash('sha256')
-    .update(JSON.stringify(payload))
-    .digest('hex')
+  return createHash('sha256').update(JSON.stringify(payload)).digest('hex')
 }
 
 export function normalizeParsedProduct(

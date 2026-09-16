@@ -94,7 +94,10 @@ productsRoutes.post('/resolve', async (c) => {
         }
         product = await getProduct(row.id, input.data.language)
         if (!catalogProductHasPhoto(product) && input.data.sourceUrl) {
-          await ensureProductPhotoFromManufacturerPage(row.id, input.data.sourceUrl)
+          await ensureProductPhotoFromManufacturerPage(
+            row.id,
+            input.data.sourceUrl,
+          )
         }
         product = await getProduct(row.id, input.data.language)
         if (!catalogProductHasPhoto(product) && input.data.sourceUrl) {
@@ -156,9 +159,7 @@ productsRoutes.get('/', async (c) => {
   const model = c.req.query('model')?.trim().slice(0, 200) ?? ''
   if (!brand) return c.json({ products: [], exact: false, ambiguous: false })
   const exact = model ? await findProduct(brand, model) : null
-  const candidates = exact
-    ? [exact]
-    : await searchCatalogProducts(brand, model)
+  const candidates = exact ? [exact] : await searchCatalogProducts(brand, model)
   const serialized = await Promise.all(
     candidates.map((p) => getProduct(p.id, c.req.query('language'))),
   )

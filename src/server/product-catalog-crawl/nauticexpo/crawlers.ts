@@ -272,11 +272,7 @@ export async function crawlNauticExpo(options: {
         let html = await page.content()
         let httpStatus = response?.status() ?? null
 
-        if (
-          !ready ||
-          httpStatus === 403 ||
-          isCloudflareChallenge(html)
-        ) {
+        if (!ready || httpStatus === 403 || isCloudflareChallenge(html)) {
           await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {})
           ready = await waitForNauticExpoContent(page)
           html = await page.content()

@@ -17,9 +17,7 @@ describe('productImageUrlForEquipment', () => {
         },
       ],
     })
-    expect(url).toBe(
-      '/api/products/prod-1/resources/img-1/content?display=1',
-    )
+    expect(url).toBe('/api/products/prod-1/resources/img-1/content?display=1')
   })
 
   it('returns null when product is rejected', () => {

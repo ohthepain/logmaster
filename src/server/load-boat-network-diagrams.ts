@@ -3,7 +3,10 @@ import type {
   BoatNetworkDiagram,
   BoatNetworkDiagramDevice,
 } from '../domain/boat-network-diagram'
-import type { AssetConnectionType, BoatNetworkKey } from '../domain/asset-connections'
+import type {
+  AssetConnectionType,
+  BoatNetworkKey,
+} from '../domain/asset-connections'
 import {
   directEquipmentOnNetwork,
   linkedNetworksFor,

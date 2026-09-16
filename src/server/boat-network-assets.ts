@@ -33,7 +33,9 @@ export async function ensureBoatNetworkAssets(
 }
 
 /** Prisma filter: equipment plus system networks that have ≥1 equipment link. */
-export function listableBoatAssetsWhere(boatId: string): Prisma.BoatAssetWhereInput {
+export function listableBoatAssetsWhere(
+  boatId: string,
+): Prisma.BoatAssetWhereInput {
   return {
     boatId,
     OR: [

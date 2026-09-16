@@ -143,13 +143,14 @@ export async function importStagedProduct(
         modelNumber: staged.modelNumber,
         reviewStatus: 'candidate',
       },
-      update: existingProduct?.reviewStatus === 'verified'
-        ? { modelKey: staged.modelKey }
-        : {
-            brand: staged.brand,
-            modelNumber: staged.modelNumber,
-            modelKey: staged.modelKey,
-          },
+      update:
+        existingProduct?.reviewStatus === 'verified'
+          ? { modelKey: staged.modelKey }
+          : {
+              brand: staged.brand,
+              modelNumber: staged.modelNumber,
+              modelKey: staged.modelKey,
+            },
     })
     if (!existingProduct) stats.products += 1
 
@@ -284,9 +285,7 @@ export async function importStagedProducts(
       outcome: 'success',
     })
     if (removed.count > 0) {
-      console.log(
-        `[nauticexpo] marked ${removed.count} source link(s) removed`,
-      )
+      console.log(`[nauticexpo] marked ${removed.count} source link(s) removed`)
     }
   }
 

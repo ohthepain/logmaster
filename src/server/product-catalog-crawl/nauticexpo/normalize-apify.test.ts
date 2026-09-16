@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { apifyItemToParsedProduct, apifyItemsToStagedProducts } from './normalize-apify'
+import {
+  apifyItemToParsedProduct,
+  apifyItemsToStagedProducts,
+} from './normalize-apify'
 
 describe('normalize-apify', () => {
   it('maps Apify dataset rows to staged catalog products', () => {
@@ -22,8 +25,8 @@ describe('normalize-apify', () => {
   })
 
   it('returns null when required fields are missing', () => {
-    expect(apifyItemToParsedProduct({ url: 'https://www.nauticexpo.com/x' })).toBe(
-      null,
-    )
+    expect(
+      apifyItemToParsedProduct({ url: 'https://www.nauticexpo.com/x' }),
+    ).toBe(null)
   })
 })

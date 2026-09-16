@@ -115,8 +115,8 @@ describe('public document downloads', () => {
     serve('<html><body>product</body></html>', 200, {
       'content-type': 'text/html; charset=utf-8',
     })
-    await expect(downloadPublicHtml('https://example.com/product')).resolves.toContain(
-      'product',
-    )
+    await expect(
+      downloadPublicHtml('https://example.com/product'),
+    ).resolves.toContain('product')
   })
 })

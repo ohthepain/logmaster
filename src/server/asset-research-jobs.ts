@@ -249,7 +249,9 @@ export async function confirmAssetResearchConnections(
     )
   }
 
-  const { createAssetConnectionInTx } = await import('./asset-connection-create')
+  const { createAssetConnectionInTx } = await import(
+    './asset-connection-create'
+  )
 
   await prisma.$transaction(async (tx) => {
     for (const connection of unique) {

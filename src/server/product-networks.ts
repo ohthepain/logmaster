@@ -11,7 +11,10 @@ type NetworkDb = {
 }
 
 export function serializeProductNetworks(
-  rows: Array<{ networkKey: ProductNetworkConnection['networkKey']; portCount: number | null }>,
+  rows: Array<{
+    networkKey: ProductNetworkConnection['networkKey']
+    portCount: number | null
+  }>,
 ): ProductNetworkConnection[] {
   return parseProductNetworkConnections(
     [],

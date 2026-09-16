@@ -57,7 +57,10 @@ export function parseProductNetworkConnections(
     while ((match = pattern.exec(text))) {
       found.set(
         key,
-        keepRicherCount(found.get(key), portCountBefore(text.slice(0, match.index))),
+        keepRicherCount(
+          found.get(key),
+          portCountBefore(text.slice(0, match.index)),
+        ),
       )
     }
   }

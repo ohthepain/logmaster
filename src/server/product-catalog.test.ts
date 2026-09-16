@@ -20,7 +20,11 @@ const mocks = vi.hoisted(() => {
     },
     brand: { upsert: vi.fn() },
     productAlias: { findUnique: vi.fn(), findMany: vi.fn() },
-    productLocale: { upsert: vi.fn(), updateMany: vi.fn(), findUnique: vi.fn() },
+    productLocale: {
+      upsert: vi.fn(),
+      updateMany: vi.fn(),
+      findUnique: vi.fn(),
+    },
     productResource: { createMany: vi.fn(), update: vi.fn() },
     catalogProductNetwork: {
       findMany: vi.fn(),
@@ -29,7 +33,13 @@ const mocks = vi.hoisted(() => {
     },
     $transaction: vi.fn(),
   }
-  return { db, research: vi.fn(), preview: vi.fn(), storeResource: vi.fn(), downloadHtml: vi.fn() }
+  return {
+    db,
+    research: vi.fn(),
+    preview: vi.fn(),
+    storeResource: vi.fn(),
+    downloadHtml: vi.fn(),
+  }
 })
 vi.mock('./db', () => ({ prisma: mocks.db }))
 vi.mock('./product-media', () => ({
@@ -38,7 +48,8 @@ vi.mock('./product-media', () => ({
 vi.mock('./asset-download', () => ({
   validateDownloadUrl: (value: string) => {
     const url = new URL(value)
-    if (url.protocol !== 'https:') throw new Error('Downloads must use public HTTPS URLs.')
+    if (url.protocol !== 'https:')
+      throw new Error('Downloads must use public HTTPS URLs.')
     return url
   },
   isPublicAddress: () => true,
@@ -110,9 +121,7 @@ it('stores known network ports from English research specifications', async () =
     where: { productId: 'p' },
   })
   expect(mocks.db.catalogProductNetwork.createMany).toHaveBeenCalledWith({
-    data: [
-      { productId: 'p', networkKey: 'seatal_kng', portCount: 2 },
-    ],
+    data: [{ productId: 'p', networkKey: 'seatal_kng', portCount: 2 }],
   })
 })
 it('does not rewrite network ports during photo preview research', async () => {
@@ -472,7 +481,9 @@ it('saves suggested model matches and their image URLs into the catalog', async 
       if (args.include?.resources) {
         return {
           ...row,
-          resources: [{ ...photo, reviewStatus: 'candidate', displayS3Key: null }],
+          resources: [
+            { ...photo, reviewStatus: 'candidate', displayS3Key: null },
+          ],
         }
       }
       return row
@@ -561,13 +572,15 @@ it('saves a manufacturer-page image when the AI image URL cannot be downloaded',
     '<img src="/_next/image?url=https%3A%2F%2Fexample.com%2Fupload%2Fshunt.png&amp;w=1200" />',
   )
   let storedPhoto = false
-  mocks.storeResource.mockImplementation(async (_productId: string, resourceId: string) => {
-    if (resourceId === 'stale') {
-      throw new Error('The document could not be downloaded.')
-    }
-    storedPhoto = true
-    return photo
-  })
+  mocks.storeResource.mockImplementation(
+    async (_productId: string, resourceId: string) => {
+      if (resourceId === 'stale') {
+        throw new Error('The document could not be downloaded.')
+      }
+      storedPhoto = true
+      return photo
+    },
+  )
   mocks.db.catalogProduct.findUniqueOrThrow.mockResolvedValue(row)
   mocks.db.catalogProduct.findUnique.mockImplementation(
     async (args: { include?: { locales?: boolean; resources?: boolean } }) => {

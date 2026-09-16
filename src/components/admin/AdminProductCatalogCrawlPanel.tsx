@@ -179,7 +179,9 @@ export function AdminProductCatalogCrawlPanel({
         ) : null}
       </div>
 
-      {err ? <p className="m-0 text-sm text-red-700 dark:text-red-300">{err}</p> : null}
+      {err ? (
+        <p className="m-0 text-sm text-red-700 dark:text-red-300">{err}</p>
+      ) : null}
     </div>
   )
 }

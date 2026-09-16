@@ -88,7 +88,10 @@ function readBrand($: CheerioAPI, pageUrl: string) {
   return { brand, logoUrl }
 }
 
-export function parseProductHtml(html: string, url: string): ParsedProduct | null {
+export function parseProductHtml(
+  html: string,
+  url: string,
+): ParsedProduct | null {
   return parseProductPage(load(html), url, html)
 }
 

@@ -204,12 +204,7 @@ function serializeAsset(asset: {
   id: string
   boatId: string
   kind?: 'equipment' | 'system_network'
-  networkKey?:
-    | 'nmea_2000'
-    | 'seatal_k1'
-    | 'seatal_kng'
-    | 'ethernet'
-    | null
+  networkKey?: 'nmea_2000' | 'seatal_k1' | 'seatal_kng' | 'ethernet' | null
   name: string
   description: string | null
   brand: string | null
@@ -613,10 +608,9 @@ boatAssetsRoutes.post(
         connectionType: z.enum(ASSET_CONNECTION_TYPES).default('cable'),
         reason: z.string().trim().max(1000).optional(),
       })
-      .refine(
-        (value) => value.equipmentAssetId || value.peerNetworkAssetId,
-        { message: 'Choose equipment or another network.' },
-      )
+      .refine((value) => value.equipmentAssetId || value.peerNetworkAssetId, {
+        message: 'Choose equipment or another network.',
+      })
       .safeParse(await c.req.json().catch(() => null))
     if (!parsed.success) {
       return c.json({ error: 'Check the connection details.' }, 400)
@@ -652,7 +646,9 @@ boatAssetsRoutes.post(
         return c.json(
           {
             error:
-              error instanceof Error ? error.message : 'Could not save connection.',
+              error instanceof Error
+                ? error.message
+                : 'Could not save connection.',
           },
           400,
         )
@@ -675,13 +671,16 @@ boatAssetsRoutes.post(
           parsed.data.equipmentAssetId!,
           networkAssetId,
           parsed.data.connectionType,
-          parsed.data.reason?.trim() || 'Connection added from the network view.',
+          parsed.data.reason?.trim() ||
+            'Connection added from the network view.',
         )
       } catch (error) {
         return c.json(
           {
             error:
-              error instanceof Error ? error.message : 'Could not save connection.',
+              error instanceof Error
+                ? error.message
+                : 'Could not save connection.',
           },
           400,
         )

@@ -48,9 +48,7 @@ describe('buildApifyInput', () => {
 
 describe('apifyWaitChunkSeconds', () => {
   it('caps waits at the Apify API maximum', () => {
-    expect(apifyWaitChunkSeconds(3_600)).toBe(
-      APIFY_WAIT_FOR_FINISH_MAX_SECONDS,
-    )
+    expect(apifyWaitChunkSeconds(3_600)).toBe(APIFY_WAIT_FOR_FINISH_MAX_SECONDS)
     expect(apifyWaitChunkSeconds(30)).toBe(30)
     expect(apifyWaitChunkSeconds(0)).toBe(1)
   })

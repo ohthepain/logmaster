@@ -6,15 +6,13 @@ export const productUiCopy = {
   equipmentDocuments: 'Documents',
   equipmentConnections: 'Connections',
   equipmentFindModel: 'Find your equipment',
-  equipmentFindHelp:
-    'Choose how to identify your equipment, then tap Search.',
+  equipmentFindHelp: 'Choose how to identify your equipment, then tap Search.',
   equipmentFindModePhoto: 'Photo',
   equipmentFindModeModel: 'Model',
   equipmentFindModeLink: 'Link',
   equipmentFindHelpPhoto:
     'Take a photo of the equipment or its label, then tap Search.',
-  equipmentFindHelpModel:
-    'Enter the brand and model, then tap Search.',
+  equipmentFindHelpModel: 'Enter the brand and model, then tap Search.',
   equipmentFindHelpLink:
     'Paste a manufacturer product page or datasheet link, then tap Search.',
   equipmentLinkLabel: 'Product link',
@@ -110,8 +108,7 @@ export const productUiCopy = {
   equipmentPickModel: 'Choose the exact model',
   equipmentPickModelHelp:
     'Your search matched more than one product. Select the one that matches your unit, or correct the brand and model and search again.',
-  equipmentPickModelRequired:
-    'Select a model from the list before continuing.',
+  equipmentPickModelRequired: 'Select a model from the list before continuing.',
   equipmentBrandMismatch:
     'This does not look like a {brand} product. Did you mean one of these brands?',
   equipmentSearchAgain: 'Search again',

@@ -45,7 +45,11 @@ async function main() {
   const manufacturerUrls = readRepeatedStringFlag('--manufacturer-url')
   const searchKeywords = readRepeatedStringFlag('--keyword')
 
-  const provider = useLocal ? 'local' : useApify || apifyRunId ? 'apify' : undefined
+  const provider = useLocal
+    ? 'local'
+    : useApify || apifyRunId
+      ? 'apify'
+      : undefined
 
   const result = await runNauticExpoCatalogCrawl({
     seedProfile,

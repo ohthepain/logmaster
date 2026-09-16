@@ -70,7 +70,10 @@ describe('server-log', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
     logAiResponse(
       'product.research',
-      { name: 'i50 Tridata', networkConnections: [{ networkKey: 'seatal_kng', portCount: 2 }] },
+      {
+        name: 'i50 Tridata',
+        networkConnections: [{ networkKey: 'seatal_kng', portCount: 2 }],
+      },
       { durationMs: 1200 },
     )
     expect(spy).toHaveBeenCalledOnce()

@@ -27,10 +27,12 @@ vi.mock('../product-catalog', () => ({
   ensureProductPhotoFromManufacturerPage: mocks.manufacturerPhoto,
   persistSuggestedCatalogProducts: vi.fn(),
   searchCatalogProducts: mocks.search,
-  catalogProductHasPhoto: (product: {
-    imageUrl?: string | null
-    previewImageUrl?: string | null
-  } | null) => !!(product?.imageUrl || product?.previewImageUrl),
+  catalogProductHasPhoto: (
+    product: {
+      imageUrl?: string | null
+      previewImageUrl?: string | null
+    } | null,
+  ) => !!(product?.imageUrl || product?.previewImageUrl),
   getProduct: mocks.get,
   findProduct: mocks.find,
   ProductResearchBusy: class extends Error {},

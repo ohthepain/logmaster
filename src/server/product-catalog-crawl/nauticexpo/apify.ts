@@ -221,7 +221,10 @@ export async function waitForApifyRun(
 
 export async function startAndWaitForApifyNauticExpoRun(
   input: ApifyNauticExpoInput,
-  options: { waitForFinishSeconds?: number; log?: (message: string) => void } = {},
+  options: {
+    waitForFinishSeconds?: number
+    log?: (message: string) => void
+  } = {},
 ): Promise<ApifyRunMeta> {
   const waitForFinishSeconds = options.waitForFinishSeconds ?? 3_600
   const started = await startApifyNauticExpoRun(input, waitForFinishSeconds)

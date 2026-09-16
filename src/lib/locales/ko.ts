@@ -154,8 +154,7 @@ const catalog: TranslationCatalog = {
   equipmentPickModel: 'Choose the exact model',
   equipmentPickModelHelp:
     'Your search matched more than one product. Select the model number that matches your unit — specs and capabilities come from the catalog.',
-  equipmentPickModelRequired:
-    'Select a model from the list before continuing.',
+  equipmentPickModelRequired: 'Select a model from the list before continuing.',
   accounting: '회계',
   shares: '지분',
   contacts: '연락처',

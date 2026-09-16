@@ -18,7 +18,10 @@ export function safeReturnPath(raw: string | undefined): string {
         ? window.location.origin
         : 'http://localhost'
     const url = new URL(trimmed, origin)
-    if (typeof window !== 'undefined' && url.origin !== window.location.origin) {
+    if (
+      typeof window !== 'undefined' &&
+      url.origin !== window.location.origin
+    ) {
       return '/'
     }
     return url.pathname + url.search + url.hash

@@ -192,7 +192,8 @@ export function formatProductCatalogNauticExpoRunInput(
   ]
   if (data.apifyRunId) parts.push(`Apify ${String(data.apifyRunId)}`)
   if (data.dryRun) parts.push('dry run')
-  if (data.maxProducts != null) parts.push(`${String(data.maxProducts)} products`)
+  if (data.maxProducts != null)
+    parts.push(`${String(data.maxProducts)} products`)
   if (data.maxPages != null) parts.push(`${String(data.maxPages)} pages`)
   if (data.resumeRunId) parts.push(`resume ${String(data.resumeRunId)}`)
   return parts.join(' · ')

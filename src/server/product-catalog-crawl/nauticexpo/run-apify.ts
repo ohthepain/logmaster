@@ -13,7 +13,10 @@ import { apifyItemsToStagedProducts } from './normalize-apify'
 import type { StagedProduct } from './normalize'
 import type { CrawlProgress } from './crawlers'
 
-async function stageApifyItems(runId: string, items: Record<string, unknown>[]) {
+async function stageApifyItems(
+  runId: string,
+  items: Record<string, unknown>[],
+) {
   const crawledAt = new Date()
   for (const item of items) {
     const stagedList = apifyItemsToStagedProducts([item], crawledAt)
@@ -54,7 +57,11 @@ export async function crawlNauticExpoViaApify(options: {
   apifyInput?: ApifyNauticExpoInput
   apifyInputOptions?: BuildApifyInputOptions
   log: (message: string) => void
-}): Promise<{ staged: StagedProduct[]; progress: CrawlProgress; apifyRunId: string }> {
+}): Promise<{
+  staged: StagedProduct[]
+  progress: CrawlProgress
+  apifyRunId: string
+}> {
   let apifyRunId = options.apifyRunId ?? null
   let items: Record<string, unknown>[]
 
@@ -91,7 +98,9 @@ export async function crawlNauticExpoViaApify(options: {
   const staged = apifyItemsToStagedProducts(items)
   const normalizeFailures = items.length - staged.length
   if (items.length === 0) {
-    options.log('[nauticexpo] Apify dataset is empty — check run on Apify console')
+    options.log(
+      '[nauticexpo] Apify dataset is empty — check run on Apify console',
+    )
   } else if (staged.length === 0) {
     options.log(
       `[nauticexpo] 0 products normalized from ${items.length} Apify rows (${normalizeFailures} failed)`,

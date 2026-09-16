@@ -82,9 +82,7 @@ assetIntelligenceRoutes.post('/:boatId/assets/identify-link', async (c) => {
           try {
             const link = new URL(value)
             return (
-              link.protocol === 'https:' &&
-              !link.username &&
-              !link.password
+              link.protocol === 'https:' && !link.username && !link.password
             )
           } catch {
             return false
@@ -311,4 +309,3 @@ assetIntelligenceRoutes.delete(
     return c.json({ ok: true })
   },
 )
-

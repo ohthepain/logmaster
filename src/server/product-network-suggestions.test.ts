@@ -76,7 +76,10 @@ it('suggests matching boat networks from stored product ports', async () => {
 })
 
 it('lazy-fills network ports from specifications when none are stored', async () => {
-  mocks.findProduct.mockResolvedValue({ id: 'product', reviewStatus: 'candidate' })
+  mocks.findProduct.mockResolvedValue({
+    id: 'product',
+    reviewStatus: 'candidate',
+  })
   mocks.productFind.mockResolvedValue({
     id: 'product',
     reviewStatus: 'candidate',
@@ -91,8 +94,6 @@ it('lazy-fills network ports from specifications when none are stored', async ()
       brand: 'Raymarine',
       modelNumber: 'i50',
     }),
-  ).toEqual([
-    expect.objectContaining({ assetId: 'net_boat_seatal_kng' }),
-  ])
+  ).toEqual([expect.objectContaining({ assetId: 'net_boat_seatal_kng' })])
   expect(mocks.ensureFromSpecs).toHaveBeenCalled()
 })

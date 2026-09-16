@@ -8,10 +8,7 @@ import {
   fetchNetworkConnectionCandidates,
 } from '../lib/boat-assets-api'
 import { useTranslation } from '../lib/i18n'
-import {
-  POPUP_MENU_Z_CLASS,
-  PopupOutsideDismiss,
-} from './PopupOutsideDismiss'
+import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 
 export function NetworkAddConnectionMenu({
   boatId,
@@ -54,7 +51,10 @@ export function NetworkAddConnectionMenu({
   }, [candidates, filterNetworkId])
 
   useEffect(() => {
-    if (equipmentId && !visibleEquipment.some((item) => item.id === equipmentId)) {
+    if (
+      equipmentId &&
+      !visibleEquipment.some((item) => item.id === equipmentId)
+    ) {
       setEquipmentId('')
     }
   }, [equipmentId, visibleEquipment])
@@ -184,7 +184,9 @@ export function NetworkAddConnectionMenu({
                             onChange={() => setEquipmentId(item.id)}
                           />
                           <span className="min-w-0">
-                            <strong className="block text-sm">{item.name}</strong>
+                            <strong className="block text-sm">
+                              {item.name}
+                            </strong>
                             <span className="mt-0.5 block text-xs text-[var(--sea-ink-soft)]">
                               {[item.brand, item.modelNumber]
                                 .filter(Boolean)

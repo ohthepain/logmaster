@@ -118,7 +118,9 @@ export function AssetConnectionsSection({
                     {item.peer.name}
                   </Link>
                 ) : (
-                  <span className="mt-1 block font-semibold">{item.peer.name}</span>
+                  <span className="mt-1 block font-semibold">
+                    {item.peer.name}
+                  </span>
                 )}
                 {item.reason ? (
                   <span className="mt-1 block text-[var(--sea-ink-soft)]">
@@ -145,11 +147,7 @@ export function AssetConnectionsSection({
                       return
                     }
                     void act(item.id, () =>
-                      removeAssetConnection(
-                        asset.boatId,
-                        asset.id,
-                        item.id,
-                      ),
+                      removeAssetConnection(asset.boatId, asset.id, item.id),
                     )
                   }}
                 >

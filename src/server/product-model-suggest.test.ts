@@ -17,7 +17,8 @@ describe('sanitizeEquipmentModelSuggest', () => {
           name: 'SmartShunt 300A IP65',
           description: 'Battery monitor shunt',
           imageUrl: 'https://www.victronenergy.com/upload/shunt.png',
-          productPageUrl: 'https://www.victronenergy.com/battery-monitors/smartshunt',
+          productPageUrl:
+            'https://www.victronenergy.com/battery-monitors/smartshunt',
           specifications: [{ name: 'Current', value: '300', unit: 'A' }],
         },
         {

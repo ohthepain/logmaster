@@ -55,9 +55,7 @@ export async function runNauticExpoCatalogCrawl(
   const delayMs = config.delayMs ?? 750
   const provider: NauticExpoCrawlProvider =
     config.provider ??
-    (config.apifyRunId || process.env.APIFY_TOKEN?.trim()
-      ? 'apify'
-      : 'local')
+    (config.apifyRunId || process.env.APIFY_TOKEN?.trim() ? 'apify' : 'local')
 
   if (provider === 'apify') {
     apifyToken()
@@ -75,7 +73,8 @@ export async function runNauticExpoCatalogCrawl(
       where: { id: runId },
     })
     if (!existing) throw new Error(`Crawl run not found: ${runId}`)
-    storageDir = storageDir ?? existing.storagePath ?? join('storage/nauticexpo', runId)
+    storageDir =
+      storageDir ?? existing.storagePath ?? join('storage/nauticexpo', runId)
     await prisma.catalogCrawlRun.update({
       where: { id: runId },
       data: {

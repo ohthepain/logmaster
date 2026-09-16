@@ -261,7 +261,10 @@ it('regenerates AI information including boat network connections', async () => 
   expect(screen.getByLabelText<HTMLTextAreaElement>('Description').value).toBe(
     'Regenerated description',
   )
-  expect(screen.getByRole('checkbox', { name: 'SeaTalkNG' })).toBeChecked()
+  expect(
+    (screen.getByRole('checkbox', { name: 'SeaTalkNG' }) as HTMLInputElement)
+      .checked,
+  ).toBe(true)
   expect(screen.getByLabelText<HTMLInputElement>('Ports').value).toBe('2')
   confirm.mockRestore()
 })

@@ -25,7 +25,10 @@ export const NAUTICEXPO_CRAWL_SEED_OPTIONS: Array<{
   { id: 'equipment', label: 'Equipment categories (NauticExpo hub)' },
   ...(
     Object.entries(NAUTICEXPO_MANUFACTURER_PRESETS) as Array<
-      [NauticExpoManufacturerPreset, (typeof NAUTICEXPO_MANUFACTURER_PRESETS)[NauticExpoManufacturerPreset]]
+      [
+        NauticExpoManufacturerPreset,
+        (typeof NAUTICEXPO_MANUFACTURER_PRESETS)[NauticExpoManufacturerPreset],
+      ]
     >
   ).map(([id, preset]) => ({
     id,

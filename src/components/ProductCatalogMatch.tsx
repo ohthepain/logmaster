@@ -91,7 +91,9 @@ export function ProductCatalogMatch({
 
   if (loading) {
     return (
-      <p className="text-sm text-[var(--sea-ink-soft)]">{t('equipmentLooking')}</p>
+      <p className="text-sm text-[var(--sea-ink-soft)]">
+        {t('equipmentLooking')}
+      </p>
     )
   }
   if (error)
@@ -142,7 +144,8 @@ export function ProductCatalogMatch({
       })}
       {suggestedOptions.map((option) => {
         const key = `${productModelKey(option.brand)}:${productModelKey(option.modelNumber)}`
-        const selected = selectedModelKey === productModelKey(option.modelNumber)
+        const selected =
+          selectedModelKey === productModelKey(option.modelNumber)
         return (
           <button
             key={key}

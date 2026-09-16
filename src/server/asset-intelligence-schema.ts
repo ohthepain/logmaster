@@ -41,9 +41,7 @@ export const downloadSchema = z.object({
 export const connectionSchema = z.object({
   assetId: z.string().min(1).max(200),
   reason: z.string().trim().min(1).max(1000),
-  connectionType: z
-    .enum(['cable', 'wifi', 'bluetooth', 'nmea0183'])
-    .optional(),
+  connectionType: z.enum(['cable', 'wifi', 'bluetooth', 'nmea0183']).optional(),
 })
 export const researchSchema = z.object({
   category: categorySchema,

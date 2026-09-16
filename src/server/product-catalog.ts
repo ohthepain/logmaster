@@ -39,7 +39,8 @@ export async function ensureCatalogBrand(
   db: Pick<typeof prisma, 'brand'> = prisma,
 ) {
   const identity = catalogBrandIdentity(brand)
-  if (!identity.id) throw new Error('Brand is required for the product catalog.')
+  if (!identity.id)
+    throw new Error('Brand is required for the product catalog.')
   return db.brand.upsert({
     where: { id: identity.id },
     create: {
@@ -653,18 +654,21 @@ export async function adoptPrimaryCatalogPhoto(
   if (!product || product.reviewStatus === 'rejected') return null
 
   const canonical = product.canonicalImageId
-    ? product.resources.find((resource) => resource.id === product.canonicalImageId)
+    ? product.resources.find(
+        (resource) => resource.id === product.canonicalImageId,
+      )
     : null
   if (canonical?.reviewStatus === 'verified' && canonical.displayS3Key) {
     return product.canonicalImageId
   }
 
-  const preferred =
-    preferredResourceId &&
-    product.resources.find((resource) => resource.id === preferredResourceId)
+  const preferred = preferredResourceId
+    ? product.resources.find((resource) => resource.id === preferredResourceId)
+    : undefined
+  const preferredId = preferred?.id
   const candidates = [
     ...(preferred ? [preferred] : []),
-    ...product.resources.filter((resource) => resource.id !== preferred?.id),
+    ...product.resources.filter((resource) => resource.id !== preferredId),
   ]
   const { storeProductResource } = await import('./product-media')
   for (const chosen of candidates) {
@@ -689,9 +693,7 @@ export async function adoptPrimaryCatalogPhoto(
           resourceId: chosen.id,
           outcome: 'error',
           errorCode:
-            error instanceof Error
-              ? error.message || error.name
-              : 'unknown',
+            error instanceof Error ? error.message || error.name : 'unknown',
         }),
       )
     }
@@ -771,7 +773,8 @@ export async function getProduct(
         storedPhotos[0] ??
         product.resources.find(
           (resource) =>
-            resource.purpose === 'photo' && resource.reviewStatus !== 'rejected',
+            resource.purpose === 'photo' &&
+            resource.reviewStatus !== 'rejected',
         )
       return preview
         ? `/api/products/${product.id}/resources/${preview.id}/content?display=1`

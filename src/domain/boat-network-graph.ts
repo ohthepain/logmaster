@@ -54,10 +54,7 @@ function networkAdjacency(
     adj.set(b, right)
   }
   for (const row of connections) {
-    if (
-      row.fromKind === 'system_network' &&
-      row.toKind === 'system_network'
-    ) {
+    if (row.fromKind === 'system_network' && row.toKind === 'system_network') {
       link(row.fromAssetId, row.toAssetId)
     }
   }
@@ -90,19 +87,13 @@ export function directEquipmentOnNetwork(
     { connectionId: string; connectionType: string }
   >()
   for (const row of connections) {
-    if (
-      row.fromAssetId === networkId &&
-      row.toKind === 'equipment'
-    ) {
+    if (row.fromAssetId === networkId && row.toKind === 'equipment') {
       byEquipment.set(row.toAssetId, {
         connectionId: row.id,
         connectionType: row.connectionType,
       })
     }
-    if (
-      row.toAssetId === networkId &&
-      row.fromKind === 'equipment'
-    ) {
+    if (row.toAssetId === networkId && row.fromKind === 'equipment') {
       if (!byEquipment.has(row.fromAssetId)) {
         byEquipment.set(row.fromAssetId, {
           connectionId: row.id,
@@ -122,10 +113,7 @@ export function linkedNetworksFor(
   const byId = new Map(networks.map((item) => [item.id, item]))
   const links: BoatNetworkDiagramLink[] = []
   for (const row of connections) {
-    if (
-      row.fromKind !== 'system_network' ||
-      row.toKind !== 'system_network'
-    ) {
+    if (row.fromKind !== 'system_network' || row.toKind !== 'system_network') {
       continue
     }
     if (row.fromAssetId === networkId) {

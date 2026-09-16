@@ -76,10 +76,15 @@ it('shows a product photo on suggested models', () => {
       onSelectSuggested={select}
     />,
   )
-  expect(document.querySelector('img[src="https://example.com/shunt.png"]')).toBeTruthy()
+  expect(
+    document.querySelector('img[src="https://example.com/shunt.png"]'),
+  ).toBeTruthy()
   fireEvent.click(screen.getByText('SHU050130050'))
   expect(select).toHaveBeenCalledWith(
-    expect.objectContaining({ modelNumber: 'SHU050130050', brand: 'Victron Energy' }),
+    expect.objectContaining({
+      modelNumber: 'SHU050130050',
+      brand: 'Victron Energy',
+    }),
   )
 })
 it('clears stale matches when model identity changes', async () => {

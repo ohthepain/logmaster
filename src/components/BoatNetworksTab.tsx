@@ -4,9 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import type { BoatNetworkDiagram } from '../domain/boat-network-diagram'
 import type { BoatNetworkPossibleDevice } from '../domain/boat-network-graph'
-import {
-  ASSET_CONNECTION_TYPE_LABELS,
-} from '../domain/asset-connections'
+import { ASSET_CONNECTION_TYPE_LABELS } from '../domain/asset-connections'
 import type { BoatNetworkKey } from '../domain/asset-connections'
 import {
   createNetworkEquipmentConnection,
@@ -33,7 +31,7 @@ function DeviceIcon({
     return (
       <img
         src={productImageUrl}
-        alt=""
+        alt={name}
         className="max-h-[4.5rem] max-w-full object-contain transition group-hover:opacity-90"
       />
     )
