@@ -1,8 +1,15 @@
+import { ImageIcon, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { ChevronRight, Search } from 'lucide-react'
-import { searchSharedProducts } from '../lib/product-catalog-api'
 import type { ProductAdminSearch } from '../lib/product-catalog-api'
+import { searchSharedProducts } from '../lib/product-catalog-api'
+import { apiUrl } from '../lib/app-origin'
 import { SharedAssetPanel } from './SharedAssetPanel'
+
+const REVIEW_STATUS_STYLES: Record<string, string> = {
+  verified: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+  candidate: 'bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]',
+  rejected: 'bg-red-500/15 text-red-700 dark:text-red-300',
+}
 
 export function SharedAssetAdmin() {
   const [query, setQuery] = useState('')
@@ -103,31 +110,52 @@ export function SharedAssetAdmin() {
             {!result.products.length ? (
               <p>No shared assets match this search.</p>
             ) : (
-              <ul className="m-0 list-none space-y-2 p-0">
+              <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-2 p-0">
                 {result.products.map((product) => (
                   <li key={product.id}>
                     <button
                       type="button"
                       onClick={() => setSelected(product.id)}
-                      className="flex w-full items-center justify-between gap-4 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4 text-left hover:bg-[var(--chip-bg)] focus-visible:outline-2 focus-visible:outline-[var(--sea-accent)]"
+                      className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-[var(--panel-border)] bg-[var(--panel)] text-left hover:border-[var(--btn-bg)] hover:bg-[var(--chip-bg)] focus-visible:outline-2 focus-visible:outline-[var(--sea-accent)]"
                     >
-                      <span className="min-w-0">
-                        <span className="block font-semibold">
+                      <div className="relative aspect-square w-full bg-[var(--chip-bg)]">
+                        {product.imageUrl ? (
+                          <img
+                            src={apiUrl(product.imageUrl)}
+                            alt=""
+                            className="size-full object-contain object-center p-1"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex size-full flex-col items-center justify-center gap-1 px-2 text-center text-[10px] text-[var(--sea-ink-soft)]">
+                            <ImageIcon
+                              aria-hidden
+                              className="size-5 stroke-[1.5] opacity-60"
+                            />
+                            No photo
+                          </div>
+                        )}
+                      </div>
+                      <span className="flex min-w-0 flex-1 flex-col gap-1 p-2">
+                        <span
+                          className={`inline-flex w-fit rounded-full px-1.5 py-px text-[10px] font-medium leading-tight ${REVIEW_STATUS_STYLES[product.reviewStatus] ?? REVIEW_STATUS_STYLES.candidate}`}
+                        >
+                          {product.reviewStatus}
+                        </span>
+                        <span className="line-clamp-2 text-xs font-semibold leading-snug text-[var(--sea-ink)]">
                           {product.brand} {product.modelNumber}
                         </span>
-                        {product.name && (
-                          <span className="mt-1 block text-sm">
+                        {product.name ? (
+                          <span className="line-clamp-1 text-[11px] leading-snug text-[var(--sea-ink-soft)]">
                             {product.name}
                           </span>
-                        )}
-                        <span className="mt-2 block text-xs text-[var(--sea-ink-soft)]">
-                          {product.reviewStatus} · {product.resourceCount}{' '}
-                          sources/files ·{' '}
+                        ) : null}
+                        <span className="mt-auto line-clamp-2 text-[10px] leading-snug text-[var(--sea-ink-soft)]">
+                          {product.resourceCount} sources ·{' '}
                           {product.languages.join(', ') ||
                             'No researched languages'}
                         </span>
                       </span>
-                      <ChevronRight aria-hidden className="size-5 shrink-0" />
                     </button>
                   </li>
                 ))}

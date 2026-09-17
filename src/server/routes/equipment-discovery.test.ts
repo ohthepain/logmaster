@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   find: vi.fn(),
   rows: vi.fn(),
   search: vi.fn(),
+  modelSearch: vi.fn(),
 }))
 vi.mock('../session', () => ({ getSessionUserId: mocks.session }))
 vi.mock('../db', () => ({
@@ -27,6 +28,7 @@ vi.mock('../product-catalog', () => ({
   ensureProductPhotoFromManufacturerPage: mocks.manufacturerPhoto,
   persistSuggestedCatalogProducts: vi.fn(),
   searchCatalogProducts: mocks.search,
+  searchCatalogProductModels: mocks.modelSearch,
   catalogProductHasPhoto: (
     product: {
       imageUrl?: string | null
@@ -144,4 +146,10 @@ it('returns model autocomplete even when only a brand is entered', async () => {
   const response = await productsRoutes.request('/?brand=Garmin&model=')
   expect((await response.json()).products).toEqual([p])
   expect(mocks.search).toHaveBeenCalledWith('Garmin', '')
+})
+it('lists catalog models for one brand only', async () => {
+  mocks.modelSearch.mockResolvedValue(['923', 'GPSMAP 8612'])
+  const response = await productsRoutes.request('/models?brand=Garmin&q=')
+  expect(await response.json()).toEqual({ models: ['923', 'GPSMAP 8612'] })
+  expect(mocks.modelSearch).toHaveBeenCalledWith('Garmin', '')
 })

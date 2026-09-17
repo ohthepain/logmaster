@@ -1,9 +1,8 @@
-import {
-  NAUTICEXPO_MANUFACTURER_PRESETS
-  
-  
+import { NAUTICEXPO_MANUFACTURER_PRESETS } from '../../../lib/nauticexpo-manufacturer-presets'
+import type {
+  NauticExpoManufacturerPreset,
+  NauticExpoSeedProfile,
 } from '../../../lib/nauticexpo-manufacturer-presets'
-import type {NauticExpoManufacturerPreset, NauticExpoSeedProfile} from '../../../lib/nauticexpo-manufacturer-presets';
 
 export {
   NAUTICEXPO_MANUFACTURER_PRESETS,

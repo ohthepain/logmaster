@@ -18,10 +18,10 @@ import {
 import { createAssetWithAttachments } from '../asset-storage'
 import { createAssetConnection } from '../asset-connection-create'
 import {
-  connectionPeerKind, ASSET_CONNECTION_TYPES 
-  
+  connectionPeerKind,
+  ASSET_CONNECTION_TYPES,
 } from '../../domain/asset-connections'
-import type {AssetConnectionDetail} from '../../domain/asset-connections';
+import type { AssetConnectionDetail } from '../../domain/asset-connections'
 import {
   ensureBoatNetworkAssets,
   isSystemNetworkVisible,

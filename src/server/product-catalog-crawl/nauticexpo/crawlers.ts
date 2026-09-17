@@ -14,19 +14,14 @@ import { NAUTICEXPO_ORIGIN } from './constants'
 import {
   extractNauticExpoLinksFromHtml,
   isCloudflareChallenge,
-  parseProductHtml
-  
+  parseProductHtml,
 } from './parsers'
-import type {ParsedProduct} from './parsers';
-import { normalizeParsedProduct  } from './normalize'
-import type {StagedProduct} from './normalize';
+import type { ParsedProduct } from './parsers'
+import { normalizeParsedProduct } from './normalize'
+import type { StagedProduct } from './normalize'
 import { EQUIPMENT_CATEGORY_SEEDS } from './seeds'
-import {
-  classifyNauticExpoUrl,
-  shouldCrawlEquipmentUrl
-  
-} from './urls'
-import type {NauticExpoPageType} from './urls';
+import { classifyNauticExpoUrl, shouldCrawlEquipmentUrl } from './urls'
+import type { NauticExpoPageType } from './urls'
 
 export type CrawlLimits = {
   maxPages: number
@@ -61,7 +56,7 @@ async function stageCrawlPage(input: StagePageInput) {
       httpStatus: input.httpStatus ?? undefined,
       contentHash: input.normalized?.contentHash,
       raw: (input.raw ?? undefined) as Prisma.InputJsonValue | undefined,
-      normalized: (input.normalized ?? undefined),
+      normalized: input.normalized ?? undefined,
       crawledAt,
       error: input.error ?? undefined,
     },
@@ -70,7 +65,7 @@ async function stageCrawlPage(input: StagePageInput) {
       httpStatus: input.httpStatus ?? undefined,
       contentHash: input.normalized?.contentHash,
       raw: (input.raw ?? undefined) as Prisma.InputJsonValue | undefined,
-      normalized: (input.normalized ?? undefined),
+      normalized: input.normalized ?? undefined,
       crawledAt,
       error: input.error ?? undefined,
     },

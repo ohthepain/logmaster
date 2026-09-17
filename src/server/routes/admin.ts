@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
-import { prisma } from '../db'
+import { shortJobOutputMessage } from '../../lib/admin-jobs'
+import type { OsmPointDatasetId } from '../../lib/map-data-layers'
+import { isMapRegionId } from '../../lib/map-regions'
 import {
   forbidden,
   getSessionUser,
@@ -7,28 +9,13 @@ import {
   isPlatformAdmin,
   unauthorized,
 } from '../admin-auth'
-import { getBoss } from '../jobs/boss'
-import { BUILD_GEO_FEATURES_QUEUE } from '../jobs/geo-features'
-import type { BuildGeoFeaturesPayload } from '../jobs/geo-features'
-import { BUILD_MARINAS_QUEUE } from '../jobs/marinas'
-import type { BuildMarinasPayload } from '../jobs/marinas'
-import { BUILD_OSM_POINTS_QUEUE } from '../jobs/osm-points'
-import type { BuildOsmPointsPayload } from '../jobs/osm-points'
 import {
-  enqueueEuropeGeoFeatures,
-  enqueueGeoFeaturesBuild,
-  parseGeoFeaturesRegionId,
-} from '../jobs/queue'
-import {
-  enqueueMarinasBuild,
-  enqueueNorthAmericaMarinas,
-  parseMarinasRegionId,
-} from '../jobs/marina-queue'
-import { enqueueOsmPointsBuild } from '../jobs/osm-points-queue'
-import { parseProductCatalogCrawlBody } from '../jobs/product-catalog-crawl-parse'
-import { enqueueProductCatalogNauticExpo } from '../jobs/product-catalog-crawl-queue'
-import type { OsmPointDatasetId } from '../../lib/map-data-layers'
-import { isMapRegionId } from '../../lib/map-regions'
+  deleteCatalogCrawlRun,
+  getCatalogCrawlRunDetail,
+  listCatalogCrawlRuns,
+  repeatCatalogCrawlRun,
+} from '../catalog-crawls'
+import { prisma } from '../db'
 import { deleteTripsFromLogbook } from '../deleted-trips'
 import {
   cancelUnifiedAdminJob,
@@ -36,8 +23,31 @@ import {
   getUnifiedAdminJob,
   listUnifiedAdminJobs,
   rerunUnifiedAdminJob,
+  SUPPORTED_JOB_QUEUES,
 } from '../jobs/admin-jobs-list'
-import { shortJobOutputMessage } from '../../lib/admin-jobs'
+import { getBoss } from '../jobs/boss'
+import type { BuildGeoFeaturesPayload } from '../jobs/geo-features'
+import { BUILD_GEO_FEATURES_QUEUE } from '../jobs/geo-features'
+import {
+  enqueueMarinasBuild,
+  enqueueNorthAmericaMarinas,
+  parseMarinasRegionId,
+} from '../jobs/marina-queue'
+import type { BuildMarinasPayload } from '../jobs/marinas'
+import type { BuildOsmPointsPayload } from '../jobs/osm-points'
+import { enqueueOsmPointsBuild } from '../jobs/osm-points-queue'
+import type { ProductCatalogNauticExpoPayload } from '../jobs/product-catalog-crawl'
+import {
+  parseCatalogCrawlRepeatMode,
+  parseProductCatalogCrawlBody,
+} from '../jobs/product-catalog-crawl-parse'
+import { enqueueProductCatalogNauticExpo } from '../jobs/product-catalog-crawl-queue'
+import {
+  enqueueEuropeGeoFeatures,
+  enqueueGeoFeaturesBuild,
+  parseGeoFeaturesRegionId,
+} from '../jobs/queue'
+import { logServerEvent } from '../lib/server-log'
 
 const db = prisma as any
 
@@ -315,17 +325,12 @@ adminRoutes.delete('/orgs/:orgId', async (c) => {
 })
 
 const MAX_JOBS = 500
-const SUPPORTED_JOB_QUEUES = [
-  BUILD_GEO_FEATURES_QUEUE,
-  BUILD_MARINAS_QUEUE,
-  BUILD_OSM_POINTS_QUEUE,
-] as const
-
 type SupportedJobQueue = (typeof SUPPORTED_JOB_QUEUES)[number]
 type AdminJobPayload =
   | BuildGeoFeaturesPayload
   | BuildMarinasPayload
   | BuildOsmPointsPayload
+  | ProductCatalogNauticExpoPayload
 
 function toIso(value: Date | null | undefined): string | null {
   return value ? value.toISOString() : null
@@ -522,6 +527,82 @@ adminRoutes.post('/jobs/product-catalog-nauticexpo/runs', async (c) => {
     },
     202,
   )
+})
+
+adminRoutes.get('/catalog-crawls', async (c) => {
+  const rawLimit = Number.parseInt(c.req.query('limit') ?? '', 10)
+  const limit = Number.isInteger(rawLimit)
+    ? Math.min(200, Math.max(1, rawLimit))
+    : 25
+  const crawls = await listCatalogCrawlRuns(limit)
+  return c.json({ crawls })
+})
+
+adminRoutes.get('/catalog-crawls/:runId', async (c) => {
+  const runId = c.req.param('runId').trim()
+  const crawl = await getCatalogCrawlRunDetail(runId)
+  if (!crawl) {
+    return c.json({ ok: false, error: 'Crawl run not found' }, 404)
+  }
+  return c.json({ crawl })
+})
+
+adminRoutes.post('/catalog-crawls/:runId/repeat', async (c) => {
+  const runId = c.req.param('runId').trim()
+  const body = await c.req.json().catch(() => ({}))
+  const record =
+    typeof body === 'object' && body !== null && !Array.isArray(body)
+      ? (body as Record<string, unknown>)
+      : {}
+  const mode = parseCatalogCrawlRepeatMode(record.mode)
+  if (!mode) {
+    return c.json(
+      { ok: false, error: 'mode must be rescrape or reimport' },
+      400,
+    )
+  }
+  const result = await repeatCatalogCrawlRun(runId, mode)
+  if (!result.ok) {
+    return c.json({ ok: false, error: result.error }, result.status)
+  }
+  logServerEvent({
+    action: 'product_catalog.nauticexpo.repeat',
+    resourceType: 'catalogCrawlRun',
+    resourceId: runId,
+    outcome: 'success',
+  })
+  logServerEvent({
+    action: 'product_catalog.nauticexpo.enqueue',
+    resourceType: 'pgboss_job',
+    resourceId: result.jobId,
+    outcome: 'success',
+  })
+  return c.json(
+    {
+      ok: true,
+      jobId: result.jobId,
+      queued: true,
+      mode,
+      originalRunId: runId,
+      ...result.payload,
+    },
+    202,
+  )
+})
+
+adminRoutes.delete('/catalog-crawls/:runId', async (c) => {
+  const runId = c.req.param('runId').trim()
+  const result = await deleteCatalogCrawlRun(runId)
+  if (!result.ok) {
+    return c.json({ ok: false, error: result.error }, result.status)
+  }
+  logServerEvent({
+    action: 'product_catalog.catalog_crawl.delete',
+    resourceType: 'catalogCrawlRun',
+    resourceId: runId,
+    outcome: 'success',
+  })
+  return c.json({ ok: true, runId })
 })
 
 adminRoutes.post('/jobs/osm-points/runs', async (c) => {

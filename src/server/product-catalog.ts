@@ -114,6 +114,26 @@ export async function searchCatalogProducts(
   })
 }
 
+export async function searchCatalogProductModels(
+  brand: string,
+  query: string,
+): Promise<string[]> {
+  const trimmedQuery = query.trim()
+  const limit = trimmedQuery ? 12 : 100
+  const products = await searchCatalogProducts(brand, trimmedQuery, limit)
+  const models: string[] = []
+  const seen = new Set<string>()
+  for (const product of products) {
+    const modelNumber = product.modelNumber.trim()
+    if (!modelNumber) continue
+    const key = productModelKey(modelNumber)
+    if (seen.has(key)) continue
+    seen.add(key)
+    models.push(modelNumber)
+  }
+  return models
+}
+
 export async function findProduct(brand: string, modelNumber: string) {
   const { brandKey, modelKey } = productIdentity(brand, modelNumber)
   if (!brandKey || !modelKey) return null

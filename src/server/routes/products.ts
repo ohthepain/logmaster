@@ -6,6 +6,7 @@ import { isAdminRequest } from '../admin-auth'
 import {
   findProduct,
   searchCatalogProducts,
+  searchCatalogProductModels,
   resolveProduct,
   ensureProductResearch,
   ensureProductPhotoResearch,
@@ -153,6 +154,13 @@ productsRoutes.post('/resolve', async (c) => {
       400,
     )
   }
+})
+productsRoutes.get('/models', async (c) => {
+  const brand = c.req.query('brand')?.trim().slice(0, 100) ?? ''
+  const query = c.req.query('q')?.trim().slice(0, 200) ?? ''
+  if (!brand) return c.json({ models: [] })
+  const models = await searchCatalogProductModels(brand, query)
+  return c.json({ models })
 })
 productsRoutes.get('/', async (c) => {
   const brand = c.req.query('brand')?.trim().slice(0, 100) ?? ''

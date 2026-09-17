@@ -1,4 +1,5 @@
 import { formatMapBbox, mapRegionLabel } from './map-regions'
+import { NAUTICEXPO_MANUFACTURER_PRESETS } from './nauticexpo-manufacturer-presets'
 
 export const BUILD_GEO_FEATURES_QUEUE = 'build_geo_features'
 export const BUILD_MARINAS_QUEUE = 'build_marinas'
@@ -180,16 +181,72 @@ export function formatMarinasRunResult(
   return parts.join(' · ')
 }
 
+function jsonRecord(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+function manufacturerUrlLabel(url: string): string {
+  const normalized = url.trim()
+  for (const preset of Object.values(NAUTICEXPO_MANUFACTURER_PRESETS)) {
+    if (
+      normalized === preset.manufacturerUrl ||
+      normalized.startsWith(preset.manufacturerUrl)
+    ) {
+      return preset.displayName
+    }
+  }
+  try {
+    const last =
+      new URL(normalized).pathname.split('/').filter(Boolean).pop() ??
+      normalized
+    return last.replace(/\.html?$/i, '')
+  } catch {
+    return normalized
+  }
+}
+
+function catalogCrawlSeedLabel(data: Record<string, unknown>): string {
+  const urls = Array.isArray(data.manufacturerUrls)
+    ? data.manufacturerUrls.filter(
+        (url): url is string =>
+          typeof url === 'string' && url.trim().length > 0,
+      )
+    : []
+  if (urls.length > 0) {
+    return urls.map(manufacturerUrlLabel).join(', ')
+  }
+  const seed =
+    typeof data.seedProfile === 'string' && data.seedProfile.trim()
+      ? data.seedProfile.trim()
+      : 'equipment'
+  if (seed === 'equipment') return 'NauticExpo equipment'
+  const preset =
+    seed in NAUTICEXPO_MANUFACTURER_PRESETS
+      ? NAUTICEXPO_MANUFACTURER_PRESETS[
+          seed as keyof typeof NAUTICEXPO_MANUFACTURER_PRESETS
+        ]
+      : null
+  return preset ? preset.displayName : `NauticExpo ${seed}`
+}
+
+export function storedCatalogCrawlApifyRunId(
+  config: unknown,
+  stats: unknown,
+): string | null {
+  const record = jsonRecord(config)
+  const statsRecord = jsonRecord(stats)
+  for (const value of [record.apifyRunId, statsRecord.apifyRunId]) {
+    if (typeof value === 'string' && value.trim()) return value.trim()
+  }
+  return null
+}
+
 export function formatProductCatalogNauticExpoRunInput(
   data: Record<string, unknown>,
 ): string {
-  const seed =
-    typeof data.seedProfile === 'string' && data.seedProfile !== 'equipment'
-      ? data.seedProfile
-      : 'equipment'
-  const parts = [
-    seed === 'equipment' ? 'NauticExpo equipment' : `NauticExpo ${seed}`,
-  ]
+  const parts = [catalogCrawlSeedLabel(data)]
   if (data.apifyRunId) parts.push(`Apify ${String(data.apifyRunId)}`)
   if (data.dryRun) parts.push('dry run')
   if (data.maxProducts != null)
@@ -197,6 +254,410 @@ export function formatProductCatalogNauticExpoRunInput(
   if (data.maxPages != null) parts.push(`${String(data.maxPages)} pages`)
   if (data.resumeRunId) parts.push(`resume ${String(data.resumeRunId)}`)
   return parts.join(' · ')
+}
+
+export const CATALOG_CRAWL_REPEAT_MODES = ['rescrape', 'reimport'] as const
+export type CatalogCrawlRepeatMode = (typeof CATALOG_CRAWL_REPEAT_MODES)[number]
+
+export type CatalogCrawlRunSummary = {
+  id: string
+  source: string
+  status: string
+  startedAt: string
+  completedAt: string | null
+  error: string | null
+  summary: string
+  result: string | null
+  apifyRunId: string | null
+  canReimport: boolean
+}
+
+export function catalogCrawlMatchesQuery(
+  crawl: CatalogCrawlRunSummary,
+  query: string,
+): boolean {
+  const needle = query.trim().toLowerCase()
+  if (!needle) return true
+  const haystack = [
+    crawl.summary,
+    crawl.status,
+    crawl.result,
+    crawl.error,
+    crawl.apifyRunId,
+    crawl.id,
+    crawl.source,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  return haystack.includes(needle)
+}
+
+export type CatalogCrawlProductStatus = 'imported' | 'parsed' | 'failed'
+
+export type CatalogCrawlProductPhoto = {
+  resourceId: string
+  sourceUrl: string
+  reviewStatus: string
+  isCanonical: boolean
+}
+
+export type CatalogCrawlParsedProduct = {
+  pageId: string
+  url: string
+  brand: string | null
+  modelNumber: string | null
+  error: string | null
+  productId: string | null
+  status: CatalogCrawlProductStatus
+  newThisRun: boolean
+  imageUrls: string[]
+  canonicalImageId: string | null
+  photos: CatalogCrawlProductPhoto[]
+}
+
+export type CatalogCrawlRunCrawlSettings = {
+  startUrls: string[]
+  maxPages: number | null
+  maxProducts: number | null
+  maxCrawlDepth: number | null
+  provider: string | null
+  dryRun: boolean
+  scopeLabel: string
+  pageFunction: string
+  configJson: string
+}
+
+export type CatalogCrawlRunDetail = CatalogCrawlRunSummary & {
+  parsedCount: number
+  importedCount: number
+  newCount: number
+  failedCount: number
+  crawlSettings: CatalogCrawlRunCrawlSettings
+  products: CatalogCrawlParsedProduct[]
+}
+
+function optionalTrimmedString(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function optionalStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0)
+}
+
+function optionalFiniteNumber(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null
+  return value
+}
+
+function catalogCrawlStartUrls(data: Record<string, unknown>): string[] {
+  const manufacturerUrls = optionalStringArray(data.manufacturerUrls)
+  if (manufacturerUrls.length > 0) return manufacturerUrls
+  const seed =
+    typeof data.seedProfile === 'string' && data.seedProfile.trim()
+      ? data.seedProfile.trim()
+      : 'equipment'
+  if (seed !== 'equipment' && seed in NAUTICEXPO_MANUFACTURER_PRESETS) {
+    return [
+      NAUTICEXPO_MANUFACTURER_PRESETS[
+        seed as keyof typeof NAUTICEXPO_MANUFACTURER_PRESETS
+      ].manufacturerUrl,
+    ]
+  }
+  return []
+}
+
+export function catalogCrawlRunCrawlSettings(
+  config: unknown,
+): CatalogCrawlRunCrawlSettings {
+  const data = jsonRecord(config)
+  const startUrls = catalogCrawlStartUrls(data)
+  const searchKeywords = optionalStringArray(data.searchKeywords)
+  const provider =
+    typeof data.provider === 'string' && data.provider.trim()
+      ? data.provider.trim()
+      : data.apifyRunId
+        ? 'apify'
+        : null
+  const scopeLabel = catalogCrawlSeedLabel(data)
+  const pageFunction =
+    provider === 'apify' || data.apifyRunId
+      ? 'Apify crawloop/nauticexpo-scraper: manufacturer or listing seeds → product detail pages (fetchDetails).'
+      : 'Local Playwright crawler: follows NauticExpo listing links from seeds, then product pages.'
+  const sanitizedConfig = { ...data }
+  delete sanitizedConfig.storageDir
+  return {
+    startUrls,
+    maxPages: optionalFiniteNumber(data.maxPages),
+    maxProducts: optionalFiniteNumber(data.maxProducts),
+    maxCrawlDepth: optionalFiniteNumber(data.maxCrawlDepth),
+    provider,
+    dryRun: data.dryRun === true,
+    scopeLabel,
+    pageFunction,
+    configJson: JSON.stringify(
+      {
+        ...sanitizedConfig,
+        ...(searchKeywords.length > 0 ? { searchKeywords } : {}),
+        ...(startUrls.length === 0 && scopeLabel.includes('equipment')
+          ? {
+              note: 'Default equipment category listing seeds (see repo seeds.ts)',
+            }
+          : {}),
+      },
+      null,
+      2,
+    ),
+  }
+}
+
+function imageUrlsFromNormalized(normalized: unknown): string[] {
+  const urls = optionalStringArray(jsonRecord(normalized).imageUrls)
+  return [...new Set(urls)]
+}
+
+export function catalogCrawlInitialPhotoIndex(
+  product: Pick<
+    CatalogCrawlParsedProduct,
+    'imageUrls' | 'photos' | 'canonicalImageId'
+  >,
+): number {
+  const urls = product.imageUrls
+  if (urls.length === 0) return 0
+  const canonicalPhoto =
+    product.photos.find(
+      (photo) =>
+        photo.isCanonical &&
+        photo.reviewStatus === 'verified' &&
+        urls.includes(photo.sourceUrl),
+    ) ??
+    (product.canonicalImageId
+      ? product.photos.find(
+          (photo) =>
+            photo.resourceId === product.canonicalImageId &&
+            urls.includes(photo.sourceUrl),
+        )
+      : null)
+  if (!canonicalPhoto) return 0
+  return urls.indexOf(canonicalPhoto.sourceUrl)
+}
+
+export function catalogCrawlEffectivePhotoIndex(
+  product: Pick<
+    CatalogCrawlParsedProduct,
+    'pageId' | 'imageUrls' | 'photos' | 'canonicalImageId'
+  >,
+  photoIndexByPageId: Readonly<Record<string, number>>,
+): number {
+  const override = photoIndexByPageId[product.pageId]
+  if (override != null) return override
+  return catalogCrawlInitialPhotoIndex(product)
+}
+
+export function catalogCrawlSelectedPhoto(
+  product: Pick<CatalogCrawlParsedProduct, 'imageUrls' | 'photos'>,
+  photoIndex: number,
+): CatalogCrawlProductPhoto | null {
+  const urls = product.imageUrls
+  if (urls.length === 0) return null
+  const safeIndex = ((photoIndex % urls.length) + urls.length) % urls.length
+  const sourceUrl = urls[safeIndex]
+  return product.photos.find((photo) => photo.sourceUrl === sourceUrl) ?? null
+}
+
+export function catalogCrawlPhotoNeedsConfirm(
+  product: Pick<
+    CatalogCrawlParsedProduct,
+    'productId' | 'imageUrls' | 'photos'
+  >,
+  photoIndex: number,
+): boolean {
+  if (!product.productId) return false
+  const photo = catalogCrawlSelectedPhoto(product, photoIndex)
+  if (!photo) return false
+  return !(photo.isCanonical && photo.reviewStatus === 'verified')
+}
+
+export function catalogCrawlProductPhotos(
+  imageUrls: string[],
+  resources: Array<{
+    id: string
+    sourceUrl: string
+    reviewStatus: string
+  }>,
+  canonicalImageId: string | null,
+): CatalogCrawlProductPhoto[] {
+  const byUrl = new Map(
+    resources.map((resource) => [resource.sourceUrl, resource]),
+  )
+  const photos: CatalogCrawlProductPhoto[] = []
+  for (const sourceUrl of imageUrls) {
+    const resource = byUrl.get(sourceUrl)
+    if (!resource) continue
+    photos.push({
+      resourceId: resource.id,
+      sourceUrl: resource.sourceUrl,
+      reviewStatus: resource.reviewStatus,
+      isCanonical: resource.id === canonicalImageId,
+    })
+  }
+  return photos
+}
+
+export function wasDuringCatalogCrawl(
+  value: string | Date | null | undefined,
+  startedAt: string | Date,
+  completedAt: string | Date | null,
+): boolean {
+  if (value == null) return false
+  const time = (value instanceof Date ? value : new Date(value)).getTime()
+  const start =
+    (startedAt instanceof Date ? startedAt : new Date(startedAt)).getTime() -
+    1000
+  const end =
+    (completedAt == null
+      ? Date.now()
+      : (completedAt instanceof Date
+          ? completedAt
+          : new Date(completedAt)
+        ).getTime()) + 60_000
+  return Number.isFinite(time) && time >= start && time <= end
+}
+
+export function catalogCrawlProductFromPage(
+  page: {
+    id: string
+    url: string
+    error: string | null
+    normalized: unknown
+  },
+  options: {
+    productId?: string | null
+    lastCrawledAt?: string | Date | null
+    productCreatedAt?: string | Date | null
+    runStartedAt: string | Date
+    runCompletedAt: string | Date | null
+  },
+): CatalogCrawlParsedProduct {
+  const brand = optionalTrimmedString(jsonRecord(page.normalized).brand)
+  const modelNumber = optionalTrimmedString(
+    jsonRecord(page.normalized).modelNumber,
+  )
+  const parsed = Boolean(brand && modelNumber)
+  const productId = options.productId ?? null
+  const importedThisRun =
+    Boolean(productId) &&
+    wasDuringCatalogCrawl(
+      options.lastCrawledAt,
+      options.runStartedAt,
+      options.runCompletedAt,
+    )
+  const newThisRun = wasDuringCatalogCrawl(
+    options.productCreatedAt,
+    options.runStartedAt,
+    options.runCompletedAt,
+  )
+  return {
+    pageId: page.id,
+    url: page.url,
+    brand,
+    modelNumber,
+    error: page.error,
+    productId,
+    status: importedThisRun ? 'imported' : parsed ? 'parsed' : 'failed',
+    newThisRun: importedThisRun && newThisRun,
+    imageUrls: imageUrlsFromNormalized(page.normalized),
+    canonicalImageId: null,
+    photos: [],
+  }
+}
+
+export function catalogCrawlProductMatchesQuery(
+  product: CatalogCrawlParsedProduct,
+  query: string,
+): boolean {
+  const needle = query.trim().toLowerCase()
+  if (!needle) return true
+  const haystack = [
+    product.brand,
+    product.modelNumber,
+    product.url,
+    product.error,
+    product.status,
+    product.newThisRun ? 'new' : null,
+    product.productId,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  return haystack.includes(needle)
+}
+
+function toIsoString(value: string | Date | null | undefined): string | null {
+  if (value == null) return null
+  if (value instanceof Date) return value.toISOString()
+  return value
+}
+
+export function formatCatalogCrawlRunResult(
+  stats: Record<string, unknown> | null | undefined,
+): string | null {
+  if (!stats) return null
+  const parts: string[] = []
+  if (typeof stats.pagesCrawled === 'number') {
+    parts.push(`${stats.pagesCrawled} pages`)
+  }
+  if (typeof stats.productsParsed === 'number') {
+    parts.push(`${stats.productsParsed} products parsed`)
+  }
+  if (stats.dryRun === true) parts.push('dry run')
+  const imported = stats.import
+  if (imported && typeof imported === 'object' && !Array.isArray(imported)) {
+    const record = imported as Record<string, unknown>
+    if (typeof record.products === 'number') {
+      parts.push(`${record.products} products imported`)
+    }
+    if (typeof record.resources === 'number') {
+      parts.push(`${record.resources} resources`)
+    }
+  }
+  return parts.length > 0 ? parts.join(' · ') : null
+}
+
+export function summarizeCatalogCrawlRun(row: {
+  id: string
+  source: string
+  status: string
+  config: unknown
+  stats: unknown
+  startedAt: string | Date
+  completedAt: string | Date | null
+  error: string | null
+}): CatalogCrawlRunSummary {
+  const config = jsonRecord(row.config)
+  const stats = jsonRecord(row.stats)
+  const apifyRunId = storedCatalogCrawlApifyRunId(config, stats)
+  return {
+    id: row.id,
+    source: row.source,
+    status: row.status,
+    startedAt: toIsoString(row.startedAt) ?? '',
+    completedAt: toIsoString(row.completedAt),
+    error: row.error,
+    summary: formatProductCatalogNauticExpoRunInput({
+      ...config,
+      apifyRunId: apifyRunId ?? config.apifyRunId,
+    }),
+    result: formatCatalogCrawlRunResult(stats),
+    apifyRunId,
+    canReimport: Boolean(apifyRunId),
+  }
 }
 
 export function formatProductCatalogNauticExpoRunResult(
@@ -321,6 +782,8 @@ export const JOB_STATE_STYLES: Record<string, string> = {
   created: 'bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]',
   retry: 'bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]',
   active: 'bg-[var(--sea-accent)]/15 text-[var(--sea-accent)]',
+  crawling: 'bg-[var(--sea-accent)]/15 text-[var(--sea-accent)]',
+  importing: 'bg-[var(--sea-accent)]/15 text-[var(--sea-accent)]',
   completed: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
   failed: 'bg-red-500/15 text-red-700 dark:text-red-300',
   cancelled: 'bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]',

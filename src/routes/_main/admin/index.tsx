@@ -1,4 +1,4 @@
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { useSession } from '../../../lib/auth-client'
 import { useIsAdmin } from '../../../lib/use-admin'
@@ -148,6 +148,18 @@ function AdminHome() {
             <span className="text-[var(--sea-ink-soft)]"> — </span>
             <span className="text-[var(--sea-ink-soft)]">
               queue NauticExpo / Apify imports on the worker
+            </span>
+          </li>
+          <li>
+            <Link
+              to="/admin/catalog-crawls"
+              className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
+            >
+              Catalog crawl history
+            </Link>
+            <span className="text-[var(--sea-ink-soft)]"> — </span>
+            <span className="text-[var(--sea-ink-soft)]">
+              search, repeat, re-import, or delete stored crawls
             </span>
           </li>
           <li>

@@ -1,10 +1,7 @@
 import { getBoss } from './boss'
 import { PG_BOSS_MAX_EXPIRE_SECONDS } from './marina-job-expire'
-import {
-  PRODUCT_CATALOG_NAUTICEXPO_QUEUE
-  
-} from './product-catalog-crawl'
-import type {ProductCatalogNauticExpoPayload} from './product-catalog-crawl';
+import { PRODUCT_CATALOG_NAUTICEXPO_QUEUE } from './product-catalog-crawl'
+import type { ProductCatalogNauticExpoPayload } from './product-catalog-crawl'
 
 /** Apify manufacturer crawls can run longer than default pg-boss job TTL. */
 export const PRODUCT_CATALOG_NAUTICEXPO_EXPIRE_SECONDS = Math.min(

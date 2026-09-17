@@ -1,8 +1,9 @@
 import { useEffect, useId, useState } from 'react'
 import { Pencil } from 'lucide-react'
+import { findAssetBrand } from '../domain/asset-brands'
 import {
   findCatalogBrands,
-  findCatalogProducts,
+  findCatalogModels,
 } from '../lib/product-catalog-api'
 import { AssetBrandLogo } from './AssetBrandLogo'
 import { useTranslation } from '../lib/i18n'
@@ -13,12 +14,14 @@ function IdentityField({
   onChange,
   options,
   committed,
+  onEditStart,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   options: string[]
   committed?: React.ReactNode
+  onEditStart?: () => void
 }) {
   const id = useId()
   const [editing, setEditing] = useState(false)
@@ -37,7 +40,10 @@ function IdentityField({
           id={id}
           type="button"
           aria-label={`Edit ${label}`}
-          onClick={() => setEditing(true)}
+          onClick={() => {
+            onEditStart?.()
+            setEditing(true)
+          }}
           className="flex min-h-14 w-full items-center justify-between gap-3 py-2 text-left text-2xl font-bold"
         >
           <span className="min-w-0 break-words">{committed ?? value}</span>
@@ -57,7 +63,10 @@ function IdentityField({
           autoComplete="off"
           value={value}
           maxLength={label === 'Brand' ? 100 : 200}
-          onFocus={() => setEditing(true)}
+          onFocus={() => {
+            onEditStart?.()
+            setEditing(true)
+          }}
           onBlur={() => {
             setEditing(false)
             setActive(-1)
@@ -143,6 +152,11 @@ export function EquipmentIdentityFields({
   const { t } = useTranslation()
   const [brands, setBrands] = useState<string[]>([])
   const [models, setModels] = useState<string[]>([])
+  const [modelQuery, setModelQuery] = useState(model)
+  const catalogBrand = findAssetBrand(brand)?.name ?? brand.trim()
+  useEffect(() => {
+    setModelQuery(model)
+  }, [model])
   useEffect(() => {
     const controller = new AbortController()
     const timer = setTimeout(() => {
@@ -160,13 +174,12 @@ export function EquipmentIdentityFields({
   }, [brand])
   useEffect(() => {
     setModels([])
-    if (!brand.trim() || noModel) return
+    if (!catalogBrand || noModel) return
     const controller = new AbortController()
     const timer = setTimeout(() => {
-      void findCatalogProducts(brand, model, language, controller.signal)
-        .then((result) => {
-          if (!controller.signal.aborted)
-            setModels(result.products.map((item) => item.modelNumber))
+      void findCatalogModels(catalogBrand, modelQuery, controller.signal)
+        .then((items) => {
+          if (!controller.signal.aborted) setModels(items)
         })
         .catch(() => {})
     }, 180)
@@ -174,7 +187,7 @@ export function EquipmentIdentityFields({
       controller.abort()
       clearTimeout(timer)
     }
-  }, [brand, model, language, noModel])
+  }, [catalogBrand, modelQuery, noModel])
   return (
     <div className="space-y-5">
       <IdentityField
@@ -188,7 +201,11 @@ export function EquipmentIdentityFields({
         <IdentityField
           label={t('equipmentModel')}
           value={model}
-          onChange={onModel}
+          onEditStart={() => setModelQuery('')}
+          onChange={(value) => {
+            setModelQuery(value)
+            onModel(value)
+          }}
           options={models}
         />
       )}

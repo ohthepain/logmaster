@@ -128,6 +128,38 @@ export function productSearchWhere(
   }
 }
 
+function adminProductListImageUrl(
+  productId: string,
+  canonicalImageId: string | null,
+  resources: Array<{
+    id: string
+    purpose: string
+    reviewStatus: string
+    displayS3Key: string | null
+    originalS3Key: string | null
+  }>,
+): string | null {
+  const photos = resources.filter(
+    (resource) =>
+      resource.purpose === 'photo' &&
+      resource.reviewStatus !== 'rejected' &&
+      (resource.displayS3Key || resource.originalS3Key),
+  )
+  const image =
+    (canonicalImageId
+      ? photos.find(
+          (resource) =>
+            resource.id === canonicalImageId &&
+            resource.reviewStatus === 'verified' &&
+            resource.displayS3Key,
+        )
+      : null) ??
+    photos.find((resource) => resource.displayS3Key) ??
+    photos[0]
+  if (!image) return null
+  return `/api/products/${productId}/resources/${image.id}/content?display=1`
+}
+
 export async function searchAdminProducts(
   query: string,
   status: string,
@@ -145,6 +177,20 @@ export async function searchAdminProducts(
       include: {
         locales: { select: { language: true, result: true } },
         _count: { select: { resources: true } },
+        resources: {
+          where: {
+            purpose: 'photo',
+            reviewStatus: { not: 'rejected' },
+          },
+          select: {
+            id: true,
+            purpose: true,
+            reviewStatus: true,
+            displayS3Key: true,
+            originalS3Key: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     }),
   ])
@@ -165,6 +211,11 @@ export async function searchAdminProducts(
         languages: row.locales.map((item) => item.language).sort(),
         resourceCount: row._count.resources,
         updatedAt: row.updatedAt.toISOString(),
+        imageUrl: adminProductListImageUrl(
+          row.id,
+          row.canonicalImageId,
+          row.resources,
+        ),
       }
     }),
   }

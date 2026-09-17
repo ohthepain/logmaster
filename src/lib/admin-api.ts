@@ -1,4 +1,9 @@
 import type { Trip } from '../domain/logbook'
+import type {
+  CatalogCrawlRepeatMode,
+  CatalogCrawlRunDetail,
+  CatalogCrawlRunSummary,
+} from './admin-jobs'
 import { apiJson } from './api-client'
 
 export type AdminUser = {
@@ -121,4 +126,47 @@ export async function rerunAdminJob(jobId: string): Promise<{ jobId: string }> {
     { method: 'POST' },
   )
   return { jobId: data.jobId }
+}
+
+export type {
+  CatalogCrawlRepeatMode,
+  CatalogCrawlRunDetail,
+  CatalogCrawlRunSummary,
+} from './admin-jobs'
+
+export async function fetchCatalogCrawlRuns(
+  limit = 25,
+): Promise<CatalogCrawlRunSummary[]> {
+  const data = await api<{ crawls: CatalogCrawlRunSummary[] }>(
+    `/api/admin/catalog-crawls?limit=${encodeURIComponent(String(limit))}`,
+  )
+  return data.crawls
+}
+
+export async function fetchCatalogCrawlRun(
+  runId: string,
+  signal?: AbortSignal,
+): Promise<CatalogCrawlRunDetail> {
+  const data = await api<{ crawl: CatalogCrawlRunDetail }>(
+    `/api/admin/catalog-crawls/${encodeURIComponent(runId)}`,
+    { signal },
+  )
+  return data.crawl
+}
+
+export async function repeatCatalogCrawl(
+  runId: string,
+  mode: CatalogCrawlRepeatMode,
+): Promise<{ jobId: string }> {
+  const data = await api<{ jobId: string }>(
+    `/api/admin/catalog-crawls/${encodeURIComponent(runId)}/repeat`,
+    { method: 'POST', body: JSON.stringify({ mode }) },
+  )
+  return { jobId: data.jobId }
+}
+
+export async function deleteCatalogCrawl(runId: string): Promise<void> {
+  await api(`/api/admin/catalog-crawls/${encodeURIComponent(runId)}`, {
+    method: 'DELETE',
+  })
 }

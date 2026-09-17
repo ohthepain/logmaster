@@ -7,9 +7,9 @@ import {
   waitFor,
 } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import type { ProductAdminDetail } from '../domain/product-admin'
 import { SharedAssetAdmin } from './SharedAssetAdmin'
 import { SharedAssetPanel } from './SharedAssetPanel'
-import type { ProductAdminDetail } from '../domain/product-admin'
 
 const mocks = vi.hoisted(() => ({
   search: vi.fn(),
@@ -102,6 +102,7 @@ beforeEach(() => {
         languages: ['en', 'sv'],
         resourceCount: 1,
         updatedAt: product.updatedAt,
+        imageUrl: null,
       },
     ],
     total: 60,

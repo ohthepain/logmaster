@@ -48,10 +48,12 @@ import { Route as MainOrgsOrgIdIndexRouteImport } from './routes/_main/orgs/$org
 import { Route as MainBoatsBoatIdIndexRouteImport } from './routes/_main/boats/$boatId/index'
 import { Route as MainAdminRegionsIndexRouteImport } from './routes/_main/admin/regions/index'
 import { Route as MainAdminJobsIndexRouteImport } from './routes/_main/admin/jobs/index'
+import { Route as MainAdminCatalogCrawlsIndexRouteImport } from './routes/_main/admin/catalog-crawls/index'
 import { Route as MainCrewInviteTokenRouteImport } from './routes/_main/crew/invite/$token'
 import { Route as MainAdminJobsSystemRouteImport } from './routes/_main/admin/jobs/system'
 import { Route as MainAdminJobsMarinasRouteImport } from './routes/_main/admin/jobs/marinas'
 import { Route as MainAdminJobsGeoFeaturesRouteImport } from './routes/_main/admin/jobs/geo-features'
+import { Route as MainAdminCatalogCrawlsRunIdRouteImport } from './routes/_main/admin/catalog-crawls/$runId'
 import { Route as MainTripsTripIdStoryIndexRouteImport } from './routes/_main/trips/$tripId/story/index'
 import { Route as MainTripsTripIdStoryEditRouteImport } from './routes/_main/trips/$tripId/story/edit'
 import { Route as MainOrgsOrgIdContactsContactIdRouteImport } from './routes/_main/orgs/$orgId/contacts/$contactId'
@@ -253,6 +255,12 @@ const MainAdminJobsIndexRoute = MainAdminJobsIndexRouteImport.update({
   path: '/admin/jobs/',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainAdminCatalogCrawlsIndexRoute =
+  MainAdminCatalogCrawlsIndexRouteImport.update({
+    id: '/admin/catalog-crawls/',
+    path: '/admin/catalog-crawls/',
+    getParentRoute: () => MainRouteRoute,
+  } as any)
 const MainCrewInviteTokenRoute = MainCrewInviteTokenRouteImport.update({
   id: '/crew/invite/$token',
   path: '/crew/invite/$token',
@@ -272,6 +280,12 @@ const MainAdminJobsGeoFeaturesRoute =
   MainAdminJobsGeoFeaturesRouteImport.update({
     id: '/admin/jobs/geo-features',
     path: '/admin/jobs/geo-features',
+    getParentRoute: () => MainRouteRoute,
+  } as any)
+const MainAdminCatalogCrawlsRunIdRoute =
+  MainAdminCatalogCrawlsRunIdRouteImport.update({
+    id: '/admin/catalog-crawls/$runId',
+    path: '/admin/catalog-crawls/$runId',
     getParentRoute: () => MainRouteRoute,
   } as any)
 const MainTripsTripIdStoryIndexRoute =
@@ -339,10 +353,12 @@ export interface FileRoutesByFullPath {
   '/reset-password/': typeof MainResetPasswordIndexRoute
   '/routes/': typeof MainRoutesIndexRoute
   '/trips/': typeof MainTripsIndexRoute
+  '/admin/catalog-crawls/$runId': typeof MainAdminCatalogCrawlsRunIdRoute
   '/admin/jobs/geo-features': typeof MainAdminJobsGeoFeaturesRoute
   '/admin/jobs/marinas': typeof MainAdminJobsMarinasRoute
   '/admin/jobs/system': typeof MainAdminJobsSystemRoute
   '/crew/invite/$token': typeof MainCrewInviteTokenRoute
+  '/admin/catalog-crawls/': typeof MainAdminCatalogCrawlsIndexRoute
   '/admin/jobs/': typeof MainAdminJobsIndexRoute
   '/admin/regions/': typeof MainAdminRegionsIndexRoute
   '/boats/$boatId/': typeof MainBoatsBoatIdIndexRoute
@@ -385,10 +401,12 @@ export interface FileRoutesByTo {
   '/reset-password': typeof MainResetPasswordIndexRoute
   '/routes': typeof MainRoutesIndexRoute
   '/trips': typeof MainTripsIndexRoute
+  '/admin/catalog-crawls/$runId': typeof MainAdminCatalogCrawlsRunIdRoute
   '/admin/jobs/geo-features': typeof MainAdminJobsGeoFeaturesRoute
   '/admin/jobs/marinas': typeof MainAdminJobsMarinasRoute
   '/admin/jobs/system': typeof MainAdminJobsSystemRoute
   '/crew/invite/$token': typeof MainCrewInviteTokenRoute
+  '/admin/catalog-crawls': typeof MainAdminCatalogCrawlsIndexRoute
   '/admin/jobs': typeof MainAdminJobsIndexRoute
   '/admin/regions': typeof MainAdminRegionsIndexRoute
   '/boats/$boatId': typeof MainBoatsBoatIdIndexRoute
@@ -436,10 +454,12 @@ export interface FileRoutesById {
   '/_main/reset-password/': typeof MainResetPasswordIndexRoute
   '/_main/routes/': typeof MainRoutesIndexRoute
   '/_main/trips/': typeof MainTripsIndexRoute
+  '/_main/admin/catalog-crawls/$runId': typeof MainAdminCatalogCrawlsRunIdRoute
   '/_main/admin/jobs/geo-features': typeof MainAdminJobsGeoFeaturesRoute
   '/_main/admin/jobs/marinas': typeof MainAdminJobsMarinasRoute
   '/_main/admin/jobs/system': typeof MainAdminJobsSystemRoute
   '/_main/crew/invite/$token': typeof MainCrewInviteTokenRoute
+  '/_main/admin/catalog-crawls/': typeof MainAdminCatalogCrawlsIndexRoute
   '/_main/admin/jobs/': typeof MainAdminJobsIndexRoute
   '/_main/admin/regions/': typeof MainAdminRegionsIndexRoute
   '/_main/boats/$boatId/': typeof MainBoatsBoatIdIndexRoute
@@ -487,10 +507,12 @@ export interface FileRouteTypes {
     | '/reset-password/'
     | '/routes/'
     | '/trips/'
+    | '/admin/catalog-crawls/$runId'
     | '/admin/jobs/geo-features'
     | '/admin/jobs/marinas'
     | '/admin/jobs/system'
     | '/crew/invite/$token'
+    | '/admin/catalog-crawls/'
     | '/admin/jobs/'
     | '/admin/regions/'
     | '/boats/$boatId/'
@@ -533,10 +555,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/routes'
     | '/trips'
+    | '/admin/catalog-crawls/$runId'
     | '/admin/jobs/geo-features'
     | '/admin/jobs/marinas'
     | '/admin/jobs/system'
     | '/crew/invite/$token'
+    | '/admin/catalog-crawls'
     | '/admin/jobs'
     | '/admin/regions'
     | '/boats/$boatId'
@@ -583,10 +607,12 @@ export interface FileRouteTypes {
     | '/_main/reset-password/'
     | '/_main/routes/'
     | '/_main/trips/'
+    | '/_main/admin/catalog-crawls/$runId'
     | '/_main/admin/jobs/geo-features'
     | '/_main/admin/jobs/marinas'
     | '/_main/admin/jobs/system'
     | '/_main/crew/invite/$token'
+    | '/_main/admin/catalog-crawls/'
     | '/_main/admin/jobs/'
     | '/_main/admin/regions/'
     | '/_main/boats/$boatId/'
@@ -879,6 +905,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAdminJobsIndexRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/admin/catalog-crawls/': {
+      id: '/_main/admin/catalog-crawls/'
+      path: '/admin/catalog-crawls'
+      fullPath: '/admin/catalog-crawls/'
+      preLoaderRoute: typeof MainAdminCatalogCrawlsIndexRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/crew/invite/$token': {
       id: '/_main/crew/invite/$token'
       path: '/crew/invite/$token'
@@ -905,6 +938,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/jobs/geo-features'
       fullPath: '/admin/jobs/geo-features'
       preLoaderRoute: typeof MainAdminJobsGeoFeaturesRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
+    '/_main/admin/catalog-crawls/$runId': {
+      id: '/_main/admin/catalog-crawls/$runId'
+      path: '/admin/catalog-crawls/$runId'
+      fullPath: '/admin/catalog-crawls/$runId'
+      preLoaderRoute: typeof MainAdminCatalogCrawlsRunIdRouteImport
       parentRoute: typeof MainRouteRoute
     }
     '/_main/trips/$tripId/story/': {
@@ -1024,10 +1064,12 @@ interface MainRouteRouteChildren {
   MainResetPasswordIndexRoute: typeof MainResetPasswordIndexRoute
   MainRoutesIndexRoute: typeof MainRoutesIndexRoute
   MainTripsIndexRoute: typeof MainTripsIndexRoute
+  MainAdminCatalogCrawlsRunIdRoute: typeof MainAdminCatalogCrawlsRunIdRoute
   MainAdminJobsGeoFeaturesRoute: typeof MainAdminJobsGeoFeaturesRoute
   MainAdminJobsMarinasRoute: typeof MainAdminJobsMarinasRoute
   MainAdminJobsSystemRoute: typeof MainAdminJobsSystemRoute
   MainCrewInviteTokenRoute: typeof MainCrewInviteTokenRoute
+  MainAdminCatalogCrawlsIndexRoute: typeof MainAdminCatalogCrawlsIndexRoute
   MainAdminJobsIndexRoute: typeof MainAdminJobsIndexRoute
   MainAdminRegionsIndexRoute: typeof MainAdminRegionsIndexRoute
 }
@@ -1065,10 +1107,12 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainResetPasswordIndexRoute: MainResetPasswordIndexRoute,
   MainRoutesIndexRoute: MainRoutesIndexRoute,
   MainTripsIndexRoute: MainTripsIndexRoute,
+  MainAdminCatalogCrawlsRunIdRoute: MainAdminCatalogCrawlsRunIdRoute,
   MainAdminJobsGeoFeaturesRoute: MainAdminJobsGeoFeaturesRoute,
   MainAdminJobsMarinasRoute: MainAdminJobsMarinasRoute,
   MainAdminJobsSystemRoute: MainAdminJobsSystemRoute,
   MainCrewInviteTokenRoute: MainCrewInviteTokenRoute,
+  MainAdminCatalogCrawlsIndexRoute: MainAdminCatalogCrawlsIndexRoute,
   MainAdminJobsIndexRoute: MainAdminJobsIndexRoute,
   MainAdminRegionsIndexRoute: MainAdminRegionsIndexRoute,
 }

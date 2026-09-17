@@ -1,14 +1,14 @@
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useCallback, useState } from 'react'
 import { AdminJobRunsPanel } from '../../../../components/admin/AdminJobRunsPanel'
-import { AdminProductCatalogCrawlPanel } from '../../../../components/admin/AdminProductCatalogCrawlPanel'
 import { AdminPageShell } from '../../../../components/admin/AdminPageShell'
+import { AdminProductCatalogCrawlPanel } from '../../../../components/admin/AdminProductCatalogCrawlPanel'
+import type { AdminJobCatalogId } from '../../../../lib/admin-jobs'
 import {
   ADMIN_JOB_CATALOG,
   BUILD_GEO_FEATURES_QUEUE,
   BUILD_MARINAS_QUEUE,
   BUILD_OSM_POINTS_QUEUE,
-  PRODUCT_CATALOG_NAUTICEXPO_QUEUE,
   formatGeoFeaturesRunInput,
   formatGeoFeaturesRunResult,
   formatMarinasRunInput,
@@ -17,8 +17,8 @@ import {
   formatOsmPointsRunResult,
   formatProductCatalogNauticExpoRunInput,
   formatProductCatalogNauticExpoRunResult,
+  PRODUCT_CATALOG_NAUTICEXPO_QUEUE,
 } from '../../../../lib/admin-jobs'
-import type { AdminJobCatalogId } from '../../../../lib/admin-jobs'
 
 type JobsSearch = {
   tab?: AdminJobCatalogId
@@ -138,6 +138,16 @@ function AdminJobsIndexPage() {
           <AdminProductCatalogCrawlPanel
             onQueued={() => setCatalogRefreshToken((value) => value + 1)}
           />
+          <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
+            Repeat, re-import, or delete stored crawls on{' '}
+            <Link
+              to="/admin/catalog-crawls"
+              className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
+            >
+              Catalog crawls
+            </Link>
+            .
+          </p>
           <AdminJobRunsPanel
             queue={PRODUCT_CATALOG_NAUTICEXPO_QUEUE}
             formatInput={formatProductCatalogNauticExpoRunInput}

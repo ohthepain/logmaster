@@ -10,6 +10,7 @@ export type ProductAdminSummary = {
   languages: string[]
   resourceCount: number
   updatedAt: string
+  imageUrl: string | null
 }
 
 export type ProductAdminDetail = {

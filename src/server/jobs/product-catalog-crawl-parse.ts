@@ -1,3 +1,5 @@
+import type { CatalogCrawlRepeatMode } from '../../lib/admin-jobs'
+import { storedCatalogCrawlApifyRunId } from '../../lib/admin-jobs'
 import { resolveSeedProfile } from '../product-catalog-crawl/nauticexpo/manufacturers'
 import type { NauticExpoCrawlConfig } from '../product-catalog-crawl/nauticexpo/run'
 import type { ProductCatalogNauticExpoPayload } from './product-catalog-crawl'
@@ -82,4 +84,38 @@ export function parseProductCatalogCrawlBody(
   }
 
   return { ok: true, payload }
+}
+
+export function parseCatalogCrawlRepeatMode(
+  value: unknown,
+): CatalogCrawlRepeatMode | null {
+  return value === 'rescrape' || value === 'reimport' ? value : null
+}
+
+/** Queue a new worker job from a stored crawl. Drops resume/storage; forces Apify. */
+export function payloadFromStoredCrawl(
+  config: unknown,
+  stats: unknown,
+  mode: CatalogCrawlRepeatMode,
+): ParseProductCatalogCrawlBodyResult {
+  const record =
+    typeof config === 'object' && config !== null && !Array.isArray(config)
+      ? (config as Record<string, unknown>)
+      : {}
+  const apifyRunId = storedCatalogCrawlApifyRunId(config, stats)
+  if (mode === 'reimport' && !apifyRunId) {
+    return { ok: false, error: 'This crawl has no Apify run to re-import.' }
+  }
+
+  return parseProductCatalogCrawlBody({
+    seedProfile: record.seedProfile,
+    manufacturerUrls: record.manufacturerUrls,
+    searchKeywords: record.searchKeywords,
+    maxProducts: record.maxProducts,
+    maxPages: record.maxPages,
+    dryRun: record.dryRun === true,
+    markMissingRemoved: record.markMissingRemoved === true,
+    provider: 'apify',
+    apifyRunId: mode === 'reimport' ? apifyRunId : undefined,
+  })
 }

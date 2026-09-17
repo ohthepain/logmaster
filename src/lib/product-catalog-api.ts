@@ -40,6 +40,26 @@ export async function saveAdminProduct(id: string, input: ProductAdminEdit) {
     )
   ).product
 }
+
+/** Download (if needed), verify, and pin a catalog photo as the default display image. */
+export async function confirmAdminProductPhoto(
+  productId: string,
+  resourceId: string,
+) {
+  return (
+    await productApi<{ product: CatalogProduct }>(
+      `/${encodeURIComponent(productId)}/review`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          imageId: resourceId,
+          resourceId,
+          resourceStatus: 'verified',
+        }),
+      },
+    )
+  ).product
+}
 export async function regenerateAdminProduct(id: string, language: string) {
   return (
     await productApi<{ product: ProductAdminDetail }>(
@@ -114,6 +134,17 @@ export async function findCatalogProducts(
     exact: boolean
     ambiguous: boolean
   }>(`?${params}`, { signal })
+}
+
+export async function findCatalogModels(
+  brand: string,
+  query: string,
+  signal?: AbortSignal,
+) {
+  const params = new URLSearchParams({ brand, q: query })
+  return (
+    await productApi<{ models: string[] }>(`/models?${params}`, { signal })
+  ).models
 }
 export async function fetchCatalogProduct(
   id: string,
