@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
-import { useEffect, useMemo, useState  } from 'react'
-import type {MouseEvent} from 'react';
+import { useEffect, useMemo, useState } from 'react'
+import type { MouseEvent } from 'react'
 import { fetchCatalogCrawlRun } from '../../lib/admin-api'
 import { confirmAdminProductPhoto } from '../../lib/product-catalog-api'
 import type {

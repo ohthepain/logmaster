@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   native: vi.fn(),
   resolve: vi.fn(),
   brands: vi.fn(),
+  catalogModels: vi.fn(),
   models: vi.fn(),
   product: vi.fn(),
   modelOptions: vi.fn(),
@@ -46,6 +47,7 @@ vi.mock('../lib/boat-assets-api', () => ({
 vi.mock('../lib/product-catalog-api', () => ({
   resolveEquipmentProduct: mocks.resolve,
   findCatalogBrands: mocks.brands,
+  findCatalogModels: mocks.catalogModels,
   findCatalogProducts: mocks.models,
   fetchEquipmentModelOptions: mocks.modelOptions,
   fetchCatalogProduct: mocks.product,
@@ -169,6 +171,7 @@ beforeEach(() => {
   mocks.brands.mockResolvedValue([
     { name: 'Garmin', logo: '/brands/garmin.svg' },
   ])
+  mocks.catalogModels.mockResolvedValue([])
   mocks.models.mockResolvedValue({
     products: [product],
     exact: true,
