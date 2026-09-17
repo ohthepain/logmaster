@@ -262,7 +262,7 @@ export function SignInPanel({
   if (pendingVerificationEmail) {
     return (
       <div
-        className={`w-full max-w-md scroll-mt-[calc(env(safe-area-inset-top,0px)+3rem)]${
+        className={`ios-map-touch-target w-full max-w-md touch-manipulation scroll-mt-[calc(env(safe-area-inset-top,0px)+3rem)]${
           embedded ? ' pt-2' : ''
         }`}
       >
@@ -322,7 +322,7 @@ export function SignInPanel({
 
   return (
     <div
-      className={`w-full max-w-md scroll-mt-[calc(env(safe-area-inset-top,0px)+3rem)]${
+      className={`ios-map-touch-target w-full max-w-md touch-manipulation scroll-mt-[calc(env(safe-area-inset-top,0px)+3rem)]${
         embedded ? ' pt-2' : ''
       }`}
     >
@@ -571,7 +571,8 @@ export function SignInPanel({
 
       {forgotOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay)] p-4"
+          data-blocking-overlay
+          className="ios-map-touch-target fixed inset-0 z-50 flex touch-manipulation items-center justify-center bg-[var(--overlay)] p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="forgot-title"
@@ -581,7 +582,7 @@ export function SignInPanel({
           onClick={closeForgotPassword}
         >
           <div
-            className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--surface-strong)] p-6 shadow-xl"
+            className="ios-map-touch-target w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--surface-strong)] p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h2

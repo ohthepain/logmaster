@@ -13,3 +13,12 @@ export function isTripDetailImmersiveRoute(pathname: string): boolean {
 export function isTripStoryRoute(pathname: string): boolean {
   return /^\/trips\/[^/]+\/story(\/edit)?\/?$/.test(pathname)
 }
+
+/** Routes where the native Apple MapKit view sits under the WebView on iOS. */
+export function isNativeAppleMapUnderlayRoute(pathname: string): boolean {
+  return (
+    pathname === '/' ||
+    pathname === '/map' ||
+    isTripDetailImmersiveRoute(pathname)
+  )
+}

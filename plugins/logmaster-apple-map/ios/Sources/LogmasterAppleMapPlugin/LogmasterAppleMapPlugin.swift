@@ -85,6 +85,10 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             instance.touchForwarder.removeFromSuperview()
             instance.mapView.removeFromSuperview()
+            if let webView = self.bridge?.webView {
+                let mapInteractive = self.maps.values.contains { $0.interactive }
+                AppleMapInstance.syncHostScroll(for: webView, mapInteractive: mapInteractive)
+            }
             call.resolve()
         }
     }

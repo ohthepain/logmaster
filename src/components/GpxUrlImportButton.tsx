@@ -96,6 +96,12 @@ export function GpxUrlImportButton({
               disabled={importing}
               placeholder="https://example.com/track.gpx"
               onChange={(event) => setUrl(event.target.value)}
+              onFocus={(event) => {
+                event.currentTarget.scrollIntoView({
+                  block: 'center',
+                  behavior: 'smooth',
+                })
+              }}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') void handleImport()
               }}

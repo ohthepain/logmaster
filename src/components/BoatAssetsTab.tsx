@@ -1,7 +1,7 @@
 import { AssetBrandLogo } from './AssetBrandLogo'
 import { getAssetIdentity } from '../domain/asset-brands'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { Cable, Plus } from 'lucide-react'
+import { Cable } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { AddAssetModal } from './AddAssetModal'
@@ -17,7 +17,10 @@ import type { ResourceMember } from '../domain/member-invite'
 import { fetchBoatAssets } from '../lib/boat-assets-api'
 import { cn } from '../lib/cn'
 import { useTranslation } from '../lib/i18n'
-import { ResourceSectionHeader } from './NotificationBellToggle'
+import {
+  ResourceAddButton,
+  ResourceSectionHeader,
+} from './NotificationBellToggle'
 
 type BoatAssetsTabProps = {
   boatId: string
@@ -114,14 +117,10 @@ export function BoatAssetsTab({
         onRefresh={() => load({ background: true })}
         refreshing={refreshing}
         actions={
-          <button
-            type="button"
+          <ResourceAddButton
+            label={t('addAsset')}
             onClick={() => setAssetModal({ mode: 'create' })}
-            className="inline-flex items-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-text)]"
-          >
-            <Plus className="h-4 w-4" />
-            {t('addAsset')}
-          </button>
+          />
         }
       />
 

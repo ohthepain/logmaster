@@ -71,6 +71,86 @@ const normalized = (value: string) =>
     .trim()
     .toLowerCase()
     .replace(/[\s\-_/]/g, '')
+
+function productImageSrc(url: string) {
+  return /^https?:\/\//i.test(url) ? url : apiUrl(url)
+}
+
+function resolveEquipmentPreviewImage(input: {
+  imageFailed: boolean
+  product: CatalogProduct | null
+  research: AssetResearch | null
+  linkPhotoUrl: string | null
+  preview: string
+}): string | null {
+  const catalogPhoto =
+    input.product?.imageUrl || input.product?.previewImageUrl || null
+  const researchPhoto =
+    input.research?.downloads.find((item) => item.purpose === 'photo')?.url ??
+    null
+  const remote = catalogPhoto ?? researchPhoto ?? input.linkPhotoUrl
+  if (!input.imageFailed && remote) return productImageSrc(remote)
+  return input.preview || null
+}
+
+function EquipmentPreviewPanel({
+  imageSrc,
+  onImageError,
+  brand,
+  model,
+  name,
+  description,
+  category,
+  compact = false,
+  noPhotoLabel,
+}: {
+  imageSrc: string | null
+  onImageError: () => void
+  brand: string
+  model: string
+  name: string
+  description: string
+  category: AssetCategory | ''
+  compact?: boolean
+  noPhotoLabel: string
+}) {
+  const title = model || name || description
+  return (
+    <div className={compact ? 'mb-5' : 'mb-6'}>
+      <div
+        className={`flex items-center justify-center overflow-hidden rounded-3xl bg-[var(--chip-bg)] ${compact ? 'aspect-[2/1]' : 'aspect-[16/9]'}`}
+      >
+        {imageSrc ? (
+          <img
+            src={imageSrc}
+            alt={[brand, model, name].filter(Boolean).join(' ')}
+            onError={onImageError}
+            className="max-h-full max-w-full object-contain"
+          />
+        ) : (
+          <div className="flex flex-col items-center gap-3 px-4 text-center text-sm text-[var(--sea-ink-soft)]">
+            <ImageIcon className="size-10 stroke-1" aria-hidden />
+            {noPhotoLabel}
+          </div>
+        )}
+      </div>
+      <AssetBrandLogo brand={brand} prominent={!compact} />
+      <h3
+        className={`mb-1 mt-3 break-words font-bold tracking-tight ${compact ? 'text-xl' : 'text-3xl'}`}
+      >
+        {title}
+      </h3>
+      {name && model ? (
+        <p className="mt-1 text-sm text-[var(--sea-ink-soft)]">{name}</p>
+      ) : null}
+      {category ? (
+        <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-[var(--sea-ink-soft)]">
+          {category}
+        </p>
+      ) : null}
+    </div>
+  )
+}
 export function findExistingBoatAsset(
   assets: ListedBoatAsset[],
   identified: {
@@ -222,8 +302,13 @@ export function AddAssetModal({
   const privateDocuments = product
     ? []
     : (research?.downloads.filter((item) => item.purpose !== 'photo') ?? [])
-  const sharedImage = product?.imageUrl || product?.previewImageUrl
-  const image = !imageFailed && sharedImage ? apiUrl(sharedImage) : preview
+  const image = resolveEquipmentPreviewImage({
+    imageFailed,
+    product,
+    research,
+    linkPhotoUrl,
+    preview,
+  })
 
   useEffect(() => {
     mounted.current = true
@@ -1356,28 +1441,16 @@ export function AddAssetModal({
                 ))}
               </ul>
             ) : null}
-            <div className="mb-6 flex aspect-[16/9] items-center justify-center overflow-hidden rounded-3xl">
-              {image ? (
-                <img
-                  src={image}
-                  alt={[brand, model, name].filter(Boolean).join(' ')}
-                  onError={() => setImageFailed(true)}
-                  className="max-h-full max-w-full object-contain"
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-3 text-center text-sm text-slate-500">
-                  <ImageIcon className="size-10 stroke-1" />
-                  {t('equipmentNoPhoto')}
-                </div>
-              )}
-            </div>
-            <AssetBrandLogo brand={brand} prominent />
-            <h3 className="mb-1 mt-3 break-words text-3xl font-bold tracking-tight">
-              {model || name || description}
-            </h3>
-            {name && model && (
-              <p className="mt-1 text-sm text-[var(--sea-ink-soft)]">{name}</p>
-            )}
+            <EquipmentPreviewPanel
+              imageSrc={image}
+              onImageError={() => setImageFailed(true)}
+              brand={brand}
+              model={model}
+              name={name}
+              description={description}
+              category={category}
+              noPhotoLabel={t('equipmentNoPhoto')}
+            />
             {product?.createdAt && (
               <p className="text-xs text-[var(--sea-ink-soft)]">
                 {t('equipmentAdded', {
@@ -1653,6 +1726,17 @@ export function AddAssetModal({
           loading(t('equipmentConnectionsSearching'))
         ) : (
           <>
+            <EquipmentPreviewPanel
+              compact
+              imageSrc={image}
+              onImageError={() => setImageFailed(true)}
+              brand={brand}
+              model={model}
+              name={name}
+              description={description}
+              category={category}
+              noPhotoLabel={t('equipmentNoPhoto')}
+            />
             {intro(
               t('equipmentConnectionsReview'),
               t('equipmentConnectionsReviewHelp'),

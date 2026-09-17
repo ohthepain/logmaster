@@ -50,7 +50,6 @@ import {
   tripDisplayName,
 } from '../lib/trip-display'
 import { getNativePlatform } from '../lib/platform'
-import { useIosNativeMapTouchPassthrough } from '../lib/native/ios-map-touch-passthrough'
 import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore, triggerLogbookSyncRetry } from '../stores/logbook'
 import { useTranslation } from '../lib/i18n'
@@ -233,14 +232,6 @@ export function TripDetailPage({
 
   const inProgressTrip = store.trips.find(
     (item) => item.status === 'IN_PROGRESS',
-  )
-
-  useIosNativeMapTouchPassthrough(
-    getNativePlatform() === 'ios' &&
-      trip != null &&
-      (trip.status === 'IN_PROGRESS' ||
-        trip.status === 'PLANNED' ||
-        trip.status === 'COMPLETED'),
   )
 
   const mediaByEntry = useMemo(() => {

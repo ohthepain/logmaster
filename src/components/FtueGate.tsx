@@ -14,6 +14,7 @@ import {
   isFtueCompletedLocally,
   markFtueCompletedLocally,
 } from '../lib/ftue'
+import { hasBlockingMapOverlay } from '../lib/native/apple-map-layout'
 import { setIosMapTouchCaptureSuspended } from '../lib/native/ios-map-touch-suspend'
 import { getNativePlatform } from '../lib/platform'
 import {
@@ -120,7 +121,7 @@ export function FtueGate({ children }: { children: React.ReactNode }) {
     }
 
     if (!ftueActive) {
-      void setIosMapTouchCaptureSuspended(false)
+      void setIosMapTouchCaptureSuspended(hasBlockingMapOverlay())
       return () => {
         document.documentElement.removeAttribute('data-ftue-active')
       }
@@ -134,7 +135,7 @@ export function FtueGate({ children }: { children: React.ReactNode }) {
     return () => {
       clearInterval(resync)
       document.documentElement.removeAttribute('data-ftue-active')
-      void setIosMapTouchCaptureSuspended(false)
+      void setIosMapTouchCaptureSuspended(hasBlockingMapOverlay())
     }
   }, [checking, showFtue, skipFtueForRoute])
 

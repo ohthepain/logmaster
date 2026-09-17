@@ -87,7 +87,7 @@ function SignInPage() {
   }, [handleGoogleSignIn])
 
   return (
-    <div className="min-h-screen w-full flex">
+    <div className="ios-map-touch-target flex min-h-screen w-full touch-manipulation">
       <div className="hidden lg:flex lg:w-1/3 flex-col justify-between p-12 relative overflow-hidden bg-[var(--btn-bg)] text-[var(--btn-text)]">
         <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full opacity-5 bg-current" />
         <div className="absolute -bottom-32 -right-16 size-[28rem] rounded-full opacity-5 bg-current" />

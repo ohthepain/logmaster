@@ -101,7 +101,7 @@ function TripsPage() {
   }
 
   return (
-    <main className="page-wrap px-3 pb-24 pt-4 sm:px-4 sm:pb-28">
+    <main className="ios-map-touch-target page-wrap touch-pan-y px-3 pb-24 pt-4 sm:px-4 sm:pb-28">
       <div className="mb-6 flex items-center justify-between gap-3">
         <div className="flex items-center gap-4">
           <h1 className="brand-title m-0 text-[2.35rem] leading-none sm:text-[2.75rem]">

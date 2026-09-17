@@ -39,6 +39,7 @@ import { useIsAdmin } from '../lib/use-admin'
 import { useLogbookStore } from '../stores/logbook'
 import { DevComponentLabel } from './DevComponentLabel'
 import { useFtue } from './FtueGate'
+import { profileMenuAddButtonClassName } from './NotificationBellToggle'
 import { NotificationControlMenuRow } from './NotificationControlMenuRow'
 import { ProfileModal } from './ProfileModal'
 import { LanguageSelector } from './LanguageSelector'
@@ -211,7 +212,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={`${menuId}-title`}
-                className="flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--surface-strong)] sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:max-w-2xl sm:rounded-[2rem] sm:border sm:border-[var(--panel-border)] sm:shadow-2xl"
+                className="ios-map-touch-target pointer-events-auto flex h-[100dvh] w-full touch-manipulation flex-col overflow-hidden bg-[var(--surface-strong)] sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:max-w-2xl sm:rounded-[2rem] sm:border sm:border-[var(--panel-border)] sm:shadow-2xl"
               >
                 <header className="flex shrink-0 items-center justify-between gap-4 px-5 pb-3 pt-[calc(env(safe-area-inset-top,0px)+1rem)] sm:px-7 sm:pt-6">
                   <h2
@@ -551,7 +552,7 @@ function MenuCard({
         type="button"
         onClick={onClick}
         aria-label={ariaLabel}
-        className="size-full rounded-[inherit] text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20 active:bg-[var(--link-bg-hover)]"
+        className="size-full touch-manipulation rounded-[inherit] text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20 active:bg-[var(--link-bg-hover)]"
       >
         {children}
       </button>
@@ -560,7 +561,10 @@ function MenuCard({
           type="button"
           onClick={addAction.onClick}
           aria-label={addAction.label}
-          className="absolute bottom-4 right-4 z-10 flex size-10 items-center justify-center rounded-full bg-[var(--chip-bg)] text-[var(--sea-ink)] shadow-sm outline-none hover:scale-105 hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/25 focus-visible:ring-offset-2 focus-visible:ring-offset-white sm:bottom-5 sm:right-5"
+          className={cn(
+            'absolute bottom-4 right-4 z-10 sm:bottom-5 sm:right-5',
+            profileMenuAddButtonClassName,
+          )}
         >
           <Plus className="size-5" strokeWidth={2.25} aria-hidden />
         </button>
@@ -779,7 +783,7 @@ function TextMenuButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-4 rounded-2xl px-2 py-4 text-left text-[var(--sea-ink)] outline-none hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20"
+      className="flex w-full touch-manipulation items-center gap-4 rounded-2xl px-2 py-4 text-left text-[var(--sea-ink)] outline-none hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--sea-ink)]/20"
     >
       <span
         className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--chip-bg)]"

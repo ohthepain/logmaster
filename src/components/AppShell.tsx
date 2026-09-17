@@ -9,24 +9,27 @@ import { DevTripRetripController } from './DevTripRetripController'
 import { AuthGate } from './AuthGate'
 import { FtueGate } from './FtueGate'
 import {
-  isTripDetailImmersiveRoute,
+  isNativeAppleMapUnderlayRoute,
   isTripStoryRoute,
 } from '../lib/trip-map-overlay'
 import { useLogbookStore } from '../stores/logbook'
+import { getNativePlatform } from '../lib/platform'
+import { useIosNativeMapTouchPassthrough } from '../lib/native/ios-map-touch-passthrough'
+import { IosBlockingOverlayTouchBridge } from './IosBlockingOverlayTouchBridge'
 
 const NO_CHROME = new Set(['/sign-in', '/reset-password'])
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  useIosNativeMapTouchPassthrough(
+    getNativePlatform() === 'ios' && isNativeAppleMapUnderlayRoute(pathname),
+  )
   const hideChrome =
     NO_CHROME.has(pathname) ||
     pathname.startsWith('/crew/invite/') ||
     pathname.startsWith('/invite/') ||
     isTripStoryRoute(pathname)
-  const mapOverlayHeader =
-    pathname === '/' ||
-    pathname === '/map' ||
-    isTripDetailImmersiveRoute(pathname)
+  const mapOverlayHeader = isNativeAppleMapUnderlayRoute(pathname)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -43,6 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [])
   return (
     <>
+      <IosBlockingOverlayTouchBridge />
       <DevComponentLabel
         name="AppShell"
         className="pointer-events-none fixed bottom-2 left-2 z-[9999]"

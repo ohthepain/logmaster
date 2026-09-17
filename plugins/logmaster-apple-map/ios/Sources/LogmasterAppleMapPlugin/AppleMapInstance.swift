@@ -451,6 +451,10 @@ final class AppleMapInstance {
         }
     }
 
+    static func syncHostScroll(for webView: WKWebView, mapInteractive: Bool) {
+        configureHostScrollView(webView, mapInteractive: mapInteractive)
+    }
+
     private static func configureHostScrollView(_ webView: WKWebView, mapInteractive: Bool) {
         let scrollView = webView.scrollView
         scrollView.isScrollEnabled = !mapInteractive

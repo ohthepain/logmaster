@@ -1,4 +1,4 @@
-import { BellOff, BellRing, RefreshCw } from 'lucide-react'
+import { BellOff, BellRing, Plus, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { toast } from 'sonner'
@@ -16,6 +16,7 @@ import {
 } from '../lib/notification-subscriptions-cache'
 import { cn } from '../lib/cn'
 import { useTranslation } from '../lib/i18n'
+import { AppIconButtonTooltip } from './AppIconButtonTooltip'
 import { translateNotificationTopic } from '../lib/resource-section-i18n'
 
 type NotificationBellToggleProps = {
@@ -194,6 +195,34 @@ export function ResourceRefreshButton({
   )
 }
 
+/** Matches profile menu card “+” controls (UserMenu MenuCard addAction). */
+export const profileMenuAddButtonClassName =
+  'inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--chip-bg)] text-[var(--sea-ink)] shadow-sm outline-none transition hover:scale-105 hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/25 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-strong)]'
+
+export function ResourceAddButton({
+  onClick,
+  label,
+  className,
+}: {
+  onClick: () => void
+  label: string
+  className?: string
+}) {
+  return (
+    <AppIconButtonTooltip label={label} side="bottom">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        title={label}
+        className={cn(profileMenuAddButtonClassName, className)}
+      >
+        <Plus className="size-5" strokeWidth={2.25} aria-hidden />
+      </button>
+    </AppIconButtonTooltip>
+  )
+}
+
 type ResourceSectionHeaderProps = {
   title: string
   topic?: NotificationTopic
@@ -228,13 +257,13 @@ export function ResourceSectionHeader({
       </div>
       {actions || onRefresh ? (
         <div className="flex items-center gap-2">
-          {actions}
           {onRefresh ? (
             <ResourceRefreshButton
               onRefresh={onRefresh}
               refreshing={refreshing}
             />
           ) : null}
+          {actions}
         </div>
       ) : null}
     </div>
