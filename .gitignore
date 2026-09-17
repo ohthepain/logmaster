@@ -24,3 +24,4 @@ terraform/bootstrap/terraform.tfstate.backup
 
 /generated/prisma
 secrets/
+__pycache__/

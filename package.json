@@ -44,6 +44,7 @@
     "cap:ios": "cap open ios",
     "cap:android": "cap open android",
     "ios:setup": "cd ios && bundle install",
+    "ios:release": "python3 scripts/ios-release.py",
     "ios:prearchive": "node scripts/bump-ios-build.mjs && node scripts/sync-app-icons.mjs && node scripts/configure-google-sign-in-ios.mjs",
     "ios:archive": "pnpm cap:sync:prod && pnpm ios:prearchive && bash scripts/ios-archive.sh",
     "ios:archive:staging": "pnpm cap:sync:staging && pnpm ios:prearchive && bash scripts/ios-archive.sh",
