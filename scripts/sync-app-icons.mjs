@@ -1,11 +1,13 @@
-import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import pngToIco from 'png-to-ico'
 import sharp from 'sharp'
 
 const root = resolve(import.meta.dirname, '..')
 const source = resolve(root, 'public/logo_trans_512.png')
+const iosSource = resolve(root, 'public/logo_1024.png')
 const BLACK = { r: 0, g: 0, b: 0 }
+const WHITE = { r: 255, g: 255, b: 255 }
 
 async function resizeTransparent(size) {
   return sharp(source).resize(size, size, { kernel: 'lanczos3' }).png().toBuffer()
@@ -15,6 +17,16 @@ async function flattenOnBlack(size) {
   return sharp(source)
     .resize(size, size, { kernel: 'lanczos3' })
     .flatten({ background: BLACK })
+    .removeAlpha()
+    .png()
+    .toBuffer()
+}
+
+/** App Store / Xcode: full-bleed logo on white (no transparency). */
+async function iosAppIcon1024() {
+  return sharp(iosSource)
+    .resize(1024, 1024, { kernel: 'lanczos3' })
+    .flatten({ background: WHITE })
     .removeAlpha()
     .png()
     .toBuffer()
@@ -83,9 +95,11 @@ await writeFile(
   await pngToIco([favicon16, favicon32, favicon48]),
 )
 
+const iosIcon1024 = await iosAppIcon1024()
+await writePng(resolve(appIconDir, '1024.png'), iosIcon1024)
+await writePng(resolve(publicDir, 'AppIcons/appstore.png'), iosIcon1024)
+
 const store1024 = await flattenOnBlack(1024)
-await writePng(resolve(appIconDir, '1024.png'), store1024)
-await writePng(resolve(publicDir, 'AppIcons/appstore.png'), store1024)
 await writePng(
   resolve(publicDir, 'AppIcons/playstore.png'),
   await flattenOnBlack(512),
@@ -106,15 +120,15 @@ for (const image of contents.images) {
 for (const [filename, size] of sizesByFile) {
   await writePng(
     resolve(appIconDir, filename),
-    size === 1024 ? store1024 : await flattenOnBlack(size),
+    size === 1024 ? iosIcon1024 : await flattenOnBlack(size),
   )
 }
 
 const iosDir = resolve(root, 'ios/App/App/Assets.xcassets/AppIcon.appiconset')
 const iosTarget = resolve(iosDir, 'AppIcon-512@2x.png')
 await mkdir(iosDir, { recursive: true })
-await copyFile(resolve(appIconDir, '1024.png'), iosTarget)
-console.log(`[ios] synced app icon -> ${iosTarget}`)
+await writePng(iosTarget, iosIcon1024)
+console.log(`[ios] synced app icon from public/logo_1024.png -> ${iosTarget}`)
 
 const androidDensities = [
   { folder: 'mipmap-mdpi', launcher: 48, foreground: 108 },

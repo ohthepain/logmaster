@@ -1,7 +1,7 @@
 import { AssetBrandLogo } from './AssetBrandLogo'
 import { getAssetIdentity } from '../domain/asset-brands'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { ChevronRight, Plus } from 'lucide-react'
+import { Cable, Plus } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { AddAssetModal } from './AddAssetModal'
@@ -27,6 +27,9 @@ type BoatAssetsTabProps = {
 }
 
 type AssetModalState = { mode: 'closed' } | { mode: 'create' }
+
+const BOAT_RESOURCE_CARD_GRID =
+  'grid grid-cols-1 gap-3 landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
 
 export function BoatAssetsTab({
   boatId,
@@ -100,7 +103,7 @@ export function BoatAssetsTab({
   }
 
   return (
-    <div>
+    <div className="min-w-0 overflow-x-hidden">
       <ResourceSectionHeader
         title={t('assets')}
         topic="BOAT_ASSETS"
@@ -125,7 +128,7 @@ export function BoatAssetsTab({
       <div
         role="group"
         aria-label="Filter assets by category"
-        className="mb-4 flex gap-2 overflow-x-auto pb-2"
+        className="mb-4 flex flex-wrap gap-2"
       >
         {['All', ...ASSET_CATEGORIES, 'Uncategorized'].map((category) => (
           <button
@@ -160,83 +163,64 @@ export function BoatAssetsTab({
             : 'No assets recorded yet.'}
         </p>
       ) : (
-        <ul className="m-0 flex list-none flex-col gap-3 p-0">
+        <ul className={cn('m-0 list-none p-0', BOAT_RESOURCE_CARD_GRID)}>
           {visibleAssets.map((asset) => {
             const identity = getAssetIdentity(asset)
             const hasCover = Boolean(asset.coverPhoto || asset.productImageUrl)
             return (
               <li key={asset.id}>
-                <div className="flex items-center gap-3 border-b border-[var(--line)] py-5">
-                  {hasCover ? (
-                    <Link
-                      to="/boats/$boatId/assets/$assetId"
-                      params={{ boatId, assetId: asset.id }}
-                      tabIndex={-1}
-                      aria-hidden
-                      className="shrink-0"
-                    >
+                <Link
+                  to="/boats/$boatId/assets/$assetId"
+                  params={{ boatId, assetId: asset.id }}
+                  className="flex h-full flex-col overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] no-underline transition hover:border-[var(--btn-bg)] hover:bg-[var(--chip-bg)]"
+                >
+                  <div className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-[var(--chip-bg)]">
+                    {hasCover ? (
                       <AssetCoverPhoto
                         cover={asset.coverPhoto}
                         productImageUrl={asset.productImageUrl}
-                        alt=""
-                        variant="list"
+                        alt={identity.title}
+                        variant="card"
+                        className="size-full"
                       />
-                    </Link>
-                  ) : null}
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      to="/boats/$boatId/assets/$assetId"
-                      params={{ boatId, assetId: asset.id }}
-                      className="block text-left no-underline"
-                    >
-                      <AssetBrandLogo brand={identity.brand} />
-                      <p className="m-0 mt-2 break-words text-lg font-semibold text-[var(--sea-ink)]">
-                        {identity.title}
+                    ) : (
+                      <Cable
+                        className="size-10 text-[var(--sea-ink-soft)]"
+                        strokeWidth={1.5}
+                        aria-hidden
+                      />
+                    )}
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col p-3">
+                    <AssetBrandLogo brand={identity.brand} />
+                    <p className="m-0 mt-2 line-clamp-2 text-base font-semibold leading-snug text-[var(--sea-ink)]">
+                      {identity.title}
+                    </p>
+                    {identity.subtitle ? (
+                      <p className="m-0 mt-1 line-clamp-2 text-sm text-[var(--sea-ink-soft)]">
+                        {identity.subtitle}
                       </p>
-                      {identity.subtitle && (
-                        <p className="mb-0 mt-1 break-words text-sm text-[var(--sea-ink-soft)]">
-                          {identity.subtitle}
-                        </p>
-                      )}
-                    </Link>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-[var(--chip-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
+                    ) : null}
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-full bg-[var(--chip-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sea-ink-soft)]">
                         {asset.ownerLabel}
                       </span>
                       <BoatNetworkSoapBars
                         boatId={boatId}
                         networks={connectedBoatNetworks(asset.connections)}
                       />
-                      <span className="text-xs text-[var(--sea-ink-soft)]">
+                      <span className="text-[10px] text-[var(--sea-ink-soft)]">
                         {asset.category ?? 'Uncategorized'}
                       </span>
-                      {asset.installedAt ? (
-                        <span className="text-xs text-[var(--sea-ink-soft)]">
-                          Installed{' '}
-                          {new Date(asset.installedAt).toLocaleDateString()}
-                        </span>
-                      ) : null}
                     </div>
                     {asset.description &&
                     asset.description !== identity.productName ? (
-                      <p className="mt-2 mb-0 text-sm text-[var(--sea-ink-soft)]">
+                      <p className="mt-2 mb-0 line-clamp-2 text-xs text-[var(--sea-ink-soft)]">
                         {asset.description}
                       </p>
                     ) : null}
                   </div>
-                  <Link
-                    to="/boats/$boatId/assets/$assetId"
-                    params={{ boatId, assetId: asset.id }}
-                    tabIndex={-1}
-                    aria-hidden
-                    className="shrink-0"
-                  >
-                    <ChevronRight
-                      className="size-5 text-[var(--sea-ink-soft)]"
-                      aria-hidden
-                    />
-                  </Link>
-                </div>
+                </Link>
               </li>
             )
           })}

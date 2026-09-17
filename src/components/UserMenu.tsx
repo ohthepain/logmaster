@@ -19,7 +19,8 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
-import type { Boat } from '../domain/boat'
+import { defaultBoatPhoto  } from '../domain/boat'
+import type {Boat} from '../domain/boat';
 import type { CrewPayload } from '../domain/crew'
 import { signOutToSignIn, useSession } from '../lib/auth-client'
 import { currentReturnPath, signInSearch } from '../lib/sign-in-redirect'
@@ -271,6 +272,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     ) : null}
 
                     <MenuCard
+                      className="max-sm:!aspect-auto max-sm:h-[8.75rem]"
                       ariaLabel={
                         trips.length ? t('manageTrips') : t('openMapToAddTrip')
                       }
@@ -321,8 +323,13 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     </MenuCard>
 
                     <MenuCard
+                      className="max-sm:!aspect-auto max-sm:h-[8.75rem]"
                       ariaLabel={
-                        boats.length ? t('manageBoats') : t('addABoat')
+                        boats.length === 1
+                          ? boats[0].name
+                          : boats.length
+                            ? t('manageBoats')
+                            : t('addABoat')
                       }
                       addAction={
                         boats.length
@@ -340,6 +347,13 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                       }
                       onClick={() =>
                         navigateFromMenu(() => {
+                          if (boats.length === 1) {
+                            void navigate({
+                              to: '/boats/$boatId',
+                              params: { boatId: boats[0].id },
+                            })
+                            return
+                          }
                           void navigate({
                             to: '/boats',
                             search: boats.length ? {} : { addBoat: true },
@@ -348,30 +362,16 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                       }
                     >
                       <CollectionCardContent
-                        title={t('boats')}
-                        detail={t(
+                        title={boats.length === 1 ? boats[0].name : t('boats')}
+                        detail={
                           boats.length === 1
-                            ? 'boatCountOne'
-                            : 'boatCountOther',
-                          { count: boats.length },
-                        )}
+                            ? t('manageBoats')
+                            : t('boatCountOther', { count: boats.length })
+                        }
                         loading={loadingCollections}
                         empty={boats.length === 0}
                       >
-                        <PhotoMontage
-                          items={boats.slice(0, 3).map((boat) => ({
-                            id: boat.id,
-                            src:
-                              boat.photos.find((photo) => photo.isDefault)
-                                ?.imageUrl ??
-                              boat.photos[0]?.imageUrl ??
-                              null,
-                            label: boat.name,
-                            fallback: (
-                              <Sailboat className="size-7" strokeWidth={1.6} />
-                            ),
-                          }))}
-                        />
+                        <PhotoMontage items={profileBoatMontageItems(boats)} />
                       </CollectionCardContent>
                     </MenuCard>
 
@@ -584,8 +584,8 @@ function CollectionCardContent({
 }) {
   const { t } = useTranslation()
   return (
-    <div className="flex size-full flex-col p-4 sm:p-5">
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+    <div className="flex size-full flex-col p-3 sm:p-5">
+      <div className="flex min-h-0 flex-1 items-center justify-center py-0.5 sm:py-0">
         {loading ? (
           <div className="flex size-16 items-center justify-center rounded-full bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]">
             <LoaderCircle className="size-6 animate-spin" aria-hidden />
@@ -617,9 +617,47 @@ type MontageItem = {
   fallback: ReactNode
 }
 
+const boatMontageFallback = <Sailboat className="size-7" strokeWidth={1.6} />
+
+function profileBoatMontageItems(boats: Boat[]): MontageItem[] {
+  if (boats.length === 1) {
+    const boat = boats[0]
+    const photos = [...boat.photos].sort((a, b) => {
+      if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1
+      return a.sortOrder - b.sortOrder
+    })
+    const picks = photos.slice(0, 3)
+    if (picks.length === 0) {
+      return [
+        {
+          id: boat.id,
+          src: null,
+          label: boat.name,
+          fallback: boatMontageFallback,
+        },
+      ]
+    }
+    return picks.map((photo) => ({
+      id: photo.id,
+      src: photo.imageUrl,
+      label: boat.name,
+      fallback: boatMontageFallback,
+    }))
+  }
+  return boats.slice(0, 3).map((boat) => ({
+    id: boat.id,
+    src: defaultBoatPhoto(boat.photos)?.imageUrl ?? null,
+    label: boat.name,
+    fallback: boatMontageFallback,
+  }))
+}
+
 function PhotoMontage({ items }: { items: MontageItem[] }) {
   return (
-    <div className="relative h-24 w-full max-w-36" aria-hidden>
+    <div
+      className="relative mx-auto h-14 w-[5.5rem] shrink-0 sm:h-24 sm:w-full sm:max-w-36"
+      aria-hidden
+    >
       {items.map((item, index) => {
         const count = items.length
         const transforms =
@@ -627,19 +665,19 @@ function PhotoMontage({ items }: { items: MontageItem[] }) {
             ? ['left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2']
             : count === 2
               ? [
-                  'left-[12%] top-[18%] -rotate-6',
-                  'right-[10%] bottom-[8%] rotate-6',
+                  'left-[6%] top-[14%] -rotate-6 sm:left-[12%] sm:top-[18%]',
+                  'right-[4%] bottom-[6%] rotate-6 sm:right-[10%] sm:bottom-[8%]',
                 ]
               : [
-                  'left-[4%] top-[25%] -rotate-6',
-                  'left-1/2 top-[6%] -translate-x-1/2 rotate-2',
-                  'right-[2%] bottom-[2%] rotate-6',
+                  'left-[0%] top-[22%] -rotate-6 sm:left-[4%] sm:top-[25%]',
+                  'left-1/2 top-[2%] -translate-x-1/2 rotate-2 sm:top-[6%]',
+                  'right-[-2%] bottom-[0%] rotate-6 sm:right-[2%] sm:bottom-[2%]',
                 ]
         return (
           <div
             key={item.id}
             className={cn(
-              'absolute flex size-[7rem] items-center justify-center overflow-hidden rounded-2xl border-[3px] border-[var(--surface-strong)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)] shadow-md',
+              'absolute flex size-12 items-center justify-center overflow-hidden rounded-xl border-2 border-[var(--surface-strong)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)] shadow-md sm:size-[7rem] sm:rounded-2xl sm:border-[3px]',
               transforms[index],
             )}
             title={item.label}
@@ -652,7 +690,9 @@ function PhotoMontage({ items }: { items: MontageItem[] }) {
                 loading="lazy"
               />
             ) : (
-              item.fallback
+              <span className="[&_svg]:size-5 sm:[&_svg]:size-7">
+                {item.fallback}
+              </span>
             )}
           </div>
         )

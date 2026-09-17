@@ -7,7 +7,7 @@ type AssetCoverPhotoProps = {
   cover: AssetCoverPhotoType | null | undefined
   productImageUrl?: string | null
   alt: string
-  variant: 'list' | 'detail'
+  variant: 'list' | 'detail' | 'card'
   className?: string
 }
 
@@ -30,6 +30,8 @@ export function AssetCoverPhoto({
         variant === 'list' && 'size-12',
         variant === 'detail' &&
           'aspect-[4/3] w-full max-w-[11rem] sm:max-w-[12rem]',
+        variant === 'card' &&
+          'aspect-[4/3] w-full max-w-none rounded-none border-0',
         className,
       )}
     >

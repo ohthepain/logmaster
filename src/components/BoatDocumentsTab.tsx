@@ -1,4 +1,5 @@
 import { FileUp, Link2 } from 'lucide-react'
+import { apiUrl } from '../lib/app-origin'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { toast } from 'sonner'
@@ -37,6 +38,17 @@ type BoatDocumentsTabProps = {
 }
 
 type AddMode = 'upload' | 'link' | null
+
+const BOAT_RESOURCE_CARD_GRID =
+  'grid grid-cols-1 gap-3 landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+
+function documentPreviewUrl(document: BoatDocument): string | null {
+  const version = document.currentVersion
+  if (!version.contentUrl) return null
+  const mime = version.mimeType?.toLowerCase() ?? ''
+  if (!mime.startsWith('image/')) return null
+  return apiUrl(version.contentUrl)
+}
 
 export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
   const { t } = useTranslation()
@@ -250,7 +262,7 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
   }
 
   return (
-    <>
+    <div className="min-w-0 overflow-x-hidden">
       <ResourceSectionHeader
         title={t('documents')}
         topic="BOAT_DOCUMENTS"
@@ -288,63 +300,77 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
               <h2 className="m-0 mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--sea-ink-soft)]">
                 {category.name}
               </h2>
-              <ul className="m-0 list-none space-y-2 p-0">
-                {groupDocs.map((document) => (
-                  <li
-                    key={document.id}
-                    className="flex items-center gap-3 rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => void handleOpenDocument(document)}
-                      className="flex min-w-0 flex-1 items-center gap-3 text-left transition hover:opacity-80"
+              <ul className={cn('m-0 list-none p-0', BOAT_RESOURCE_CARD_GRID)}>
+                {groupDocs.map((document) => {
+                  const previewUrl = documentPreviewUrl(document)
+                  return (
+                    <li
+                      key={document.id}
+                      className="relative flex flex-col overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)]"
                     >
-                      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)]">
-                        <BoatDocumentKindIcon
-                          kind={document.currentVersion.kind}
-                          className="size-4"
+                      <button
+                        type="button"
+                        onClick={() => void handleOpenDocument(document)}
+                        className="flex min-w-0 flex-1 flex-col text-left transition hover:bg-[var(--chip-bg)]"
+                      >
+                        <div className="flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-[var(--chip-bg)]">
+                          {previewUrl ? (
+                            <img
+                              src={previewUrl}
+                              alt=""
+                              className="size-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <BoatDocumentKindIcon
+                              kind={document.currentVersion.kind}
+                              className="size-10 text-[var(--sea-ink)]"
+                            />
+                          )}
+                        </div>
+                        <div className="min-w-0 p-3 pr-12">
+                          <p className="m-0 line-clamp-2 text-sm font-semibold leading-snug text-[var(--sea-ink)]">
+                            {document.title}{' '}
+                            <DocumentPurposeBadge purpose={document.purpose} />
+                          </p>
+                          <p className="m-0 mt-1 line-clamp-2 text-xs text-[var(--sea-ink-soft)]">
+                            {document.currentVersion.kind === 'link'
+                              ? document.currentVersion.url
+                              : (document.currentVersion.fileName ??
+                                'Uploaded file')}
+                          </p>
+                          <p className="m-0 mt-1 text-[10px] text-[var(--sea-ink-soft)]">
+                            Updated{' '}
+                            {new Date(document.updatedAt).toLocaleDateString()}
+                            {' · '}v{document.currentVersion.versionNumber}
+                          </p>
+                        </div>
+                      </button>
+                      <div className="absolute right-2 top-2">
+                        <BoatDocumentActionsMenu
+                          boatId={boatId}
+                          boatDocument={document}
+                          categoryName={categoryName(document.categoryId)}
+                          categories={categories}
+                          onCategoryCreated={addCategory}
+                          onOpenViewer={setDocumentViewer}
+                          onUpdated={(updated) =>
+                            setDocuments((current) =>
+                              current.map((item) =>
+                                item.id === updated.id ? updated : item,
+                              ),
+                            )
+                          }
+                          onDeleted={(documentId) =>
+                            setDocuments((current) =>
+                              current.filter((item) => item.id !== documentId),
+                            )
+                          }
                         />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="m-0 truncate text-sm font-semibold text-[var(--sea-ink)]">
-                          {document.title}{' '}
-                          <DocumentPurposeBadge purpose={document.purpose} />
-                        </p>
-                        <p className="m-0 truncate text-xs text-[var(--sea-ink-soft)]">
-                          {document.currentVersion.kind === 'link'
-                            ? document.currentVersion.url
-                            : (document.currentVersion.fileName ??
-                              'Uploaded file')}
-                        </p>
-                        <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
-                          Updated{' '}
-                          {new Date(document.updatedAt).toLocaleDateString()}
-                          {' · '}v{document.currentVersion.versionNumber}
-                        </p>
                       </div>
-                    </button>
-                    <BoatDocumentActionsMenu
-                      boatId={boatId}
-                      boatDocument={document}
-                      categoryName={categoryName(document.categoryId)}
-                      categories={categories}
-                      onCategoryCreated={addCategory}
-                      onOpenViewer={setDocumentViewer}
-                      onUpdated={(updated) =>
-                        setDocuments((current) =>
-                          current.map((item) =>
-                            item.id === updated.id ? updated : item,
-                          ),
-                        )
-                      }
-                      onDeleted={(documentId) =>
-                        setDocuments((current) =>
-                          current.filter((item) => item.id !== documentId),
-                        )
-                      }
-                    />
-                  </li>
-                ))}
+                    </li>
+                  )
+                })}
               </ul>
             </section>
           ))}
@@ -524,6 +550,6 @@ export function BoatDocumentsTab({ boatId }: BoatDocumentsTabProps) {
           onClose={() => setDocumentViewer(null)}
         />
       ) : null}
-    </>
+    </div>
   )
 }

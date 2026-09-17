@@ -1,4 +1,11 @@
-import { ImagePlus, Star, Trash2 } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  ImagePlus,
+  Star,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { Boat, BoatPhoto } from '../domain/boat'
@@ -26,9 +33,15 @@ export function BoatPhotosTab({
 }: BoatPhotosTabProps) {
   const { t } = useTranslation()
   const [uploading, setUploading] = useState(false)
-  const [activePhoto, setActivePhoto] = useState<BoatPhoto | null>(null)
+  const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const [captionDraft, setCaptionDraft] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const photos = boat.photos
+  const activePhoto =
+    activeIndex != null && activeIndex >= 0 && activeIndex < photos.length
+      ? photos[activeIndex]
+      : null
 
   const handleUpload = async (file: File) => {
     setUploading(true)
@@ -49,9 +62,19 @@ export function BoatPhotosTab({
     }
   }
 
-  const openPhotoMenu = (photo: BoatPhoto) => {
-    setActivePhoto(photo)
+  const openPhotoAt = (index: number) => {
+    const photo = photos[index]
+    if (!photo) return
+    setActiveIndex(index)
     setCaptionDraft(photo.caption ?? '')
+  }
+
+  const closeGallery = () => setActiveIndex(null)
+
+  const shiftGallery = (direction: -1 | 1) => {
+    if (activeIndex == null || photos.length <= 1) return
+    const next = (activeIndex + direction + photos.length) % photos.length
+    openPhotoAt(next)
   }
 
   const handleSetDefault = async () => {
@@ -64,7 +87,7 @@ export function BoatPhotosTab({
           photo.id === updated.id ? updated : { ...photo, isDefault: false },
         ),
       })
-      setActivePhoto(updated)
+      setCaptionDraft(updated.caption ?? '')
       toast.success('Default photo updated')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to update photo')
@@ -83,7 +106,7 @@ export function BoatPhotosTab({
           photo.id === updated.id ? updated : photo,
         ),
       })
-      setActivePhoto(updated)
+      setCaptionDraft(updated.caption ?? '')
       toast.success('Caption saved')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to save caption')
@@ -91,15 +114,22 @@ export function BoatPhotosTab({
   }
 
   const handleDeletePhoto = async () => {
-    if (!activePhoto) return
+    if (!activePhoto || activeIndex == null) return
     if (!window.confirm('Delete this photo?')) return
     try {
       await deleteBoatPhoto(activePhoto.id)
+      const nextPhotos = boat.photos.filter(
+        (photo) => photo.id !== activePhoto.id,
+      )
       onBoatChange({
         ...boat,
-        photos: boat.photos.filter((photo) => photo.id !== activePhoto.id),
+        photos: nextPhotos,
       })
-      setActivePhoto(null)
+      if (nextPhotos.length === 0) {
+        closeGallery()
+      } else {
+        openPhotoAt(Math.min(activeIndex, nextPhotos.length - 1))
+      }
       toast.success('Photo deleted')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to delete photo')
@@ -137,20 +167,19 @@ export function BoatPhotosTab({
         </button>
       </div>
 
-      {boat.photos.length === 0 ? (
+      {photos.length === 0 ? (
         <p className="mt-6 text-sm text-[var(--sea-ink-soft)]">
           {t('noPhotosYet')}
         </p>
       ) : (
-        <div className="mt-6 -mx-3 overflow-x-auto px-3 sm:mx-0 sm:px-0">
-          <div className="flex snap-x snap-mandatory gap-3 pb-2">
-            {boat.photos.map((photo) => (
+        <ul className="mt-6 grid grid-cols-2 list-none gap-2 p-0 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+          {photos.map((photo, index) => (
+            <li key={photo.id}>
               <button
-                key={photo.id}
                 type="button"
-                onClick={() => openPhotoMenu(photo)}
+                onClick={() => openPhotoAt(index)}
                 className={cn(
-                  'relative shrink-0 snap-start overflow-hidden rounded-2xl border bg-[var(--panel)]',
+                  'relative block w-full overflow-hidden rounded-xl border bg-[var(--panel)] text-left',
                   photo.isDefault
                     ? 'border-[var(--active-border)] ring-2 ring-[var(--sea-ink)]/15'
                     : 'border-[var(--panel-border)]',
@@ -159,58 +188,83 @@ export function BoatPhotosTab({
                 <img
                   src={photo.imageUrl}
                   alt={photo.caption ?? boat.name}
-                  className="h-48 w-64 object-cover sm:h-56 sm:w-72"
+                  className="aspect-square w-full object-cover"
+                  loading="lazy"
                 />
                 {photo.isDefault && (
-                  <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-[var(--btn-bg)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--btn-text)]">
-                    <Star className="size-3" />
+                  <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-[var(--btn-bg)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.15em] text-[var(--btn-text)] sm:left-2 sm:top-2 sm:px-2 sm:text-[10px]">
+                    <Star className="size-2.5 sm:size-3" />
                     {t('defaultPhoto')}
                   </span>
                 )}
-                {photo.caption && (
-                  <span className="absolute inset-x-0 bottom-0 bg-[var(--overlay)] px-3 py-2 text-left text-xs text-white">
+                {photo.caption ? (
+                  <span className="absolute inset-x-0 bottom-0 bg-[var(--overlay)] px-2 py-1.5 text-left text-[10px] text-white sm:text-xs">
                     {photo.caption}
                   </span>
-                )}
+                ) : null}
               </button>
-            ))}
-          </div>
-        </div>
+            </li>
+          ))}
+        </ul>
       )}
 
-      {activePhoto && (
-        <div className="fixed inset-0 z-[90] flex items-end justify-center bg-[var(--overlay)] p-3 backdrop-blur-sm sm:items-center">
-          <div className="w-full max-w-lg rounded-[1.75rem] border border-[var(--panel-border)] bg-[var(--surface-strong)] p-4 shadow-2xl sm:p-6">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <p className="island-kicker">Photo</p>
-                <h2 className="m-0 text-xl font-bold text-[var(--sea-ink)]">
-                  {boat.name}
-                </h2>
-              </div>
+      {activePhoto && activeIndex != null ? (
+        <div className="fixed inset-0 z-[90] flex flex-col bg-[var(--overlay)] backdrop-blur-sm">
+          <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-2 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]">
+            <p className="m-0 text-sm font-semibold text-white">
+              {activeIndex + 1} / {photos.length}
+            </p>
+            <button
+              type="button"
+              onClick={closeGallery}
+              className="inline-flex size-10 items-center justify-center rounded-full bg-white/15 text-white"
+              aria-label={t('close')}
+            >
+              <X className="size-5" aria-hidden />
+            </button>
+          </div>
+
+          <div className="relative flex min-h-0 flex-1 items-center justify-center px-3">
+            {photos.length > 1 ? (
               <button
                 type="button"
-                onClick={() => setActivePhoto(null)}
-                className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-sm font-semibold text-[var(--sea-ink)]"
+                aria-label="Previous photo"
+                onClick={() => shiftGallery(-1)}
+                className="absolute left-2 z-10 flex size-10 items-center justify-center rounded-full bg-black/40 text-white sm:left-4"
               >
-                Close
+                <ChevronLeft className="size-6" aria-hidden />
               </button>
-            </div>
-
+            ) : null}
             <img
               src={activePhoto.imageUrl}
               alt={activePhoto.caption ?? boat.name}
-              className="mb-4 max-h-64 w-full rounded-2xl object-cover"
+              className="max-h-full max-w-full object-contain"
             />
+            {photos.length > 1 ? (
+              <button
+                type="button"
+                aria-label="Next photo"
+                onClick={() => shiftGallery(1)}
+                className="absolute right-2 z-10 flex size-10 items-center justify-center rounded-full bg-black/40 text-white sm:right-4"
+              >
+                <ChevronRight className="size-6" aria-hidden />
+              </button>
+            ) : null}
+          </div>
 
-            <label className="mb-4 block">
+          <div className="max-h-[45vh] shrink-0 overflow-y-auto rounded-t-[1.75rem] border-t border-[var(--panel-border)] bg-[var(--surface-strong)] p-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:p-6">
+            <h2 className="m-0 text-lg font-bold text-[var(--sea-ink)]">
+              {boat.name}
+            </h2>
+
+            <label className="mb-4 mt-3 block">
               <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
                 Caption
               </span>
               <textarea
                 value={captionDraft}
                 onChange={(e) => setCaptionDraft(e.target.value)}
-                rows={3}
+                rows={2}
                 placeholder="Optional caption"
                 className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
               />
@@ -245,7 +299,7 @@ export function BoatPhotosTab({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </>
   )
 }

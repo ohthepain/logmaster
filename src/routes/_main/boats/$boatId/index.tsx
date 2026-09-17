@@ -336,7 +336,7 @@ function BoatDetailPage() {
         })}
       </div>
 
-      <div role="tabpanel" className="mt-6">
+      <div role="tabpanel" className="mt-6 min-w-0 overflow-x-hidden">
         {tab === 'photos' ? (
           <BoatPhotosTab
             boat={boat}

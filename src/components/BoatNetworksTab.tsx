@@ -92,9 +92,9 @@ function NetworkBackboneDiagram({
         </div>
       ) : null}
       {hasActual || possible.length ? (
-        <div className="overflow-x-auto pb-1">
-          <div className="min-w-min px-2 pt-2">
-            <div className="flex items-end gap-8 sm:gap-12">
+        <div className="pb-1">
+          <div className="px-2 pt-2">
+            <div className="flex flex-wrap items-end justify-center gap-x-6 gap-y-4 sm:gap-x-12">
               {diagram.devices.map((device) => (
                 <div
                   key={device.assetId}
