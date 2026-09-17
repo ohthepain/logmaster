@@ -1199,7 +1199,6 @@ export function AddAssetModal({
               <EquipmentIdentityFields
                 brand={brand}
                 model={model}
-                language={language}
                 noModel={noModel}
                 onBrand={(value) => {
                   if (value !== brand) {
@@ -1300,7 +1299,6 @@ export function AddAssetModal({
               <EquipmentIdentityFields
                 brand={brand}
                 model={model}
-                language={language}
                 noModel={false}
                 onBrand={(value) => {
                   if (value !== brand) setBrand(value)

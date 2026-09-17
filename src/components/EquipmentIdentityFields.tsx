@@ -137,14 +137,12 @@ function IdentityField({
 export function EquipmentIdentityFields({
   brand,
   model,
-  language,
   onBrand,
   onModel,
   noModel,
 }: {
   brand: string
   model: string
-  language: string
   onBrand: (value: string) => void
   onModel: (value: string) => void
   noModel: boolean

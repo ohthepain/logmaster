@@ -7,7 +7,14 @@ import {
 } from '../lib/admin-jobs'
 import { prisma } from './db'
 import { payloadFromStoredCrawl } from './jobs/product-catalog-crawl-parse'
+import type { ProductCatalogNauticExpoPayload } from './jobs/product-catalog-crawl'
 import { enqueueProductCatalogNauticExpo } from './jobs/product-catalog-crawl-queue'
+
+type CatalogCrawlRunFailure = {
+  ok: false
+  status: 400 | 404
+  error: string
+}
 
 export async function listCatalogCrawlRuns(limit = 25) {
   const rows = await prisma.catalogCrawlRun.findMany({
@@ -28,7 +35,9 @@ export async function listCatalogCrawlRuns(limit = 25) {
   )
 }
 
-export async function deleteCatalogCrawlRun(runId: string) {
+export async function deleteCatalogCrawlRun(
+  runId: string,
+): Promise<{ ok: true } | CatalogCrawlRunFailure> {
   const row = await prisma.catalogCrawlRun.findUnique({
     where: { id: runId },
     select: { id: true },
@@ -43,7 +52,10 @@ export async function deleteCatalogCrawlRun(runId: string) {
 export async function repeatCatalogCrawlRun(
   runId: string,
   mode: CatalogCrawlRepeatMode,
-) {
+): Promise<
+  | { ok: true; jobId: string; payload: ProductCatalogNauticExpoPayload }
+  | CatalogCrawlRunFailure
+> {
   const row = await prisma.catalogCrawlRun.findUnique({
     where: { id: runId },
   })
