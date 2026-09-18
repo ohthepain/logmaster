@@ -146,12 +146,11 @@ export function TripPlaybackOverlay({
   const distanceAxis = useMemo(
     () =>
       tripPlaybackUsesDistanceAxis(
-        range,
         playbackPath,
         tripTrackSamplesForTrip(trip.id, tracks),
         chronologicalEntries,
       ),
-    [chronologicalEntries, playbackPath, range, tracks, trip.id],
+    [chronologicalEntries, playbackPath, tracks, trip.id],
   )
   const timeMsForEntry = (entry: LogEntry) =>
     playbackTimeMsForEntry(range, playbackPath, distanceAxis, entry)

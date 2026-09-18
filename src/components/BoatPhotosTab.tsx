@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
-import type { Boat, BoatPhoto } from '../domain/boat'
+import type { Boat } from '../domain/boat'
 import {
   deleteBoatPhoto,
   updateBoatPhoto,

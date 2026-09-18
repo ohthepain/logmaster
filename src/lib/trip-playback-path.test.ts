@@ -45,12 +45,7 @@ describe('tripPlaybackUsesDistanceAxis', () => {
     const path = buildPlaybackPath(samples, [])
     expect(path).not.toBeNull()
     expect(
-      tripPlaybackUsesDistanceAxis(
-        { startMs: 0, endMs: 400, durationMs: 400 },
-        path,
-        samples,
-        [],
-      ),
+      tripPlaybackUsesDistanceAxis(path, samples, []),
     ).toBe(true)
   })
 
@@ -62,16 +57,7 @@ describe('tripPlaybackUsesDistanceAxis', () => {
     const path = buildPlaybackPath(samples, [])
     expect(path).not.toBeNull()
     expect(
-      tripPlaybackUsesDistanceAxis(
-        {
-          startMs: Date.parse(samples[0].time),
-          endMs: Date.parse(samples[1].time),
-          durationMs: 4 * 3_600_000,
-        },
-        path,
-        samples,
-        [],
-      ),
+      tripPlaybackUsesDistanceAxis(path, samples, []),
     ).toBe(false)
   })
 
@@ -85,16 +71,7 @@ describe('tripPlaybackUsesDistanceAxis', () => {
     const path = buildPlaybackPath([], entries)
     expect(path).not.toBeNull()
     expect(
-      tripPlaybackUsesDistanceAxis(
-        {
-          startMs: Date.parse(stamp),
-          endMs: Date.parse(stamp) + 1,
-          durationMs: 1,
-        },
-        path,
-        [],
-        entries,
-      ),
+      tripPlaybackUsesDistanceAxis(path, [], entries),
     ).toBe(true)
   })
 })

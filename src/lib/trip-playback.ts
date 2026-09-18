@@ -115,7 +115,7 @@ export function tripPlaybackPositionAt(
   const path = buildPlaybackPath(trackSamples, entries)
   if (path) {
     const range = tripPlaybackRange(trip, entries, tracks)
-    if (tripPlaybackUsesDistanceAxis(range, path, trackSamples, entries)) {
+    if (tripPlaybackUsesDistanceAxis(path, trackSamples, entries)) {
       return playbackPositionAlongPath(
         path,
         playbackDistanceAtTimeMs(range, path, timeMs),

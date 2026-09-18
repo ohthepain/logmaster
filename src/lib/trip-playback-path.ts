@@ -101,7 +101,6 @@ function entryTimes(entries: LogEntry[]): number[] {
 }
 
 export function tripPlaybackUsesDistanceAxis(
-  range: TripPlaybackRange,
   path: PlaybackPath | null,
   samples: PositionTrackSample[] = [],
   entries: LogEntry[] = [],
