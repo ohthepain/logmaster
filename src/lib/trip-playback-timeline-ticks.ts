@@ -8,7 +8,7 @@ import {
 const HOUR_MS = 3_600_000
 const DAY_MS = 86_400_000
 const MINUTE_MS = 60_000
-const MIN_LABEL_SPACING_PERCENT = 7
+const MIN_LABEL_SPACING_PERCENT = 12
 const MIN_LABELED_TICKS = 4
 const METERS_PER_NM = 1852
 
@@ -75,7 +75,7 @@ function chooseHourStep(visibleDurationMs: number): number | null {
 
   const niceSteps = [1, 2, 3, 6, 12] as const
   for (const step of niceSteps) {
-    if (visibleHours / step <= 10) return step
+    if (visibleHours / step <= 6) return step
   }
   return 12
 }
@@ -93,9 +93,32 @@ function dayNumberAt(timeMs: number, tripStartMs: number): number {
   return Math.floor((timeMs - tripStartMs) / DAY_MS) + 1
 }
 
-function hourLabel(timeMs: number, tripStartMs: number): string {
-  const hours = Math.round((timeMs - tripStartMs) / HOUR_MS)
-  return `${hours}h`
+export function formatClockTickLabel(timeMs: number): string {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(timeMs))
+}
+
+function ceilToLocalHour(timeMs: number, hourStep: number): number {
+  const date = new Date(timeMs)
+  const onHour =
+    date.getMinutes() === 0 &&
+    date.getSeconds() === 0 &&
+    date.getMilliseconds() === 0
+  date.setSeconds(0, 0)
+  date.setMinutes(0)
+  if (!onHour) date.setHours(date.getHours() + 1)
+  const remainder = date.getHours() % hourStep
+  if (remainder !== 0) date.setHours(date.getHours() + (hourStep - remainder))
+  return date.getTime()
+}
+
+function nextLocalHours(timeMs: number, hours: number): number {
+  const date = new Date(timeMs)
+  date.setHours(date.getHours() + hours)
+  return date.getTime()
 }
 
 export function formatDistanceTickLabel(meters: number): string {
@@ -186,30 +209,32 @@ function labeledCount(ticks: TimelineTick[]): number {
 }
 
 function cullLabels(ticks: TimelineTick[]): TimelineTick[] {
-  if (labeledCount(ticks) <= MIN_LABELED_TICKS) return ticks
-
-  const sorted = ticks
+  const labeled = ticks
     .map((tick, index) => ({ tick, index }))
     .filter(({ tick }) => tick.label)
-    .sort((a, b) => {
-      if (a.tick.percent !== b.tick.percent)
-        return a.tick.percent - b.tick.percent
-      return a.tick.kind === 'day' ? -1 : 1
-    })
+
+  if (labeled.length <= MIN_LABELED_TICKS) return ticks
 
   const dropLabel = new Set<number>()
-  let lastPercent = -Infinity
-  let remaining = sorted.length
-  for (const { tick, index } of sorted) {
-    if (
-      tick.percent - lastPercent < MIN_LABEL_SPACING_PERCENT &&
-      remaining > MIN_LABELED_TICKS
-    ) {
+  const keptPercents: number[] = []
+  const days = labeled.filter(({ tick }) => tick.kind === 'day')
+  const others = labeled
+    .filter(({ tick }) => tick.kind !== 'day')
+    .sort((a, b) => a.tick.percent - b.tick.percent)
+
+  for (const { tick } of days) {
+    keptPercents.push(tick.percent)
+  }
+
+  for (const { tick, index } of others) {
+    const close = keptPercents.some(
+      (percent) => Math.abs(tick.percent - percent) < MIN_LABEL_SPACING_PERCENT,
+    )
+    if (close) {
       dropLabel.add(index)
-      remaining -= 1
       continue
     }
-    lastPercent = tick.percent
+    keptPercents.push(tick.percent)
   }
 
   return ticks.map((tick, index) =>
@@ -261,27 +286,23 @@ export function computePlaybackTimelineTicks(
 
   const hourStep = chooseHourStep(window.durationMs)
   if (hourStep != null) {
-    const firstHour =
-      Math.ceil((window.startMs - tripStartMs) / HOUR_MS / hourStep) * hourStep
     for (
-      let hour = firstHour;
-      hour * HOUR_MS + tripStartMs <= window.endMs;
-      hour += hourStep
+      let timeMs = ceilToLocalHour(window.startMs, hourStep);
+      timeMs <= window.endMs;
+      timeMs = nextLocalHours(timeMs, hourStep)
     ) {
-      const timeMs = tripStartMs + hour * HOUR_MS
-      if (hour <= 0 || isDayBoundary(timeMs, tripStartMs)) continue
-      addTick(timeMs, 'hour', hourLabel(timeMs, tripStartMs))
+      if (timeMs <= tripStartMs || isDayBoundary(timeMs, tripStartMs)) continue
+      addTick(timeMs, 'hour', formatClockTickLabel(timeMs))
     }
 
     if (hourStep > 1) {
       for (
-        let hour = firstHour;
-        hour * HOUR_MS + tripStartMs <= window.endMs;
-        hour += 1
+        let timeMs = ceilToLocalHour(window.startMs, 1);
+        timeMs <= window.endMs;
+        timeMs = nextLocalHours(timeMs, 1)
       ) {
-        const timeMs = tripStartMs + hour * HOUR_MS
-        if (hour <= 0 || isDayBoundary(timeMs, tripStartMs)) continue
-        if (hour % hourStep === 0) continue
+        if (timeMs <= tripStartMs || isDayBoundary(timeMs, tripStartMs))
+          continue
         addTick(timeMs, 'minor', null)
       }
     }

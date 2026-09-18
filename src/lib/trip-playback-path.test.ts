@@ -44,9 +44,7 @@ describe('tripPlaybackUsesDistanceAxis', () => {
     ]
     const path = buildPlaybackPath(samples, [])
     expect(path).not.toBeNull()
-    expect(
-      tripPlaybackUsesDistanceAxis(path, samples, []),
-    ).toBe(true)
+    expect(tripPlaybackUsesDistanceAxis(path, samples, [])).toBe(true)
   })
 
   it('uses time for a realistic logged passage', () => {
@@ -56,9 +54,7 @@ describe('tripPlaybackUsesDistanceAxis', () => {
     ]
     const path = buildPlaybackPath(samples, [])
     expect(path).not.toBeNull()
-    expect(
-      tripPlaybackUsesDistanceAxis(path, samples, []),
-    ).toBe(false)
+    expect(tripPlaybackUsesDistanceAxis(path, samples, [])).toBe(false)
   })
 
   it('uses distance for waypoint-only entries with one timestamp', () => {
@@ -70,9 +66,7 @@ describe('tripPlaybackUsesDistanceAxis', () => {
     ]
     const path = buildPlaybackPath([], entries)
     expect(path).not.toBeNull()
-    expect(
-      tripPlaybackUsesDistanceAxis(path, [], entries),
-    ).toBe(true)
+    expect(tripPlaybackUsesDistanceAxis(path, [], entries)).toBe(true)
   })
 })
 

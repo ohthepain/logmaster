@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildPlaybackPath } from './trip-playback-path'
 import {
   computePlaybackTimelineTicks,
+  formatClockTickLabel,
   formatDistanceTickLabel,
 } from './trip-playback-timeline-ticks'
 
@@ -25,7 +26,43 @@ describe('computePlaybackTimelineTicks', () => {
     expect(dayLabels).toContain('Day 3')
   })
 
-  it('shows hour labels when zoomed in', () => {
+  it('labels hour ticks with clock time instead of elapsed hours', () => {
+    const tripStart = Date.parse('2026-06-01T08:00:00Z')
+    const window = {
+      startMs: tripStart,
+      endMs: tripStart + 2.5 * DAY,
+      durationMs: 2.5 * DAY,
+    }
+    const ticks = computePlaybackTimelineTicks(window, tripStart)
+    const hourTicks = ticks.filter((tick) => tick.kind === 'hour' && tick.label)
+    expect(hourTicks.length).toBeGreaterThan(0)
+    expect(hourTicks.map((tick) => tick.label)).not.toContain('12h')
+    expect(hourTicks.map((tick) => tick.label)).not.toContain('36h')
+    for (const tick of hourTicks) {
+      expect(tick.label).toBe(formatClockTickLabel(tick.timeMs))
+    }
+  })
+
+  it('leaves gaps between labeled ticks so legend text does not overlap', () => {
+    const tripStart = Date.parse('2026-06-01T08:00:00Z')
+    const window = {
+      startMs: tripStart,
+      endMs: tripStart + 2.5 * DAY,
+      durationMs: 2.5 * DAY,
+    }
+    const ticks = computePlaybackTimelineTicks(window, tripStart)
+    const labeled = ticks
+      .filter((tick) => tick.label)
+      .sort((a, b) => a.percent - b.percent)
+    expect(labeled.length).toBeGreaterThan(1)
+    for (let index = 1; index < labeled.length; index += 1) {
+      expect(
+        labeled[index].percent - labeled[index - 1].percent,
+      ).toBeGreaterThanOrEqual(12)
+    }
+  })
+
+  it('shows clock times when zoomed in to hours', () => {
     const tripStart = Date.parse('2026-06-01T08:00:00Z')
     const window = {
       startMs: tripStart,
@@ -33,12 +70,12 @@ describe('computePlaybackTimelineTicks', () => {
       durationMs: 8 * HOUR,
     }
     const ticks = computePlaybackTimelineTicks(window, tripStart)
-    const hourLabels = ticks
-      .filter((tick) => tick.label?.endsWith('h'))
-      .map((tick) => tick.label)
-    expect(hourLabels).toContain('1h')
-    expect(hourLabels).toContain('2h')
-    expect(hourLabels).not.toContain('0h')
+    const hourTicks = ticks.filter((tick) => tick.kind === 'hour' && tick.label)
+    expect(hourTicks.length).toBeGreaterThanOrEqual(4)
+    expect(hourTicks.some((tick) => tick.label?.endsWith('h'))).toBe(false)
+    for (const tick of hourTicks) {
+      expect(tick.label).toBe(formatClockTickLabel(tick.timeMs))
+    }
   })
 
   it('prefers day labels over colliding hour labels', () => {
@@ -51,7 +88,13 @@ describe('computePlaybackTimelineTicks', () => {
     const ticks = computePlaybackTimelineTicks(window, tripStart)
     const atDayTwo = ticks.find((tick) => tick.timeMs === tripStart + DAY)
     expect(atDayTwo?.label).toBe('Day 2')
-    expect(ticks.some((tick) => tick.label === '24h')).toBe(false)
+    expect(
+      ticks.some(
+        (tick) =>
+          tick.timeMs === tripStart + DAY &&
+          tick.label === formatClockTickLabel(tripStart + DAY),
+      ),
+    ).toBe(false)
   })
 
   it('keeps at least four labeled ticks on a one-minute trip', () => {

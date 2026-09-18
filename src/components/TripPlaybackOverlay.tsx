@@ -33,6 +33,11 @@ import {
   entryHasPlaybackMedia,
   playbackMediaMarkerOffsets,
 } from '../lib/trip-playback-media-timeline'
+import {
+  buildPlaybackUnderwaySegments,
+  clipPlaybackUnderwaySegments,
+  playbackUnderwayEventsFromEntries,
+} from '../lib/trip-playback-underway'
 import { cn } from '../lib/cn'
 import { compareLogEntriesChronologically } from '../lib/logbook-entry-order'
 import { PlaybackTimelineLogEntryMarker } from './PlaybackTimelineLogEntryMarker'
@@ -207,6 +212,16 @@ export function TripPlaybackOverlay({
       }),
     [distanceAxis, playbackPath, range, windowRange],
   )
+  const underwayTrackStops = useMemo(() => {
+    const events = playbackUnderwayEventsFromEntries(
+      chronologicalEntries,
+      timeMsForEntry,
+    )
+    return clipPlaybackUnderwaySegments(
+      buildPlaybackUnderwaySegments(range, events),
+      windowRange,
+    )
+  }, [chronologicalEntries, distanceAxis, playbackPath, range, windowRange])
   const visibleMediaMarkers = useMemo(
     () =>
       timelineMediaMarkers.filter((marker) => {
@@ -603,9 +618,20 @@ export function TripPlaybackOverlay({
             ) : null}
 
             <div
-              className="absolute inset-x-0 h-1 rounded-full bg-white/25"
+              className="absolute inset-x-0 h-1.5 overflow-hidden rounded-full bg-white/25"
               style={{ top: timelineTrackTopPx }}
-            />
+            >
+              {underwayTrackStops.map((stop, index) => (
+                <div
+                  key={`${stop.leftPercent}-${stop.widthPercent}-${index}`}
+                  className="absolute top-0 h-full rounded-full bg-[#157a45]"
+                  style={{
+                    left: `${stop.leftPercent}%`,
+                    width: `${stop.widthPercent}%`,
+                  }}
+                />
+              ))}
+            </div>
             {timelineTicks.map((tick) => (
               <div
                 key={`${tick.kind}-${tick.timeMs}`}
