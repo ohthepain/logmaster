@@ -230,6 +230,7 @@ export function availablePlaybackPanels(
 
   for (const track of instrumentTracksForTrip(tripId, tracks)) {
     if (!isInstrumentTrack(track)) continue
+    if (track.kind === 'sog') continue
     if (decodeInstrumentTrack(track).length === 0) continue
     const meta = instrumentTrackMeta(track.kind)
     options.push({
@@ -252,20 +253,6 @@ export function availablePlaybackPanels(
       id: track.kind,
       label: meta.label,
       shortLabel: meta.shortLabel,
-    })
-  }
-
-  const hasInstrumentSog = instrumentTracksForTrip(tripId, tracks).some(
-    (track) => track.kind === 'sog' && decodeInstrumentTrack(track).length > 0,
-  )
-  const derivedSog = deriveSogFromPositionSamples(
-    tripTrackSamplesForTrip(tripId, tracks),
-  )
-  if (!hasInstrumentSog && derivedSog.length > 1) {
-    options.push({
-      id: 'sog-derived',
-      label: 'Speed over ground (GPS)',
-      shortLabel: 'SOG',
     })
   }
 
@@ -377,12 +364,7 @@ export function defaultPlaybackViewState(
   const state = Object.fromEntries(
     options.map((option) => [option.id, false]),
   ) as PlaybackViewState
-  const preferredGraph: PlaybackPanelId[] = [
-    'sog',
-    'sog-derived',
-    'stw',
-    'wind',
-  ]
+  const preferredGraph: PlaybackPanelId[] = ['stw', 'wind']
   for (const id of preferredGraph) {
     if (options.some((option) => option.id === id)) {
       state[id] = true

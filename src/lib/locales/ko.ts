@@ -117,7 +117,6 @@ const catalog: TranslationCatalog = {
   logEntries: '항해 일지 기록',
   media: '미디어',
   logShort: '일지',
-  timeZoom: '시간 확대 {value}×',
   plannedRouteOverlayHint:
     '일지를 바꾸지 않고 항해 지도에 계획 항로를 겹쳐 표시합니다.',
   hideOverlay: '오버레이 숨기기',

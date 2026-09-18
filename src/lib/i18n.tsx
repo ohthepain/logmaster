@@ -118,7 +118,6 @@ export type TranslationKey =
   | 'logEntries'
   | 'media'
   | 'logShort'
-  | 'timeZoom'
   | 'plannedRouteOverlayHint'
   | 'hideOverlay'
   | 'hideTripInfo'

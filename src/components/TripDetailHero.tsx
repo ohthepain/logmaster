@@ -36,6 +36,7 @@ import { TripMapEditMenu } from './TripMapEditMenu'
 import { PlannedRoutePickerModal } from './RouteCopyModals'
 import { cn } from '../lib/cn'
 import { useTranslation } from '../lib/i18n'
+import { APP_HEADER_TOP_OFFSET } from '../lib/safe-area'
 import { tripPlaybackPositionAt, tripPlaybackRange } from '../lib/trip-playback'
 
 export type CompletedTripPanel = 'map' | 'log'
@@ -165,6 +166,10 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
     }, [])
     const [playbackTimeMs, setPlaybackTimeMs] = useState(playbackRange.startMs)
     const [playbackPlaying, setPlaybackPlaying] = useState(false)
+    const [playbackMapEntryRequest, setPlaybackMapEntryRequest] = useState<{
+      entryId: string
+      nonce: number
+    } | null>(null)
     const [liveTimeMs, setLiveTimeMs] = useState(() => Date.now())
     const [retripNowMs, setRetripNowMs] = useState(() => Date.now())
 
@@ -207,25 +212,33 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
     const playbackPosition = useMemo(
       () =>
         isPlayback
-          ? tripPlaybackPositionAt(
-              trip.id,
-              mapEntries,
-              playbackTimeMs,
-              mapTracks,
-            )
+          ? tripPlaybackPositionAt(trip, mapEntries, playbackTimeMs, mapTracks)
           : null,
-      [isPlayback, mapEntries, mapTracks, playbackTimeMs, trip.id],
+      [isPlayback, mapEntries, mapTracks, playbackTimeMs, trip],
     )
 
     const showPlaybackOverlay = isPlayback && completedTripPanel === 'map'
+    const handleMapEntrySelect = useCallback(
+      (entryId: string) => {
+        if (showPlaybackOverlay) {
+          setPlaybackMapEntryRequest((prev) => ({
+            entryId,
+            nonce: (prev?.nonce ?? 0) + 1,
+          }))
+          return
+        }
+        onEntrySelect?.(entryId)
+      },
+      [onEntrySelect, showPlaybackOverlay],
+    )
     const infoTimeMs =
       devTripRetrip && retripInfoTimeMs != null
         ? retripInfoTimeMs
         : isPlayback
           ? playbackTimeMs
           : liveTimeMs
-    const infoTripId =
-      devTripRetrip && retripSourceTrip ? retripSourceTrip.id : trip.id
+    const infoTrip = devTripRetrip && retripSourceTrip ? retripSourceTrip : trip
+    const infoTripId = infoTrip.id
     const infoTracks =
       devTripRetrip && retripSourceTrip ? retripSourceTracks : mapTracks
     const infoEntries =
@@ -235,7 +248,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
         isPlayback && !devTripRetrip
           ? playbackPosition
           : tripPlaybackPositionAt(
-              infoTripId,
+              infoTrip,
               infoEntries,
               infoTimeMs,
               infoTracks,
@@ -245,7 +258,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
         infoEntries,
         infoTimeMs,
         infoTracks,
-        infoTripId,
+        infoTrip,
         isPlayback,
         playbackPosition,
       ],
@@ -312,7 +325,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
               legs={mapLegs}
               tracks={mapTracks}
               selectedEntryId={selectedEntryId}
-              onEntrySelect={onEntrySelect}
+              onEntrySelect={handleMapEntrySelect}
               mediaByEntry={mediaByEntry}
               mapClassName="absolute inset-0 size-full"
               allowFullscreen={showInteractiveMap}
@@ -387,7 +400,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
                 legs={mapLegs}
                 tracks={mapTracks}
                 selectedEntryId={selectedEntryId}
-                onEntrySelect={onEntrySelect}
+                onEntrySelect={handleMapEntrySelect}
                 mediaByEntry={mediaByEntry}
                 mapClassName="absolute inset-0 size-full"
                 allowFullscreen={false}
@@ -435,6 +448,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
             currentTimeMs={playbackTimeMs}
             onCurrentTimeChange={setPlaybackTimeMs}
             onPlayingChange={setPlaybackPlaying}
+            openMapEntryRequest={playbackMapEntryRequest}
             onShowLogEntries={
               onCompletedTripPanelChange
                 ? () => onCompletedTripPanelChange('log')
@@ -478,9 +492,15 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
           />
         ) : null}
 
-        <div className="pointer-events-none absolute inset-x-0 top-16 z-40 flex flex-col items-start gap-2 px-3 sm:px-4">
+        <div
+          className="pointer-events-none absolute inset-x-0 z-40 flex flex-col items-start gap-2 px-3 sm:px-4"
+          style={{ top: APP_HEADER_TOP_OFFSET }}
+        >
           {!waypointMapInteractionActive ? (
-            <div className="pointer-events-auto flex justify-start gap-2">
+            <div
+              className="ios-map-touch-target pointer-events-auto flex justify-start gap-2"
+              data-map-touch-zone
+            >
               {isPlayback ? (
                 <TripMapChromeButton
                   label={t('closeReplayAndReturnToMap')}

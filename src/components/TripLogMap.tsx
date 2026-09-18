@@ -310,8 +310,9 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
       () =>
         buildLegEntryPointsGeoJson(entries, legs, {
           entryLayerToggles: mapLogEntryLayerToggles,
+          mediaByEntry,
         }),
-      [entries, legs, mapLogEntryLayerToggles],
+      [entries, legs, mapLogEntryLayerToggles, mediaByEntry],
     )
     const waypointPickEntryGeoJson = useMemo(
       () => buildLegEntryPointsGeoJson(tripWaypointEntries(entries), legs),
@@ -670,7 +671,11 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
       if (!entrySource) return
 
       let cancelled = false
-      void syncLogEntryMapMarkerImages(map, displayedEntryGeoJson).then(() => {
+      void syncLogEntryMapMarkerImages(
+        map,
+        displayedEntryGeoJson,
+        mediaByEntry,
+      ).then(() => {
         if (cancelled) return
         entrySource.setData(displayedEntryGeoJson)
       })
@@ -678,7 +683,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
       return () => {
         cancelled = true
       }
-    }, [mapReady, displayedEntryGeoJson])
+    }, [mapReady, displayedEntryGeoJson, mediaByEntry])
 
     useEffect(() => {
       const map = mapRef.current

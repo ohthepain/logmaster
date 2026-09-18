@@ -48,7 +48,7 @@ export function MapDefaultView() {
 
   if (!trip) {
     return (
-      <main className="relative h-dvh w-full overflow-hidden">
+      <main className="relative h-dvh w-full overflow-hidden bg-transparent">
         <DevComponentLabel name="MapDefaultView" />
         <TripLogMap
           trip={EMPTY_MAP_TRIP}

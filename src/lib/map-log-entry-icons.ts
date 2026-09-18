@@ -4,6 +4,7 @@ import {
   SailingMapColors,
   sailingMapLegEntryIconLayout,
 } from './maplibre-sailing-theme'
+import type { Media } from '../domain/logbook'
 import type {
   LogEntryMapIconKind,
   LogEntryMapOutline,
@@ -16,7 +17,7 @@ import {
 import type { WaypointMapKind } from './waypoint-map-style'
 import {
   LOG_ENTRY_MAP_ICON_KINDS,
-  logEntryMapMarkerImageId,
+  logEntryMapThumbnailUrl,
 } from './log-entry-map-marker'
 
 export const LOG_ENTRY_MAP_MARKER_SIZE = 64
@@ -60,6 +61,8 @@ type MarkerSpec = {
   kind: LogEntryMapIconKind
   color: string
   outline: LogEntryMapOutline
+  thumbnailUrl?: string | null
+  imageId: string
 }
 
 function parseHexColor(color: string): { r: number; g: number; b: number } {
@@ -543,28 +546,41 @@ function colorizeGlyphImage(
 }
 
 function loadGlyphImage(src: string): Promise<HTMLImageElement | null> {
-  const cached = glyphImageCache.get(src)
+  return loadMarkerImage(src, false)
+}
+
+function loadThumbnailImage(src: string): Promise<HTMLImageElement | null> {
+  return loadMarkerImage(src, /^https?:/i.test(src))
+}
+
+function loadMarkerImage(
+  src: string,
+  cors: boolean,
+): Promise<HTMLImageElement | null> {
+  const cacheKey = cors ? `cors:${src}` : src
+  const cached = glyphImageCache.get(cacheKey)
   if (cached !== undefined) return Promise.resolve(cached)
-  const pending = glyphLoaders.get(src)
+  const pending = glyphLoaders.get(cacheKey)
   if (pending) return pending
 
   const loader = new Promise<HTMLImageElement | null>((resolve) => {
     const image = new Image()
     image.decoding = 'async'
+    if (cors) image.crossOrigin = 'anonymous'
     image.onload = () => {
-      glyphImageCache.set(src, image)
+      glyphImageCache.set(cacheKey, image)
       resolve(image)
     }
     image.onerror = () => {
-      glyphImageCache.set(src, null)
+      glyphImageCache.set(cacheKey, null)
       resolve(null)
     }
     image.src = src
   }).finally(() => {
-    glyphLoaders.delete(src)
+    glyphLoaders.delete(cacheKey)
   })
 
-  glyphLoaders.set(src, loader)
+  glyphLoaders.set(cacheKey, loader)
   return loader
 }
 
@@ -587,6 +603,59 @@ export function logEntryMapMarkerDisplaySize(
     ? LOG_ENTRY_MAP_MEDIA_MARKER_SIZE
     : LOG_ENTRY_MAP_MARKER_SIZE
   return canvasSize / LOG_ENTRY_MAP_MARKER_PIXEL_RATIO
+}
+
+function drawCoverImage(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  size: number,
+  mediaMarker: boolean,
+) {
+  const imgW = image.naturalWidth || image.width
+  const imgH = image.naturalHeight || image.height
+  if (!imgW || !imgH) return
+
+  let x: number
+  let y: number
+  let width: number
+  let height: number
+  if (mediaMarker) {
+    const geom = mediaRectGeometry(size)
+    const inset = geom.strokeWidth
+    x = geom.x + inset
+    y = geom.y + inset
+    width = geom.width - inset * 2
+    height = geom.height - inset * 2
+  } else {
+    const geom = markerCircleGeometry(size)
+    const diameter = Math.max(1, (geom.radius - geom.strokeWidth) * 2)
+    x = geom.center - diameter / 2
+    y = geom.center - diameter / 2
+    width = diameter
+    height = diameter
+  }
+
+  const scale = Math.max(width / imgW, height / imgH)
+  const dw = imgW * scale
+  const dh = imgH * scale
+  ctx.drawImage(image, x + (width - dw) / 2, y + (height - dh) / 2, dw, dh)
+}
+
+function drawPlayBadge(ctx: CanvasRenderingContext2D, size: number) {
+  const center = size / 2
+  ctx.save()
+  ctx.fillStyle = 'rgba(0,0,0,0.38)'
+  ctx.beginPath()
+  ctx.arc(center, center, size * 0.16, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = MARKER_GLYPH_COLOR
+  ctx.beginPath()
+  ctx.moveTo(center - size * 0.05, center - size * 0.08)
+  ctx.lineTo(center + size * 0.1, center)
+  ctx.lineTo(center - size * 0.05, center + size * 0.08)
+  ctx.closePath()
+  ctx.fill()
+  ctx.restore()
 }
 
 async function renderMarkerImageData(spec: MarkerSpec): Promise<ImageData> {
@@ -613,12 +682,22 @@ async function renderMarkerImageData(spec: MarkerSpec): Promise<ImageData> {
     clipToInnerCircle(ctx, size)
   }
 
-  const asset = GLYPH_ASSETS[spec.kind]
-  const image = asset ? await loadGlyphImage(asset) : null
-  if (image) {
-    drawGlyphFromAsset(ctx, image, MARKER_GLYPH_COLOR, size)
+  const thumbnail = spec.thumbnailUrl
+    ? await loadThumbnailImage(spec.thumbnailUrl)
+    : null
+  if (thumbnail) {
+    drawCoverImage(ctx, thumbnail, size, mediaMarker)
+    if (spec.kind === 'video' || spec.kind === 'media-video') {
+      drawPlayBadge(ctx, size)
+    }
   } else {
-    drawFallbackGlyph(ctx, spec.kind, MARKER_GLYPH_COLOR, size)
+    const asset = GLYPH_ASSETS[spec.kind]
+    const image = asset ? await loadGlyphImage(asset) : null
+    if (image) {
+      drawGlyphFromAsset(ctx, image, MARKER_GLYPH_COLOR, size)
+    } else {
+      drawFallbackGlyph(ctx, spec.kind, MARKER_GLYPH_COLOR, size)
+    }
   }
   ctx.restore()
 
@@ -631,15 +710,27 @@ async function renderMarkerImageData(spec: MarkerSpec): Promise<ImageData> {
   return ctx.getImageData(0, 0, size, size)
 }
 
+function markerCacheKey(spec: MarkerSpec): string {
+  return `${spec.imageId}:${spec.thumbnailUrl ?? ''}`
+}
+
 export async function renderLogEntryMapMarkerImage(
   kind: LogEntryMapIconKind,
   color: string,
   outline: LogEntryMapOutline,
+  thumbnailUrl?: string | null,
 ): Promise<ImageData> {
-  const cacheKey = `${kind}:${color}:${outline}`
+  const spec: MarkerSpec = {
+    kind,
+    color,
+    outline,
+    thumbnailUrl: thumbnailUrl ?? null,
+    imageId: `${kind}:${color}:${outline}:${thumbnailUrl ?? ''}`,
+  }
+  const cacheKey = markerCacheKey(spec)
   const cached = imageDataCache.get(cacheKey)
   if (cached) return cached
-  const image = await renderMarkerImageData({ kind, color, outline })
+  const image = await renderMarkerImageData(spec)
   imageDataCache.set(cacheKey, image)
   return image
 }
@@ -648,12 +739,18 @@ export async function renderLogEntryMapMarkerDataUrl(
   kind: LogEntryMapIconKind,
   color: string,
   outline: LogEntryMapOutline,
+  thumbnailUrl?: string | null,
 ): Promise<string> {
-  const cacheKey = `${kind}:${color}:${outline}`
+  const cacheKey = `${kind}:${color}:${outline}:${thumbnailUrl ?? ''}`
   const cached = dataUrlCache.get(cacheKey)
   if (cached) return cached
 
-  const image = await renderLogEntryMapMarkerImage(kind, color, outline)
+  const image = await renderLogEntryMapMarkerImage(
+    kind,
+    color,
+    outline,
+    thumbnailUrl,
+  )
   const size = markerCanvasSize(kind)
   const { canvas, ctx } = createMarkerCanvas(size)
   ctx.putImageData(image, 0, 0)
@@ -705,7 +802,10 @@ export function syncLogEntryMapIconSelection(
   )
 }
 
-function markerSpecsFromGeoJson(collection: FeatureCollection): MarkerSpec[] {
+function markerSpecsFromGeoJson(
+  collection: FeatureCollection,
+  mediaByEntry?: Map<string, Media[]>,
+): MarkerSpec[] {
   const seen = new Set<string>()
   const specs: MarkerSpec[] = []
 
@@ -715,11 +815,21 @@ function markerSpecsFromGeoJson(collection: FeatureCollection): MarkerSpec[] {
     const kind = properties.kind as LogEntryMapIconKind | undefined
     const color = typeof properties.color === 'string' ? properties.color : null
     const outline = properties.outline as LogEntryMapOutline | undefined
+    const entryId =
+      typeof properties.entryId === 'string' ? properties.entryId : null
     if (!icon || !kind || !color || !outline) continue
     if (!LOG_ENTRY_MAP_ICON_KINDS.includes(kind)) continue
     if (seen.has(icon)) continue
     seen.add(icon)
-    specs.push({ kind, color, outline })
+    specs.push({
+      kind,
+      color,
+      outline,
+      imageId: icon,
+      thumbnailUrl: entryId
+        ? logEntryMapThumbnailUrl(mediaByEntry?.get(entryId) ?? [])
+        : null,
+    })
   }
 
   return specs
@@ -728,25 +838,22 @@ function markerSpecsFromGeoJson(collection: FeatureCollection): MarkerSpec[] {
 export async function syncLogEntryMapMarkerImages(
   map: maplibregl.Map,
   collection: FeatureCollection,
+  mediaByEntry?: Map<string, Media[]>,
 ) {
-  const specs = markerSpecsFromGeoJson(collection)
+  const specs = markerSpecsFromGeoJson(collection, mediaByEntry)
   await Promise.all(
     specs.map(async (spec) => {
-      const imageId = logEntryMapMarkerImageId(
-        spec.kind,
-        spec.color,
-        spec.outline,
-      )
       const image = await renderLogEntryMapMarkerImage(
         spec.kind,
         spec.color,
         spec.outline,
+        spec.thumbnailUrl,
       )
-      if (map.hasImage(imageId)) {
-        map.updateImage(imageId, image)
+      if (map.hasImage(spec.imageId)) {
+        map.updateImage(spec.imageId, image)
         return
       }
-      map.addImage(imageId, image, {
+      map.addImage(spec.imageId, image, {
         pixelRatio: LOG_ENTRY_MAP_MARKER_PIXEL_RATIO,
       })
     }),

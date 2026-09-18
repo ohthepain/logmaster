@@ -118,7 +118,6 @@ const catalog: TranslationCatalog = {
   logEntries: 'Entradas del diario',
   media: 'Medios',
   logShort: 'Diario',
-  timeZoom: 'Zoom temporal {value}×',
   plannedRouteOverlayHint:
     'Superponer una ruta planificada en el mapa del viaje sin cambiar el diario.',
   hideOverlay: 'Ocultar superposición',

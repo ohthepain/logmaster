@@ -116,7 +116,6 @@ const catalog: TranslationCatalog = {
   logEntries: 'قيود السجل',
   media: 'الوسائط',
   logShort: 'السجل',
-  timeZoom: 'تكبير الوقت {value}×',
   plannedRouteOverlayHint: 'اعرض مسارًا مخططًا فوق خريطة الرحلة دون تغيير السجل.',
   hideOverlay: 'إخفاء الطبقة',
   hideTripInfo: 'إخفاء معلومات الرحلة',

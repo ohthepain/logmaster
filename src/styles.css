@@ -162,6 +162,12 @@ body {
   }
 }
 
+html[data-ios-native-map-underlay],
+html[data-ios-native-map-underlay] body {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
 html.ios-native-map-touch-root,
 body.ios-native-map-touch-root {
   pointer-events: none;

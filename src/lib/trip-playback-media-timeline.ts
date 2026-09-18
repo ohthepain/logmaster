@@ -23,7 +23,7 @@ function mediaItemKind(item: Media): PlaybackTimelineMediaKind {
 function mediaThumbnail(item: Media): string | null {
   if (item.thumbnailUrl) return item.thumbnailUrl
   if (item.type === 'voice') return null
-  return item.remoteUrl ?? null
+  return item.remoteUrl ?? item.localPath ?? null
 }
 
 export function entryHasPlaybackMedia(
@@ -66,7 +66,7 @@ export function buildPlaybackTimelineMediaMarkers(
     if (entry.type === 'MEDIA') {
       const entryIsVideo = isVideoLogEntry(entry)
       const thumbMedia = media.find(
-        (item) => item.thumbnailUrl || item.remoteUrl,
+        (item) => item.thumbnailUrl || item.remoteUrl || item.localPath,
       )
       markers.push({
         id: `media-entry-${entry.id}`,

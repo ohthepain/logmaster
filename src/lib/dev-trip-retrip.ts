@@ -57,7 +57,7 @@ export function retripPositionAt(
 ): RetripPosition | null {
   const sourceTimeMs = retripSourceTimeMs(sourceTrip, sourceElapsedMs)
   const position = tripPlaybackPositionAt(
-    sourceTrip.id,
+    sourceTrip,
     sourceEntries,
     sourceTimeMs,
     sourceTracks,

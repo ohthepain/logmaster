@@ -34,7 +34,7 @@ export function AppHeaderBrand({
       aria-label={t('home')}
     >
       <img
-        src="/logo_trans_512.png"
+        src="/logo_trans_crop_512.png"
         alt=""
         width={36}
         height={36}
@@ -54,7 +54,9 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
       data-app-header
       className={cn(
         'top-0 z-50 shrink-0 pt-[env(safe-area-inset-top,0px)]',
-        mapOverlay ? 'fixed inset-x-0 bg-transparent' : 'sticky bg-transparent',
+        mapOverlay
+          ? 'pointer-events-none fixed inset-x-0 bg-transparent'
+          : 'sticky bg-transparent',
       )}
     >
       <DevComponentLabel
@@ -63,12 +65,19 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
       />
       <div
         className={cn(
-          'page-wrap ios-map-touch-target flex min-h-16 items-center gap-3 px-3 py-2 sm:px-4',
+          'page-wrap flex min-h-16 items-center gap-3 px-3 py-2 sm:px-4',
           hideBrand ? 'justify-end' : 'justify-between',
         )}
       >
-        {hideBrand ? null : <AppHeaderBrand mapOverlay={mapOverlay} />}
-        <div className="flex items-center justify-end gap-2">
+        {hideBrand ? null : (
+          <div className="pointer-events-auto">
+            <AppHeaderBrand mapOverlay={mapOverlay} />
+          </div>
+        )}
+        <div
+          className="ios-map-touch-target pointer-events-auto flex items-center justify-end gap-2"
+          data-map-touch-zone
+        >
           <DevModeToggle mapOverlay={mapOverlay} />
           {!mapOverlay ? <ThemeToggle /> : null}
           <NotificationInbox mapOverlay={mapOverlay} />

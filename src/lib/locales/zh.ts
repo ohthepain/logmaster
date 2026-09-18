@@ -116,7 +116,6 @@ const catalog: TranslationCatalog = {
   logEntries: '航海日志条目',
   media: '媒体',
   logShort: '日志',
-  timeZoom: '时间缩放 {value}×',
   plannedRouteOverlayHint: '在航程地图上叠加计划航线，而不更改日志。',
   hideOverlay: '隐藏叠加',
   hideTripInfo: '隐藏航程信息',

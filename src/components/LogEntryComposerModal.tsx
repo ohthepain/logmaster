@@ -18,6 +18,7 @@ import {
 } from '../lib/log-entry-content-order'
 import { readImageFile } from '../lib/image-file'
 import { isDevModeAvailable } from '../lib/dev-mode'
+import { isVideoMediaFileName } from '../lib/media-entry'
 import { photoMetadataFromLogEntry } from '../lib/photo-exif-stamp'
 import {
   stampAndExportPhotoMetadata,
@@ -425,18 +426,25 @@ export function LogEntryComposerModal({
   const contentBlocks: EntryContentBlock[] = []
 
   for (const item of entryMedia) {
-    if (!item.thumbnailUrl) continue
+    if (item.type === 'voice') continue
+    const src =
+      item.thumbnailUrl ??
+      (isVideoMediaFileName(item.remoteUrl) ||
+      isVideoMediaFileName(item.localPath)
+        ? null
+        : (item.remoteUrl ?? item.localPath))
+    if (!src) continue
     contentBlocks.push({
       key: item.id,
       kind: 'photo',
       order: item.order,
-      src: item.thumbnailUrl,
+      src,
       onDelete: () => void handleRemoveMedia(item.id),
       onSetMetadata: showPhotoMetadataAction
         ? () =>
             void handleSetPhotoMetadata(
               item.id,
-              item.thumbnailUrl!,
+              src,
               item.localPath ?? 'photo.jpg',
               {
                 mediaId: item.id,

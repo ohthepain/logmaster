@@ -117,7 +117,6 @@ const catalog: TranslationCatalog = {
   logEntries: 'Lokimerkinnät',
   media: 'Media',
   logShort: 'Loki',
-  timeZoom: 'Aikazoomaus {value}×',
   plannedRouteOverlayHint:
     'Lisää suunniteltu reitti matkakartan päälle muuttamatta lokia.',
   hideOverlay: 'Piilota peittokuva',

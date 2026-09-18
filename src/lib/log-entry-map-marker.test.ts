@@ -6,6 +6,7 @@ import {
   logEntryMapIconKind,
   logEntryMapMarkerImageId,
   logEntryMapOutline,
+  logEntryMapThumbnailUrl,
 } from './log-entry-map-marker'
 
 const entry = (overrides: Partial<LogEntry>): LogEntry =>
@@ -42,6 +43,18 @@ describe('logEntryMapIconKind', () => {
       'engine-off',
     )
     expect(logEntryMapIconKind(entry({ type: 'PHOTO' }))).toBe('photo')
+    expect(
+      logEntryMapIconKind(entry({ type: 'PHOTO' }), {
+        media: [
+          {
+            type: 'photo',
+            thumbnailUrl: 'data:image/jpeg;base64,abc',
+            remoteUrl: null,
+            localPath: null,
+          },
+        ],
+      }),
+    ).toBe('media-photo')
     expect(logEntryMapIconKind(entry({ type: 'MEDIA' }))).toBe('media-photo')
     expect(
       logEntryMapIconKind(
@@ -53,6 +66,18 @@ describe('logEntryMapIconKind', () => {
     expect(logEntryMapIconKind(entry({ type: 'HOURLY_LOG' }))).toBe(
       'hourly-log',
     )
+    expect(
+      logEntryMapIconKind(entry({ type: 'HOURLY_LOG' }), {
+        media: [
+          {
+            type: 'photo',
+            thumbnailUrl: 'https://example.com/hourly.jpg',
+            remoteUrl: null,
+            localPath: null,
+          },
+        ],
+      }),
+    ).toBe('media-photo')
   })
 
   it('uses a compass icon for direction-change auto entries', () => {
@@ -70,6 +95,27 @@ describe('logEntryMapIconKind', () => {
     expect(
       logEntryMapIconKind(entry({ type: 'PHOTO', data: { video: true } })),
     ).toBe('video')
+  })
+})
+
+describe('logEntryMapThumbnailUrl', () => {
+  it('prefers thumbnailUrl and skips voice notes', () => {
+    expect(
+      logEntryMapThumbnailUrl([
+        {
+          type: 'voice',
+          thumbnailUrl: 'voice.png',
+          remoteUrl: null,
+          localPath: null,
+        },
+        {
+          type: 'photo',
+          thumbnailUrl: 'thumb.jpg',
+          remoteUrl: 'full.jpg',
+          localPath: null,
+        },
+      ]),
+    ).toBe('thumb.jpg')
   })
 })
 
@@ -149,5 +195,11 @@ describe('logEntryMapMarkerImageId', () => {
     expect(logEntryMapMarkerImageId('photo', '#7ec8e8', 'dotted')).toBe(
       'log-entry-photo-7ec8e8-dotted',
     )
+  })
+
+  it('appends a thumbnail key so each photo marker is unique', () => {
+    expect(
+      logEntryMapMarkerImageId('media-photo', '#7ec8e8', 'solid', 'entry-1'),
+    ).toBe('log-entry-media-photo-7ec8e8-solid-entry1')
   })
 })

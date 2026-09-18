@@ -35,6 +35,7 @@ import type {
   LogEntryMapIconKind,
   LogEntryMapOutline,
 } from '../lib/log-entry-map-marker'
+import { logEntryMapThumbnailUrl } from '../lib/log-entry-map-marker'
 import type { TripPlaybackPosition } from '../lib/trip-playback'
 import {
   TRIP_TRACK_FIT_MARGIN_FRACTION,
@@ -76,6 +77,7 @@ type TripAppleMapKitProps = {
 
 async function entryMarkersFromGeoJson(
   collection: GeoJSON.FeatureCollection,
+  mediaByEntry?: Map<string, Media[]>,
 ): Promise<MapEntryPoint[]> {
   const markers: MapEntryPoint[] = []
   for (const feature of collection.features) {
@@ -103,7 +105,12 @@ async function entryMarkersFromGeoJson(
       entryId,
       latitude,
       longitude,
-      imageDataUrl: await renderLogEntryMapMarkerDataUrl(kind, color, outline),
+      imageDataUrl: await renderLogEntryMapMarkerDataUrl(
+        kind,
+        color,
+        outline,
+        logEntryMapThumbnailUrl(mediaByEntry?.get(entryId) ?? []),
+      ),
     })
   }
   return markers
@@ -191,8 +198,9 @@ export const TripAppleMapKit = forwardRef<
     () =>
       buildLegEntryPointsGeoJson(entries, legs, {
         entryLayerToggles: mapLogEntryLayerToggles,
+        mediaByEntry,
       }),
-    [entries, legs, mapLogEntryLayerToggles],
+    [entries, legs, mapLogEntryLayerToggles, mediaByEntry],
   )
   const viewportTarget = useMemo(
     () => resolveTripLogMapViewport(trip, entries, { focusEntryId, tracks }),
@@ -278,9 +286,9 @@ export const TripAppleMapKit = forwardRef<
     await LogmasterAppleMap.setOverlays({
       mapId,
       track: trackCoordinatesFromGeoJson(legTrackGeoJson),
-      entryPoints: await entryMarkersFromGeoJson(legEntryGeoJson),
+      entryPoints: await entryMarkersFromGeoJson(legEntryGeoJson, mediaByEntry),
     })
-  }, [mapId, mapReady, legTrackGeoJson, legEntryGeoJson])
+  }, [mapId, mapReady, legTrackGeoJson, legEntryGeoJson, mediaByEntry])
 
   const syncSelectedEntry = useCallback(async () => {
     if (!mapReady) return

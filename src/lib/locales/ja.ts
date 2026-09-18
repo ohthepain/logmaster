@@ -117,7 +117,6 @@ const catalog: TranslationCatalog = {
   logEntries: '航海日誌の記録',
   media: 'メディア',
   logShort: '日誌',
-  timeZoom: '時間ズーム {value}×',
   plannedRouteOverlayHint:
     '日誌を変えずに、計画航路を航海地図に重ねて表示します。',
   hideOverlay: '重ね表示を隠す',

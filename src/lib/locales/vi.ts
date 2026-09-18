@@ -117,7 +117,6 @@ const catalog: TranslationCatalog = {
   logEntries: 'Mục nhật ký',
   media: 'Phương tiện',
   logShort: 'Nhật ký',
-  timeZoom: 'Thu phóng thời gian {value}×',
   plannedRouteOverlayHint:
     'Phủ một tuyến đã lập lên bản đồ chuyến đi mà không đổi nhật ký.',
   hideOverlay: 'Ẩn lớp phủ',

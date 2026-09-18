@@ -117,7 +117,6 @@ const catalog: TranslationCatalog = {
   logEntries: 'Loggposter',
   media: 'Media',
   logShort: 'Logg',
-  timeZoom: 'Tidszoom {value}×',
   plannedRouteOverlayHint:
     'Lägg en planerad rutt över reskartan utan att ändra loggen.',
   hideOverlay: 'Dölj överlagring',

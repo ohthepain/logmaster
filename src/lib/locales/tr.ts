@@ -117,7 +117,6 @@ const catalog: TranslationCatalog = {
   logEntries: 'Seyir defteri kayıtları',
   media: 'Medya',
   logShort: 'Defter',
-  timeZoom: 'Zaman yakınlaştırma {value}×',
   plannedRouteOverlayHint:
     'Seyir defterini değiştirmeden sefer haritasına planlanan bir rota yerleştir.',
   hideOverlay: 'Katmanı gizle',

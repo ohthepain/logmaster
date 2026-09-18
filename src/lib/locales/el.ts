@@ -118,7 +118,6 @@ const catalog: TranslationCatalog = {
   logEntries: 'Καταχωρίσεις ημερολογίου',
   media: 'Πολυμέσα',
   logShort: 'Ημερ.',
-  timeZoom: 'Ζουμ χρόνου {value}×',
   plannedRouteOverlayHint:
     'Επικάλυψε μια προγραμματισμένη διαδρομή στον χάρτη του ταξιδιού χωρίς να αλλάξεις το ημερολόγιο.',
   hideOverlay: 'Απόκρυψη επικάλυψης',

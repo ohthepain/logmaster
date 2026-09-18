@@ -119,7 +119,6 @@ const catalog: TranslationCatalog = {
   logEntries: 'Logbucheinträge',
   media: 'Medien',
   logShort: 'Log',
-  timeZoom: 'Zeitzoom {value}×',
   plannedRouteOverlayHint:
     'Eine geplante Route über die Törn-Karte legen, ohne das Log zu ändern.',
   hideOverlay: 'Überlagerung ausblenden',

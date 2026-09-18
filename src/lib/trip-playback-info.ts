@@ -19,6 +19,10 @@ import { formatPosition } from './logbook-format'
 import { compareLogEntriesChronologically } from './logbook-entry-order'
 import type { TripPlaybackPosition } from './trip-playback'
 import {
+  interpolatePlaybackGraphValue,
+  playbackPanelGraphPoints,
+} from './trip-playback-panels'
+import {
   tripPlaybackPositionFromTrackSamples,
   tripTrackSamplesForTrip,
 } from './trip-track-playback'
@@ -342,6 +346,20 @@ export function tripPlaybackInfoAt(
       default:
         break
     }
+  }
+
+  if (!seen.has('sog')) {
+    const derivedValue = interpolatePlaybackGraphValue(
+      playbackPanelGraphPoints('sog-derived', tripId, tracks),
+      timeMs,
+    )
+    pushLine(
+      lines,
+      seen,
+      'sog',
+      'Speed over ground',
+      derivedValue != null ? formatKnots(derivedValue) : null,
+    )
   }
 
   if (elevation != null && Number.isFinite(elevation)) {

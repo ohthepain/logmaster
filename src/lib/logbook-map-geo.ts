@@ -1,4 +1,4 @@
-import type { LogEntry, Leg, Trip } from '../domain/logbook'
+import type { LogEntry, Leg, Media, Trip } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { decodeTripTrack, isPositionTrack } from '../domain/trip-track'
 import {
@@ -13,6 +13,7 @@ import {
   logEntryMapIconKind,
   logEntryMapMarkerImageId,
   logEntryMapOutline,
+  logEntryMapThumbnailUrl,
 } from './log-entry-map-marker'
 import {
   defaultMapLogEntryLayerToggles,
@@ -324,25 +325,31 @@ export function buildLegEntryPointsGeoJson(
   options?: {
     entryLayerToggles?: MapLogEntryLayerToggles
     activeWaypointEntryId?: string | null
+    mediaByEntry?: Map<string, Media[]>
   },
 ) {
   const toggles = options?.entryLayerToggles ?? defaultMapLogEntryLayerToggles()
+  const mediaByEntry = options?.mediaByEntry
   const legColors = legColorLookup(legs)
   const sorted = collapseColocatedLogEntries(
     positionedEntries(filterEntriesForMapLogLayers(entries, toggles)),
+    mediaByEntry,
   )
 
   return {
     type: 'FeatureCollection' as const,
     features: sorted.map((entry, index) => {
       const legId = entry.legId ?? null
+      const media = mediaByEntry?.get(entry.id) ?? []
       const kind = logEntryMapIconKind(entry, {
         activeWaypoint: entry.id === options?.activeWaypointEntryId,
+        media,
       })
       const color = isWaypointMapKind(kind)
         ? waypointMapColor(kind)
         : colorForLegId(legId, legColors, 0)
       const outline = logEntryMapOutline(entry)
+      const thumbnailUrl = logEntryMapThumbnailUrl(media)
       return {
         type: 'Feature' as const,
         geometry: {
@@ -355,7 +362,12 @@ export function buildLegEntryPointsGeoJson(
           color,
           kind,
           outline,
-          icon: logEntryMapMarkerImageId(kind, color, outline),
+          icon: logEntryMapMarkerImageId(
+            kind,
+            color,
+            outline,
+            thumbnailUrl ? entry.id : null,
+          ),
         },
       }
     }),

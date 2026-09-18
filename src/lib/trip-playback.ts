@@ -10,6 +10,12 @@ import {
   tripPlaybackRangeFromTrackSamples,
   tripTrackSamplesForTrip,
 } from './trip-track-playback'
+import {
+  buildPlaybackPath,
+  playbackDistanceAtTimeMs,
+  playbackPositionAlongPath,
+  tripPlaybackUsesDistanceAxis,
+} from './trip-playback-path'
 
 export type TripPlaybackPosition = {
   latitude: number
@@ -100,12 +106,23 @@ function entryHeading(entry: LogEntry): number | null {
 }
 
 export function tripPlaybackPositionAt(
-  tripId: string,
+  trip: Pick<Trip, 'id' | 'startedAt' | 'completedAt'>,
   entries: LogEntry[],
   timeMs: number,
   tracks: TripTrack[] = [],
 ): TripPlaybackPosition | null {
-  const trackSamples = tripTrackSamplesForTrip(tripId, tracks)
+  const trackSamples = tripTrackSamplesForTrip(trip.id, tracks)
+  const path = buildPlaybackPath(trackSamples, entries)
+  if (path) {
+    const range = tripPlaybackRange(trip, entries, tracks)
+    if (tripPlaybackUsesDistanceAxis(range, path, trackSamples, entries)) {
+      return playbackPositionAlongPath(
+        path,
+        playbackDistanceAtTimeMs(range, path, timeMs),
+      )
+    }
+  }
+
   if (trackSamples.length > 0) {
     return tripPlaybackPositionFromTrackSamples(trackSamples, timeMs)
   }

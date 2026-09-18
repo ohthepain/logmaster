@@ -17,13 +17,23 @@ import { formatDateTime } from '../lib/logbook-format'
 import { logEntryLegColor } from '../lib/logbook-map-geo'
 import { isVideoLogEntry } from '../lib/log-entry-map-marker'
 import { tripPlaybackRange, tripPlaybackWindow } from '../lib/trip-playback'
-import { computePlaybackTimelineTicks } from '../lib/trip-playback-timeline-ticks'
+import {
+  buildPlaybackPath,
+  playbackDistanceAtTimeMs,
+  playbackTimeMsForEntry,
+  tripPlaybackUsesDistanceAxis,
+} from '../lib/trip-playback-path'
+import { tripTrackSamplesForTrip } from '../lib/trip-track-playback'
+import {
+  computePlaybackTimelineTicks,
+  formatDistanceTickLabel,
+} from '../lib/trip-playback-timeline-ticks'
 import {
   buildPlaybackTimelineMediaMarkers,
+  entryHasPlaybackMedia,
   playbackMediaMarkerOffsets,
 } from '../lib/trip-playback-media-timeline'
 import { cn } from '../lib/cn'
-import { useTranslation } from '../lib/i18n'
 import { compareLogEntriesChronologically } from '../lib/logbook-entry-order'
 import { PlaybackTimelineLogEntryMarker } from './PlaybackTimelineLogEntryMarker'
 import { PLAYBACK_SPEEDS, PlaybackSpeedControl } from './PlaybackSpeedControl'
@@ -65,6 +75,7 @@ type TripPlaybackOverlayProps = {
   onCurrentTimeChange: (timeMs: number) => void
   onShowLogEntries?: () => void
   onPlayingChange?: (playing: boolean) => void
+  openMapEntryRequest?: { entryId: string; nonce: number } | null
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -82,7 +93,8 @@ function isVideoMedia(entry: LogEntry, media: Media[]) {
 
 function mediaSource(media: Media[]) {
   for (const item of media) {
-    const source = item.remoteUrl ?? item.thumbnailUrl
+    if (item.type === 'voice') continue
+    const source = item.remoteUrl ?? item.thumbnailUrl ?? item.localPath
     if (source) return source
   }
   return null
@@ -95,15 +107,6 @@ function formatClock(timeMs: number) {
   }).format(new Date(timeMs))
 }
 
-function formatDuration(durationMs: number) {
-  const totalMinutes = Math.max(0, Math.round(durationMs / 60_000))
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = totalMinutes % 60
-  return hours > 0
-    ? `${hours}h ${minutes.toString().padStart(2, '0')}m`
-    : `${minutes}m`
-}
-
 export function TripPlaybackOverlay({
   trip,
   entries,
@@ -114,8 +117,8 @@ export function TripPlaybackOverlay({
   onCurrentTimeChange,
   onShowLogEntries,
   onPlayingChange,
+  openMapEntryRequest = null,
 }: TripPlaybackOverlayProps) {
-  const { t } = useTranslation()
   const timelineRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
   const currentTimeRef = useRef(currentTimeMs)
@@ -132,6 +135,32 @@ export function TripPlaybackOverlay({
     () => tripPlaybackRange(trip, chronologicalEntries, tracks),
     [chronologicalEntries, tracks, trip],
   )
+  const playbackPath = useMemo(
+    () =>
+      buildPlaybackPath(
+        tripTrackSamplesForTrip(trip.id, tracks),
+        chronologicalEntries,
+      ),
+    [chronologicalEntries, tracks, trip.id],
+  )
+  const distanceAxis = useMemo(
+    () =>
+      tripPlaybackUsesDistanceAxis(
+        range,
+        playbackPath,
+        tripTrackSamplesForTrip(trip.id, tracks),
+        chronologicalEntries,
+      ),
+    [chronologicalEntries, playbackPath, range, tracks, trip.id],
+  )
+  const timeMsForEntry = (entry: LogEntry) =>
+    playbackTimeMsForEntry(range, playbackPath, distanceAxis, entry)
+  const playbackOrderedEntries = useMemo(() => {
+    if (!distanceAxis) return chronologicalEntries
+    return [...chronologicalEntries].sort(
+      (left, right) => timeMsForEntry(left) - timeMsForEntry(right),
+    )
+  }, [chronologicalEntries, distanceAxis, playbackPath, range])
   const [timeZoom, setTimeZoom] = useState(1)
   const [windowCenterMs, setWindowCenterMs] = useState(currentTimeMs)
   const [playing, setPlaying] = useState(false)
@@ -171,17 +200,32 @@ export function TripPlaybackOverlay({
         : 22)
   const timelineHeightPx = timelineTrackTopPx + TIMELINE_TRACK_SECTION_PX
   const timelineTicks = useMemo(
-    () => computePlaybackTimelineTicks(windowRange, range.startMs),
-    [range.startMs, windowRange],
+    () =>
+      computePlaybackTimelineTicks(windowRange, range.startMs, {
+        range,
+        path: playbackPath,
+        distanceAxis,
+      }),
+    [distanceAxis, playbackPath, range, windowRange],
   )
   const visibleMediaMarkers = useMemo(
     () =>
-      timelineMediaMarkers.filter(
-        (marker) =>
-          marker.timeMs >= windowRange.startMs &&
-          marker.timeMs <= windowRange.endMs,
-      ),
-    [timelineMediaMarkers, windowRange.endMs, windowRange.startMs],
+      timelineMediaMarkers.filter((marker) => {
+        const entry = chronologicalEntries.find(
+          (item) => item.id === marker.entryId,
+        )
+        const timeMs = entry ? timeMsForEntry(entry) : marker.timeMs
+        return timeMs >= windowRange.startMs && timeMs <= windowRange.endMs
+      }),
+    [
+      chronologicalEntries,
+      distanceAxis,
+      playbackPath,
+      range,
+      timelineMediaMarkers,
+      windowRange.endMs,
+      windowRange.startMs,
+    ],
   )
   const mediaMarkerOffsets = useMemo(
     () => playbackMediaMarkerOffsets(visibleMediaMarkers),
@@ -228,6 +272,31 @@ export function TripPlaybackOverlay({
   }, [range.startMs, trip.id])
 
   useEffect(() => {
+    if (!openMapEntryRequest) return
+    const entry = chronologicalEntries.find(
+      (item) => item.id === openMapEntryRequest.entryId,
+    )
+    if (!entry) return
+    const timeMs = timeMsForEntry(entry)
+    if (Number.isFinite(timeMs)) {
+      onCurrentTimeChange(timeMs)
+      setWindowCenterMs(timeMs)
+      setPlaying(false)
+      setActiveEntryId(entry.id)
+    }
+    const media = mediaByEntry.get(entry.id) ?? []
+    if (entryHasPlaybackMedia(entry, media)) {
+      setMediaEntryId(entry.id)
+      setMediaPinned(true)
+    }
+  }, [
+    chronologicalEntries,
+    mediaByEntry,
+    onCurrentTimeChange,
+    openMapEntryRequest,
+  ])
+
+  useEffect(() => {
     if (!playing) return
     let animationFrame = 0
     let previousFrame = performance.now()
@@ -257,8 +326,8 @@ export function TripPlaybackOverlay({
   const updateEntryAtTime = (timeMs: number, thresholdMs: number) => {
     let nearest: LogEntry | null = null
     let nearestDistance = Number.POSITIVE_INFINITY
-    for (const entry of chronologicalEntries) {
-      const distance = Math.abs(new Date(entry.timestamp).getTime() - timeMs)
+    for (const entry of playbackOrderedEntries) {
+      const distance = Math.abs(timeMsForEntry(entry) - timeMs)
       if (distance < nearestDistance) {
         nearest = entry
         nearestDistance = distance
@@ -294,11 +363,7 @@ export function TripPlaybackOverlay({
   }
 
   const moveToEntry = (entry: LogEntry) => {
-    const timeMs = clamp(
-      new Date(entry.timestamp).getTime(),
-      range.startMs,
-      range.endMs,
-    )
+    const timeMs = clamp(timeMsForEntry(entry), range.startMs, range.endMs)
     setPlaying(false)
     onCurrentTimeChange(timeMs)
     setWindowCenterMs(timeMs)
@@ -308,17 +373,17 @@ export function TripPlaybackOverlay({
   const skipEntry = (direction: -1 | 1) => {
     const candidates =
       direction < 0
-        ? [...chronologicalEntries]
+        ? [...playbackOrderedEntries]
             .reverse()
-            .filter(
-              (entry) => new Date(entry.timestamp).getTime() < currentTimeMs,
-            )
-        : chronologicalEntries.filter(
-            (entry) => new Date(entry.timestamp).getTime() > currentTimeMs,
+            .filter((entry) => timeMsForEntry(entry) < currentTimeMs)
+        : playbackOrderedEntries.filter(
+            (entry) => timeMsForEntry(entry) > currentTimeMs,
           )
     const target =
       candidates[0] ??
-      chronologicalEntries[direction < 0 ? 0 : chronologicalEntries.length - 1]
+      playbackOrderedEntries[
+        direction < 0 ? 0 : playbackOrderedEntries.length - 1
+      ]
     if (target) moveToEntry(target)
   }
 
@@ -335,15 +400,20 @@ export function TripPlaybackOverlay({
 
   const openEntryAtTime = (entry: LogEntry) => {
     const media = mediaByEntry.get(entry.id) ?? []
-    const hasMedia = media.length > 0 || isVideoLogEntry(entry)
-    if (hasMedia) openEntryMedia(entry)
+    if (entryHasPlaybackMedia(entry, media)) openEntryMedia(entry)
     else moveToEntry(entry)
   }
 
   return (
     <>
       {mediaEntry ? (
-        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/80">
+        <div
+          data-map-touch-zone={mediaPinned || undefined}
+          className={cn(
+            'absolute inset-0 z-20 flex items-center justify-center bg-black/80',
+            mediaPinned ? 'pointer-events-auto' : 'pointer-events-none',
+          )}
+        >
           {mediaIsVideo ? (
             videoSource ? (
               <video
@@ -436,19 +506,6 @@ export function TripPlaybackOverlay({
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 10px)' }}
       >
         <div className="mx-auto max-w-4xl">
-          <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-semibold text-white/75">
-            <span>{formatClock(currentTimeMs)}</span>
-            <span>
-              {formatDuration(Math.max(0, currentTimeMs - range.startMs))} /{' '}
-              {formatDuration(range.durationMs)}
-            </span>
-            <span>
-              {t('timeZoom', {
-                value: timeZoom.toFixed(timeZoom < 2 ? 1 : 0),
-              })}
-            </span>
-          </div>
-
           <div
             ref={timelineRef}
             className="relative touch-none select-none"
@@ -580,8 +637,8 @@ export function TripPlaybackOverlay({
             ))}
 
             {showTimelineEntries
-              ? chronologicalEntries.map((entry, index) => {
-                  const timeMs = new Date(entry.timestamp).getTime()
+              ? playbackOrderedEntries.map((entry, index) => {
+                  const timeMs = timeMsForEntry(entry)
                   if (
                     timeMs < windowRange.startMs ||
                     timeMs > windowRange.endMs
@@ -591,6 +648,12 @@ export function TripPlaybackOverlay({
                   const left =
                     ((timeMs - windowRange.startMs) / windowRange.durationMs) *
                     100
+                  const atLabel =
+                    distanceAxis && playbackPath
+                      ? formatDistanceTickLabel(
+                          playbackDistanceAtTimeMs(range, playbackPath, timeMs),
+                        )
+                      : formatClock(timeMs)
                   return (
                     <button
                       key={entry.id}
@@ -601,7 +664,7 @@ export function TripPlaybackOverlay({
                         left: `${left}%`,
                         height: TIMELINE_ENTRY_ROW_PX,
                       }}
-                      aria-label={`${entryTitle(entry.type, entry.data)} at ${formatClock(timeMs)}`}
+                      aria-label={`${entryTitle(entry.type, entry.data)} at ${atLabel}`}
                     >
                       <PlaybackTimelineLogEntryMarker
                         entry={entry}
@@ -616,18 +679,24 @@ export function TripPlaybackOverlay({
 
             {showTimelineMedia
               ? visibleMediaMarkers.map((marker) => {
-                  const left =
-                    ((marker.timeMs - windowRange.startMs) /
-                      windowRange.durationMs) *
-                    100
-                  const offsetPx = mediaMarkerOffsets.get(marker.id) ?? 0
                   const entry =
                     chronologicalEntries.find(
                       (item) => item.id === marker.entryId,
                     ) ?? null
+                  const timeMs = entry ? timeMsForEntry(entry) : marker.timeMs
+                  const left =
+                    ((timeMs - windowRange.startMs) / windowRange.durationMs) *
+                    100
+                  const offsetPx = mediaMarkerOffsets.get(marker.id) ?? 0
+                  const atLabel =
+                    distanceAxis && playbackPath
+                      ? formatDistanceTickLabel(
+                          playbackDistanceAtTimeMs(range, playbackPath, timeMs),
+                        )
+                      : formatClock(timeMs)
                   const label = entry
-                    ? `${entryTitle(entry.type, entry.data)} media at ${formatClock(marker.timeMs)}`
-                    : `Media at ${formatClock(marker.timeMs)}`
+                    ? `${entryTitle(entry.type, entry.data)} media at ${atLabel}`
+                    : `Media at ${atLabel}`
                   return (
                     <button
                       key={marker.id}

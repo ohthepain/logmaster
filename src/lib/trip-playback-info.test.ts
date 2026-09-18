@@ -101,6 +101,54 @@ describe('tripPlaybackInfoAt', () => {
     expect(labels).toContain('Elevation')
   })
 
+  it('includes GPS-derived SOG when no instrument SOG track exists', () => {
+    const tracks: TripTrack[] = [
+      {
+        id: 'track-position',
+        tripId,
+        source: 'gpx-import',
+        kind: 'position',
+        encoding: 'delta-v1',
+        payload: encodePositionTrackSamples([
+          {
+            time: '2026-06-01T09:00:00.000Z',
+            latitude: 59.9139,
+            longitude: 10.7522,
+            heading: 120,
+          },
+          {
+            time: '2026-06-01T10:00:00.000Z',
+            latitude: 59.9239,
+            longitude: 10.7622,
+            heading: 130,
+          },
+        ]),
+        sampleCount: 2,
+        startedAt: '2026-06-01T09:00:00.000Z',
+        endedAt: '2026-06-01T10:00:00.000Z',
+        createdAt: '2026-06-01T09:00:00.000Z',
+        updatedAt: '2026-06-01T10:00:00.000Z',
+        synced: false,
+      },
+    ]
+
+    const snapshot = tripPlaybackInfoAt(
+      tripId,
+      tracks,
+      [],
+      Date.parse('2026-06-01T10:00:00.000Z'),
+      {
+        latitude: 59.9239,
+        longitude: 10.7622,
+        heading: 130,
+      },
+    )
+
+    const sog = snapshot.lines.find((line) => line.id === 'sog')
+    expect(sog?.label).toBe('Speed over ground')
+    expect(sog?.value).toMatch(/kn$/)
+  })
+
   it('returns only time when no other data exists', () => {
     const snapshot = tripPlaybackInfoAt(
       tripId,

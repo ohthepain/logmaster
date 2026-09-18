@@ -595,4 +595,45 @@ describe('buildLegEntryPointsGeoJson', () => {
     expect(geojson.features).toHaveLength(1)
     expect(geojson.features[0]?.properties.kind).toBe('anchor-dropped')
   })
+
+  it('uses a photo marker for hourly logs with attached photos', () => {
+    const geojson = buildLegEntryPointsGeoJson(
+      [
+        baseEntry({
+          id: 'hourly-photo',
+          type: 'HOURLY_LOG',
+          latitude: 48.1,
+          longitude: -123.1,
+        }),
+      ],
+      [],
+      {
+        mediaByEntry: new Map([
+          [
+            'hourly-photo',
+            [
+              {
+                id: 'media-1',
+                logEntryId: 'hourly-photo',
+                type: 'photo',
+                order: 0,
+                thumbnailUrl: 'https://example.com/thumb.jpg',
+                remoteUrl: null,
+                localPath: null,
+                createdAt: '2026-01-01T12:00:00.000Z',
+                updatedAt: '2026-01-01T12:00:00.000Z',
+                synced: true,
+              },
+            ],
+          ],
+        ]),
+      },
+    )
+
+    expect(geojson.features).toHaveLength(1)
+    expect(geojson.features[0]?.properties).toMatchObject({
+      kind: 'media-photo',
+      icon: 'log-entry-media-photo-7ec8e8-solid-hourlyphoto',
+    })
+  })
 })

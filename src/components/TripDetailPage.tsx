@@ -156,20 +156,6 @@ export function TripDetailPage({
       .catch(() => {})
   }, [tripId])
 
-  useEffect(() => {
-    if (getNativePlatform() !== 'ios') return
-    const { style: htmlStyle } = document.documentElement
-    const { style: bodyStyle } = document.body
-    const previousHtmlBackground = htmlStyle.backgroundColor
-    const previousBodyBackground = bodyStyle.backgroundColor
-    htmlStyle.backgroundColor = 'transparent'
-    bodyStyle.backgroundColor = 'transparent'
-    return () => {
-      htmlStyle.backgroundColor = previousHtmlBackground
-      bodyStyle.backgroundColor = previousBodyBackground
-    }
-  }, [])
-
   const tripLegs = useMemo(
     () => store.legs.filter((leg) => leg.tripId === tripId),
     [store.legs, tripId],

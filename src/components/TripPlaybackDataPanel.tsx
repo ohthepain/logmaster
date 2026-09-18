@@ -1,5 +1,6 @@
 import { Check, Layers } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { LogEntry, Media } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { cn } from '../lib/cn'
@@ -76,10 +77,103 @@ export function TripPlaybackViewSelector({
 }: TripPlaybackViewSelectorProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<{
+    bottom: number
+    right: number
+  } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const enabledCount = countEnabledPlaybackViews(viewState)
 
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPosition(null)
+      return
+    }
+    const update = () => {
+      const rect = rootRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setMenuPosition({
+        bottom: window.innerHeight - rect.top + 8,
+        right: window.innerWidth - rect.right,
+      })
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [open])
+
   if (options.length === 0) return null
+
+  const menu =
+    open && menuPosition && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            role="group"
+            aria-label={t('timelineTracks')}
+            className={cn(
+              'ios-map-touch-target fixed min-w-[13rem] overflow-hidden rounded-xl border border-white/15 bg-black/90 p-2 shadow-xl backdrop-blur-md',
+              POPUP_MENU_Z_CLASS,
+            )}
+            style={menuPosition}
+            data-map-touch-zone
+            data-playback-control
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <p className="m-0 px-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">
+              {t('showOnTimeline')}
+            </p>
+            <div className="space-y-1">
+              {options.map((option) => {
+                const checked = viewState[option.id] ?? false
+                const disabled = option.disabled === true
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    data-playback-control
+                    disabled={disabled}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={() => onToggle(option.id)}
+                    className={cn(
+                      'flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm transition',
+                      disabled
+                        ? 'cursor-not-allowed text-white/35'
+                        : checked
+                          ? 'bg-white/15 text-white'
+                          : 'text-white/80 hover:bg-white/10',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'inline-flex size-4 shrink-0 items-center justify-center rounded border',
+                        checked
+                          ? 'border-[var(--brand)] bg-[var(--brand)] text-white'
+                          : 'border-white/30 bg-transparent',
+                      )}
+                      aria-hidden
+                    >
+                      {checked ? (
+                        <Check className="size-3" strokeWidth={3} />
+                      ) : null}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      {translatePlaybackField(option.id, t, option.label)}
+                    </span>
+                    <span className="text-[10px] uppercase tracking-[0.12em] text-white/45">
+                      {translatePlaybackShortLabel(
+                        option.id,
+                        t,
+                        option.shortLabel,
+                      )}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>,
+          document.body,
+        )
+      : null
 
   return (
     <div ref={rootRef} className="relative justify-self-end">
@@ -97,67 +191,7 @@ export function TripPlaybackViewSelector({
         <Layers className="size-3.5" />
         {enabledCount > 0 ? enabledCount : t('tracks')}
       </button>
-      {open ? (
-        <div
-          role="group"
-          aria-label={t('timelineTracks')}
-          className={cn(
-            'absolute bottom-full right-0 mb-2 min-w-[13rem] overflow-hidden rounded-xl border border-white/15 bg-black/90 p-2 shadow-xl backdrop-blur-md',
-            POPUP_MENU_Z_CLASS,
-          )}
-        >
-          <p className="m-0 px-1 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">
-            {t('showOnTimeline')}
-          </p>
-          <div className="space-y-1">
-            {options.map((option) => {
-              const checked = viewState[option.id] ?? false
-              const disabled = option.disabled === true
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  data-playback-control
-                  disabled={disabled}
-                  onClick={() => onToggle(option.id)}
-                  className={cn(
-                    'flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm transition',
-                    disabled
-                      ? 'cursor-not-allowed text-white/35'
-                      : checked
-                        ? 'bg-white/15 text-white'
-                        : 'text-white/80 hover:bg-white/10',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'inline-flex size-4 shrink-0 items-center justify-center rounded border',
-                      checked
-                        ? 'border-[var(--brand)] bg-[var(--brand)] text-white'
-                        : 'border-white/30 bg-transparent',
-                    )}
-                    aria-hidden
-                  >
-                    {checked ? (
-                      <Check className="size-3" strokeWidth={3} />
-                    ) : null}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    {translatePlaybackField(option.id, t, option.label)}
-                  </span>
-                  <span className="text-[10px] uppercase tracking-[0.12em] text-white/45">
-                    {translatePlaybackShortLabel(
-                      option.id,
-                      t,
-                      option.shortLabel,
-                    )}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      ) : null}
+      {menu}
     </div>
   )
 }

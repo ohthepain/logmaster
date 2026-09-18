@@ -1,6 +1,7 @@
 import { useNavigate } from '@tanstack/react-router'
 import { Pencil } from 'lucide-react'
-import { useId, useState } from 'react'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 import { cn } from '../lib/cn'
 import { useTranslation } from '../lib/i18n'
@@ -27,6 +28,11 @@ export function TripMapEditMenu({
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number
+    left: number
+  } | null>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
   const busy = disabled || uploading
 
@@ -35,8 +41,130 @@ export function TripMapEditMenu({
     setOpen(false)
   }
 
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPosition(null)
+      return
+    }
+    const update = () => {
+      const rect = rootRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setMenuPosition({
+        top: rect.top,
+        left: rect.right + 8,
+      })
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [open])
+
+  const menu =
+    open && menuPosition && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            id={menuId}
+            role="menu"
+            aria-label={t('tripEditOptions')}
+            data-map-touch-zone
+            className={cn(
+              'ios-map-touch-target pointer-events-auto fixed min-w-[12.5rem] overflow-hidden rounded-xl border border-white/25 bg-black/80 py-1 shadow-xl backdrop-blur-md',
+              POPUP_MENU_Z_CLASS,
+            )}
+            style={menuPosition}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <label
+              htmlFor={busy ? undefined : uploadInputId}
+              role="menuitem"
+              aria-disabled={busy}
+              onClick={(event) => {
+                if (busy) {
+                  event.preventDefault()
+                  return
+                }
+                // Close after the label activates the file input (sync close unmounts too early).
+                window.setTimeout(() => setOpen(false), 0)
+              }}
+              className={cn(
+                'ios-map-touch-target pointer-events-auto block w-full cursor-pointer px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10',
+                busy && 'pointer-events-none opacity-60',
+              )}
+            >
+              {uploading ? t('uploading') : t('uploadPhotosAndVideo')}
+            </label>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation()
+                runAction(() => {
+                  void navigate({
+                    to: '/trips/$tripId/story/edit',
+                    params: { tripId },
+                  })
+                })
+              }}
+              className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
+            >
+              {t('trackStories')}
+            </button>
+            {onAddWaypoint ? (
+              <button
+                type="button"
+                role="menuitem"
+                disabled={busy}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  runAction(onAddWaypoint)
+                }}
+                className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
+              >
+                {t('addWaypoint')}
+              </button>
+            ) : null}
+            {onEditWaypoints ? (
+              <button
+                type="button"
+                role="menuitem"
+                disabled={busy}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  runAction(onEditWaypoints)
+                }}
+                className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
+              >
+                {t('editWaypoints')}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation()
+                runAction(onEditCover)
+              }}
+              className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
+            >
+              {t('editTripCover')}
+            </button>
+          </div>,
+          document.body,
+        )
+      : null
+
   return (
-    <div className="pointer-events-auto relative" data-map-touch-zone>
+    <div
+      ref={rootRef}
+      className="pointer-events-auto relative"
+      data-map-touch-zone
+    >
       {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
       <button
         type="button"
@@ -52,106 +180,13 @@ export function TripMapEditMenu({
           setOpen((current) => !current)
         }}
         className={cn(
-          'ios-map-touch-target pointer-events-auto inline-flex size-10 items-center justify-center rounded-full border border-white/25 text-white backdrop-blur-sm transition hover:bg-black/45 disabled:opacity-60',
+          'ios-map-touch-target pointer-events-auto inline-flex size-10 touch-manipulation items-center justify-center rounded-full border border-white/25 text-white backdrop-blur-sm transition hover:bg-black/45 disabled:opacity-60',
           open ? 'bg-black/55' : 'bg-black/30',
         )}
       >
         <Pencil className="size-4" />
       </button>
-
-      {open ? (
-        <div
-          id={menuId}
-          role="menu"
-          aria-label={t('tripEditOptions')}
-          data-map-touch-zone
-          className={cn(
-            'ios-map-touch-target pointer-events-auto absolute left-full top-0 ml-2 min-w-[12.5rem] overflow-hidden rounded-xl border border-white/25 bg-black/80 py-1 shadow-xl backdrop-blur-md',
-            POPUP_MENU_Z_CLASS,
-          )}
-        >
-          <label
-            htmlFor={busy ? undefined : uploadInputId}
-            role="menuitem"
-            aria-disabled={busy}
-            onClick={(event) => {
-              if (busy) {
-                event.preventDefault()
-                return
-              }
-              // Close after the label activates the file input (sync close unmounts too early).
-              window.setTimeout(() => setOpen(false), 0)
-            }}
-            className={cn(
-              'ios-map-touch-target pointer-events-auto block w-full cursor-pointer px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10',
-              busy && 'pointer-events-none opacity-60',
-            )}
-          >
-            {uploading ? t('uploading') : t('uploadPhotosAndVideo')}
-          </label>
-          <button
-            type="button"
-            role="menuitem"
-            disabled={busy}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation()
-              runAction(() => {
-                void navigate({
-                  to: '/trips/$tripId/story/edit',
-                  params: { tripId },
-                })
-              })
-            }}
-            className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
-          >
-            {t('trackStories')}
-          </button>
-          {onAddWaypoint ? (
-            <button
-              type="button"
-              role="menuitem"
-              disabled={busy}
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={(event) => {
-                event.stopPropagation()
-                runAction(onAddWaypoint)
-              }}
-              className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
-            >
-              {t('addWaypoint')}
-            </button>
-          ) : null}
-          {onEditWaypoints ? (
-            <button
-              type="button"
-              role="menuitem"
-              disabled={busy}
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={(event) => {
-                event.stopPropagation()
-                runAction(onEditWaypoints)
-              }}
-              className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
-            >
-              {t('editWaypoints')}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            role="menuitem"
-            disabled={busy}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation()
-              runAction(onEditCover)
-            }}
-            className="ios-map-touch-target pointer-events-auto w-full px-3 py-2.5 text-left text-sm font-medium text-white outline-none hover:bg-white/10 disabled:opacity-60"
-          >
-            {t('editTripCover')}
-          </button>
-        </div>
-      ) : null}
+      {menu}
     </div>
   )
 }

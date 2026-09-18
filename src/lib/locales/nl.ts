@@ -118,7 +118,6 @@ const catalog: TranslationCatalog = {
   logEntries: 'Logboekitems',
   media: 'Media',
   logShort: 'Log',
-  timeZoom: 'Tijdzoom {value}×',
   plannedRouteOverlayHint:
     'Leg een geplande route over de tochtkaart zonder het logboek te wijzigen.',
   hideOverlay: 'Overlay verbergen',

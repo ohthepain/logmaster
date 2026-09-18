@@ -34,7 +34,7 @@ describe('trip-playback-panels', () => {
     expect(samples[0]?.value).toBeGreaterThan(0)
   })
 
-  it('lists instrument panels and omits derived SOG when instrument SOG exists', () => {
+  it('omits SOG from the timeline selector even when instrument or derived SOG exists', () => {
     const tracks: TripTrack[] = [
       {
         id: 'track-position',
@@ -78,13 +78,29 @@ describe('trip-playback-panels', () => {
         updatedAt: '2026-06-01T10:00:00.000Z',
         synced: false,
       },
+      {
+        id: 'track-stw',
+        tripId,
+        source: 'instrument',
+        kind: 'stw',
+        encoding: 'scalar-delta-v1',
+        payload: encodeScalarTrackSamples([
+          { time: '2026-06-01T09:00:00.000Z', value: 3 },
+        ]),
+        sampleCount: 1,
+        startedAt: '2026-06-01T09:00:00.000Z',
+        endedAt: '2026-06-01T09:00:00.000Z',
+        createdAt: '2026-06-01T09:00:00.000Z',
+        updatedAt: '2026-06-01T09:00:00.000Z',
+        synced: false,
+      },
     ]
 
     const options = availablePlaybackPanels(tripId, tracks, [])
     expect(options.map((option) => option.id)).toEqual([
       'log-entries',
       'media',
-      'sog',
+      'stw',
     ])
     expect(options[0]?.disabled).toBe(true)
     expect(options[1]?.disabled).toBe(true)
@@ -158,13 +174,13 @@ describe('trip-playback-panels', () => {
   it('defaults log entries off when entries and instrument tracks are available', () => {
     const tracks: TripTrack[] = [
       {
-        id: 'track-sog',
+        id: 'track-stw',
         tripId,
         source: 'instrument',
-        kind: 'sog',
+        kind: 'stw',
         encoding: 'scalar-delta-v1',
         payload: encodeScalarTrackSamples([
-          { time: '2026-06-01T09:00:00.000Z', value: 4 },
+          { time: '2026-06-01T09:00:00.000Z', value: 3 },
         ]),
         sampleCount: 1,
         startedAt: '2026-06-01T09:00:00.000Z',
@@ -179,7 +195,7 @@ describe('trip-playback-panels', () => {
     ])
     const state = defaultPlaybackViewState(options)
     expect(state['log-entries']).toBe(false)
-    expect(state.sog).toBe(true)
+    expect(state.stw).toBe(true)
   })
 
   it('builds multiple graph series with distinct colors', () => {

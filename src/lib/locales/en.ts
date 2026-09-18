@@ -117,7 +117,6 @@ const catalog: TranslationCatalog = {
   logEntries: 'Log entries',
   media: 'Media',
   logShort: 'Log',
-  timeZoom: 'Time zoom {value}×',
   plannedRouteOverlayHint:
     'Overlay a planned route on the trip map without changing the log.',
   hideOverlay: 'Hide overlay',
