@@ -68,6 +68,15 @@ function isDayBoundary(timeMs: number, tripStartMs: number): boolean {
   return Math.abs((timeMs - tripStartMs) % DAY_MS) < 1
 }
 
+function chooseDayLabelStep(visibleDurationMs: number): number {
+  const visibleDays = Math.max(0.1, visibleDurationMs / DAY_MS)
+  const niceSteps = [1, 2, 5, 10, 20, 50] as const
+  for (const step of niceSteps) {
+    if (visibleDays / step <= 6) return step
+  }
+  return 50
+}
+
 function chooseHourStep(visibleDurationMs: number): number | null {
   if (visibleDurationMs > 10 * DAY_MS) return null
   const visibleHours = visibleDurationMs / HOUR_MS
@@ -212,29 +221,29 @@ function cullLabels(ticks: TimelineTick[]): TimelineTick[] {
   const labeled = ticks
     .map((tick, index) => ({ tick, index }))
     .filter(({ tick }) => tick.label)
-
-  if (labeled.length <= MIN_LABELED_TICKS) return ticks
+    .sort((a, b) => a.tick.percent - b.tick.percent)
 
   const dropLabel = new Set<number>()
   const keptPercents: number[] = []
   const days = labeled.filter(({ tick }) => tick.kind === 'day')
-  const others = labeled
-    .filter(({ tick }) => tick.kind !== 'day')
-    .sort((a, b) => a.tick.percent - b.tick.percent)
+  const others = labeled.filter(({ tick }) => tick.kind !== 'day')
 
-  for (const { tick } of days) {
-    keptPercents.push(tick.percent)
-  }
-
-  for (const { tick, index } of others) {
+  const keepIfSpaced = (index: number, percent: number) => {
     const close = keptPercents.some(
-      (percent) => Math.abs(tick.percent - percent) < MIN_LABEL_SPACING_PERCENT,
+      (kept) => Math.abs(percent - kept) < MIN_LABEL_SPACING_PERCENT,
     )
     if (close) {
       dropLabel.add(index)
-      continue
+      return
     }
-    keptPercents.push(tick.percent)
+    keptPercents.push(percent)
+  }
+
+  for (const { tick, index } of days) {
+    keepIfSpaced(index, tick.percent)
+  }
+  for (const { tick, index } of others) {
+    keepIfSpaced(index, tick.percent)
   }
 
   return ticks.map((tick, index) =>
@@ -279,9 +288,15 @@ export function computePlaybackTimelineTicks(
 
   const firstDayIndex = Math.floor((window.startMs - tripStartMs) / DAY_MS)
   const lastDayIndex = Math.ceil((window.endMs - tripStartMs) / DAY_MS)
+  const dayLabelStep = chooseDayLabelStep(window.durationMs)
   for (let dayIndex = firstDayIndex; dayIndex <= lastDayIndex; dayIndex += 1) {
     const timeMs = tripStartMs + dayIndex * DAY_MS
-    addTick(timeMs, 'day', `Day ${dayNumberAt(timeMs, tripStartMs)}`)
+    const dayNumber = dayNumberAt(timeMs, tripStartMs)
+    const label =
+      dayNumber > 0 && (dayNumber - 1) % dayLabelStep === 0
+        ? `Day ${dayNumber}`
+        : null
+    addTick(timeMs, 'day', label)
   }
 
   const hourStep = chooseHourStep(window.durationMs)

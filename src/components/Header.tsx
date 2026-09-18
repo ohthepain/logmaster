@@ -34,7 +34,7 @@ export function AppHeaderBrand({
       aria-label={t('home')}
     >
       <img
-        src="/logo_trans_crop_512.png"
+        src="/logo_trans_512.png"
         alt=""
         width={36}
         height={36}

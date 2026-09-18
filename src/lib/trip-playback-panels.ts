@@ -402,6 +402,18 @@ export function sanitizePlaybackViewState(
   return next
 }
 
+export function togglePlaybackViewState(
+  state: PlaybackViewState,
+  options: PlaybackPanelOption[],
+  panelId: PlaybackPanelId,
+): PlaybackViewState {
+  const option = options.find((item) => item.id === panelId)
+  if (!option || option.disabled)
+    return sanitizePlaybackViewState(state, options)
+  const sanitized = sanitizePlaybackViewState(state, options)
+  return { ...sanitized, [panelId]: !sanitized[panelId] }
+}
+
 export function enabledPlaybackPanelIds(
   state: PlaybackViewState,
 ): PlaybackPanelId[] {

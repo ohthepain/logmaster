@@ -12,6 +12,7 @@ import {
   interpolatePlaybackGraphValue,
   playbackPanelGraphPoints,
   sanitizePlaybackViewState,
+  togglePlaybackViewState,
 } from './trip-playback-panels'
 
 const tripId = 'trip-1'
@@ -246,5 +247,20 @@ describe('trip-playback-panels', () => {
     )
     expect(Object.keys(sanitized)).toEqual(['log-entries', 'media'])
     expect(sanitized['log-entries']).toBe(false)
+  })
+
+  it('allows turning log entries off even when it is the last enabled row', () => {
+    const options = availablePlaybackPanels(
+      tripId,
+      [],
+      [{ id: 'e1', deleted: false } as never],
+    )
+    const next = togglePlaybackViewState(
+      { 'log-entries': true, media: false },
+      options,
+      'log-entries',
+    )
+    expect(next['log-entries']).toBe(false)
+    expect(next.media).toBe(false)
   })
 })

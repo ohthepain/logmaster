@@ -26,6 +26,30 @@ describe('computePlaybackTimelineTicks', () => {
     expect(dayLabels).toContain('Day 3')
   })
 
+  it('skips overlapping day labels on a long trip', () => {
+    const tripStart = Date.parse('2026-06-01T08:00:00Z')
+    const window = {
+      startMs: tripStart,
+      endMs: tripStart + 44 * DAY,
+      durationMs: 44 * DAY,
+    }
+    const ticks = computePlaybackTimelineTicks(window, tripStart)
+    const dayLabels = ticks
+      .filter((tick) => tick.label?.startsWith('Day '))
+      .map((tick) => tick.label)
+    expect(dayLabels).toContain('Day 1')
+    expect(dayLabels.length).toBeLessThan(10)
+    expect(dayLabels).not.toContain('Day 2')
+    const labeled = ticks
+      .filter((tick) => tick.label)
+      .sort((a, b) => a.percent - b.percent)
+    for (let index = 1; index < labeled.length; index += 1) {
+      expect(
+        labeled[index].percent - labeled[index - 1].percent,
+      ).toBeGreaterThanOrEqual(12)
+    }
+  })
+
   it('labels hour ticks with clock time instead of elapsed hours', () => {
     const tripStart = Date.parse('2026-06-01T08:00:00Z')
     const window = {

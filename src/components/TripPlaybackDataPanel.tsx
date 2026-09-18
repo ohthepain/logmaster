@@ -17,6 +17,7 @@ import {
   defaultPlaybackViewState,
   enabledGraphPlaybackPanelIds,
   sanitizePlaybackViewState,
+  togglePlaybackViewState,
 } from '../lib/trip-playback-panels'
 import type {
   PlaybackPanelId,
@@ -215,17 +216,9 @@ export function usePlaybackViewState(
   }, [options])
 
   const togglePanel = (panelId: PlaybackPanelId) => {
-    const option = options.find((item) => item.id === panelId)
-    if (option?.disabled) return
-
-    setViewState((current) => {
-      const sanitized = sanitizePlaybackViewState(current, options)
-      const next = { ...sanitized, [panelId]: !sanitized[panelId] }
-      if (!Object.values(next).some(Boolean)) {
-        return sanitized
-      }
-      return next
-    })
+    setViewState((current) =>
+      togglePlaybackViewState(current, options, panelId),
+    )
   }
 
   const showTimelineEntries = viewState['log-entries'] ?? false
