@@ -10,7 +10,7 @@ import {
   subscribeWebPush,
 } from '../lib/notifications-api'
 
-const APNS_TOKEN_TIMEOUT_MS = 20_000
+const PUSH_TOKEN_TIMEOUT_MS = 20_000
 
 async function registerNativePush(): Promise<void> {
   if (!Capacitor.isPluginAvailable('PushNotifications')) {
@@ -60,8 +60,8 @@ async function registerNativePush(): Promise<void> {
   let timeoutId = 0
   const timedOut = new Promise<void>((_, reject) => {
     timeoutId = window.setTimeout(() => {
-      reject(new Error('APNs token timeout'))
-    }, APNS_TOKEN_TIMEOUT_MS)
+      reject(new Error('Push registration token timeout'))
+    }, PUSH_TOKEN_TIMEOUT_MS)
   })
 
   try {

@@ -128,8 +128,8 @@ def build(config, commit, target):
         source = directory / 'source'
         env = build_environment(config, target)
 
-        def execute(args, cwd=source, capture=False):
-            result = subprocess.run(args, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+        def execute(args, cwd=source, capture=False, command_env=None):
+            result = subprocess.run(args, cwd=cwd, env=env if command_env is None else command_env, stdin=subprocess.DEVNULL,
                                     stdout=subprocess.PIPE if capture else log, stderr=log,
                                     check=True, text=True)
             return result.stdout.strip() if capture else None
@@ -137,7 +137,13 @@ def build(config, commit, target):
         try:
             git = ['/usr/bin/git', '-c', 'core.hooksPath=/dev/null']
             execute([*git, 'init', '--template=', str(source)], directory)
-            execute([*git, 'fetch', '--no-tags', '--no-recurse-submodules', '--depth=1', REPOSITORY, commit])
+            # Only the fixed-repository fetch may use the host's SSH agent.
+            # Never expose it to dependency scripts, checkout hooks or Xcode.
+            fetch_env = env.copy()
+            if os.environ.get('SSH_AUTH_SOCK'):
+                fetch_env['SSH_AUTH_SOCK'] = os.environ['SSH_AUTH_SOCK']
+            execute([*git, 'fetch', '--no-tags', '--no-recurse-submodules', '--depth=1', REPOSITORY, commit],
+                    command_env=fetch_env)
             actual = execute([*git, 'rev-parse', 'FETCH_HEAD^{commit}'], capture=True)
             if actual != commit:
                 raise ValueError('fetched commit does not match the requested SHA')

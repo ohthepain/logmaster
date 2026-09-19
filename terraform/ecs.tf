@@ -58,6 +58,14 @@ resource "aws_ecs_task_definition" "app" {
 
       secrets = [
         {
+          name      = "FCM_PROJECT_ID"
+          valueFrom = aws_ssm_parameter.fcm_project_id.arn
+        },
+        {
+          name      = "FCM_SERVICE_ACCOUNT_JSON"
+          valueFrom = aws_ssm_parameter.fcm_service_account_json.arn
+        },
+        {
           name      = "DATABASE_URL"
           valueFrom = aws_ssm_parameter.database_url.arn
         },

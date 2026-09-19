@@ -1,6 +1,7 @@
 import webpush from 'web-push'
 import { prisma } from '../db'
 import { sendApnsMessage } from './apns'
+import { sendFcmMessage } from './fcm'
 import { logServerEvent } from '../lib/server-log'
 
 const db = prisma as any
@@ -33,58 +34,6 @@ function ensureWebPushConfigured(): boolean {
   if (!publicKey || !privateKey) return false
   webpush.setVapidDetails(subject, publicKey, privateKey)
   webPushConfigured = true
-  return true
-}
-
-async function sendFcmMessage(args: {
-  token: string
-  title: string
-  body: string
-  linkUrl: string | null
-}): Promise<boolean> {
-  const serverKey = process.env.FCM_SERVER_KEY?.trim()
-  if (!serverKey) return false
-
-  const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-    method: 'POST',
-    headers: {
-      Authorization: `key=${serverKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      to: args.token,
-      notification: {
-        title: args.title,
-        body: args.body,
-      },
-      data: {
-        linkUrl: args.linkUrl ?? '',
-      },
-    }),
-  })
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '')
-    console.warn('[notifications] FCM send failed', response.status, text)
-    return false
-  }
-
-  const payload = (await response.json()) as {
-    failure?: number
-    results?: Array<{ error?: string }>
-  }
-  const error = payload.results?.[0]?.error
-  if (payload.failure && error) {
-    if (
-      error === 'NotRegistered' ||
-      error === 'InvalidRegistration' ||
-      error === 'MismatchSenderId'
-    ) {
-      return false
-    }
-    console.warn('[notifications] FCM error', error)
-    return false
-  }
   return true
 }
 
@@ -175,13 +124,14 @@ export async function sendPushToUser(args: {
           })
         }
       } else if (device.platform === 'android') {
-        const ok = await sendFcmMessage({
+        const result = await sendFcmMessage({
           token: device.token,
           title: args.title,
           body: args.body,
           linkUrl,
+          notificationId: args.notificationId,
         })
-        if (!ok) {
+        if (result === 'invalid-token') {
           await db.pushDevice.delete({ where: { id: device.id } })
         }
       }

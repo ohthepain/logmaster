@@ -88,6 +88,8 @@ Swift package resolution is restricted to the committed resolved versions.
 Only request commits you trust: dependency installation and Xcode builds execute
 code from the selected commit and its dependencies under your Mac account. A
 fixed helper command does not sandbox that code away from your local credentials.
+The helper passes the existing SSH agent only to the fixed-repository Git fetch;
+dependency installation and Xcode builds do not receive the agent environment.
 
 Artifacts, source checkout, build logs and a release manifest remain under
 `ios/build/releases/RELEASE_ID/` (ignored by Git). The manifest records the exact

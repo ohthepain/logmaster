@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "262873177212",
+    "project_id": "logmaster-e7025",
+    "storage_bucket": "logmaster-e7025.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:262873177212:android:0ea5605ad128e8fa03fdf9",
+        "android_client_info": {
+          "package_name": "live.logmaster.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDU0PWzI8QiwCkJsOLb-NwHSkCavEfNyUg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

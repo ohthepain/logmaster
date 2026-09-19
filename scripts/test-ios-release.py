@@ -107,6 +107,18 @@ class ReleaseTests(unittest.TestCase):
             self.assertNotIn(key, env)
         self.assertEqual(env['CAP_REMOTE_APP_URL'], 'https://logmaster.live')
 
+    def test_only_fixed_repository_fetch_receives_ssh_agent(self):
+        with patch.dict(os.environ, {'SSH_AUTH_SOCK': '/local/agent', 'AWS_SECRET_ACCESS_KEY': 'secret'}):
+            self.build()
+        for args, kwargs in self.calls:
+            env = kwargs['env']
+            self.assertNotIn('AWS_SECRET_ACCESS_KEY', env)
+            if 'fetch' in args:
+                self.assertEqual(args[-2:], [release.REPOSITORY, SHA])
+                self.assertEqual(env['SSH_AUTH_SOCK'], '/local/agent')
+            else:
+                self.assertNotIn('SSH_AUTH_SOCK', env)
+
     def test_fetched_sha_mismatch_stops_before_checkout(self):
         def mismatch(args, **kwargs):
             result = self.fake_run(args, **kwargs)

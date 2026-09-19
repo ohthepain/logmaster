@@ -292,3 +292,24 @@ resource "aws_ssm_parameter" "apns_bundle_id" {
     Name = "${local.name_prefix}-apns-bundle-id"
   }
 }
+
+# Populate out of band after apply; a blank project disables Android sending.
+resource "aws_ssm_parameter" "fcm_project_id" {
+  name  = "${local.ssm_env_prefix}/FCM_PROJECT_ID"
+  type  = "SecureString"
+  value = " "
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
+
+resource "aws_ssm_parameter" "fcm_service_account_json" {
+  name  = "${local.ssm_env_prefix}/FCM_SERVICE_ACCOUNT_JSON"
+  type  = "SecureString"
+  value = " "
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+}

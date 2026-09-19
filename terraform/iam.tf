@@ -33,6 +33,8 @@ resource "aws_iam_role_policy" "ecs_execution_ssm" {
         ]
         Resource = [
           aws_ssm_parameter.database_url.arn,
+          aws_ssm_parameter.fcm_project_id.arn,
+          aws_ssm_parameter.fcm_service_account_json.arn,
           aws_ssm_parameter.better_auth_secret.arn,
           aws_ssm_parameter.google_client_id.arn,
           aws_ssm_parameter.google_client_secret.arn,

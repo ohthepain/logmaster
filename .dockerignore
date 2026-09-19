@@ -18,3 +18,6 @@ terraform/**/backend.hcl
 terraform/bootstrap/terraform.tfstate
 terraform/network/.terraform
 terraform/network/terraform.tfstate
+
+# Local signing and server credentials must never enter the image.
+secrets/
