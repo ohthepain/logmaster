@@ -356,7 +356,7 @@ export function buildPlaybackGraphSeries(
   })
 }
 
-export type PlaybackViewState = Record<PlaybackPanelId, boolean>
+export type PlaybackViewState = Partial<Record<PlaybackPanelId, boolean>>
 
 export function defaultPlaybackViewState(
   options: PlaybackPanelOption[],

@@ -242,7 +242,7 @@ describe('trip-playback-panels', () => {
   it('drops unavailable tracks when sanitizing view state', () => {
     const options = availablePlaybackPanels(tripId, [], [])
     const sanitized = sanitizePlaybackViewState(
-      { sog: true, 'log-entries': false } as never,
+      { sog: true, 'log-entries': false },
       options,
     )
     expect(Object.keys(sanitized)).toEqual(['log-entries', 'media'])
