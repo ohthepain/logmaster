@@ -15,7 +15,8 @@
       "src/**/*.json",
       "src/**/*.ts",
       "src/**/*.tsx",
-      "!src/routeTree.gen.ts"
+      "!src/routeTree.gen.ts",
+      "!!ios/build"
     ]
   },
   "css": {
