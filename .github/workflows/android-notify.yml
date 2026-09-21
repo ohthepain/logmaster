@@ -1,0 +1,59 @@
+name: Notify Sailors Android testers
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_label:
+        description: 'Available release, e.g. 1.0 (build 2)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Preview only (no email sent)'
+        type: boolean
+        default: true
+      release_available:
+        description: 'I verified this release is available to internal testers in Play Console'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: android-tester-notifications
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    environment: android-release
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v5
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Authenticate to SES
+        if: ${{ !inputs.dry_run && inputs.release_available }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_NOTIFY }}
+          aws-region: eu-central-1
+      - name: Preview or send announcement
+        env:
+          ANDROID_RELEASE_LABEL: ${{ inputs.release_label }}
+          NOTIFY_DRY_RUN: ${{ inputs.dry_run }}
+          ANDROID_RELEASE_AVAILABLE: ${{ inputs.release_available }}
+          ANDROID_TESTER_EMAILS: ${{ secrets.ANDROID_TESTER_EMAILS }}
+          ANDROID_TESTING_URL: ${{ vars.ANDROID_TESTING_URL }}
+          AWS_SES_FROM_EMAIL: ${{ vars.AWS_SES_FROM_EMAIL }}
+          AWS_REGION: eu-central-1
+        run: node scripts/notify-android-testers.mjs
