@@ -117,7 +117,11 @@ describe('resolveAssetDisplayImageUrl', () => {
       resolveAssetDisplayImageUrl({
         documentLinks: [],
         productId: 'prod-1',
-        product: { reviewStatus: 'rejected', canonicalImageId: null, resources: [] },
+        product: {
+          reviewStatus: 'rejected',
+          canonicalImageId: null,
+          resources: [],
+        },
       }),
     ).toBeNull()
   })

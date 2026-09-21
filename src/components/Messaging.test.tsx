@@ -102,7 +102,7 @@ function mockLikes(
   options: { fail?: boolean; own?: boolean; myLikes?: number } = {},
 ) {
   let myLikeCount = options.myLikes ?? 0
-  mocks.api.mockImplementation(async (url: string, init?: RequestInit) => {
+  mocks.api.mockImplementation(async (url: string) => {
     if (url === '/api/messaging/threads')
       return { threads: [thread], objects: [object] }
     if (url.endsWith('/messages'))

@@ -282,7 +282,9 @@ messagingRoutes.put(
     const threadId = c.req.param('threadId')
     await requireThread(userId, threadId)
     const messageId = z.string().uuid().parse(c.req.param('messageId'))
-    z.object({}).strict().parse(await c.req.json().catch(() => ({})))
+    z.object({})
+      .strict()
+      .parse(await c.req.json().catch(() => ({})))
     const message = await prisma.chatMessage.findFirst({
       where: { id: messageId, threadId },
     })

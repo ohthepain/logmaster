@@ -64,9 +64,8 @@ export function BoatPhotosTab({
   const [captionDraft, setCaptionDraft] = useState('')
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
-  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmTarget | null>(
-    null,
-  )
+  const [deleteConfirm, setDeleteConfirm] =
+    useState<DeleteConfirmTarget | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [dragSelecting, setDragSelecting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -219,9 +218,7 @@ export function BoatPhotosTab({
         caption: captionDraft,
       })
       applyPhotosUpdate(
-        boat.photos.map((photo) =>
-          photo.id === updated.id ? updated : photo,
-        ),
+        boat.photos.map((photo) => (photo.id === updated.id ? updated : photo)),
       )
       setCaptionDraft(updated.caption ?? '')
       toast.success('Caption saved')
@@ -232,10 +229,7 @@ export function BoatPhotosTab({
 
   const removePhotosLocally = (ids: Set<string>) => {
     const nextPhotos = boat.photos.filter((photo) => !ids.has(photo.id))
-    if (
-      nextPhotos.length > 0 &&
-      !nextPhotos.some((photo) => photo.isDefault)
-    ) {
+    if (nextPhotos.length > 0 && !nextPhotos.some((photo) => photo.isDefault)) {
       const sorted = [...nextPhotos].sort((a, b) => a.sortOrder - b.sortOrder)
       applyPhotosUpdate(
         nextPhotos.map((photo) =>
@@ -249,7 +243,9 @@ export function BoatPhotosTab({
 
   const runDelete = async (ids: Set<string>, singleIndex: number | null) => {
     setDeleting(true)
-    const remainingAfterDelete = boat.photos.filter((photo) => !ids.has(photo.id))
+    const remainingAfterDelete = boat.photos.filter(
+      (photo) => !ids.has(photo.id),
+    )
     try {
       await Promise.all([...ids].map((id) => deleteBoatPhoto(id)))
       removePhotosLocally(ids)
@@ -368,7 +364,9 @@ export function BoatPhotosTab({
                   data-photo-id={photo.id}
                   onPointerDown={(event) => {
                     if (event.button !== 0) return
-                    if ((event.target as HTMLElement).closest('[data-photo-menu]')) {
+                    if (
+                      (event.target as HTMLElement).closest('[data-photo-menu]')
+                    ) {
                       return
                     }
                     dragSessionRef.current = {
@@ -432,9 +430,7 @@ export function BoatPhotosTab({
 
       {deleteConfirm ? (
         <Modal
-          title={
-            deleteConfirmCount === 1 ? 'Delete photo?' : 'Delete photos?'
-          }
+          title={deleteConfirmCount === 1 ? 'Delete photo?' : 'Delete photos?'}
           onClose={() => {
             if (!deleting) setDeleteConfirm(null)
           }}

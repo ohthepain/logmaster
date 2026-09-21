@@ -37,7 +37,10 @@ export function BoatPhotoActionsMenu({
 
   return (
     <div
-      className={cn('absolute right-1.5 top-1.5 sm:right-2 sm:top-2', className)}
+      className={cn(
+        'absolute right-1.5 top-1.5 sm:right-2 sm:top-2',
+        className,
+      )}
       ref={rootRef}
       data-photo-menu
       onPointerDown={(event) => event.stopPropagation()}

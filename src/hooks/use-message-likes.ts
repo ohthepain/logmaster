@@ -58,7 +58,7 @@ export function useMessageLikes(
         setState({
           scope,
           likes: Object.fromEntries(
-            results.map((like) => [like.messageId, like]),
+            results.map((entry) => [entry.messageId, entry]),
           ),
         })
         setRefreshError(null)

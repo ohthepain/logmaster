@@ -15,7 +15,10 @@ describe('resolveMapModeTrip', () => {
 
   it('does not reopen a planned trip in map mode', () => {
     expect(
-      resolveMapModeTrip([trip('COMPLETED', 'done'), trip('PLANNED', 'planned')]),
+      resolveMapModeTrip([
+        trip('COMPLETED', 'done'),
+        trip('PLANNED', 'planned'),
+      ]),
     ).toBeNull()
   })
 

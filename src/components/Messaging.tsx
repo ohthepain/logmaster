@@ -62,7 +62,9 @@ function ChatGradientHeader({
   return (
     <div className={cn(mobileChatHeaderClassName, className)}>
       <div
-        className={cn(showStatusBar && 'pt-[env(safe-area-inset-top,0px)] md:pt-0')}
+        className={cn(
+          showStatusBar && 'pt-[env(safe-area-inset-top,0px)] md:pt-0',
+        )}
       >
         {showStatusBar ? (
           <div className="md:hidden">
@@ -87,10 +89,7 @@ function ChatObjectAnchor({
   return (
     <a
       href={object.href}
-      className={cn(
-        'text-inherit underline underline-offset-2',
-        className,
-      )}
+      className={cn('text-inherit underline underline-offset-2', className)}
     >
       {children}
     </a>
@@ -168,8 +167,7 @@ function Avatar({
 function senderAvatarUrl(senderId: string, objects: ChatObject[]) {
   const user = objects.find((o) => o.kind === 'user' && o.id === senderId)
   return (
-    user?.image ??
-    `/api/messaging/users/${encodeURIComponent(senderId)}/avatar`
+    user?.image ?? `/api/messaging/users/${encodeURIComponent(senderId)}/avatar`
   )
 }
 
@@ -212,9 +210,11 @@ const receivedBubbleClassName =
   'rounded-[18px] border border-black/[0.06] bg-white px-3.5 pb-2 pt-2.5 text-black shadow-sm'
 const ownBubbleClassName =
   'rounded-[18px] bg-[#d0f0fe] px-3.5 py-2.5 text-black'
-const messageTimeClassName = 'mt-1.5 block text-[11px] text-[var(--sea-ink-soft)]'
+const messageTimeClassName =
+  'mt-1.5 block text-[11px] text-[var(--sea-ink-soft)]'
 const messageRowSpacingClassName = 'pb-5'
-const messageBubbleWidthClassName = 'relative min-w-0 max-w-[85%] sm:max-w-[75%]'
+const messageBubbleWidthClassName =
+  'relative min-w-0 max-w-[85%] sm:max-w-[75%]'
 
 function MessageLikeCountPill({ count }: { count: number }) {
   return (
@@ -243,10 +243,7 @@ function ReceivedMessageRow({
   likePending: boolean
   onToggleLike: (origin: { x: number; y: number }) => void | Promise<void>
 }) {
-  const { src, hasPhoto } = useSenderHasProfilePhoto(
-    message.senderId,
-    objects,
-  )
+  const { src, hasPhoto } = useSenderHasProfilePhoto(message.senderId, objects)
   return (
     <div className={cn('flex items-start gap-2', messageRowSpacingClassName)}>
       {hasPhoto ? (
@@ -695,10 +692,7 @@ export function Messaging({
         >
           {selected ? (
             <>
-              <ThreadChatHeader
-                thread={selected}
-                onBack={() => onSelect()}
-              />
+              <ThreadChatHeader thread={selected} onBack={() => onSelect()} />
               <div
                 ref={messageList}
                 role="log"
@@ -747,7 +741,10 @@ export function Messaging({
                   return (
                     <div
                       key={message.id}
-                      className={cn('flex justify-end', messageRowSpacingClassName)}
+                      className={cn(
+                        'flex justify-end',
+                        messageRowSpacingClassName,
+                      )}
                     >
                       <div className={messageBubbleWidthClassName}>
                         <div className={ownBubbleClassName}>

@@ -51,7 +51,9 @@ export const streamProvider: MessagingProvider = {
     const config = await api.getChannelType(CHANNEL_TYPE)
     if (
       config.push_notifications ||
-      config.grants?.channel_member?.some((g) => g !== 'read-channel') ||
+      config.grants?.channel_member?.some(
+        (grant) => grant !== 'read-channel',
+      ) ||
       config.grants?.user?.length
     ) {
       throw new Error(
