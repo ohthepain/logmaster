@@ -44,8 +44,13 @@ jobs:
         env:
           DATABASE_URL: postgresql://localhost:5432/dummy
         run: pnpm install --frozen-lockfile
-      - name: Install Android SDK components
-        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: >-
+            platform-tools
+            platforms;android-36
+            build-tools;35.0.0
       - name: Restore upload keystore
         env:
           UPLOAD_KEY_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
