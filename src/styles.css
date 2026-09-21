@@ -764,3 +764,14 @@ a {
     filter: grayscale(1);
   }
 }
+@keyframes message-heart-float {
+  0% { transform: translate(0, var(--heart-start)) rotate(-12deg) scale(0.7); opacity: 0; }
+  12% { opacity: 1; }
+  40% { transform: translate(22px, calc(var(--heart-start) * 0.6)) rotate(10deg) scale(1.1); }
+  75% { transform: translate(-16px, calc(var(--heart-start) * 0.2)) rotate(-8deg); opacity: 1; }
+  100% { transform: translate(8px, -70px) rotate(8deg); opacity: 0; }
+}
+.message-floating-heart { animation: message-heart-float 2.4s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .message-floating-heart { display: none; animation: none; }
+}

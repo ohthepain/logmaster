@@ -2,6 +2,8 @@
 
 V1 adds `/messages` and a messages button beside the profile button. The app owns the inbox, bubbles, object links, history, unread counts and all authorization. Media/response-card rendering is reserved for v2.
 
+Received messages have a heart toggle: one like per account, stored in `chat_message_like` with a unique message/user key. The sender and other members see the shared count at the bottom of the bubble. Liking fills the local heart red and floats a decorative heart upward at a random horizontal position; reduced-motion preferences disable the animation. Failed saves restore the previous state. Likes refresh for all loaded messages (including older history) on the chat's existing foreground refresh cadence, at least every 15 seconds. Likes do not send push notifications or create Stream messages. The `20260921150000_message_likes` migration must be applied before deploying this UI/API.
+
 ## Ownership and replacing Stream
 
 PostgreSQL is the source of truth (`chat_message`, `chat_read`). Thread IDs are provider independent. Object threads are `org:<id>`, `boat:<id>`, `trip:<id>`, and `asset:<id>`; private conversations use a hash of the sorted pair of Logmaster user IDs. No empty conversation needs to be provisioned externally.

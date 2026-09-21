@@ -239,6 +239,70 @@ messagingRoutes.post('/threads/:threadId/read', async (c) => {
   return c.json({ ok: true })
 })
 
+async function messageLikes(
+  threadId: string,
+  messageIds: string[],
+  userId: string,
+) {
+  const rows = await prisma.chatMessage.findMany({
+    where: { threadId, id: { in: messageIds } },
+    select: {
+      id: true,
+      _count: { select: { likes: true } },
+      likes: { where: { userId }, select: { userId: true } },
+    },
+  })
+  return rows.map((row) => ({
+    messageId: row.id,
+    likeCount: row._count.likes,
+    likedByMe: row.likes.length > 0,
+  }))
+}
+
+// Refresh every loaded message, including older history, without exposing liker identities.
+messagingRoutes.post('/threads/:threadId/likes/query', async (c) => {
+  const userId = c.get('userId')
+  const threadId = c.req.param('threadId')
+  await requireThread(userId, threadId)
+  const { messageIds } = z
+    .object({
+      messageIds: z.array(z.string().uuid()).min(1).max(100),
+    })
+    .strict()
+    .parse(await c.req.json())
+  return c.json({ likes: await messageLikes(threadId, messageIds, userId) })
+})
+
+messagingRoutes.put(
+  '/threads/:threadId/messages/:messageId/like',
+  async (c) => {
+    const userId = c.get('userId')
+    const threadId = c.req.param('threadId')
+    await requireThread(userId, threadId)
+    const messageId = z.string().uuid().parse(c.req.param('messageId'))
+    const { liked } = z
+      .object({ liked: z.boolean() })
+      .strict()
+      .parse(await c.req.json())
+    const message = await prisma.chatMessage.findFirst({
+      where: { id: messageId, threadId },
+    })
+    if (!message) return c.json({ error: 'Message not found' }, 404)
+    if (message.senderId === userId)
+      return c.json({ error: 'You can only like received messages.' }, 403)
+    if (liked) {
+      // The unique key makes retries and simultaneous requests count only once.
+      await prisma.chatMessageLike.createMany({
+        data: [{ messageId, userId }],
+        skipDuplicates: true,
+      })
+    } else {
+      await prisma.chatMessageLike.deleteMany({ where: { messageId, userId } })
+    }
+    return c.json((await messageLikes(threadId, [messageId], userId))[0])
+  },
+)
+
 messagingRoutes.post('/presence', async (c) => {
   const { sessionId, active } = z
     .object({ sessionId: z.string().uuid(), active: z.boolean() })

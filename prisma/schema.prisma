@@ -103,6 +103,7 @@ model User {
   notificationPreferenceMutes NotificationPreferenceMute[]
   notifications             Notification[]
   pushDevices                 PushDevice[]
+  messageLikes                ChatMessageLike[]
 
   @@unique([email])
   @@map("user")
@@ -1476,10 +1477,22 @@ model ChatMessage {
   responseCard Json?
   createdAt    DateTime @default(now())
   publishedAt  DateTime?
+  likes        ChatMessageLike[]
   @@index([threadId, createdAt, id])
   @@index([publishedAt, createdAt])
   @@index([senderId, createdAt])
   @@map("chat_message")
+}
+
+model ChatMessageLike {
+  messageId String
+  userId    String
+  createdAt DateTime @default(now())
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([messageId, userId])
+  @@index([userId])
+  @@map("chat_message_like")
 }
 
 model ChatRead {

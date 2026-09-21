@@ -43,6 +43,10 @@ beforeEach(() => {
   vi.clearAllMocks()
   Element.prototype.scrollIntoView = vi.fn()
   mocks.api.mockImplementation(async (url: string) => {
+    if (url.endsWith('/likes/query'))
+      return {
+        likes: [{ messageId: message.id, likeCount: 0, likedByMe: false }],
+      }
     if (url === '/api/messaging/threads')
       return { threads: [thread], objects: [object] }
     if (url.endsWith('/messages'))
@@ -92,4 +96,103 @@ it('keeps failed drafts and retries with the same idempotency key', async () => 
   await waitFor(() => expect((composer as HTMLTextAreaElement).value).toBe(''))
   expect(ids).toHaveLength(2)
   expect(ids[0]).toBe(ids[1])
+})
+
+function mockLikes(
+  options: { fail?: boolean; own?: boolean; liked?: boolean } = {},
+) {
+  let liked = options.liked ?? false
+  mocks.api.mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url === '/api/messaging/threads')
+      return { threads: [thread], objects: [object] }
+    if (url.endsWith('/messages'))
+      return {
+        messages: [{ ...message, senderId: options.own ? 'user' : 'other' }],
+        nextCursor: null,
+      }
+    const value = () => ({
+      messageId: message.id,
+      likeCount: 2 + Number(liked),
+      likedByMe: liked,
+    })
+    if (url.endsWith('/likes/query')) return { likes: [value()] }
+    if (url.endsWith('/like')) {
+      if (options.fail) throw new Error('Offline')
+      liked = JSON.parse(init?.body as string).liked
+      return value()
+    }
+    return { ok: true }
+  })
+}
+it('fills the received-message heart, updates the shared count and animates only likes', async () => {
+  mockLikes()
+  render(<Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />)
+  await screen.findByLabelText('2 likes')
+  const button = screen.getByRole('button', { name: 'Like message' })
+  expect(button.querySelector('svg')?.getAttribute('fill')).toBe('none')
+  fireEvent.click(button)
+  fireEvent.click(button)
+  await screen.findByLabelText('3 likes')
+  expect(
+    screen
+      .getByRole('button', { name: 'Unlike message' })
+      .getAttribute('aria-pressed'),
+  ).toBe('true')
+  expect(button.querySelector('svg')?.getAttribute('fill')).toBe('currentColor')
+  const floating = document.querySelector('.message-floating-heart')!
+  expect(floating).toBeTruthy()
+  fireEvent.animationEnd(floating)
+  await waitFor(
+    () => expect(document.querySelector('.message-floating-heart')).toBeNull(),
+    { timeout: 3000 },
+  )
+  await waitFor(() =>
+    expect((button as HTMLButtonElement).disabled).toBe(false),
+  )
+  expect(
+    mocks.api.mock.calls.filter(([url]) => url.endsWith('/like')),
+  ).toHaveLength(1)
+  fireEvent.click(button)
+  await screen.findByLabelText('2 likes')
+  await waitFor(() => expect(button.getAttribute('aria-pressed')).toBe('false'))
+  expect(document.querySelector('.message-floating-heart')).toBeNull()
+})
+it('restores the previous count and empty heart if saving fails', async () => {
+  mockLikes({ fail: true })
+  render(<Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />)
+  await screen.findByLabelText('2 likes')
+  fireEvent.click(screen.getByRole('button', { name: 'Like message' }))
+  await screen.findByText('Could not save your like. Please try again.')
+  expect(screen.getByLabelText('2 likes')).toBeTruthy()
+  expect(
+    screen
+      .getByRole('button', { name: 'Like message' })
+      .getAttribute('aria-pressed'),
+  ).toBe('false')
+})
+it('shows likes to the sender without a self-like button', async () => {
+  mockLikes({ own: true })
+  render(<Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />)
+  await screen.findByLabelText('2 likes')
+  expect(screen.queryByRole('button', { name: 'Like message' })).toBeNull()
+})
+it('restores a saved red heart and respects reduced motion', async () => {
+  mockLikes({ liked: true })
+  vi.stubGlobal('matchMedia', () => ({ matches: true }))
+  try {
+    render(
+      <Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />,
+    )
+    await screen.findByLabelText('3 likes')
+    const button = screen.getByRole('button', { name: 'Unlike message' })
+    fireEvent.click(button)
+    await waitFor(() =>
+      expect((button as HTMLButtonElement).disabled).toBe(false),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Like message' }))
+    await screen.findByLabelText('3 likes')
+    expect(document.querySelector('.message-floating-heart')).toBeNull()
+  } finally {
+    vi.unstubAllGlobals()
+  }
 })

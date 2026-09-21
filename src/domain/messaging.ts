@@ -24,6 +24,11 @@ export type ChatMessage = {
   responseCard: ResponseCard | null
   createdAt: string
 }
+export type MessageLikes = {
+  messageId: string
+  likeCount: number
+  likedByMe: boolean
+}
 export type ChatThread = {
   id: string
   object: ChatObject

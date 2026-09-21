@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import type { CSSProperties } from 'react'
 import {
   ArrowLeft,
   ArrowUp,
   ExternalLink,
+  Heart,
   MessageCircle,
   Search,
 } from 'lucide-react'
@@ -10,6 +13,7 @@ import type { ChatMessage, ChatObject, ChatThread } from '../domain/messaging'
 import { referenceObjects, threadTimeGroup } from '../domain/messaging'
 import { apiJson } from '../lib/api-client'
 import { useChatActivity } from '../hooks/use-chat-activity'
+import { useMessageLikes } from '../hooks/use-message-likes'
 
 function Avatar({ object }: { object: ChatObject }) {
   const [failed, setFailed] = useState(false)
@@ -95,6 +99,45 @@ export function Messaging({
   const [revision, setRevision] = useState(0)
   const refresh = useCallback(() => setRevision((n) => n + 1), [])
   const { active } = useChatActivity(userId, refresh)
+  const messageLikes = useMessageLikes(
+    userId,
+    selectedId,
+    messages.map((m) => m.id),
+    active,
+    revision,
+  )
+  const [hearts, setHearts] = useState<
+    { id: string; left: number; top: number; expiresAt: number }[]
+  >([])
+  function floatHeart(top: number) {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const heart = {
+      id: crypto.randomUUID(),
+      left: 8 + Math.random() * 84,
+      top: Math.max(80, Math.min(window.innerHeight - 40, top)),
+      expiresAt: Date.now() + 2600,
+    }
+    setHearts((items) => [...items.slice(-19), heart])
+  }
+  useEffect(() => {
+    setHearts([])
+  }, [selectedId, active])
+  useEffect(() => {
+    if (!hearts.length) return
+    // Also clean up when animation events are cancelled by a motion preference change.
+    const timer = setTimeout(
+      () => {
+        setHearts((items) =>
+          items.filter((heart) => heart.expiresAt > Date.now()),
+        )
+      },
+      Math.max(
+        0,
+        Math.min(...hearts.map((heart) => heart.expiresAt)) - Date.now(),
+      ),
+    )
+    return () => clearTimeout(timer)
+  }, [hearts])
   const selected = threads.find((t) => t.id === selectedId)
   const draft = selectedId ? (drafts[selectedId] ?? '') : ''
   const draftReferences = useMemo(
@@ -420,6 +463,7 @@ export function Messaging({
                 )}
                 {messages.map((message) => {
                   const own = message.senderId === userId
+                  const like = messageLikes.likes[message.id]
                   return (
                     <div
                       key={message.id}
@@ -442,6 +486,54 @@ export function Messaging({
                         >
                           {timeLabel(message.createdAt)}
                         </time>
+                        {!own && (
+                          <div className="mt-1 flex justify-end">
+                            <button
+                              type="button"
+                              aria-label={
+                                like?.likedByMe
+                                  ? 'Unlike message'
+                                  : 'Like message'
+                              }
+                              aria-pressed={like?.likedByMe ?? false}
+                              disabled={
+                                !active ||
+                                !like ||
+                                messageLikes.isPending(message.id)
+                              }
+                              onClick={(event) => {
+                                const top =
+                                  event.currentTarget.getBoundingClientRect()
+                                    .top
+                                void messageLikes.toggle(message.id, () =>
+                                  floatHeart(top),
+                                )
+                              }}
+                              className={`flex size-11 items-center justify-center rounded-full transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-500 disabled:opacity-50 ${like?.likedByMe ? 'text-red-500' : 'text-[var(--sea-ink-soft)]'}`}
+                            >
+                              <Heart
+                                size={20}
+                                fill={like?.likedByMe ? 'currentColor' : 'none'}
+                                aria-hidden
+                              />
+                            </button>
+                          </div>
+                        )}
+                        {like && like.likeCount > 0 && (
+                          <div
+                            aria-label={`${like.likeCount} ${like.likeCount === 1 ? 'like' : 'likes'}`}
+                            className="mt-2 flex justify-center border-t border-current/15 pt-2"
+                          >
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-red-500 shadow-sm">
+                              <Heart
+                                size={14}
+                                fill="currentColor"
+                                aria-hidden
+                              />
+                              {like.likeCount}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
@@ -530,6 +622,38 @@ export function Messaging({
           )}
         </section>
       </div>
+      {messageLikes.error && (
+        <p role="alert" className="mt-2 text-sm text-red-600">
+          {messageLikes.error}
+        </p>
+      )}
+      {hearts.length > 0 &&
+        createPortal(
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-0 z-[100] overflow-hidden"
+          >
+            {hearts.map((heart) => (
+              <Heart
+                key={heart.id}
+                className="message-floating-heart absolute top-0 size-9 text-red-500 drop-shadow-md"
+                fill="currentColor"
+                style={
+                  {
+                    left: `${heart.left}%`,
+                    '--heart-start': `${heart.top}px`,
+                  } as CSSProperties
+                }
+                onAnimationEnd={() =>
+                  setHearts((items) =>
+                    items.filter((item) => item.id !== heart.id),
+                  )
+                }
+              />
+            ))}
+          </div>,
+          document.body,
+        )}
       {error && (
         <div
           role="alert"

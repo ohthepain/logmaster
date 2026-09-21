@@ -165,7 +165,7 @@ export function NotificationBellToggle({
   )
 }
 
-const resourceIconButtonClassName =
+export const resourceIconButtonClassName =
   'inline-flex size-9 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60'
 
 export function ResourceRefreshButton({
@@ -229,6 +229,8 @@ type ResourceSectionHeaderProps = {
   boatId?: string
   orgId?: string
   titleExtras?: ReactNode
+  /** Rendered before the refresh control (e.g. bulk actions). */
+  actionsBeforeRefresh?: ReactNode
   actions?: ReactNode
   onRefresh?: () => void | Promise<void>
   refreshing?: boolean
@@ -240,6 +242,7 @@ export function ResourceSectionHeader({
   boatId,
   orgId,
   titleExtras,
+  actionsBeforeRefresh,
   actions,
   onRefresh,
   refreshing = false,
@@ -255,8 +258,9 @@ export function ResourceSectionHeader({
         ) : null}
         {titleExtras}
       </div>
-      {actions || onRefresh ? (
+      {actions || actionsBeforeRefresh || onRefresh ? (
         <div className="flex items-center gap-2">
+          {actionsBeforeRefresh}
           {onRefresh ? (
             <ResourceRefreshButton
               onRefresh={onRefresh}
