@@ -1,8 +1,10 @@
+import { tripLogCopy } from '../trip-log-copy'
 import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
+  ...tripLogCopy('ja'),
   language: '言語',
   english: 'English',
   swedish: 'Svenska',

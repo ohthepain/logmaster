@@ -1,3 +1,4 @@
+import { durableMediaUrl } from '../lib/log-media-sync'
 import { create } from 'zustand'
 import type {
   Leg,
@@ -1052,8 +1053,8 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       type: mediaInput.type,
       order,
       localPath: mediaInput.localPath ?? null,
-      remoteUrl: mediaInput.remoteUrl ?? null,
-      thumbnailUrl: mediaInput.thumbnailUrl ?? null,
+      remoteUrl: await durableMediaUrl(mediaInput.remoteUrl),
+      thumbnailUrl: await durableMediaUrl(mediaInput.thumbnailUrl),
       createdAt: nowIso(),
       updatedAt: nowIso(),
       synced: false,

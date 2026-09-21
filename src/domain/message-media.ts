@@ -14,6 +14,16 @@ export const MESSAGE_MEDIA_TYPES = [
   'video/ogg',
   'video/3gpp',
 ] as const
+export const LOG_MEDIA_TYPES = [
+  ...MESSAGE_MEDIA_TYPES,
+  'audio/webm',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/ogg',
+  'audio/wav',
+  'audio/x-m4a',
+  'audio/aac',
+] as const
 export type ChatAttachment = {
   id: string
   checksum: string
@@ -26,7 +36,8 @@ export function messageMediaType(file: Pick<File, 'type' | 'name'>): string {
     'image/jpg': 'image/jpeg',
     'video/mov': 'video/quicktime',
   }
-  if (file.type) return aliases[file.type] ?? file.type.toLowerCase()
+  if (file.type)
+    return aliases[file.type] ?? file.type.split(';')[0].toLowerCase()
   const extensions: Record<string, string> = {
     jpg: 'image/jpeg',
     jpeg: 'image/jpeg',
@@ -44,8 +55,12 @@ export function messageMediaType(file: Pick<File, 'type' | 'name'>): string {
   }
   return extensions[file.name.split('.').at(-1)?.toLowerCase() ?? ''] ?? ''
 }
-export function validateMessageFile(file: File) {
-  if (!MESSAGE_MEDIA_TYPES.some((type) => type === messageMediaType(file)))
+export function validateMessageFile(file: File, allowAudio = false) {
+  if (
+    !(allowAudio ? LOG_MEDIA_TYPES : MESSAGE_MEDIA_TYPES).some(
+      (type) => type === messageMediaType(file),
+    )
+  )
     throw new Error(`${file.name}: choose a supported photo or video.`)
   if (!file.size || file.size > MAX_MESSAGE_MEDIA_BYTES)
     throw new Error(`${file.name}: files must be between 1 byte and 100 MB.`)

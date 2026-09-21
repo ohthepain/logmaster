@@ -509,6 +509,7 @@ model LogEntry {
   synced     Boolean        @default(false)
   deleted    Boolean        @default(false)
   media      Media[]
+  chatMessage ChatMessage?
 
   @@index([tripId, timestamp])
   @@index([legId, timestamp])
@@ -521,6 +522,8 @@ model Media {
   logEntryId   String
   logEntry     LogEntry    @relation(fields: [logEntryId], references: [id], onDelete: Cascade)
   type         MediaType
+  chatMediaId  String?
+  chatMedia    ChatMedia? @relation(fields: [chatMediaId], references: [id], onDelete: Restrict)
   order        Int         @default(0)
   localPath    String?
   remoteUrl    String?
@@ -529,6 +532,7 @@ model Media {
   updatedAt    DateTime    @updatedAt
   synced       Boolean     @default(false)
 
+  @@index([chatMediaId])
   @@index([logEntryId, createdAt])
   @@index([logEntryId, order])
   @@index([synced, updatedAt])
@@ -1469,6 +1473,8 @@ model CatalogSourceLink {
 
 // Logmaster owns history and identity. Stream is a replaceable live event transport.
 model ChatMessage {
+  logEntryId   String? @unique
+  logEntry     LogEntry? @relation(fields: [logEntryId], references: [id], onDelete: Cascade)
   id           String   @id
   threadId     String
   senderId     String
@@ -1545,6 +1551,7 @@ model ChatMedia {
   createdAt    DateTime @default(now())
   uploadedAt   DateTime?
   messages     ChatMessageMedia[]
+  logMedia Media[]
   @@unique([uploaderId, checksum])
   @@index([checksum])
   @@map("chat_media")

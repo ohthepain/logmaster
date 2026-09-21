@@ -1,4 +1,5 @@
 /** Provider-neutral contracts. No Stream types may escape the adapters. */
+import type { LogEntryType } from './logbook'
 import type { ChatAttachment } from './message-media'
 import type { ImageResponseCard } from './response-cards'
 
@@ -19,7 +20,17 @@ export type ResponseCard =
       object: Pick<ChatObject, 'kind' | 'id'>
       data: Record<string, unknown>
     }
+export type TripChatLog = {
+  id: string
+  type: LogEntryType
+  timestamp: string
+  notes: string | null
+  latitude: number | null
+  longitude: number | null
+  legacyMedia: { id: string; kind: 'photo' | 'video' | 'voice'; url: string }[]
+}
 export type ChatMessage = {
+  logEntry?: TripChatLog | null
   id: string
   threadId: string
   senderId: string

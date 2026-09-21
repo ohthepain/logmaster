@@ -1,3 +1,4 @@
+import { localLogMediaSource, uploadLogMediaForSync } from './log-media-sync'
 import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { syncTripLifecycleFromEntries } from '../domain/trip-state'
@@ -418,6 +419,21 @@ export async function syncLogbook(options: SyncLogbookOptions = {}) {
     return { ok: true as const, synced: 0, snapshot }
   }
 
+  // Establish new trips before their signed uploads. Log entries and their chat
+  // projections are committed together only after the bytes are available.
+  if (pendingMedia.some(localLogMediaSource) && pendingTrips.length) {
+    const prepared = await fetch(apiUrl('/api/logbook/sync'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trips: pendingTrips }),
+    })
+    if (!prepared.ok) throw new Error('Could not prepare trip media for sync.')
+  }
+  const uploadedMedia = await uploadLogMediaForSync(
+    pendingMedia,
+    snapshot.logEntries,
+  )
   const response = await fetch(apiUrl('/api/logbook/sync'), {
     method: 'POST',
     credentials: 'include',
@@ -429,7 +445,7 @@ export async function syncLogbook(options: SyncLogbookOptions = {}) {
       legs: pendingLegs,
       logEntries: pendingEntries,
       tripTracks: [],
-      media: pendingMedia,
+      media: uploadedMedia,
       deletedTripIds: pendingDeletedTripIds,
       deletedMediaIds: pendingDeletedMediaIds,
     } satisfies SyncPayload),

@@ -195,13 +195,14 @@ function MediaItem({
   media: ChatAttachment
 }) {
   const video = media.contentType.startsWith('video/')
+  const audio = media.contentType.startsWith('audio/')
   const [load, setLoad] = useState(false)
   const [url, setUrl] = useState('')
   const [error, setError] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (video) return
+    if (video || audio) return
     if (typeof IntersectionObserver === 'undefined') {
       setLoad(true)
       return
@@ -217,7 +218,7 @@ function MediaItem({
     )
     if (ref.current) observer.observe(ref.current)
     return () => observer.disconnect()
-  }, [video])
+  }, [video, audio])
   useEffect(() => {
     if (!load) return
     const abort = new AbortController()
@@ -254,7 +255,15 @@ function MediaItem({
       className="my-1 min-w-40 overflow-hidden rounded-xl bg-black/5"
     >
       {url && !error ? (
-        video ? (
+        audio ? (
+          <audio
+            src={url}
+            controls
+            preload="metadata"
+            className="w-full"
+            onError={() => setError(true)}
+          />
+        ) : video ? (
           <video
             src={url}
             controls
@@ -280,14 +289,14 @@ function MediaItem({
         )
       ) : (
         <div className="flex min-h-28 flex-col items-center justify-center gap-2 p-4 text-center text-sm text-slate-600">
-          {!load && video ? (
+          {!load && (video || audio) ? (
             <button
               type="button"
               onClick={() => setLoad(true)}
               className="flex flex-col items-center gap-2"
             >
               <Play size={30} />
-              Play video
+              {audio ? 'Play voice note' : 'Play video'}
             </button>
           ) : error ? (
             <>
@@ -309,7 +318,9 @@ function MediaItem({
               </a>
             </>
           ) : (
-            <span role="status">Loading {video ? 'video' : 'photo'}…</span>
+            <span role="status">
+              Loading {audio ? 'audio' : video ? 'video' : 'photo'}…
+            </span>
           )}
           {(!url || error) && (
             <span className="max-w-56 truncate text-xs">{media.fileName}</span>

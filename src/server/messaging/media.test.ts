@@ -6,6 +6,7 @@ import {
   messageMediaKey,
   prepareMessageMedia,
   requireMessageAttachments,
+  requireLogbookAttachments,
 } from './media'
 
 const mocks = vi.hoisted(() => ({
@@ -127,7 +128,29 @@ it('does not attach unverified or unrelated media and never reads unshared draft
     where: {
       id: 'private',
       uploadedAt: { not: null },
-      messages: { some: { message: { threadId: 'boat:b' } } },
+      OR: [{ messages: { some: { message: { threadId: 'boat:b' } } } }],
     },
   })
+})
+
+it('allows logbook editors to reuse log media without exposing private chat attachments', async () => {
+  mocks.many.mockResolvedValue([{ id: 'shared-log' }])
+  await requireLogbookAttachments('editor', 'trip', ['shared-log'])
+  expect(mocks.many).toHaveBeenCalledWith({
+    where: {
+      id: { in: ['shared-log'] },
+      uploadedAt: { not: null },
+      OR: [
+        { uploaderId: 'editor' },
+        {
+          logMedia: { some: { logEntry: { tripId: 'trip', deleted: false } } },
+        },
+      ],
+    },
+    select: { id: true },
+  })
+  mocks.many.mockResolvedValue([])
+  await expect(
+    requireLogbookAttachments('editor', 'trip', ['private-chat']),
+  ).rejects.toThrow('not uploaded or available')
 })

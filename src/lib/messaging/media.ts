@@ -21,15 +21,18 @@ export async function uploadMessageFiles(
   threadId: string,
   files: File[],
   progress: (value: string) => void,
+  logTripId?: string,
 ): Promise<ChatAttachment[]> {
   const media: ChatAttachment[] = []
   for (const [index, file] of files.entries()) {
-    validateMessageFile(file)
+    validateMessageFile(file, !!logTripId)
     progress(`Preparing ${index + 1} of ${files.length}…`)
     if (!hashes.has(file)) hashes.set(file, sha256(file))
     const checksum = await hashes.get(file)!
     if (media.some((item) => item.checksum === checksum)) continue
-    const base = `/api/messaging/threads/${encodeURIComponent(threadId)}/media`
+    const base = logTripId
+      ? `/api/logbook/trips/${encodeURIComponent(logTripId)}/media`
+      : `/api/messaging/threads/${encodeURIComponent(threadId)}/media`
     const prepared = await apiJson<{
       media: ChatAttachment
       upload: null | { url: string; headers: Record<string, string> }

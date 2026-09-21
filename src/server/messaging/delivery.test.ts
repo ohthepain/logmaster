@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from 'vitest'
 import { chatPushDisposition, scheduleChatNotifications } from './delivery'
 
 const mocks = vi.hoisted(() => ({
+  logEntry: vi.fn(),
   message: vi.fn(),
   thread: vi.fn(),
   read: vi.fn(),
@@ -12,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 }))
 vi.mock('../db', () => ({
   prisma: {
+    logEntry: { findUnique: mocks.logEntry },
     chatMessage: { findUnique: mocks.message },
     chatRead: { findUnique: mocks.read },
     chatPresence: { findFirst: mocks.presence },
@@ -111,4 +113,28 @@ it('inherits boat mute preferences for an asset conversation', async () => {
   })
   await chatPushDisposition('recipient', 'message')
   expect(mocks.preference).toHaveBeenCalledWith('recipient', 'boat:boat')
+})
+
+it('uses current trip membership for log posts and suppresses deleted log notifications', async () => {
+  mocks.message.mockResolvedValue({
+    id: 'message',
+    logEntryId: 'entry',
+    senderId: 'editor',
+    threadId: 'trip:trip',
+    createdAt: new Date(),
+  })
+  mocks.logEntry.mockResolvedValue({
+    deleted: false,
+    trip: { userId: 'creator' },
+  })
+  await scheduleChatNotifications('message')
+  expect(mocks.thread).toHaveBeenCalledWith('creator', 'trip:trip')
+  mocks.schedule.mockClear()
+  mocks.logEntry.mockResolvedValue({
+    deleted: true,
+    trip: { userId: 'creator' },
+  })
+  await scheduleChatNotifications('message')
+  expect(mocks.schedule).not.toHaveBeenCalled()
+  expect(await chatPushDisposition('recipient', 'message')).toBe('suppress')
 })

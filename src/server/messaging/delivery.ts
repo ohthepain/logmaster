@@ -9,6 +9,20 @@ import { getNotificationPreferenceNode } from '../notifications/preferences'
 
 const QUEUE = 'publish_chat_outbox'
 
+async function logDeliveryOwner(message: {
+  logEntryId?: string | null
+  senderId: string
+}) {
+  if (!message.logEntryId) return message.senderId
+  const entry = await prisma.logEntry.findUnique({
+    where: { id: message.logEntryId },
+    select: { deleted: true, trip: { select: { userId: true } } },
+  })
+  return entry && !entry.deleted
+    ? (entry.trip.userId ?? message.senderId)
+    : null
+}
+
 export async function chatPushDisposition(
   userId: string,
   messageId: string,
@@ -17,6 +31,8 @@ export async function chatPushDisposition(
     where: { id: messageId },
   })
   if (!message || message.senderId === userId) return 'suppress'
+  if (message.logEntryId && !(await logDeliveryOwner(message)))
+    return 'suppress'
   let thread: ThreadAccess
   try {
     thread = await requireThread(userId, message.threadId)
@@ -53,9 +69,11 @@ export async function scheduleChatNotifications(messageId: string) {
     where: { id: messageId },
   })
   if (!message) return
+  const owner = await logDeliveryOwner(message)
+  if (!owner) return
   let thread
   try {
-    thread = await requireThread(message.senderId, message.threadId)
+    thread = await requireThread(owner, message.threadId)
   } catch (error) {
     if (error instanceof Error && error.message === 'Chat not found') return
     throw error
@@ -87,7 +105,8 @@ export async function publishPendingMessages() {
     try {
       let thread
       try {
-        thread = await requireThread(message.senderId, message.threadId)
+        const owner = await logDeliveryOwner(message)
+        if (owner) thread = await requireThread(owner, message.threadId)
       } catch (error) {
         if (!(error instanceof Error && error.message === 'Chat not found'))
           throw error

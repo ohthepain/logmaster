@@ -1,3 +1,4 @@
+import { logbookMediaRoutes } from './routes/logbook-media'
 import { messagingRoutes } from './routes/messaging'
 import { productsRoutes } from './routes/products'
 import { Hono } from 'hono'
@@ -82,6 +83,7 @@ app.get('/health', (c) =>
 app.route('/logbook', logbookRoutes)
 app.route('/logbook', logbookTrackRoutes)
 app.route('/logbook', logbookStoryMediaRoutes)
+app.route('/logbook', logbookMediaRoutes)
 app.route('/boats', boatsRoutes)
 app.route('/boats', boatSharesRoutes)
 app.route('/boats', boatMembersRoutes)

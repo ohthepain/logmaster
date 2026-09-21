@@ -1,3 +1,5 @@
+import { plainTripLog, TripChatLogItem, TripLogContent } from './TripChatLog'
+import { useTranslation } from '../lib/i18n'
 import { MessageResponseCard, ResponseCardSuggestions } from './ResponseCards'
 import type { CardSummary } from '../domain/response-cards'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -260,6 +262,7 @@ function ReceivedMessageRow({
       ) : null}
       <div className={messageBubbleWidthClassName}>
         <div className={receivedBubbleClassName}>
+          {message.logEntry && <TripLogContent entry={message.logEntry} />}
           <MessageResponseCard responseCard={message.responseCard} />
           <MessageMedia
             userId={userId}
@@ -366,6 +369,7 @@ export function Messaging({
   selectedId?: string
   onSelect: (id?: string) => void
 }) {
+  const { t: translate } = useTranslation()
   const [threads, setThreads] = useState<ChatThread[]>([])
   const [objects, setObjects] = useState<ChatObject[]>([])
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -491,6 +495,27 @@ export function Messaging({
       { signal: abort.signal },
     )
       .then(async (data) => {
+        const logIds = latestMessages.current
+          .filter((message) => message.logEntry)
+          .map((message) => message.id)
+        const updatedLogs: ChatMessage[] = []
+        const removed = new Set<string>()
+        for (let offset = 0; offset < logIds.length; offset += 100) {
+          const update = await apiJson<{
+            messages: ChatMessage[]
+            removedIds: string[]
+          }>(
+            `/api/messaging/threads/${encodeURIComponent(selectedId)}/logs/query`,
+            {
+              method: 'POST',
+              body: JSON.stringify({ ids: logIds.slice(offset, offset + 100) }),
+              signal: abort.signal,
+            },
+          )
+          updatedLogs.push(...update.messages)
+          update.removedIds.forEach((id) => removed.add(id))
+        }
+        if (abort.signal.aborted) return
         const previousLast = latestMessages.current.at(-1)
         const resetHistory = Boolean(
           previousLast &&
@@ -500,7 +525,9 @@ export function Messaging({
         setMessages((previous) => {
           if (resetHistory) return data.messages
           const byId = new Map(
-            [...previous, ...data.messages].map((m) => [m.id, m]),
+            [...previous, ...data.messages, ...updatedLogs]
+              .filter((m) => !removed.has(m.id))
+              .map((m) => [m.id, m]),
           )
           return [...byId.values()].sort(
             (a, b) =>
@@ -733,7 +760,7 @@ export function Messaging({
                       </span>
                       <span className="mt-1 block truncate text-sm text-[var(--sea-ink-soft)]">
                         {thread.lastMessage
-                          ? `${thread.lastMessage.senderId === userId ? 'You: ' : ''}${thread.lastMessage.text || (thread.lastMessage.responseCard ? 'Response card' : '') || (thread.lastMessage.media?.some((item) => item.contentType.startsWith('video/')) ? 'Video' : 'Photo')}`
+                          ? `${thread.lastMessage.senderId === userId ? 'You: ' : ''}${(thread.lastMessage.logEntry ? translate(`tripLog_${thread.lastMessage.logEntry.type}`) : '') || thread.lastMessage.text || (thread.lastMessage.responseCard ? 'Response card' : '') || (thread.lastMessage.media?.some((item) => item.contentType.startsWith('video/')) ? 'Video' : 'Photo')}`
                           : 'Start the conversation'}
                       </span>
                     </span>
@@ -791,6 +818,14 @@ export function Messaging({
                   </div>
                 )}
                 {messages.map((message) => {
+                  if (message.logEntry && plainTripLog(message.logEntry))
+                    return (
+                      <TripChatLogItem
+                        key={message.id}
+                        userId={userId}
+                        message={message}
+                      />
+                    )
                   const own = message.senderId === userId
                   const like = messageLikes.likes[message.id]
                   if (!own) {
@@ -821,6 +856,9 @@ export function Messaging({
                     >
                       <div className={messageBubbleWidthClassName}>
                         <div className={ownBubbleClassName}>
+                          {message.logEntry && (
+                            <TripLogContent entry={message.logEntry} />
+                          )}
                           <MessageResponseCard
                             responseCard={message.responseCard}
                           />

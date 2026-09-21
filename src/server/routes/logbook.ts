@@ -1,3 +1,6 @@
+import { tripLogChatWrites } from '../messaging/trip-log'
+import { wakeChatWorker } from '../messaging/delivery'
+import { requireLogbookAttachments } from '../messaging/media'
 import { Hono } from 'hono'
 import type { ServerEnv } from '../lib/hono-env'
 import { logServerEventFromContext } from '../lib/server-log-context'
@@ -181,6 +184,9 @@ function toMedia(data: Record<string, unknown>) {
   return {
     id: String(data.id ?? crypto.randomUUID()),
     logEntryId: String(data.logEntryId),
+    ...(typeof data.chatMediaId === 'string'
+      ? { chatMediaId: data.chatMediaId }
+      : {}),
     type: String(data.type ?? 'attachment'),
     localPath: (data.localPath as string | null | undefined) ?? null,
     remoteUrl: (data.remoteUrl as string | null | undefined) ?? null,
@@ -403,9 +409,24 @@ logbookRoutes.post('/sync', async (c) => {
     const tracksToUpsert = tripTracks.filter(
       (track) => !tombstoneIds.has(String(track.tripId)),
     )
-    const allowedEntryIds = new Set(
-      entriesToUpsert.map((entry) => String(entry.id)),
-    )
+    // Media can sync independently of its parent. Never force clients to resend
+    // an older log entry just to upload an attachment.
+    const existingMediaParents = media.length
+      ? ((await db.logEntry.findMany({
+          where: {
+            id: {
+              in: [...new Set(media.map((item) => String(item.logEntryId)))],
+            },
+            tripId: { notIn: [...tombstoneIds] },
+            deleted: false,
+          },
+          select: { id: true, tripId: true },
+        })) as { id: string; tripId: string }[])
+      : []
+    const allowedEntryIds = new Set([
+      ...entriesToUpsert.map((entry) => String(entry.id)),
+      ...existingMediaParents.map((entry) => entry.id),
+    ])
     const mediaToUpsert = media.filter((item) =>
       allowedEntryIds.has(String(item.logEntryId)),
     )
@@ -440,6 +461,34 @@ logbookRoutes.post('/sync', async (c) => {
         await assertCanEditTrip(userId, logEntry.tripId, allowedTripIds)
       }
 
+      // Validate both old and new parents to prevent reparenting someone else's entry/media.
+      for (const entry of entriesToUpsert) {
+        const old = await db.logEntry.findUnique({
+          where: { id: String(entry.id) },
+          select: { tripId: true },
+        })
+        if (old) await assertCanEditTrip(userId, old.tripId, allowedTripIds)
+      }
+      for (const item of mediaToUpsert) {
+        const old = await db.media.findUnique({
+          where: { id: String(item.id) },
+          include: { logEntry: { select: { tripId: true } } },
+        })
+        if (old)
+          await assertCanEditTrip(userId, old.logEntry.tripId, allowedTripIds)
+        if (typeof item.chatMediaId === 'string') {
+          const parent =
+            entriesToUpsert.find(
+              (entry) => String(entry.id) === String(item.logEntryId),
+            ) ??
+            existingMediaParents.find(
+              (entry) => entry.id === String(item.logEntryId),
+            )!
+          await requireLogbookAttachments(userId, String(parent.tripId), [
+            item.chatMediaId,
+          ])
+        }
+      }
       await prisma.$transaction([
         ...preparedTrips.map((trip) =>
           db.trip.upsert({
@@ -476,7 +525,17 @@ logbookRoutes.post('/sync', async (c) => {
             update: toMedia(item) as any,
           }),
         ),
+        ...tripLogChatWrites(
+          entriesToUpsert as {
+            id: unknown
+            tripId: unknown
+            deleted?: unknown
+          }[],
+          userId,
+        ),
       ])
+      if (entriesToUpsert.some((entry) => !entry.deleted))
+        await wakeChatWorker()
     }
 
     if (newEndTripEntries.length > 0) {

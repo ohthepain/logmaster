@@ -1,3 +1,8 @@
+import {
+  tripLogMessageContent,
+  visibleChatMessage,
+  legacyTripLogMedia,
+} from '../messaging/trip-log'
 import { CARD_LANGUAGES } from '../../domain/response-cards'
 import {
   matchResponseCards,
@@ -119,6 +124,16 @@ messagingRoutes.get('/cards/:id/image', async (c) => {
   })
 })
 
+messagingRoutes.get('/threads/:threadId/log-media/:id', async (c) => {
+  const threadId = c.req.param('threadId')
+  await requireThread(c.get('userId'), threadId)
+  if (!threadId.startsWith('trip:')) return c.notFound()
+  return (
+    (await legacyTripLogMedia(threadId.slice(5), c.req.param('id'))) ??
+    c.notFound()
+  )
+})
+
 async function serializeMessages(
   rows: Awaited<ReturnType<typeof prisma.chatMessage.findMany>>,
 ): Promise<ChatMessage[]> {
@@ -133,6 +148,7 @@ async function serializeMessages(
         orderBy: { position: 'asc' },
       })
     : []
+  const logs = await tripLogMessageContent(rows)
   return rows.map((row) => ({
     id: row.id,
     threadId: row.threadId,
@@ -140,12 +156,18 @@ async function serializeMessages(
     senderName:
       users.find((u) => u.id === row.senderId)?.name ?? 'Former member',
     text: row.text,
+    logEntry: row.logEntryId
+      ? (logs.get(row.logEntryId)?.logEntry ?? null)
+      : null,
     references: row.references as unknown as ObjectReference[],
     responseCard: row.responseCard as unknown as ResponseCard | null,
     createdAt: row.createdAt.toISOString(),
-    media: attachments
-      .filter((item) => item.messageId === row.id)
-      .map((item) => mediaDescriptor(item.media)),
+    media: [
+      ...attachments
+        .filter((item) => item.messageId === row.id)
+        .map((item) => mediaDescriptor(item.media)),
+      ...(row.logEntryId ? (logs.get(row.logEntryId)?.media ?? []) : []),
+    ],
   }))
 }
 
@@ -172,7 +194,7 @@ messagingRoutes.get('/threads', async (c) => {
       const readAt = read?.readAt ?? new Date(0)
       const [latest, unreadCount] = await Promise.all([
         prisma.chatMessage.findMany({
-          where: { threadId: thread.id },
+          where: { threadId: thread.id, AND: [visibleChatMessage] },
           orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
           take: 1,
         }),
@@ -180,6 +202,7 @@ messagingRoutes.get('/threads', async (c) => {
           where: {
             threadId: thread.id,
             senderId: { not: userId },
+            AND: [visibleChatMessage],
             OR: [
               { createdAt: { gt: readAt } },
               { createdAt: readAt, id: { gt: read?.readMessageId ?? '' } },
@@ -216,6 +239,7 @@ messagingRoutes.get('/threads/:threadId/messages', async (c) => {
   const rows = await prisma.chatMessage.findMany({
     where: {
       threadId,
+      AND: [visibleChatMessage],
       ...(cursor
         ? {
             OR: [
@@ -233,6 +257,28 @@ messagingRoutes.get('/threads/:threadId/messages', async (c) => {
   return c.json({
     messages: await serializeMessages(page),
     nextCursor: hasMore ? page[0].id : null,
+  })
+})
+
+// Refresh previously loaded log items too, so edits/deletions do not leave stale history.
+messagingRoutes.post('/threads/:threadId/logs/query', async (c) => {
+  const threadId = c.req.param('threadId')
+  await requireThread(c.get('userId'), threadId)
+  const { ids } = z
+    .object({ ids: z.array(z.string().uuid()).max(100) })
+    .strict()
+    .parse(await c.req.json())
+  const rows = await prisma.chatMessage.findMany({
+    where: {
+      id: { in: ids },
+      threadId,
+      logEntryId: { not: null },
+      AND: [visibleChatMessage],
+    },
+  })
+  return c.json({
+    messages: await serializeMessages(rows),
+    removedIds: ids.filter((id) => !rows.some((row) => row.id === id)),
   })
 })
 

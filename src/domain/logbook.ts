@@ -105,6 +105,7 @@ export type LogEntry = {
 }
 
 export type Media = {
+  chatMediaId?: string | null
   id: string
   logEntryId: string
   type: MediaType

@@ -22,12 +22,21 @@ export const mediaDescriptor = (media: ChatAttachment): ChatAttachment => ({
   size: media.size,
   fileName: media.fileName,
 })
+const sharedMedia = (threadId: string) => [
+  { messages: { some: { message: { threadId } } } },
+  ...(threadId.startsWith('trip:')
+    ? [
+        {
+          logMedia: {
+            some: { logEntry: { tripId: threadId.slice(5), deleted: false } },
+          },
+        },
+      ]
+    : []),
+]
 const accessibleMedia = (userId: string, threadId: string) => ({
   uploadedAt: { not: null },
-  OR: [
-    { uploaderId: userId },
-    { messages: { some: { message: { threadId } } } },
-  ],
+  OR: [{ uploaderId: userId }, ...sharedMedia(threadId)],
 })
 
 // Callers must first authorize current thread membership. Reuse only verified,
@@ -153,7 +162,7 @@ export async function getSharedMessageMedia(threadId: string, mediaId: string) {
     where: {
       id: mediaId,
       uploadedAt: { not: null },
-      messages: { some: { message: { threadId } } },
+      OR: sharedMedia(threadId),
     },
   })
   if (!media) throw new HTTPException(404, { message: 'Media not found' })
@@ -170,4 +179,28 @@ export async function readMessageMedia(
       ...(range ? { Range: range } : {}),
     }),
   )
+}
+
+/** Logbook editors may have broader access than the selected chat crew. */
+export async function requireLogbookAttachments(
+  userId: string,
+  tripId: string,
+  ids: string[],
+) {
+  if (!ids.length) return
+  const media = await prisma.chatMedia.findMany({
+    where: {
+      id: { in: ids },
+      uploadedAt: { not: null },
+      OR: [
+        { uploaderId: userId },
+        { logMedia: { some: { logEntry: { tripId, deleted: false } } } },
+      ],
+    },
+    select: { id: true },
+  })
+  if (media.length !== new Set(ids).size)
+    throw new HTTPException(400, {
+      message: 'Some log media is not uploaded or available in this trip.',
+    })
 }
