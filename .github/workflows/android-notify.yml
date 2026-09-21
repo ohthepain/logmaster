@@ -53,7 +53,7 @@ jobs:
           NOTIFY_DRY_RUN: ${{ inputs.dry_run }}
           ANDROID_RELEASE_AVAILABLE: ${{ inputs.release_available }}
           ANDROID_TESTER_EMAILS: ${{ secrets.ANDROID_TESTER_EMAILS }}
-          ANDROID_TESTING_URL: ${{ vars.ANDROID_TESTING_URL }}
-          AWS_SES_FROM_EMAIL: ${{ vars.AWS_SES_FROM_EMAIL }}
+          ANDROID_TESTING_URL: ${{ vars.ANDROID_TESTING_URL || secrets.ANDROID_TESTING_URL }}
+          AWS_SES_FROM_EMAIL: ${{ vars.AWS_SES_FROM_EMAIL || secrets.AWS_SES_FROM_EMAIL }}
           AWS_REGION: eu-central-1
         run: node scripts/notify-android-testers.mjs

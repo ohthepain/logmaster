@@ -35,7 +35,7 @@ Add environment variables:
 | Variable | Value |
 | --- | --- |
 | `ANDROID_UPLOAD_KEY_ALIAS` | `logmaster-upload` (default) |
-| `ANDROID_TESTING_URL` | Copy the opt-in link from Play Console; expected `https://play.google.com/apps/testing/live.logmaster.app` |
+| `ANDROID_TESTING_URL` | **Environment variable** (or secret): internal-testing join link from Play Console, e.g. `https://play.google.com/apps/internaltest/4700471077434195460`, or closed-testing `https://play.google.com/apps/testing/live.logmaster.app`. Not a per-build `/apps/test/.../version` URL. |
 | `AWS_SES_FROM_EMAIL` | A verified SES sender address, ideally a monitored mailbox for replies |
 
 The tracked Android `google-services.json` supplies client Firebase configuration.

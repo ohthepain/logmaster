@@ -2,6 +2,27 @@ import { appendFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 
+/** Stable internal-testing join link from Play Console (track id, not per build). */
+const DEFAULT_ANDROID_TESTING_URL =
+  "https://play.google.com/apps/internaltest/4700471077434195460";
+const DEFAULT_AWS_SES_FROM_EMAIL = "no-reply@logmaster.live";
+
+/** Play opt-in links we allow in tester email (not per-build /apps/test/... URLs). */
+export function isAllowedPlayTesterLink(raw) {
+  let url;
+  try {
+    url = new URL(String(raw).trim());
+  } catch {
+    return false;
+  }
+  if (url.origin !== "https://play.google.com" || url.search || url.hash) {
+    return false;
+  }
+  if (url.pathname === "/apps/testing/live.logmaster.app") return true;
+  if (/^\/apps\/internaltest\/\d+$/.test(url.pathname)) return true;
+  return false;
+}
+
 export function notificationConfig(env) {
   const recipients = [
     ...new Set(
@@ -22,15 +43,12 @@ export function notificationConfig(env) {
   if (!version || !/^[A-Za-z0-9][A-Za-z0-9 .()+_-]{0,79}$/.test(version)) {
     throw new Error("Set a short ANDROID_RELEASE_LABEL, for example 1.0 (build 2)");
   }
-  const link = env.ANDROID_TESTING_URL?.trim();
-  const url = new URL(link || "https://invalid.example");
-  if (
-    url.origin !== "https://play.google.com" ||
-    url.pathname !== "/apps/testing/live.logmaster.app" ||
-    url.search ||
-    url.hash
-  ) {
-    throw new Error("Set ANDROID_TESTING_URL to the Play opt-in link for live.logmaster.app");
+  const link =
+    env.ANDROID_TESTING_URL?.trim() || DEFAULT_ANDROID_TESTING_URL;
+  if (!isAllowedPlayTesterLink(link)) {
+    throw new Error(
+      "Set ANDROID_TESTING_URL (android-release environment variable or secret) to the Play internal-testing join link or https://play.google.com/apps/testing/live.logmaster.app — not a per-build /apps/test/... URL",
+    );
   }
   if (!["true", "false"].includes(env.NOTIFY_DRY_RUN || "true")) {
     throw new Error("NOTIFY_DRY_RUN must be true or false");
@@ -39,8 +57,11 @@ export function notificationConfig(env) {
   if (!dryRun && env.ANDROID_RELEASE_AVAILABLE !== "true") {
     throw new Error("Confirm the release is available to internal testers before sending");
   }
-  const from = env.AWS_SES_FROM_EMAIL?.trim();
-  if (!from || /[\r\n]/.test(from)) throw new Error("Set AWS_SES_FROM_EMAIL to a verified SES sender");
+  const from =
+    env.AWS_SES_FROM_EMAIL?.trim() || DEFAULT_AWS_SES_FROM_EMAIL;
+  if (/[\r\n]/.test(from)) {
+    throw new Error("Set AWS_SES_FROM_EMAIL to a verified SES sender");
+  }
   return {
     recipients,
     dryRun,

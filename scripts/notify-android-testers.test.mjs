@@ -18,7 +18,14 @@ describe('Android tester notification', () => {
   })
   it('rejects unavailable releases, wrong links and missing recipients before sending', () => {
     expect(() => notificationConfig({ ...env, NOTIFY_DRY_RUN: 'false' })).toThrow(/available/)
-    expect(() => notificationConfig({ ...env, ANDROID_TESTING_URL: 'https://example.com' })).toThrow(/opt-in/)
+    expect(() => notificationConfig({ ...env, ANDROID_TESTING_URL: 'https://example.com' })).toThrow(/ANDROID_TESTING_URL/)
+    expect(
+      notificationConfig({
+        ...env,
+        ANDROID_TESTING_URL:
+          'https://play.google.com/apps/internaltest/4700471077434195460',
+      }).text,
+    ).toContain('/apps/internaltest/')
     expect(() => notificationConfig({ ...env, ANDROID_TESTER_EMAILS: '' })).toThrow(/email/)
   })
   it('sends separately, counts failures, and never retries uncertain sends', async () => {
