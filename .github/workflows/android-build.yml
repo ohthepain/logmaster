@@ -56,7 +56,11 @@ jobs:
           UPLOAD_KEY_BASE64: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
         run: |
           umask 077
-          test -n "$UPLOAD_KEY_BASE64"
+          if [[ -z "$UPLOAD_KEY_BASE64" ]]; then
+            echo 'Missing secret ANDROID_UPLOAD_KEYSTORE_BASE64 on the android-release environment.'
+            echo 'See docs/android-releases-with-github.md (one-time setup).'
+            exit 1
+          fi
           printf '%s' "$UPLOAD_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/logmaster-upload.p12"
       - name: Build and sign bundle
         env:
