@@ -34,6 +34,33 @@ Object names are recognized case-insensitively at whole-name boundaries. The ser
 
 Reference: [Stream plain JavaScript SDK](https://getstream.io/chat/docs/javascript/), [channel features and push setting](https://getstream.io/chat/docs/node/channel-features/), [permissions](https://getstream.io/chat/docs/node/chat-permission-policies/), [webhooks](https://getstream.io/docs/platform/webhooks/).
 
+## First production deployment
+
+Get the API key and secret from your Stream Chat application's dashboard overview and put them in the gitignored `.env` as `STREAM_API_KEY` and `STREAM_API_SECRET`. Keep production and staging in separate Stream apps. The bucket name is an ordinary setting; S3 uses the ECS task role and needs no new access key.
+
+On `main`, use this order:
+
+```bash
+# Review the production plan, then apply the infrastructure changes.
+pnpm tf:plan:prod
+pnpm tf:apply:prod
+
+# Configure the Stream app using the local credentials.
+pnpm messaging:configure
+
+# Write both values to Terraform-created SSM SecureString parameters.
+pnpm messaging:secrets production
+
+# After setting the Stream message.new webhook described above:
+git push origin main
+```
+
+The SSM paths are `/logmaster/production/STREAM_API_KEY` and `/logmaster/production/STREAM_API_SECRET`, in `eu-central-1`. The helper requires both SecureString parameters to exist before writing either, sends values through stdin rather than process arguments, and does not print them. Terraform's `ignore_changes = [value]` preserves these updates. Do not put the values in tfvars or GitHub secrets. Access to Terraform state remains sensitive: providers may refresh SSM values into state even when changes are ignored.
+
+The current CI workflow builds and deploys the application but **does not run Terraform apply**. Applying first is necessary to update the ECS task definition and execution-role permissions. New containers run `prisma migrate deploy` on startup. The push to `main` triggers the production deployment and the new tasks receive the SSM values. Updating SSM alone does not refresh a running container; for later rotations use `pnpm messaging:secrets production --redeploy` after configuring the replacement Stream app if needed.
+
+If parameters were created manually before Terraform, import each into the production workspace (`aws_ssm_parameter.stream_api_key` and `aws_ssm_parameter.stream_api_secret`) rather than attempting to create them again.
+
 ## Notification manager and lifecycle
 
 All server push producers now use the exported `pushNotificationManager` singleton. It writes a durable, deduplicated outbox keyed by notification and recipient, supports scheduled delivery and priority (chat is 10, existing activity notifications default to 0), and leases jobs across worker processes. Existing email delivery is unchanged. Transient push failures are retried with backoff, then marked failed after eight attempts. As with APNs/FCM/Web Push generally, delivery is at least once: a worker crash after a provider accepts a push but before acknowledgement can cause a duplicate. Per-device failures can also resend to successful devices during retry.

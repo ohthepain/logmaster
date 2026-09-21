@@ -159,6 +159,8 @@ Terraform creates per-environment **SecureString** parameters under `/logmaster/
 | `/logmaster/{env}/MAPTILER_API_KEY` | `MAPTILER_API_KEY` |
 | `/logmaster/{env}/AISSTREAM_API_KEY` | `AISSTREAM_API_KEY` |
 | `/logmaster/{env}/OPENAI_API_KEY` | `OPENAI_API_KEY` |
+| `/logmaster/{env}/STREAM_API_KEY` | `STREAM_API_KEY` |
+| `/logmaster/{env}/STREAM_API_SECRET` | `STREAM_API_SECRET` |
 | `/logmaster/{env}/FCM_PROJECT_ID` | `FCM_PROJECT_ID` |
 | `/logmaster/{env}/FCM_SERVICE_ACCOUNT_JSON` | `FCM_SERVICE_ACCOUNT_JSON` |
 | `/logmaster/{env}/APNS_KEY` | `APNS_KEY` |
@@ -180,6 +182,8 @@ Shared keys (MapTiler, AISStream, OpenAI, Google OAuth, APNS `.p8`) live under `
 **AIS live layer on deploy:** ECS reads `AISSTREAM_API_KEY` from SSM. If it is empty, `/api/ais/vessels` returns **503**. Either ensure `/logmaster/account/aisstream-api-key` exists and set `aisstream_api_key_parameter_name` in tfvars, or run `./scripts/set-aisstream-secrets.sh staging`.
 
 **Asset identification on deploy:** ECS reads `OPENAI_API_KEY` from SSM. If it is empty, asset photo identification and web research are skipped. Apply succeeds if `/logmaster/account/openai-api-key` is missing (the per-env parameter is created empty). Run `./scripts/set-openai-secrets.sh staging` or `production` from a machine with `OPENAI_API_KEY` in `.env` — that writes both the per-env parameter and the shared account key.
+
+**Messaging on deploy:** Apply Terraform first, configure the Stream app with `pnpm messaging:configure`, then run `pnpm messaging:secrets production` (or `staging`) to copy credentials from the gitignored `.env` into the per-environment SecureString parameters. The helper does not redeploy unless `--redeploy` is supplied. See [messaging deployment](../docs/messaging.md#first-production-deployment) for the full sequence.
 
 **Android push (FCM) on deploy:** ECS reads the target project and service-account JSON from SSM. Apply Terraform, populate both FCM parameters, and redeploy. See [Android Firebase setup](../docs/android-firebase-notifications.md) for credential handling and device verification.
 

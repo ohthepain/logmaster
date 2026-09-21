@@ -52,7 +52,8 @@
     "cap:run:ios": "CAP_DEV_SERVER_URL=http://localhost:3020 cap run ios --target 80B83655-1822-458A-958C-C3CE82A2FDD6",
     "cap:dev": "CAP_DEV_SERVER_URL=http://localhost:3020 cap run ios --target 80B83655-1822-458A-958C-C3CE82A2FDD6",
     "ios:sim": "bash scripts/ios-simulator-dev.sh",
-    "messaging:configure": "node --import tsx scripts/configure-messaging.ts"
+    "messaging:configure": "node --import tsx scripts/configure-messaging.ts",
+    "messaging:secrets": "node --import tsx scripts/set-stream-secrets.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1037.0",
