@@ -45,6 +45,15 @@ function AdminHome() {
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           <li>
             <Link
+              to="/admin/response-cards"
+              className="font-medium text-[var(--sea-accent)] underline"
+            >
+              Response cards
+            </Link>{' '}
+            — configure localized phrases and animated or static chat cards
+          </li>
+          <li>
+            <Link
               to="/admin/products"
               className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
             >

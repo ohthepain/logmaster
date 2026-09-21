@@ -38,6 +38,7 @@ import { Route as MainBoatsBoatIdRouteImport } from './routes/_main/boats/$boatI
 import { Route as MainAdminUsersRouteImport } from './routes/_main/admin/users'
 import { Route as MainAdminTripsRouteImport } from './routes/_main/admin/trips'
 import { Route as MainAdminTranslationsRouteImport } from './routes/_main/admin/translations'
+import { Route as MainAdminResponseCardsRouteImport } from './routes/_main/admin/response-cards'
 import { Route as MainAdminProductsRouteImport } from './routes/_main/admin/products'
 import { Route as MainAdminPgbossRouteImport } from './routes/_main/admin/pgboss'
 import { Route as MainAdminOrgsRouteImport } from './routes/_main/admin/orgs'
@@ -206,6 +207,11 @@ const MainAdminTranslationsRoute = MainAdminTranslationsRouteImport.update({
   path: '/admin/translations',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainAdminResponseCardsRoute = MainAdminResponseCardsRouteImport.update({
+  id: '/admin/response-cards',
+  path: '/admin/response-cards',
+  getParentRoute: () => MainRouteRoute,
+} as any)
 const MainAdminProductsRoute = MainAdminProductsRouteImport.update({
   id: '/admin/products',
   path: '/admin/products',
@@ -340,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/admin/orgs': typeof MainAdminOrgsRoute
   '/admin/pgboss': typeof MainAdminPgbossRoute
   '/admin/products': typeof MainAdminProductsRoute
+  '/admin/response-cards': typeof MainAdminResponseCardsRoute
   '/admin/translations': typeof MainAdminTranslationsRoute
   '/admin/trips': typeof MainAdminTripsRoute
   '/admin/users': typeof MainAdminUsersRoute
@@ -392,6 +399,7 @@ export interface FileRoutesByTo {
   '/admin/orgs': typeof MainAdminOrgsRoute
   '/admin/pgboss': typeof MainAdminPgbossRoute
   '/admin/products': typeof MainAdminProductsRoute
+  '/admin/response-cards': typeof MainAdminResponseCardsRoute
   '/admin/translations': typeof MainAdminTranslationsRoute
   '/admin/trips': typeof MainAdminTripsRoute
   '/admin/users': typeof MainAdminUsersRoute
@@ -443,6 +451,7 @@ export interface FileRoutesById {
   '/_main/admin/orgs': typeof MainAdminOrgsRoute
   '/_main/admin/pgboss': typeof MainAdminPgbossRoute
   '/_main/admin/products': typeof MainAdminProductsRoute
+  '/_main/admin/response-cards': typeof MainAdminResponseCardsRoute
   '/_main/admin/translations': typeof MainAdminTranslationsRoute
   '/_main/admin/trips': typeof MainAdminTripsRoute
   '/_main/admin/users': typeof MainAdminUsersRoute
@@ -497,6 +506,7 @@ export interface FileRouteTypes {
     | '/admin/orgs'
     | '/admin/pgboss'
     | '/admin/products'
+    | '/admin/response-cards'
     | '/admin/translations'
     | '/admin/trips'
     | '/admin/users'
@@ -549,6 +559,7 @@ export interface FileRouteTypes {
     | '/admin/orgs'
     | '/admin/pgboss'
     | '/admin/products'
+    | '/admin/response-cards'
     | '/admin/translations'
     | '/admin/trips'
     | '/admin/users'
@@ -599,6 +610,7 @@ export interface FileRouteTypes {
     | '/_main/admin/orgs'
     | '/_main/admin/pgboss'
     | '/_main/admin/products'
+    | '/_main/admin/response-cards'
     | '/_main/admin/translations'
     | '/_main/admin/trips'
     | '/_main/admin/users'
@@ -847,6 +859,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAdminTranslationsRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/admin/response-cards': {
+      id: '/_main/admin/response-cards'
+      path: '/admin/response-cards'
+      fullPath: '/admin/response-cards'
+      preLoaderRoute: typeof MainAdminResponseCardsRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/admin/products': {
       id: '/_main/admin/products'
       path: '/admin/products'
@@ -1064,6 +1083,7 @@ interface MainRouteRouteChildren {
   MainAdminOrgsRoute: typeof MainAdminOrgsRoute
   MainAdminPgbossRoute: typeof MainAdminPgbossRoute
   MainAdminProductsRoute: typeof MainAdminProductsRoute
+  MainAdminResponseCardsRoute: typeof MainAdminResponseCardsRoute
   MainAdminTranslationsRoute: typeof MainAdminTranslationsRoute
   MainAdminTripsRoute: typeof MainAdminTripsRoute
   MainAdminUsersRoute: typeof MainAdminUsersRoute
@@ -1108,6 +1128,7 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainAdminOrgsRoute: MainAdminOrgsRoute,
   MainAdminPgbossRoute: MainAdminPgbossRoute,
   MainAdminProductsRoute: MainAdminProductsRoute,
+  MainAdminResponseCardsRoute: MainAdminResponseCardsRoute,
   MainAdminTranslationsRoute: MainAdminTranslationsRoute,
   MainAdminTripsRoute: MainAdminTripsRoute,
   MainAdminUsersRoute: MainAdminUsersRoute,

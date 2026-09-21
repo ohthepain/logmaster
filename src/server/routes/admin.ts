@@ -1,3 +1,4 @@
+import { adminResponseCardsRoutes } from './admin-response-cards'
 import { Hono } from 'hono'
 import { shortJobOutputMessage } from '../../lib/admin-jobs'
 import type { OsmPointDatasetId } from '../../lib/map-data-layers'
@@ -65,6 +66,8 @@ adminRoutes.use('*', async (c, next) => {
     return forbidden()
   await next()
 })
+
+adminRoutes.route('/response-cards', adminResponseCardsRoutes)
 
 adminRoutes.get('/translations', async (c) => {
   const rows = await db.translationOverride.findMany({

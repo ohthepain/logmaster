@@ -10,7 +10,15 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { ChatMessage, ChatObject, ChatThread } from '../domain/messaging'
 import { Messaging, MessageText } from './Messaging'
 
-const mocks = vi.hoisted(() => ({ api: vi.fn() }))
+vi.mock('../lib/i18n', () => ({ useTranslation: () => ({ language: 'en' }) }))
+const mocks = vi.hoisted(() => ({ api: vi.fn(), upload: vi.fn() }))
+vi.mock('../lib/messaging/media', () => ({
+  uploadMessageFiles: mocks.upload,
+  loadMessageMedia: vi.fn(
+    async () => new Blob(['photo'], { type: 'image/jpeg' }),
+  ),
+  messageMediaUrl: () => '/test-media',
+}))
 vi.mock('../lib/api-client', () => ({ apiJson: mocks.api }))
 vi.mock('../hooks/use-chat-activity', () => ({
   useChatActivity: () => ({ active: true, live: true }),
@@ -41,8 +49,13 @@ const thread: ChatThread = {
 }
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.upload.mockResolvedValue([])
+  URL.createObjectURL = vi.fn(() => 'blob:test')
+  URL.revokeObjectURL = vi.fn()
   Element.prototype.scrollIntoView = vi.fn()
   mocks.api.mockImplementation(async (url: string) => {
+    if (url === '/api/messaging/cards/match')
+      return { cards: [], translationUnavailable: false }
     if (url.endsWith('/likes/query'))
       return {
         likes: [{ messageId: message.id, likeCount: 0, myLikeCount: 0 }],
@@ -193,4 +206,83 @@ it('restores a saved red heart and respects reduced motion', async () => {
   } finally {
     vi.unstubAllGlobals()
   }
+})
+
+it('opens the media tray, keeps selections while typing, and sends media only on Send', async () => {
+  const attachment = {
+    id: 'media-id',
+    checksum: 'a'.repeat(64),
+    size: 5,
+    contentType: 'image/jpeg',
+    fileName: 'boat.jpg',
+  }
+  mocks.upload.mockResolvedValue([attachment])
+  const base = mocks.api.getMockImplementation()!
+  mocks.api.mockImplementation(async (url: string, options?: RequestInit) => {
+    if (url.endsWith('/messages') && options?.method === 'POST')
+      return {
+        message: {
+          ...message,
+          senderId: 'user',
+          text: 'Look!',
+          media: [attachment],
+        },
+      }
+    return base(url, options)
+  })
+  render(<Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />)
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Add photos or videos' }),
+  )
+  expect(screen.getByRole('region', { name: 'Media selector' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Camera' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Record video' })).toBeTruthy()
+  const file = new File(['photo'], 'boat.jpg', { type: 'image/jpeg' })
+  fireEvent.change(screen.getByLabelText('Select photos and videos'), {
+    target: { files: [file] },
+  })
+  expect(screen.getByLabelText('Selected media')).toBeTruthy()
+  expect(mocks.upload).not.toHaveBeenCalled()
+  const input = screen.getByRole('textbox', { name: 'Message' })
+  fireEvent.focus(input)
+  expect(screen.queryByRole('region', { name: 'Media selector' })).toBeNull()
+  fireEvent.change(input, { target: { value: 'Look!' } })
+  expect(
+    screen.queryByRole('button', { name: 'Add photos or videos' }),
+  ).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
+  await waitFor(() =>
+    expect(screen.queryByLabelText('Selected media')).toBeNull(),
+  )
+  expect(mocks.upload).toHaveBeenCalledWith(
+    'boat:boat',
+    [file],
+    expect.any(Function),
+  )
+  const sendCall = mocks.api.mock.calls.find(
+    ([url, options]) => url.endsWith('/messages') && options?.method === 'POST',
+  )!
+  expect(JSON.parse(sendCall[1].body)).toMatchObject({
+    text: 'Look!',
+    mediaIds: ['media-id'],
+  })
+})
+it('allows media-only messages and preserves the selection after an upload failure', async () => {
+  mocks.upload.mockRejectedValue(new Error('Upload failed'))
+  render(<Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />)
+  await screen.findByRole('button', { name: 'Add photos or videos' })
+  fireEvent.change(screen.getByLabelText('Select photos and videos'), {
+    target: { files: [new File(['video'], 'trip.mp4', { type: 'video/mp4' })] },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
+  await screen.findByText('Upload failed')
+  expect(screen.getByLabelText('Selected media')).toBeTruthy()
+  expect(
+    mocks.api.mock.calls.some(
+      ([url, options]) =>
+        url.endsWith('/messages') && options?.method === 'POST',
+    ),
+  ).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: 'Remove trip.mp4' }))
+  expect(screen.queryByRole('button', { name: 'Send message' })).toBeNull()
 })

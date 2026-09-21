@@ -46,6 +46,7 @@ resource "aws_ecs_task_definition" "app" {
         { name = "NODE_ENV", value = "production" },
         { name = "PORT", value = tostring(var.app_port) },
         { name = "AWS_REGION", value = var.aws_region },
+        { name = "S3_BUCKET_MESSAGING_CARDS", value = var.messaging_cards_bucket_name },
         { name = "S3_BUCKET_MESSAGE_MEDIA", value = var.message_media_bucket_name },
         { name = "S3_BUCKET_PHOTOS", value = aws_s3_bucket.uploads.bucket },
         { name = "S3_BUCKET_GEOJSON", value = aws_s3_bucket.uploads.bucket },

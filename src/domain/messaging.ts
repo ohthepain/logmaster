@@ -1,4 +1,7 @@
 /** Provider-neutral contracts. No Stream types may escape the adapters. */
+import type { ChatAttachment } from './message-media'
+import type { ImageResponseCard } from './response-cards'
+
 export type ChatObjectKind = 'org' | 'boat' | 'trip' | 'asset' | 'user'
 export type ChatObject = {
   kind: ChatObjectKind
@@ -8,12 +11,14 @@ export type ChatObject = {
   image: string | null
 }
 export type ObjectReference = ChatObject & { start: number; end: number }
-export type ResponseCard = {
-  version: 1
-  type: string
-  object: Pick<ChatObject, 'kind' | 'id'>
-  data: Record<string, unknown>
-}
+export type ResponseCard =
+  | ImageResponseCard
+  | {
+      version: 1
+      type: string
+      object: Pick<ChatObject, 'kind' | 'id'>
+      data: Record<string, unknown>
+    }
 export type ChatMessage = {
   id: string
   threadId: string
@@ -23,6 +28,7 @@ export type ChatMessage = {
   references: ObjectReference[]
   responseCard: ResponseCard | null
   createdAt: string
+  media?: ChatAttachment[]
 }
 export type MessageLikes = {
   messageId: string

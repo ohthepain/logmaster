@@ -1,63 +1,173 @@
 import { createHash } from 'node:crypto'
-import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
+import {
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+} from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { HTTPException } from 'hono/http-exception'
+import { prisma } from '../db'
 import { getPhotosS3Client } from '../s3-photos'
-import { requireThread } from './threads'
+import type { ChatAttachment } from '../../domain/message-media'
 
-/** Storage boundary for v2 attachments. Do not use Stream upload APIs or public ACLs. */
 export const messageMediaBucket = () =>
   process.env.S3_BUCKET_MESSAGE_MEDIA?.trim() || 'logmaster-message-media'
-const MAX_BYTES = 20 * 1024 * 1024
-const TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'video/mp4',
-  'audio/mp4',
-  'audio/mpeg',
-  'application/pdf',
-])
-function mediaKey(threadId: string, mediaId: string) {
-  if (!/^[0-9a-f-]{36}$/i.test(mediaId)) throw new Error('Invalid media ID')
-  // Hashes avoid coupling S3 paths to provider channel IDs and unsafe object names.
-  return `threads/${createHash('sha256').update(threadId).digest('hex')}/${mediaId}`
+export function messageMediaKey(uploaderId: string, checksum: string) {
+  return `users/${createHash('sha256').update(uploaderId).digest('hex')}/sha256/${checksum}`
 }
-export async function storeMessageMedia(input: {
-  userId: string
-  threadId: string
-  mediaId: string
-  body: Uint8Array
-  contentType: string
-}) {
-  await requireThread(input.userId, input.threadId)
-  if (
-    !TYPES.has(input.contentType) ||
-    !input.body.byteLength ||
-    input.body.byteLength > MAX_BYTES
-  )
-    throw new Error('Unsupported media or file larger than 20 MB')
-  const key = mediaKey(input.threadId, input.mediaId)
-  await getPhotosS3Client().send(
-    new PutObjectCommand({
-      Bucket: messageMediaBucket(),
-      Key: key,
-      Body: input.body,
-      ContentType: input.contentType,
-      ServerSideEncryption: 'AES256',
-      CacheControl: 'private, no-store',
-    }),
-  )
-  return { key, contentType: input.contentType, size: input.body.byteLength }
-}
-export async function readMessageMedia(
+export const mediaDescriptor = (media: ChatAttachment): ChatAttachment => ({
+  id: media.id,
+  checksum: media.checksum,
+  contentType: media.contentType,
+  size: media.size,
+  fileName: media.fileName,
+})
+const accessibleMedia = (userId: string, threadId: string) => ({
+  uploadedAt: { not: null },
+  OR: [
+    { uploaderId: userId },
+    { messages: { some: { message: { threadId } } } },
+  ],
+})
+
+// Callers must first authorize current thread membership. Reuse only verified,
+// owned or already-shared bytes; a checksum is never an authorization credential.
+export async function prepareMessageMedia(
   userId: string,
   threadId: string,
-  mediaId: string,
+  input: {
+    checksum: string
+    size: number
+    contentType: string
+    fileName: string
+  },
 ) {
-  await requireThread(userId, threadId)
+  const existing = await prisma.chatMedia.findFirst({
+    where: { checksum: input.checksum, ...accessibleMedia(userId, threadId) },
+  })
+  if (existing) return { media: mediaDescriptor(existing), upload: null }
+  const media = await prisma.chatMedia.upsert({
+    where: {
+      uploaderId_checksum: { uploaderId: userId, checksum: input.checksum },
+    },
+    create: { uploaderId: userId, ...input },
+    update: {},
+  })
+  if (media.size !== input.size || media.contentType !== input.contentType)
+    throw new HTTPException(409, {
+      message: 'This file has different metadata. Please select it again.',
+    })
+  // Recover a successful PUT whose completion response was lost, without uploading again.
+  try {
+    return { media: await completeMessageMedia(userId, media.id), upload: null }
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      !['NotFound', 'NoSuchKey'].includes(error.name)
+    )
+      throw error
+  }
+  const checksum = Buffer.from(media.checksum, 'hex').toString('base64')
+  const headers = {
+    'Content-Type': media.contentType,
+    'x-amz-checksum-sha256': checksum,
+    'x-amz-server-side-encryption': 'AES256',
+    'If-None-Match': '*',
+  }
+  const url = await getSignedUrl(
+    getPhotosS3Client(),
+    new PutObjectCommand({
+      Bucket: messageMediaBucket(),
+      Key: messageMediaKey(media.uploaderId, media.checksum),
+      ContentType: media.contentType,
+      ContentLength: media.size,
+      ChecksumSHA256: checksum,
+      ServerSideEncryption: 'AES256',
+      IfNoneMatch: '*',
+    }),
+    {
+      expiresIn: 600,
+      unhoistableHeaders: new Set([
+        'x-amz-checksum-sha256',
+        'x-amz-server-side-encryption',
+      ]),
+      signableHeaders: new Set([
+        'content-type',
+        'content-length',
+        'if-none-match',
+      ]),
+    },
+  )
+  return { media: mediaDescriptor(media), upload: { url, headers } }
+}
+
+export async function completeMessageMedia(userId: string, mediaId: string) {
+  const media = await prisma.chatMedia.findFirst({
+    where: { id: mediaId, uploaderId: userId },
+  })
+  if (!media) throw new HTTPException(404, { message: 'Media not found' })
+  if (!media.uploadedAt) {
+    const head = await getPhotosS3Client().send(
+      new HeadObjectCommand({
+        Bucket: messageMediaBucket(),
+        Key: messageMediaKey(media.uploaderId, media.checksum),
+        ChecksumMode: 'ENABLED',
+      }),
+    )
+    if (
+      head.ContentLength !== media.size ||
+      head.ContentType !== media.contentType ||
+      head.ChecksumSHA256 !==
+        Buffer.from(media.checksum, 'hex').toString('base64')
+    )
+      throw new HTTPException(409, {
+        message: 'Upload verification failed. Please try again.',
+      })
+    await prisma.chatMedia.update({
+      where: { id: media.id },
+      data: { uploadedAt: new Date() },
+    })
+  }
+  return mediaDescriptor(media)
+}
+
+export async function requireMessageAttachments(
+  userId: string,
+  threadId: string,
+  ids: string[],
+) {
+  if (!ids.length) return
+  const media = await prisma.chatMedia.findMany({
+    where: { id: { in: ids }, ...accessibleMedia(userId, threadId) },
+    select: { id: true },
+  })
+  if (media.length !== ids.length)
+    throw new HTTPException(400, {
+      message:
+        'Some attachments are not uploaded or available in this conversation.',
+    })
+}
+
+export async function getSharedMessageMedia(threadId: string, mediaId: string) {
+  const media = await prisma.chatMedia.findFirst({
+    where: {
+      id: mediaId,
+      uploadedAt: { not: null },
+      messages: { some: { message: { threadId } } },
+    },
+  })
+  if (!media) throw new HTTPException(404, { message: 'Media not found' })
+  return media
+}
+export async function readMessageMedia(
+  media: { uploaderId: string; checksum: string },
+  range?: string,
+) {
   return getPhotosS3Client().send(
     new GetObjectCommand({
       Bucket: messageMediaBucket(),
-      Key: mediaKey(threadId, mediaId),
+      Key: messageMediaKey(media.uploaderId, media.checksum),
+      ...(range ? { Range: range } : {}),
     }),
   )
 }

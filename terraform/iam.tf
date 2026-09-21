@@ -97,6 +97,8 @@ resource "aws_iam_role_policy" "ecs_task_uploads" {
           "s3:ListBucket",
         ]
         Resource = [
+          "arn:aws:s3:::${var.messaging_cards_bucket_name}",
+          "arn:aws:s3:::${var.messaging_cards_bucket_name}/*",
           "arn:aws:s3:::${var.message_media_bucket_name}",
           "arn:aws:s3:::${var.message_media_bucket_name}/*",
           aws_s3_bucket.uploads.arn,

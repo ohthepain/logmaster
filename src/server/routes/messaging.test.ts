@@ -3,6 +3,7 @@ import { createHmac } from 'node:crypto'
 import { messagingRoutes } from './messaging'
 
 const mocks = vi.hoisted(() => ({
+  card: vi.fn(),
   session: vi.fn(),
   threads: vi.fn(),
   requireThread: vi.fn(),
@@ -17,6 +18,19 @@ const mocks = vi.hoisted(() => ({
   wake: vi.fn(),
   read: vi.fn(),
   upsertLike: vi.fn(),
+  attachments: vi.fn(),
+  requireAttachments: vi.fn(),
+  prepareMedia: vi.fn(),
+  completeMedia: vi.fn(),
+  sharedMedia: vi.fn(),
+  readMedia: vi.fn(),
+  mediaCount: vi.fn(),
+}))
+vi.mock('../messaging/cards', () => ({
+  responseCardSnapshot: mocks.card,
+  matchResponseCards: vi.fn(),
+  translateCardText: vi.fn(),
+  readResponseCard: vi.fn(),
 }))
 vi.mock('../db', () => ({
   prisma: {
@@ -29,8 +43,18 @@ vi.mock('../db', () => ({
     },
     user: { findMany: mocks.users },
     chatMessageLike: { upsert: mocks.upsertLike },
+    chatMessageMedia: { findMany: mocks.attachments },
+    chatMedia: { count: mocks.mediaCount },
     $executeRaw: mocks.read,
   },
+}))
+vi.mock('../messaging/media', () => ({
+  requireMessageAttachments: mocks.requireAttachments,
+  prepareMessageMedia: mocks.prepareMedia,
+  completeMessageMedia: mocks.completeMedia,
+  getSharedMessageMedia: mocks.sharedMedia,
+  readMessageMedia: mocks.readMedia,
+  mediaDescriptor: (media: unknown) => media,
 }))
 vi.mock('../session', () => ({ getSessionUserId: mocks.session }))
 vi.mock('../messaging/threads', () => ({
@@ -83,6 +107,9 @@ beforeEach(() => {
   mocks.users.mockResolvedValue([{ id: 'user', name: 'Alice' }])
   mocks.messages.mockResolvedValue([])
   mocks.findFirst.mockResolvedValue(row)
+  mocks.attachments.mockResolvedValue([])
+  mocks.mediaCount.mockResolvedValue(0)
+  mocks.requireAttachments.mockResolvedValue(undefined)
 })
 it('rejects signed-out reads before touching message data', async () => {
   mocks.session.mockResolvedValue(null)
@@ -279,4 +306,154 @@ describe('message likes', () => {
         .status,
     ).toBe(404)
   })
+})
+
+describe('message media', () => {
+  const mediaId = '01a0c37e-921c-4bd0-a35f-b72197befe00'
+  const descriptor = {
+    id: mediaId,
+    checksum: 'a'.repeat(64),
+    size: 3,
+    contentType: 'image/jpeg',
+    fileName: 'boat.jpg',
+  }
+  it('accepts media-only messages and atomically attaches only verified, authorized IDs', async () => {
+    const response = await post('/threads/boat:boat/messages', {
+      id,
+      text: '',
+      mediaIds: [mediaId],
+    })
+    expect(response.status).toBe(201)
+    expect(mocks.requireAttachments).toHaveBeenCalledWith('user', 'boat:boat', [
+      mediaId,
+    ])
+    expect(mocks.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        text: '',
+        media: { create: [{ mediaId, position: 0 }] },
+      }),
+    })
+    const { HTTPException } = await import('hono/http-exception')
+    mocks.requireAttachments.mockRejectedValueOnce(
+      new HTTPException(400, { message: 'Unavailable attachment' }),
+    )
+    mocks.create.mockClear()
+    expect(
+      (await post('/threads/boat:boat/messages', { id, mediaIds: [mediaId] }))
+        .status,
+    ).toBe(400)
+    expect(mocks.create).not.toHaveBeenCalled()
+  })
+  it('rejects empty messages, repeated attachments and unsupported/oversized upload requests', async () => {
+    expect(
+      (await post('/threads/boat:boat/messages', { id, text: '' })).status,
+    ).toBe(400)
+    expect(
+      (
+        await post('/threads/boat:boat/messages', {
+          id,
+          mediaIds: [mediaId, mediaId],
+        })
+      ).status,
+    ).toBe(400)
+    const input = {
+      checksum: descriptor.checksum,
+      size: 3,
+      contentType: 'image/svg+xml',
+      fileName: 'x.svg',
+    }
+    expect((await post('/threads/boat:boat/media/prepare', input)).status).toBe(
+      400,
+    )
+    expect(
+      (
+        await post('/threads/boat:boat/media/prepare', {
+          ...input,
+          contentType: 'image/jpeg',
+          size: 101 * 1024 * 1024,
+        })
+      ).status,
+    ).toBe(400)
+    expect(mocks.prepareMedia).not.toHaveBeenCalled()
+  })
+  it('authorizes upload preparation and completion before touching S3', async () => {
+    mocks.requireThread.mockRejectedValueOnce(new Error('Chat not found'))
+    expect(
+      (await post('/threads/boat:boat/media/prepare', descriptor)).status,
+    ).toBe(404)
+    expect(mocks.prepareMedia).not.toHaveBeenCalled()
+    mocks.completeMedia.mockResolvedValue(descriptor)
+    expect(
+      (await post(`/threads/boat:boat/media/${mediaId}/complete`, {})).status,
+    ).toBe(200)
+    expect(mocks.completeMedia).toHaveBeenCalledWith('user', mediaId)
+  })
+  it('reauthorizes cached content and supports conditional and ranged reads', async () => {
+    const path = `/threads/boat:boat/media/${mediaId}/content`
+    const etag = `"sha256-${descriptor.checksum}"`
+    mocks.sharedMedia.mockResolvedValue(descriptor)
+    mocks.requireThread.mockRejectedValueOnce(new Error('Chat not found'))
+    expect(
+      (
+        await messagingRoutes.request(path, {
+          headers: { 'if-none-match': etag },
+        })
+      ).status,
+    ).toBe(404)
+    expect(mocks.sharedMedia).not.toHaveBeenCalled()
+    expect(
+      (
+        await messagingRoutes.request(path, {
+          headers: { 'if-none-match': etag },
+        })
+      ).status,
+    ).toBe(304)
+    expect(mocks.readMedia).not.toHaveBeenCalled()
+    mocks.readMedia.mockResolvedValue({
+      ContentLength: 2,
+      ContentRange: 'bytes 0-1/3',
+      Body: {
+        transformToWebStream: () =>
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new Uint8Array([1, 2]))
+              controller.close()
+            },
+          }),
+      },
+    })
+    const response = await messagingRoutes.request(path, {
+      headers: { range: 'bytes=0-1' },
+    })
+    expect(response.status).toBe(206)
+    expect(response.headers.get('Content-Range')).toBe('bytes 0-1/3')
+    expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff')
+    expect(await response.arrayBuffer()).toHaveProperty('byteLength', 2)
+  })
+})
+
+it('sends a card without text, using only a server-owned snapshot', async () => {
+  const responseCard = {
+    version: 1,
+    type: 'image-response',
+    card: { id, title: 'Yes', checksum: 'a'.repeat(64), enabled: true },
+  }
+  mocks.card.mockResolvedValue(responseCard)
+  const response = await post('/threads/boat:boat/messages', { id, cardId: id })
+  expect(response.status).toBe(201)
+  expect(mocks.card).toHaveBeenCalledWith(id)
+  expect(mocks.create).toHaveBeenCalledWith({
+    data: expect.objectContaining({ responseCard, text: '' }),
+  })
+  const forged = await post('/threads/boat:boat/messages', {
+    id,
+    responseCard: { type: 'image-response', url: 'https://untrusted.test' },
+  })
+  expect(forged.status).toBe(400)
+})
+it('checks thread membership before resolving a card', async () => {
+  mocks.threads.mockResolvedValue([])
+  const response = await post('/threads/boat:boat/messages', { id, cardId: id })
+  expect(response.status).toBe(404)
+  expect(mocks.card).not.toHaveBeenCalled()
 })

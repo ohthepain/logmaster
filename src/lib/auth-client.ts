@@ -2,6 +2,7 @@ import { createAuthClient } from 'better-auth/react'
 import { magicLinkClient } from 'better-auth/client/plugins'
 import { offlinePlugin } from 'better-auth-offline'
 import { getAppOrigin } from './app-origin'
+import { clearMessageMediaCaches } from './messaging/media'
 
 const baseURL =
   typeof window !== 'undefined' ? getAppOrigin() : 'http://localhost:3020'
@@ -19,7 +20,12 @@ export const authClient = createAuthClient({
   },
 })
 
-export const { signIn, signUp, signOut, useSession } = authClient
+export const { signIn, signUp, useSession } = authClient
+export async function signOut(...args: Parameters<typeof authClient.signOut>) {
+  const result = await authClient.signOut(...args)
+  await clearMessageMediaCaches().catch(() => {})
+  return result
+}
 
 export async function signOutToSignIn(search?: string) {
   await signOut()

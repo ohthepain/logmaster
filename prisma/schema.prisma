@@ -1478,6 +1478,7 @@ model ChatMessage {
   createdAt    DateTime @default(now())
   publishedAt  DateTime?
   likes        ChatMessageLike[]
+  media        ChatMessageMedia[]
   @@index([threadId, createdAt, id])
   @@index([publishedAt, createdAt])
   @@index([senderId, createdAt])
@@ -1532,4 +1533,64 @@ model PushDispatch {
   createdAt      DateTime @default(now())
   @@index([deliveredAt, failedAt, availableAt, priority])
   @@map("push_dispatch")
+}
+
+model ChatMedia {
+  id           String @id @default(uuid())
+  uploaderId   String
+  checksum     String
+  contentType  String
+  size         Int
+  fileName     String
+  createdAt    DateTime @default(now())
+  uploadedAt   DateTime?
+  messages     ChatMessageMedia[]
+  @@unique([uploaderId, checksum])
+  @@index([checksum])
+  @@map("chat_media")
+}
+
+model ChatMessageMedia {
+  messageId String
+  mediaId   String
+  position  Int
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  media     ChatMedia @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  @@id([messageId, mediaId])
+  @@index([mediaId])
+  @@map("chat_message_media")
+}
+
+// Assets are immutable and retained when cards are retired, for message history.
+model MessagingCard {
+  id          String @id @default(uuid())
+  title       String
+  checksum    String @unique
+  contentType String
+  size        Int
+  enabled     Boolean @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime @default(now())
+  expressions MessagingCardLink[]
+  @@map("messaging_card")
+}
+
+model MessagingExpression {
+  id         String @id @default(uuid())
+  language   String
+  text       String
+  normalized String
+  cards      MessagingCardLink[]
+  @@unique([language, normalized])
+  @@map("messaging_expression")
+}
+
+model MessagingCardLink {
+  expressionId String
+  cardId       String
+  expression   MessagingExpression @relation(fields: [expressionId], references: [id], onDelete: Cascade)
+  card         MessagingCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  @@id([expressionId, cardId])
+  @@index([cardId])
+  @@map("messaging_card_link")
 }

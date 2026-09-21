@@ -3,9 +3,11 @@
 <plist version="1.0">
 <dict>
   <key>NSCameraUsageDescription</key>
-  <string>Take photos to identify boat assets and attach them to your records.</string>
+  <string>Take photos and videos to share in messages or attach to your boat records.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Record audio when capturing videos to share in messages.</string>
   <key>NSPhotoLibraryUsageDescription</key>
-  <string>Choose photos to identify boat assets and attach them to your records.</string>
+  <string>Choose photos and videos to share in messages or attach to your boat records.</string>
   <key>NSPhotoLibraryAddUsageDescription</key>
   <string>Save photos of your boat assets to your photo library.</string>
 	<key>CAPACITOR_DEBUG</key>

@@ -1,3 +1,5 @@
+import { MessageResponseCard, ResponseCardSuggestions } from './ResponseCards'
+import type { CardSummary } from '../domain/response-cards'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { CSSProperties, ReactNode } from 'react'
@@ -6,6 +8,7 @@ import {
   BatteryFull,
   ChevronLeft,
   Heart,
+  Image as ImageIcon,
   MessageCircle,
   Search,
   Signal,
@@ -17,6 +20,8 @@ import { apiJson } from '../lib/api-client'
 import { cn } from '../lib/cn'
 import { useChatActivity } from '../hooks/use-chat-activity'
 import { useMessageLikes } from '../hooks/use-message-likes'
+import { MessageMedia, MediaSelector } from './MessageMedia'
+import { uploadMessageFiles } from '../lib/messaging/media'
 
 const mobileChatHeaderClassName =
   'bg-gradient-to-r from-[#0385ff] to-[#02adf5] text-white'
@@ -229,6 +234,7 @@ function MessageLikeCountPill({ count }: { count: number }) {
 }
 
 function ReceivedMessageRow({
+  userId,
   message,
   objects,
   like,
@@ -236,6 +242,7 @@ function ReceivedMessageRow({
   likePending,
   onToggleLike,
 }: {
+  userId: string
   message: ChatMessage
   objects: ChatObject[]
   like: { likeCount: number; myLikeCount: number } | undefined
@@ -253,6 +260,12 @@ function ReceivedMessageRow({
       ) : null}
       <div className={messageBubbleWidthClassName}>
         <div className={receivedBubbleClassName}>
+          <MessageResponseCard responseCard={message.responseCard} />
+          <MessageMedia
+            userId={userId}
+            threadId={message.threadId}
+            media={message.media}
+          />
           {hasPhoto === false ? (
             <p className="mb-1 mt-0 text-xs font-semibold text-[var(--sea-ink-soft)]">
               {message.senderName}
@@ -359,6 +372,15 @@ export function Messaging({
   const [cursor, setCursor] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [mediaDrafts, setMediaDrafts] = useState<Record<string, File[]>>({})
+  const [cardDrafts, setCardDrafts] = useState<
+    Record<string, CardSummary | undefined>
+  >({})
+  const selectedCard = selectedId ? cardDrafts[selectedId] : undefined
+  const [mediaOpen, setMediaOpen] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null)
+  const selectedFiles = selectedId ? (mediaDrafts[selectedId] ?? []) : []
+  const sendingRef = useRef(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -425,6 +447,8 @@ export function Messaging({
   const retryMessage = useRef<{
     threadId: string
     text: string
+    files: File[]
+    cardId?: string
     id: string
   } | null>(null)
   const currentThread = useRef(selectedId)
@@ -454,6 +478,7 @@ export function Messaging({
 
   useEffect(() => {
     historyStarted.current = null
+    setMediaOpen(false)
     setMessages([])
     setCursor(null)
     setError(null)
@@ -548,21 +573,54 @@ export function Messaging({
     }
   }
   async function send() {
-    if (!selectedId || !draft.trim() || sending) return
+    if (
+      !selectedId ||
+      (!draft.trim() && !selectedFiles.length && !selectedCard) ||
+      sendingRef.current ||
+      !active
+    )
+      return
     const threadId = selectedId
     const text = draft.trim()
+    const files = selectedFiles
     const pending =
       retryMessage.current?.threadId === threadId &&
-      retryMessage.current.text === text
+      retryMessage.current.text === text &&
+      retryMessage.current.cardId === selectedCard?.id &&
+      retryMessage.current.files.length === files.length &&
+      retryMessage.current.files.every((file, i) => file === files[i])
         ? retryMessage.current
-        : { threadId, text, id: crypto.randomUUID() }
+        : {
+            threadId,
+            text,
+            files,
+            cardId: selectedCard?.id,
+            id: crypto.randomUUID(),
+          }
     retryMessage.current = pending
+    sendingRef.current = true
     setSending(true)
     setError(null)
     try {
+      const attachments = await uploadMessageFiles(
+        threadId,
+        files,
+        setUploadProgress,
+      )
+      setUploadProgress(files.length ? 'Sending…' : null)
       const data = await apiJson<{ message: ChatMessage }>(
         `/api/messaging/threads/${encodeURIComponent(threadId)}/messages`,
-        { method: 'POST', body: JSON.stringify({ id: pending.id, text }) },
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            id: pending.id,
+            text,
+            ...(pending.cardId ? { cardId: pending.cardId } : {}),
+            ...(attachments.length
+              ? { mediaIds: attachments.map((item) => item.id) }
+              : {}),
+          }),
+        },
       )
       if (currentThread.current === threadId)
         setMessages((items) => [
@@ -573,7 +631,19 @@ export function Messaging({
         ...all,
         [threadId]: all[threadId]?.trim() === text ? '' : all[threadId],
       }))
+      setCardDrafts((all) => ({
+        ...all,
+        [threadId]:
+          all[threadId]?.id === pending.cardId ? undefined : all[threadId],
+      }))
       retryMessage.current = null
+      setMediaDrafts((all) => ({
+        ...all,
+        [threadId]: (all[threadId] ?? []).filter(
+          (file) => !files.includes(file),
+        ),
+      }))
+      if (currentThread.current === threadId) setMediaOpen(false)
       refresh()
     } catch (e) {
       setError(
@@ -582,7 +652,9 @@ export function Messaging({
           : 'Message not sent. Your draft is saved here; try again.',
       )
     } finally {
+      sendingRef.current = false
       setSending(false)
+      setUploadProgress(null)
     }
   }
   const visible = threads.filter((t) =>
@@ -661,7 +733,7 @@ export function Messaging({
                       </span>
                       <span className="mt-1 block truncate text-sm text-[var(--sea-ink-soft)]">
                         {thread.lastMessage
-                          ? `${thread.lastMessage.senderId === userId ? 'You: ' : ''}${thread.lastMessage.text}`
+                          ? `${thread.lastMessage.senderId === userId ? 'You: ' : ''}${thread.lastMessage.text || (thread.lastMessage.responseCard ? 'Response card' : '') || (thread.lastMessage.media?.some((item) => item.contentType.startsWith('video/')) ? 'Video' : 'Photo')}`
                           : 'Start the conversation'}
                       </span>
                     </span>
@@ -725,6 +797,7 @@ export function Messaging({
                     return (
                       <ReceivedMessageRow
                         key={message.id}
+                        userId={userId}
                         message={message}
                         objects={objects}
                         like={like}
@@ -748,6 +821,14 @@ export function Messaging({
                     >
                       <div className={messageBubbleWidthClassName}>
                         <div className={ownBubbleClassName}>
+                          <MessageResponseCard
+                            responseCard={message.responseCard}
+                          />
+                          <MessageMedia
+                            userId={userId}
+                            threadId={message.threadId}
+                            media={message.media}
+                          />
                           <p className="m-0 whitespace-pre-wrap break-words text-[15px] leading-snug text-black">
                             <MessageText message={message} objects={objects} />
                           </p>
@@ -775,6 +856,35 @@ export function Messaging({
                 }}
                 className="shrink-0 bg-white pb-[env(safe-area-inset-bottom,0px)]"
               >
+                <ResponseCardSuggestions
+                  key={`cards:${selected.id}`}
+                  text={draft}
+                  selected={selectedCard}
+                  disabled={sending || !active}
+                  onSelect={(card) => {
+                    setCardDrafts((all) => ({ ...all, [selected.id]: card }))
+                    setMediaOpen(false)
+                  }}
+                />
+                <MediaSelector
+                  key={selected.id}
+                  open={mediaOpen}
+                  files={selectedFiles}
+                  disabled={sending}
+                  onFiles={(files) =>
+                    setMediaDrafts((all) => ({ ...all, [selected.id]: files }))
+                  }
+                  onClose={() => setMediaOpen(false)}
+                  onError={setError}
+                />
+                {uploadProgress && (
+                  <p
+                    role="status"
+                    className="m-0 px-3 pt-2 text-xs text-slate-600"
+                  >
+                    {uploadProgress}
+                  </p>
+                )}
                 {draftReferences.length > 0 && (
                   <div
                     aria-label="Linked objects"
@@ -801,12 +911,15 @@ export function Messaging({
                     rows={2}
                     maxLength={5000}
                     value={draft}
-                    onChange={(e) =>
+                    onFocus={() => setMediaOpen(false)}
+                    onClick={() => setMediaOpen(false)}
+                    onChange={(e) => {
+                      setMediaOpen(false)
                       setDrafts((all) => ({
                         ...all,
                         [selected.id]: e.target.value,
                       }))
-                    }
+                    }}
                     onKeyDown={(e) => {
                       if (
                         e.key === 'Enter' &&
@@ -820,7 +933,23 @@ export function Messaging({
                     placeholder={`Message ${selected.object.name}…`}
                     className="max-h-36 min-h-11 flex-1 resize-none rounded-none border-0 bg-white px-3 py-2.5 text-[15px] text-black caret-[#0385ff] outline-none placeholder:text-[var(--sea-ink-soft)]"
                   />
-                  {draft.trim() ? (
+                  {!draft.length && (
+                    <button
+                      type="button"
+                      aria-label="Add photos or videos"
+                      aria-expanded={mediaOpen}
+                      disabled={sending}
+                      onClick={() => {
+                        if (document.activeElement instanceof HTMLElement)
+                          document.activeElement.blur()
+                        setMediaOpen((value) => !value)
+                      }}
+                      className="flex w-12 shrink-0 items-center justify-center bg-white text-[#0385ff] disabled:opacity-40"
+                    >
+                      <ImageIcon size={24} />
+                    </button>
+                  )}
+                  {draft.trim() || selectedFiles.length || selectedCard ? (
                     <button
                       type="submit"
                       aria-label="Send message"

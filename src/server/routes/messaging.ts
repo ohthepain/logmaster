@@ -1,5 +1,13 @@
+import { CARD_LANGUAGES } from '../../domain/response-cards'
+import {
+  matchResponseCards,
+  translateCardText,
+  responseCardSnapshot,
+  readResponseCard,
+} from '../messaging/cards'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
+import { HTTPException } from 'hono/http-exception'
 import { z } from 'zod'
 import { prisma } from '../db'
 import { getSessionUserId } from '../session'
@@ -16,10 +24,25 @@ import type {
   ResponseCard,
 } from '../../domain/messaging'
 import { getPhotoObject, profilePhotoS3Key } from '../s3-photos'
+import {
+  MAX_MESSAGE_ATTACHMENTS,
+  MAX_MESSAGE_MEDIA_BYTES,
+  MESSAGE_MEDIA_TYPES,
+} from '../../domain/message-media'
+import {
+  completeMessageMedia,
+  getSharedMessageMedia,
+  mediaDescriptor,
+  prepareMessageMedia,
+  readMessageMedia,
+  requireMessageAttachments,
+} from '../messaging/media'
 
 export const messagingRoutes = new Hono<{ Variables: { userId: string } }>()
 messagingRoutes.use('*', bodyLimit({ maxSize: 64 * 1024 }))
 messagingRoutes.onError((error, c) => {
+  if (error instanceof HTTPException)
+    return c.json({ error: error.message }, error.status)
   if (error instanceof z.ZodError || error instanceof SyntaxError)
     return c.json({ error: 'Invalid messaging request' }, 400)
   if (error.message === 'Chat not found')
@@ -67,6 +90,35 @@ messagingRoutes.use('*', async (c, next) => {
   await next()
 })
 
+messagingRoutes.post('/cards/match', async (c) => {
+  const { text, language } = z
+    .object({
+      text: z.string().trim().max(200),
+      language: z.enum(CARD_LANGUAGES),
+    })
+    .strict()
+    .parse(await c.req.json())
+  return c.json(
+    await matchResponseCards(text, language, () =>
+      translateCardText(text, language, c.get('userId')),
+    ),
+  )
+})
+messagingRoutes.get('/cards/:id/image', async (c) => {
+  const { card, object } = await readResponseCard(
+    z.string().uuid().parse(c.req.param('id')),
+  )
+  if (!object.Body) return c.notFound()
+  return new Response(object.Body.transformToWebStream(), {
+    headers: {
+      'Content-Type': card.contentType,
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'private, max-age=86400',
+      ETag: `"${card.checksum}"`,
+    },
+  })
+})
+
 async function serializeMessages(
   rows: Awaited<ReturnType<typeof prisma.chatMessage.findMany>>,
 ): Promise<ChatMessage[]> {
@@ -74,6 +126,13 @@ async function serializeMessages(
     where: { id: { in: [...new Set(rows.map((m) => m.senderId))] } },
     select: { id: true, name: true },
   })
+  const attachments = rows.length
+    ? await prisma.chatMessageMedia.findMany({
+        where: { messageId: { in: rows.map((row) => row.id) } },
+        include: { media: true },
+        orderBy: { position: 'asc' },
+      })
+    : []
   return rows.map((row) => ({
     id: row.id,
     threadId: row.threadId,
@@ -84,6 +143,9 @@ async function serializeMessages(
     references: row.references as unknown as ObjectReference[],
     responseCard: row.responseCard as unknown as ResponseCard | null,
     createdAt: row.createdAt.toISOString(),
+    media: attachments
+      .filter((item) => item.messageId === row.id)
+      .map((item) => mediaDescriptor(item.media)),
   }))
 }
 
@@ -181,8 +243,20 @@ messagingRoutes.post('/threads/:threadId/messages', async (c) => {
   const thread = threads.find((t) => t.id === threadId)
   if (!thread) return c.json({ error: 'Chat not found' }, 404)
   const input = z
-    .object({ id: z.string().uuid(), text: z.string().trim().min(1).max(5000) })
+    .object({
+      id: z.string().uuid(),
+      text: z.string().trim().max(5000).default(''),
+      cardId: z.string().uuid().optional(),
+      mediaIds: z
+        .array(z.string().uuid())
+        .max(MAX_MESSAGE_ATTACHMENTS)
+        .default([]),
+    })
     .strict()
+    .refine((value) =>
+      Boolean(value.text || value.mediaIds.length || value.cardId),
+    )
+    .refine((value) => new Set(value.mediaIds).size === value.mediaIds.length)
     .parse(await c.req.json())
   const existing = await prisma.chatMessage.findUnique({
     where: { id: input.id },
@@ -209,6 +283,10 @@ messagingRoutes.post('/threads/:threadId/messages', async (c) => {
     input.text,
     threads.map((t) => t.object),
   )
+  await requireMessageAttachments(userId, threadId, input.mediaIds)
+  const responseCard = input.cardId
+    ? await responseCardSnapshot(input.cardId)
+    : null
   const row = await prisma.chatMessage.create({
     data: {
       id: input.id,
@@ -216,6 +294,17 @@ messagingRoutes.post('/threads/:threadId/messages', async (c) => {
       senderId: userId,
       text: prepared.text,
       references: prepared.references,
+      ...(responseCard ? { responseCard } : {}),
+      ...(input.mediaIds.length
+        ? {
+            media: {
+              create: input.mediaIds.map((mediaId, position) => ({
+                mediaId,
+                position,
+              })),
+            },
+          }
+        : {}),
     },
   })
   // History and pending delivery are one durable write; provider failures never lose messages.
@@ -344,4 +433,90 @@ messagingRoutes.get('/users/:userId/avatar', async (c) => {
     }
   }
   return c.notFound()
+})
+
+messagingRoutes.post('/threads/:threadId/media/prepare', async (c) => {
+  const userId = c.get('userId')
+  const threadId = c.req.param('threadId')
+  await requireThread(userId, threadId)
+  const input = z
+    .object({
+      checksum: z.string().regex(/^[a-f0-9]{64}$/),
+      contentType: z.enum(MESSAGE_MEDIA_TYPES),
+      size: z.number().int().min(1).max(MAX_MESSAGE_MEDIA_BYTES),
+      fileName: z.string().trim().min(1).max(255),
+    })
+    .strict()
+    .parse(await c.req.json())
+  if (
+    (await prisma.chatMedia.count({
+      where: {
+        uploaderId: userId,
+        createdAt: { gt: new Date(Date.now() - 60_000) },
+      },
+    })) >= 30
+  )
+    return c.json(
+      { error: 'Please wait a moment before adding more media.' },
+      429,
+    )
+  return c.json(await prepareMessageMedia(userId, threadId, input))
+})
+
+messagingRoutes.post(
+  '/threads/:threadId/media/:mediaId/complete',
+  async (c) => {
+    await requireThread(c.get('userId'), c.req.param('threadId'))
+    const id = z.string().uuid().parse(c.req.param('mediaId'))
+    return c.json({ media: await completeMessageMedia(c.get('userId'), id) })
+  },
+)
+
+messagingRoutes.get('/threads/:threadId/media/:mediaId/access', async (c) => {
+  await requireThread(c.get('userId'), c.req.param('threadId'))
+  const id = z.string().uuid().parse(c.req.param('mediaId'))
+  return c.json({
+    media: mediaDescriptor(
+      await getSharedMessageMedia(c.req.param('threadId'), id),
+    ),
+  })
+})
+
+messagingRoutes.get('/threads/:threadId/media/:mediaId/content', async (c) => {
+  await requireThread(c.get('userId'), c.req.param('threadId'))
+  const id = z.string().uuid().parse(c.req.param('mediaId'))
+  const media = await getSharedMessageMedia(c.req.param('threadId'), id)
+  const etag = `"sha256-${media.checksum}"`
+  const headers: Record<string, string> = {
+    'Content-Type': media.contentType,
+    'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': 'private, no-cache',
+    ETag: etag,
+    'Accept-Ranges': 'bytes',
+    'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(media.fileName).replace(/'/g, '%27')}`,
+  }
+  // Reauthorize before any 304 response, including on account switches/revocation.
+  if (c.req.header('if-none-match') === etag)
+    return new Response(null, { status: 304, headers })
+  const range = c.req.header('range')
+  if (range && !/^bytes=\d*-\d*$/.test(range))
+    return c.json({ error: 'Invalid range' }, 416)
+  try {
+    const object = await readMessageMedia(media, range)
+    if (!object.Body) return c.notFound()
+    if (object.ContentLength != null)
+      headers['Content-Length'] = String(object.ContentLength)
+    if (object.ContentRange) headers['Content-Range'] = object.ContentRange
+    return new Response(object.Body.transformToWebStream(), {
+      status: range ? 206 : 200,
+      headers,
+    })
+  } catch (error) {
+    if (error instanceof Error && error.name === 'InvalidRange')
+      return new Response(null, {
+        status: 416,
+        headers: { 'Content-Range': `bytes */${media.size}` },
+      })
+    throw error
+  }
 })
