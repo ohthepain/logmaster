@@ -765,11 +765,24 @@ a {
   }
 }
 @keyframes message-heart-float {
-  0% { transform: translate(0, var(--heart-start)) rotate(-12deg) scale(0.7); opacity: 0; }
-  12% { opacity: 1; }
-  40% { transform: translate(22px, calc(var(--heart-start) * 0.6)) rotate(10deg) scale(1.1); }
-  75% { transform: translate(-16px, calc(var(--heart-start) * 0.2)) rotate(-8deg); opacity: 1; }
-  100% { transform: translate(8px, -70px) rotate(8deg); opacity: 0; }
+  0% {
+    transform: translate(-50%, -50%) rotate(-12deg) scale(0.65);
+    opacity: 0;
+  }
+  14% {
+    transform: translate(-50%, -50%) rotate(-6deg) scale(1);
+    opacity: 1;
+  }
+  45% {
+    transform: translate(-50%, calc(-50% - 36px)) rotate(10deg) scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--heart-drift-x, 0px)), calc(-50% - 92px))
+      rotate(8deg)
+      scale(1);
+    opacity: 0;
+  }
 }
 .message-floating-heart { animation: message-heart-float 2.4s ease-out both; }
 @media (prefers-reduced-motion: reduce) {

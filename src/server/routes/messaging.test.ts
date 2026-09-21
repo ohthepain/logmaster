@@ -16,8 +16,7 @@ const mocks = vi.hoisted(() => ({
   notify: vi.fn(),
   wake: vi.fn(),
   read: vi.fn(),
-  createLikes: vi.fn(),
-  deleteLikes: vi.fn(),
+  upsertLike: vi.fn(),
 }))
 vi.mock('../db', () => ({
   prisma: {
@@ -29,10 +28,7 @@ vi.mock('../db', () => ({
       count: mocks.count,
     },
     user: { findMany: mocks.users },
-    chatMessageLike: {
-      createMany: mocks.createLikes,
-      deleteMany: mocks.deleteLikes,
-    },
+    chatMessageLike: { upsert: mocks.upsertLike },
     $executeRaw: mocks.read,
   },
 }))
@@ -208,7 +204,7 @@ describe('Stream webhook', () => {
 
 describe('message likes', () => {
   const path = `/threads/boat:boat/messages/${id}/like`
-  const like = (body: unknown = { liked: true }) =>
+  const like = (body: unknown = {}) =>
     messagingRoutes.request(path, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -217,31 +213,31 @@ describe('message likes', () => {
   beforeEach(() => {
     mocks.findFirst.mockResolvedValue({ ...row, senderId: 'peer' })
     mocks.messages.mockResolvedValue([
-      { id, _count: { likes: 3 }, likes: [{ userId: 'user' }] },
+      {
+        id,
+        likes: [
+          { userId: 'user', count: 2 },
+          { userId: 'peer', count: 1 },
+        ],
+      },
     ])
   })
-  it('uses the session identity and an idempotent insert, returning the global count', async () => {
+  it('increments the current user count and returns totals', async () => {
     const response = await like()
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({
       messageId: id,
       likeCount: 3,
-      likedByMe: true,
+      myLikeCount: 2,
     })
-    expect(mocks.createLikes).toHaveBeenCalledWith({
-      data: [{ messageId: id, userId: 'user' }],
-      skipDuplicates: true,
+    expect(mocks.upsertLike).toHaveBeenCalledWith({
+      where: { messageId_userId: { messageId: id, userId: 'user' } },
+      create: { messageId: id, userId: 'user', count: 1 },
+      update: { count: { increment: 1 } },
     })
     expect(mocks.notify).not.toHaveBeenCalled()
     expect(mocks.wake).not.toHaveBeenCalled()
-    expect((await like({ liked: true, userId: 'peer' })).status).toBe(400)
-  })
-  it('only removes the current user’s like', async () => {
-    expect((await like({ liked: false })).status).toBe(200)
-    expect(mocks.deleteLikes).toHaveBeenCalledWith({
-      where: { messageId: id, userId: 'user' },
-    })
-    expect(mocks.createLikes).not.toHaveBeenCalled()
+    expect((await like({ liked: true })).status).toBe(400)
   })
   it('blocks signed-out users, former members, own messages and cross-thread IDs', async () => {
     mocks.session.mockResolvedValueOnce(null)
@@ -255,8 +251,7 @@ describe('message likes', () => {
     expect(mocks.findFirst).toHaveBeenLastCalledWith({
       where: { id, threadId: 'boat:boat' },
     })
-    expect(mocks.createLikes).not.toHaveBeenCalled()
-    expect(mocks.deleteLikes).not.toHaveBeenCalled()
+    expect(mocks.upsertLike).not.toHaveBeenCalled()
   })
   it('limits refresh batches and scopes every requested ID to an authorized thread', async () => {
     expect(
@@ -273,10 +268,10 @@ describe('message likes', () => {
     expect(response.status).toBe(200)
     expect(mocks.messages.mock.calls[0][0]).toMatchObject({
       where: { threadId: 'boat:boat', id: { in: [id] } },
-      select: { likes: { where: { userId: 'user' } } },
+      select: { likes: { select: { userId: true, count: true } } },
     })
     expect(await response.json()).toEqual({
-      likes: [{ messageId: id, likeCount: 3, likedByMe: true }],
+      likes: [{ messageId: id, likeCount: 3, myLikeCount: 2 }],
     })
     mocks.requireThread.mockRejectedValueOnce(new Error('Chat not found'))
     expect(

@@ -1,0 +1,1 @@
+ALTER TABLE "chat_message_like" ADD COLUMN "count" INTEGER NOT NULL DEFAULT 1;

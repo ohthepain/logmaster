@@ -248,15 +248,17 @@ async function messageLikes(
     where: { threadId, id: { in: messageIds } },
     select: {
       id: true,
-      _count: { select: { likes: true } },
-      likes: { where: { userId }, select: { userId: true } },
+      likes: { select: { userId: true, count: true } },
     },
   })
-  return rows.map((row) => ({
-    messageId: row.id,
-    likeCount: row._count.likes,
-    likedByMe: row.likes.length > 0,
-  }))
+  return rows.map((row) => {
+    const mine = row.likes.find((like) => like.userId === userId)
+    return {
+      messageId: row.id,
+      likeCount: row.likes.reduce((total, like) => total + like.count, 0),
+      myLikeCount: mine?.count ?? 0,
+    }
+  })
 }
 
 // Refresh every loaded message, including older history, without exposing liker identities.
@@ -280,25 +282,18 @@ messagingRoutes.put(
     const threadId = c.req.param('threadId')
     await requireThread(userId, threadId)
     const messageId = z.string().uuid().parse(c.req.param('messageId'))
-    const { liked } = z
-      .object({ liked: z.boolean() })
-      .strict()
-      .parse(await c.req.json())
+    z.object({}).strict().parse(await c.req.json().catch(() => ({})))
     const message = await prisma.chatMessage.findFirst({
       where: { id: messageId, threadId },
     })
     if (!message) return c.json({ error: 'Message not found' }, 404)
     if (message.senderId === userId)
       return c.json({ error: 'You can only like received messages.' }, 403)
-    if (liked) {
-      // The unique key makes retries and simultaneous requests count only once.
-      await prisma.chatMessageLike.createMany({
-        data: [{ messageId, userId }],
-        skipDuplicates: true,
-      })
-    } else {
-      await prisma.chatMessageLike.deleteMany({ where: { messageId, userId } })
-    }
+    await prisma.chatMessageLike.upsert({
+      where: { messageId_userId: { messageId, userId } },
+      create: { messageId, userId, count: 1 },
+      update: { count: { increment: 1 } },
+    })
     return c.json((await messageLikes(threadId, [messageId], userId))[0])
   },
 )

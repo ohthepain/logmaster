@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 import Header from './Header'
 import { BackgroundTripRecorder } from './BackgroundTripRecorder'
@@ -19,8 +19,21 @@ import { IosBlockingOverlayTouchBridge } from './IosBlockingOverlayTouchBridge'
 
 const NO_CHROME = new Set(['/sign-in', '/reset-password'])
 
+function useMobileViewport() {
+  const [mobile, setMobile] = useState(false)
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 767px)')
+    const sync = () => setMobile(query.matches)
+    sync()
+    query.addEventListener('change', sync)
+    return () => query.removeEventListener('change', sync)
+  }, [])
+  return mobile
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const mobileViewport = useMobileViewport()
   useIosNativeMapTouchPassthrough(
     getNativePlatform() === 'ios' && isNativeAppleMapUnderlayRoute(pathname),
   )
@@ -28,7 +41,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     NO_CHROME.has(pathname) ||
     pathname.startsWith('/crew/invite/') ||
     pathname.startsWith('/invite/') ||
-    isTripStoryRoute(pathname)
+    isTripStoryRoute(pathname) ||
+    (mobileViewport && pathname === '/messages')
   const mapOverlayHeader = isNativeAppleMapUnderlayRoute(pathname)
 
   useEffect(() => {

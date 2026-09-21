@@ -27,7 +27,7 @@ export type ChatMessage = {
 export type MessageLikes = {
   messageId: string
   likeCount: number
-  likedByMe: boolean
+  myLikeCount: number
 }
 export type ChatThread = {
   id: string

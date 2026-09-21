@@ -301,6 +301,7 @@ function BoatAssetDetailPage() {
           </div>
           <AssetCoverPhoto
             cover={asset.coverPhoto}
+            productImageUrl={asset.productImageUrl}
             alt={`${asset.name} photo`}
             variant="detail"
             className="sm:mt-1"

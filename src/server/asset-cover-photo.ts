@@ -64,3 +64,45 @@ export function pickAssetCoverPhoto(
     contentUrl: `/api/boats/documents/versions/${pick.version.id}/content${pick.version.previewS3Key ? '?preview=1' : ''}`,
   }
 }
+
+export type CatalogProductImageSource = {
+  reviewStatus: string
+  canonicalImageId: string | null
+  resources: Array<{
+    id: string
+    displayS3Key: string | null
+    reviewStatus: string
+  }>
+}
+
+/** Verified canonical catalog photo for equipment without its own uploads. */
+export function catalogProductImageUrl(
+  productId: string | null | undefined,
+  product: CatalogProductImageSource | null | undefined,
+): string | null {
+  if (!productId || !product || product.reviewStatus === 'rejected') {
+    return null
+  }
+  const canonicalId = product.canonicalImageId
+  if (!canonicalId) return null
+  const resource = product.resources.find((r) => r.id === canonicalId)
+  if (
+    !resource ||
+    resource.reviewStatus !== 'verified' ||
+    !resource.displayS3Key
+  ) {
+    return null
+  }
+  return `/api/products/${productId}/resources/${canonicalId}/content?display=1`
+}
+
+export function resolveAssetDisplayImageUrl(asset: {
+  documentLinks: Array<{ document: LinkedDocument }>
+  productId?: string | null
+  product?: CatalogProductImageSource | null
+}): string | null {
+  return (
+    pickAssetCoverPhoto(asset.documentLinks)?.contentUrl ??
+    catalogProductImageUrl(asset.productId, asset.product)
+  )
+}

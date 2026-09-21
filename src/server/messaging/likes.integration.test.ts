@@ -33,32 +33,32 @@ describe.skipIf(!url)('message likes PostgreSQL persistence', () => {
     await db.user.deleteMany({ where: { id: { in: ids } } })
     await db.$disconnect()
   })
-  it('counts concurrent retries once per user and removes only the selected user’s like', async () => {
-    await Promise.all(
-      Array.from({ length: 20 }, (_, i) =>
-        db.chatMessageLike.createMany({
-          data: [{ messageId, userId: ids[1 + (i % 3)] }],
-          skipDuplicates: true,
-        }),
-      ),
-    )
-    expect(await db.chatMessageLike.count({ where: { messageId } })).toBe(3)
-    await db.chatMessageLike.deleteMany({
-      where: { messageId, userId: ids[1] },
-    })
-    await db.chatMessageLike.deleteMany({
-      where: { messageId, userId: ids[1] },
-    })
-    expect(await db.chatMessageLike.count({ where: { messageId } })).toBe(2)
-    const view = await db.chatMessage.findUniqueOrThrow({
-      where: { id: messageId },
-      select: {
-        _count: { select: { likes: true } },
-        likes: { where: { userId: ids[2] } },
+  it('accumulates likes per user and sums counts across members', async () => {
+    await db.chatMessageLike.upsert({
+      where: {
+        messageId_userId: { messageId, userId: ids[1] },
       },
+      create: { messageId, userId: ids[1], count: 1 },
+      update: { count: { increment: 1 } },
     })
-    expect(view._count.likes).toBe(2)
-    expect(view.likes).toHaveLength(1)
+    await db.chatMessageLike.upsert({
+      where: {
+        messageId_userId: { messageId, userId: ids[1] },
+      },
+      create: { messageId, userId: ids[1], count: 1 },
+      update: { count: { increment: 1 } },
+    })
+    await db.chatMessageLike.upsert({
+      where: {
+        messageId_userId: { messageId, userId: ids[2] },
+      },
+      create: { messageId, userId: ids[2], count: 1 },
+      update: { count: { increment: 1 } },
+    })
+    const rows = await db.chatMessageLike.findMany({ where: { messageId } })
+    expect(rows).toHaveLength(2)
+    expect(rows.find((row) => row.userId === ids[1])?.count).toBe(2)
+    expect(rows.reduce((total, row) => total + row.count, 0)).toBe(3)
     await db.user.delete({ where: { id: ids[2] } })
     expect(await db.chatMessageLike.count({ where: { messageId } })).toBe(1)
     await db.chatMessage.delete({ where: { id: messageId } })

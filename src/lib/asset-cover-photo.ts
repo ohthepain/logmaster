@@ -7,3 +7,14 @@ export function assetCoverPhotoSrc(
   if (!cover?.contentUrl) return null
   return apiUrl(cover.contentUrl)
 }
+
+/** Asset-owned photo first, then linked catalog product image. */
+export function assetDisplayImageSrc(
+  cover: AssetCoverPhoto | null | undefined,
+  productImageUrl?: string | null,
+): string | null {
+  return (
+    assetCoverPhotoSrc(cover) ??
+    (productImageUrl ? apiUrl(productImageUrl) : null)
+  )
+}

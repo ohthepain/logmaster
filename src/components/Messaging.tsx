@@ -1,24 +1,156 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import {
-  ArrowLeft,
   ArrowUp,
-  ExternalLink,
+  BatteryFull,
+  ChevronLeft,
   Heart,
   MessageCircle,
   Search,
+  Signal,
+  Wifi,
 } from 'lucide-react'
 import type { ChatMessage, ChatObject, ChatThread } from '../domain/messaging'
 import { referenceObjects, threadTimeGroup } from '../domain/messaging'
 import { apiJson } from '../lib/api-client'
+import { cn } from '../lib/cn'
 import { useChatActivity } from '../hooks/use-chat-activity'
 import { useMessageLikes } from '../hooks/use-message-likes'
 
-function Avatar({ object }: { object: ChatObject }) {
-  const [failed, setFailed] = useState(false)
+const mobileChatHeaderClassName =
+  'bg-gradient-to-r from-[#0385ff] to-[#02adf5] text-white'
+
+function statusBarTimeLabel() {
+  return new Date().toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function MobileSystemTopBar() {
+  const [time, setTime] = useState(statusBarTimeLabel)
+  useEffect(() => {
+    const id = window.setInterval(() => setTime(statusBarTimeLabel()), 30_000)
+    return () => window.clearInterval(id)
+  }, [])
   return (
-    <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--brand-muted)] text-lg font-semibold text-[var(--sea-ink)]">
+    <div
+      aria-hidden
+      className="flex items-center justify-between px-4 pb-1 pt-1 text-[13px] font-semibold leading-none"
+    >
+      <span>{time}</span>
+      <span className="flex items-center gap-1.5 opacity-95">
+        <Signal className="size-3.5" strokeWidth={2.5} />
+        <Wifi className="size-3.5" strokeWidth={2.5} />
+        <BatteryFull className="size-4" strokeWidth={2.5} />
+      </span>
+    </div>
+  )
+}
+
+function ChatGradientHeader({
+  children,
+  className,
+  showStatusBar = false,
+}: {
+  children: ReactNode
+  className?: string
+  /** Decorative status row; mobile full-screen only. */
+  showStatusBar?: boolean
+}) {
+  return (
+    <div className={cn(mobileChatHeaderClassName, className)}>
+      <div
+        className={cn(showStatusBar && 'pt-[env(safe-area-inset-top,0px)] md:pt-0')}
+      >
+        {showStatusBar ? (
+          <div className="md:hidden">
+            <MobileSystemTopBar />
+          </div>
+        ) : null}
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function ChatObjectAnchor({
+  object,
+  className,
+  children,
+}: {
+  object: Pick<ChatObject, 'href' | 'name'>
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <a
+      href={object.href}
+      className={cn(
+        'text-inherit underline underline-offset-2',
+        className,
+      )}
+    >
+      {children}
+    </a>
+  )
+}
+
+function ThreadChatHeader({
+  thread,
+  onBack,
+}: {
+  thread: ChatThread
+  onBack?: () => void
+}) {
+  return (
+    <ChatGradientHeader showStatusBar={Boolean(onBack)} className="shrink-0">
+      <div className="flex items-center gap-2 px-2 pb-3 pt-1 md:px-4 md:pb-4 md:pt-4">
+        {onBack ? (
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back to conversations"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-white md:hidden"
+          >
+            <ChevronLeft className="size-7" strokeWidth={2.5} />
+          </button>
+        ) : null}
+        <a
+          href={thread.object.href}
+          aria-label={`Open ${thread.object.name}`}
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-md text-inherit no-underline outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+        >
+          <Avatar object={thread.object} size="sm" ring />
+          <span className="min-w-0 truncate text-lg font-bold md:text-xl">
+            {thread.object.name}
+          </span>
+        </a>
+      </div>
+    </ChatGradientHeader>
+  )
+}
+
+function Avatar({
+  object,
+  size = 'md',
+  ring = false,
+}: {
+  object: ChatObject
+  size?: 'md' | 'sm'
+  ring?: boolean
+}) {
+  const [failed, setFailed] = useState(false)
+  const sizeClass = size === 'sm' ? 'size-10 text-sm' : 'size-12 text-lg'
+  return (
+    <span
+      className={cn(
+        'flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--brand-muted)] font-semibold text-[var(--sea-ink)]',
+        sizeClass,
+        ring && 'ring-2 ring-white/90',
+      )}
+    >
       {object.image && !failed ? (
         <img
           src={object.image}
@@ -32,6 +164,148 @@ function Avatar({ object }: { object: ChatObject }) {
     </span>
   )
 }
+
+function senderAvatarUrl(senderId: string, objects: ChatObject[]) {
+  const user = objects.find((o) => o.kind === 'user' && o.id === senderId)
+  return (
+    user?.image ??
+    `/api/messaging/users/${encodeURIComponent(senderId)}/avatar`
+  )
+}
+
+const senderPhotoProbeCache = new Map<string, boolean>()
+
+function useSenderHasProfilePhoto(senderId: string, objects: ChatObject[]) {
+  const src = useMemo(
+    () => senderAvatarUrl(senderId, objects),
+    [senderId, objects],
+  )
+  const cached = senderPhotoProbeCache.get(src)
+  const [hasPhoto, setHasPhoto] = useState<boolean | null>(
+    cached !== undefined ? cached : null,
+  )
+  useEffect(() => {
+    if (senderPhotoProbeCache.has(src)) {
+      setHasPhoto(senderPhotoProbeCache.get(src)!)
+      return
+    }
+    setHasPhoto(null)
+    const probe = new Image()
+    probe.onload = () => {
+      senderPhotoProbeCache.set(src, true)
+      setHasPhoto(true)
+    }
+    probe.onerror = () => {
+      senderPhotoProbeCache.set(src, false)
+      setHasPhoto(false)
+    }
+    probe.src = src
+    return () => {
+      probe.onload = null
+      probe.onerror = null
+    }
+  }, [src])
+  return { src, hasPhoto }
+}
+
+const receivedBubbleClassName =
+  'rounded-[18px] border border-black/[0.06] bg-white px-3.5 pb-2 pt-2.5 text-black shadow-sm'
+const ownBubbleClassName =
+  'rounded-[18px] bg-[#d0f0fe] px-3.5 py-2.5 text-black'
+const messageTimeClassName = 'mt-1.5 block text-[11px] text-[var(--sea-ink-soft)]'
+const messageRowSpacingClassName = 'pb-5'
+const messageBubbleWidthClassName = 'relative min-w-0 max-w-[85%] sm:max-w-[75%]'
+
+function MessageLikeCountPill({ count }: { count: number }) {
+  return (
+    <span
+      aria-label={`${count} ${count === 1 ? 'like' : 'likes'}`}
+      className="inline-flex items-center gap-1 rounded-full border border-black/[0.06] bg-white px-2 py-0.5 text-xs font-semibold text-red-500 shadow-sm"
+    >
+      <Heart size={12} fill="currentColor" aria-hidden />
+      {count}
+    </span>
+  )
+}
+
+function ReceivedMessageRow({
+  message,
+  objects,
+  like,
+  active,
+  likePending,
+  onToggleLike,
+}: {
+  message: ChatMessage
+  objects: ChatObject[]
+  like: { likeCount: number; myLikeCount: number } | undefined
+  active: boolean
+  likePending: boolean
+  onToggleLike: (origin: { x: number; y: number }) => void | Promise<void>
+}) {
+  const { src, hasPhoto } = useSenderHasProfilePhoto(
+    message.senderId,
+    objects,
+  )
+  return (
+    <div className={cn('flex items-start gap-2', messageRowSpacingClassName)}>
+      {hasPhoto ? (
+        <span className="flex size-9 shrink-0 overflow-hidden rounded-full bg-[var(--brand-muted)]">
+          <img src={src} alt="" className="size-full object-cover" />
+        </span>
+      ) : null}
+      <div className={messageBubbleWidthClassName}>
+        <div className={receivedBubbleClassName}>
+          {hasPhoto === false ? (
+            <p className="mb-1 mt-0 text-xs font-semibold text-[var(--sea-ink-soft)]">
+              {message.senderName}
+            </p>
+          ) : null}
+          <p className="m-0 whitespace-pre-wrap break-words text-[15px] leading-snug text-black">
+            <MessageText message={message} objects={objects} />
+          </p>
+          <time
+            dateTime={message.createdAt}
+            className="mt-1 block text-[11px] leading-none text-[var(--sea-ink-soft)]"
+          >
+            {timeLabel(message.createdAt)}
+          </time>
+        </div>
+        <div className="absolute bottom-0 right-0 flex translate-x-1 translate-y-1/2 items-center gap-1">
+          {like && like.likeCount > 0 ? (
+            <MessageLikeCountPill count={like.likeCount} />
+          ) : null}
+          <button
+            type="button"
+            aria-label="Like message"
+            aria-pressed={(like?.myLikeCount ?? 0) > 0}
+            disabled={!active || !like || likePending}
+            onClick={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect()
+              void onToggleLike({
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2,
+              })
+            }}
+            className={cn(
+              'flex size-9 items-center justify-center rounded-full border border-black/[0.08] bg-white shadow-md transition disabled:opacity-50',
+              (like?.myLikeCount ?? 0) > 0
+                ? 'text-red-500'
+                : 'text-[var(--sea-ink-soft)]',
+            )}
+          >
+            <Heart
+              size={18}
+              fill={(like?.myLikeCount ?? 0) > 0 ? 'currentColor' : 'none'}
+              aria-hidden
+            />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function timeLabel(value: string) {
   const date = new Date(value)
   return date.toDateString() === new Date().toDateString()
@@ -60,13 +334,9 @@ export function MessageText({
     const target = objects.find((o) => o.kind === ref.kind && o.id === ref.id)
     parts.push(
       target ? (
-        <a
-          key={ref.start}
-          href={target.href}
-          className="font-semibold text-inherit underline underline-offset-2"
-        >
+        <ChatObjectAnchor key={ref.start} object={target}>
           {message.text.slice(ref.start, ref.end)}
-        </a>
+        </ChatObjectAnchor>
       ) : (
         message.text.slice(ref.start, ref.end)
       ),
@@ -107,14 +377,21 @@ export function Messaging({
     revision,
   )
   const [hearts, setHearts] = useState<
-    { id: string; left: number; top: number; expiresAt: number }[]
+    {
+      id: string
+      x: number
+      y: number
+      driftX: number
+      expiresAt: number
+    }[]
   >([])
-  function floatHeart(top: number) {
+  function floatHeart(origin: { x: number; y: number }) {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     const heart = {
       id: crypto.randomUUID(),
-      left: 8 + Math.random() * 84,
-      top: Math.max(80, Math.min(window.innerHeight - 40, top)),
+      x: origin.x,
+      y: origin.y,
+      driftX: -22 + Math.random() * 44,
       expiresAt: Date.now() + 2600,
     }
     setHearts((items) => [...items.slice(-19), heart])
@@ -316,18 +593,28 @@ export function Messaging({
   )
   let previousGroup = ''
   return (
-    <main className="page-wrap px-3 pb-4 sm:px-4">
-      <div className="flex h-[calc(100dvh-6rem-env(safe-area-inset-top,0px))] min-h-80 overflow-hidden rounded-3xl border border-[var(--panel-border)] bg-[var(--surface-strong)] text-[var(--sea-ink)] shadow-sm">
+    <main
+      className={cn(
+        'flex min-h-0 flex-1 flex-col text-[var(--sea-ink)]',
+        'fixed inset-0 z-40 bg-[var(--surface-strong)] md:static md:z-auto',
+        'md:h-[calc(100dvh-6rem-env(safe-area-inset-top,0px))]',
+      )}
+    >
+      <div className="flex h-dvh min-h-0 flex-1 flex-col overflow-hidden md:h-full md:flex-row">
         <aside
           aria-label="Conversations"
-          className={`${selectedId ? 'hidden md:flex' : 'flex'} w-full shrink-0 flex-col border-r border-[var(--panel-border)] md:w-80 lg:w-96`}
+          className={`${selectedId ? 'hidden md:flex' : 'flex'} w-full min-h-0 shrink-0 flex-col border-r border-[var(--panel-border)] bg-[var(--surface-strong)] md:w-80 lg:w-96`}
         >
-          <div className="p-5">
-            <h1 className="m-0 text-2xl font-bold">Messages</h1>
-            <p className="mt-1 text-sm text-[var(--sea-ink-soft)]">
+          <ChatGradientHeader showStatusBar className="shrink-0">
+            <div className="flex items-center px-3 pb-3 pt-1 md:px-4 md:pb-4 md:pt-4">
+              <h1 className="m-0 text-xl font-bold md:text-2xl">Messages</h1>
+            </div>
+          </ChatGradientHeader>
+          <div className="px-4 pb-3 pt-2 md:px-4">
+            <p className="m-0 mb-3 text-sm text-[var(--sea-ink-soft)]">
               Your people. Your boats. Your adventures.
             </p>
-            <label className="mt-4 flex items-center gap-2 rounded-xl bg-[var(--chip-bg)] px-3 py-2">
+            <label className="flex items-center gap-2 rounded-xl bg-[var(--chip-bg)] px-3 py-2">
               <Search size={17} aria-hidden />
               <input
                 aria-label="Search conversations"
@@ -404,44 +691,20 @@ export function Messaging({
         </aside>
         <section
           aria-label="Chat"
-          className={`${selectedId ? 'flex' : 'hidden md:flex'} min-w-0 flex-1 flex-col`}
+          className={`${selectedId ? 'flex' : 'hidden md:flex'} min-h-0 min-w-0 flex-1 flex-col bg-[#eef2f6]`}
         >
           {selected ? (
             <>
-              <header className="flex items-center gap-3 border-b border-[var(--panel-border)] px-4 py-3">
-                <button
-                  type="button"
-                  onClick={() => onSelect()}
-                  aria-label="Back to conversations"
-                  className="rounded-full p-2 md:hidden"
-                >
-                  <ArrowLeft size={20} />
-                </button>
-                <Avatar key={selected.id} object={selected.object} />
-                <div className="min-w-0 flex-1">
-                  <h2 className="m-0 truncate text-base font-semibold">
-                    {selected.object.name}
-                  </h2>
-                  <p className="m-0 text-xs capitalize text-[var(--sea-ink-soft)]">
-                    {selected.object.kind === 'user'
-                      ? 'Private conversation'
-                      : `${selected.object.kind} · ${selected.memberCount} members`}
-                  </p>
-                </div>
-                <a
-                  href={selected.object.href}
-                  aria-label={`Open ${selected.object.name}`}
-                  className="flex items-center gap-1 rounded-full border border-[var(--chip-line)] px-3 py-2 text-xs text-inherit no-underline"
-                >
-                  View <ExternalLink size={13} />
-                </a>
-              </header>
+              <ThreadChatHeader
+                thread={selected}
+                onBack={() => onSelect()}
+              />
               <div
                 ref={messageList}
                 role="log"
                 aria-label="Messages"
                 aria-live="polite"
-                className="flex-1 space-y-3 overflow-y-auto bg-[var(--bg-base)] p-4 sm:p-6"
+                className="min-h-0 flex-1 space-y-1 overflow-y-auto bg-[#eef2f6] p-4 sm:p-6"
               >
                 {cursor && (
                   <div className="text-center">
@@ -464,76 +727,45 @@ export function Messaging({
                 {messages.map((message) => {
                   const own = message.senderId === userId
                   const like = messageLikes.likes[message.id]
+                  if (!own) {
+                    return (
+                      <ReceivedMessageRow
+                        key={message.id}
+                        message={message}
+                        objects={objects}
+                        like={like}
+                        active={active}
+                        likePending={messageLikes.isPending(message.id)}
+                        onToggleLike={(origin) =>
+                          messageLikes.like(message.id, () =>
+                            floatHeart(origin),
+                          )
+                        }
+                      />
+                    )
+                  }
                   return (
                     <div
                       key={message.id}
-                      className={`flex ${own ? 'justify-end' : 'justify-start'}`}
+                      className={cn('flex justify-end', messageRowSpacingClassName)}
                     >
-                      <div
-                        className={`max-w-[85%] rounded-2xl px-4 py-2.5 shadow-sm sm:max-w-[75%] ${own ? 'rounded-br-sm bg-[var(--brand)] text-white' : 'rounded-bl-sm border border-[var(--panel-border)] bg-[var(--surface-strong)]'}`}
-                      >
-                        {!own && (
-                          <p className="mb-1 mt-0 text-xs font-semibold opacity-70">
-                            {message.senderName}
+                      <div className={messageBubbleWidthClassName}>
+                        <div className={ownBubbleClassName}>
+                          <p className="m-0 whitespace-pre-wrap break-words text-[15px] leading-snug text-black">
+                            <MessageText message={message} objects={objects} />
                           </p>
-                        )}
-                        <p className="m-0 whitespace-pre-wrap break-words text-sm leading-relaxed">
-                          <MessageText message={message} objects={objects} />
-                        </p>
-                        <time
-                          dateTime={message.createdAt}
-                          className="mt-1 block text-right text-[10px] opacity-65"
-                        >
-                          {timeLabel(message.createdAt)}
-                        </time>
-                        {!own && (
-                          <div className="mt-1 flex justify-end">
-                            <button
-                              type="button"
-                              aria-label={
-                                like?.likedByMe
-                                  ? 'Unlike message'
-                                  : 'Like message'
-                              }
-                              aria-pressed={like?.likedByMe ?? false}
-                              disabled={
-                                !active ||
-                                !like ||
-                                messageLikes.isPending(message.id)
-                              }
-                              onClick={(event) => {
-                                const top =
-                                  event.currentTarget.getBoundingClientRect()
-                                    .top
-                                void messageLikes.toggle(message.id, () =>
-                                  floatHeart(top),
-                                )
-                              }}
-                              className={`flex size-11 items-center justify-center rounded-full transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-500 disabled:opacity-50 ${like?.likedByMe ? 'text-red-500' : 'text-[var(--sea-ink-soft)]'}`}
-                            >
-                              <Heart
-                                size={20}
-                                fill={like?.likedByMe ? 'currentColor' : 'none'}
-                                aria-hidden
-                              />
-                            </button>
-                          </div>
-                        )}
-                        {like && like.likeCount > 0 && (
-                          <div
-                            aria-label={`${like.likeCount} ${like.likeCount === 1 ? 'like' : 'likes'}`}
-                            className="mt-2 flex justify-center border-t border-current/15 pt-2"
+                          <time
+                            dateTime={message.createdAt}
+                            className={messageTimeClassName}
                           >
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-red-500 shadow-sm">
-                              <Heart
-                                size={14}
-                                fill="currentColor"
-                                aria-hidden
-                              />
-                              {like.likeCount}
-                            </span>
+                            {timeLabel(message.createdAt)}
+                          </time>
+                        </div>
+                        {like && like.likeCount > 0 ? (
+                          <div className="absolute bottom-0 left-1/2 flex -translate-x-1/2 translate-y-1/2">
+                            <MessageLikeCountPill count={like.likeCount} />
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   )
@@ -544,28 +776,29 @@ export function Messaging({
                   e.preventDefault()
                   void send()
                 }}
-                className="border-t border-[var(--panel-border)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+                className="shrink-0 bg-white pb-[env(safe-area-inset-bottom,0px)]"
               >
                 {draftReferences.length > 0 && (
                   <div
                     aria-label="Linked objects"
-                    className="mb-2 flex flex-wrap gap-2 text-xs"
+                    className="flex flex-wrap gap-2 px-3 pt-2 text-xs text-black"
                   >
                     {[
                       ...new Map(
                         draftReferences.map((r) => [r.kind + r.id, r]),
                       ).values(),
                     ].map((ref) => (
-                      <span
+                      <ChatObjectAnchor
                         key={ref.kind + ref.id}
-                        className="underline underline-offset-2"
+                        object={ref}
+                        className="text-black"
                       >
                         {ref.name}
-                      </span>
+                      </ChatObjectAnchor>
                     ))}
                   </div>
                 )}
-                <div className="flex items-end gap-2">
+                <div className="flex items-stretch">
                   <textarea
                     aria-label="Message"
                     rows={2}
@@ -588,21 +821,23 @@ export function Messaging({
                       }
                     }}
                     placeholder={`Message ${selected.object.name}…`}
-                    className="max-h-36 min-h-12 flex-1 resize-none rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand)]"
+                    className="max-h-36 min-h-11 flex-1 resize-none rounded-none border-0 bg-white px-3 py-2.5 text-[15px] text-black caret-[#0385ff] outline-none placeholder:text-[var(--sea-ink-soft)]"
                   />
-                  <button
-                    type="submit"
-                    aria-label="Send message"
-                    disabled={sending || !draft.trim() || !active}
-                    className="mb-1 flex size-11 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-white disabled:opacity-40"
-                  >
-                    <ArrowUp size={20} />
-                  </button>
+                  {draft.trim() ? (
+                    <button
+                      type="submit"
+                      aria-label="Send message"
+                      disabled={sending || !active}
+                      className="flex w-12 shrink-0 items-center justify-center bg-white text-[#0385ff] disabled:opacity-40"
+                    >
+                      <ArrowUp size={22} strokeWidth={2.5} />
+                    </button>
+                  ) : null}
                 </div>
               </form>
             </>
           ) : (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center text-[var(--sea-ink-soft)]">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-[#eef2f6] p-8 text-center text-[var(--sea-ink-soft)]">
               <MessageCircle size={40} />
               <p>
                 {selectedId && !loading
@@ -623,7 +858,10 @@ export function Messaging({
         </section>
       </div>
       {messageLikes.error && (
-        <p role="alert" className="mt-2 text-sm text-red-600">
+        <p
+          role="alert"
+          className="mx-3 mb-2 text-sm text-red-600 md:mx-0 md:mt-2"
+        >
           {messageLikes.error}
         </p>
       )}
@@ -636,12 +874,13 @@ export function Messaging({
             {hearts.map((heart) => (
               <Heart
                 key={heart.id}
-                className="message-floating-heart absolute top-0 size-9 text-red-500 drop-shadow-md"
+                className="message-floating-heart absolute size-9 text-red-500 drop-shadow-md"
                 fill="currentColor"
                 style={
                   {
-                    left: `${heart.left}%`,
-                    '--heart-start': `${heart.top}px`,
+                    left: heart.x,
+                    top: heart.y,
+                    '--heart-drift-x': `${heart.driftX}px`,
                   } as CSSProperties
                 }
                 onAnimationEnd={() =>
@@ -657,7 +896,7 @@ export function Messaging({
       {error && (
         <div
           role="alert"
-          className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800"
+          className="mx-3 mb-2 flex items-center justify-between gap-3 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800 md:mx-0 md:mt-2"
         >
           <span>{error}</span>
           <button

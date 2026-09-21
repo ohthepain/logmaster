@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { prisma } from '../db'
-import { pickAssetCoverPhoto } from '../asset-cover-photo'
+import { resolveAssetDisplayImageUrl } from '../asset-cover-photo'
 import type { ChatObject, ChatObjectKind } from '../../domain/messaging'
 
 export type ThreadAccess = {
@@ -106,6 +106,14 @@ export async function discoverThreads(userId: string): Promise<ThreadAccess[]> {
         documentLinks: {
           include: { document: { include: { versions: true } } },
         },
+        product: {
+          include: {
+            resources: {
+              where: { reviewStatus: 'verified', purpose: 'photo' },
+              select: { id: true, displayS3Key: true, reviewStatus: true },
+            },
+          },
+        },
       },
     }),
   ])
@@ -148,7 +156,7 @@ export async function discoverThreads(userId: string): Promise<ThreadAccess[]> {
         asset.id,
         asset.name,
         `/boats/${asset.boatId}/assets/${asset.id}`,
-        pickAssetCoverPhoto(asset.documentLinks)?.contentUrl ?? null,
+        resolveAssetDisplayImageUrl(asset),
       ),
       memberIds: boatMembers(boat),
     })

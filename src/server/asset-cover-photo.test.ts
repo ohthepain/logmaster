@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { pickAssetCoverPhoto } from './asset-cover-photo'
+import {
+  catalogProductImageUrl,
+  pickAssetCoverPhoto,
+  resolveAssetDisplayImageUrl,
+} from './asset-cover-photo'
 
 function doc(
   id: string,
@@ -66,5 +70,63 @@ describe('pickAssetCoverPhoto', () => {
         }),
       ]),
     ).toBeNull()
+  })
+})
+
+const verifiedProduct = {
+  reviewStatus: 'verified',
+  canonicalImageId: 'img-1',
+  resources: [
+    {
+      id: 'img-1',
+      displayS3Key: 'catalog/key',
+      reviewStatus: 'verified',
+    },
+  ],
+}
+
+describe('resolveAssetDisplayImageUrl', () => {
+  it('uses the asset photo when present', () => {
+    const links = [
+      doc('d1', 'photo', new Date('2026-01-01'), {
+        id: 'v1',
+        mimeType: 'image/jpeg',
+      }),
+    ]
+    expect(
+      resolveAssetDisplayImageUrl({
+        documentLinks: links,
+        productId: 'prod-1',
+        product: verifiedProduct,
+      }),
+    ).toBe('/api/boats/documents/versions/v1/content')
+  })
+
+  it('falls back to the catalog product image', () => {
+    expect(
+      resolveAssetDisplayImageUrl({
+        documentLinks: [],
+        productId: 'prod-1',
+        product: verifiedProduct,
+      }),
+    ).toBe('/api/products/prod-1/resources/img-1/content?display=1')
+  })
+
+  it('returns null when neither source has an image', () => {
+    expect(
+      resolveAssetDisplayImageUrl({
+        documentLinks: [],
+        productId: 'prod-1',
+        product: { reviewStatus: 'rejected', canonicalImageId: null, resources: [] },
+      }),
+    ).toBeNull()
+  })
+})
+
+describe('catalogProductImageUrl', () => {
+  it('matches resolveAssetDisplayImageUrl catalog fallback', () => {
+    expect(catalogProductImageUrl('prod-1', verifiedProduct)).toBe(
+      '/api/products/prod-1/resources/img-1/content?display=1',
+    )
   })
 })

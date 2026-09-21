@@ -1,6 +1,5 @@
-import { apiUrl } from '../lib/app-origin'
 import { cn } from '../lib/cn'
-import { assetCoverPhotoSrc } from '../lib/asset-cover-photo'
+import { assetDisplayImageSrc } from '../lib/asset-cover-photo'
 import type { AssetCoverPhoto as AssetCoverPhotoType } from '../domain/boat-assets'
 
 type AssetCoverPhotoProps = {
@@ -18,9 +17,7 @@ export function AssetCoverPhoto({
   variant,
   className,
 }: AssetCoverPhotoProps) {
-  const src = productImageUrl
-    ? apiUrl(productImageUrl)
-    : assetCoverPhotoSrc(cover)
+  const src = assetDisplayImageSrc(cover, productImageUrl)
   if (!src) return null
 
   return (

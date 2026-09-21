@@ -17,6 +17,7 @@ import type {
   BoatNetworkGraphConnection,
   BoatNetworkGraphEquipment,
 } from '../domain/boat-network-graph'
+import { catalogProductImageUrl } from './asset-cover-photo'
 import { ensureBoatNetworkAssets } from './boat-network-assets'
 import { loadProductNetworks } from './product-networks'
 import { prisma } from './db'
@@ -54,20 +55,7 @@ export function productImageUrlForEquipment(
   productId: string | null,
   product: EquipmentAsset['product'],
 ): string | null {
-  if (!productId || !product || product.reviewStatus === 'rejected') {
-    return null
-  }
-  const canonicalId = product.canonicalImageId
-  if (!canonicalId) return null
-  const resource = product.resources.find((r) => r.id === canonicalId)
-  if (
-    !resource ||
-    resource.reviewStatus !== 'verified' ||
-    !resource.displayS3Key
-  ) {
-    return null
-  }
-  return `/api/products/${productId}/resources/${canonicalId}/content?display=1`
+  return catalogProductImageUrl(productId, product ?? null)
 }
 
 export function devicesOnNetworkFromConnections(

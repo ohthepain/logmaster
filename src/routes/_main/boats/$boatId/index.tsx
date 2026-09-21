@@ -48,6 +48,7 @@ import { isBoatIconId } from '../../../../lib/boat-icons'
 import { cn } from '../../../../lib/cn'
 import { useTranslation } from '../../../../lib/i18n'
 import type { TranslationKey } from '../../../../lib/i18n'
+import { MessagesButton } from '../../../../components/MessagesButton'
 import { NotificationBellToggle } from '../../../../components/NotificationBellToggle'
 import { isBoatNetworkKey } from '../../../../domain/asset-connections'
 import type { BoatNetworkKey } from '../../../../domain/asset-connections'
@@ -301,12 +302,18 @@ function BoatDetailPage() {
             {t('orgNamed', { name: boat.orgName })}
           </Link>
         ) : null}
-        <NotificationBellToggle
-          topic="BOAT_TRIPS_COMPLETED"
-          boatId={boat.id}
-          label={t('completedTrips')}
-          className="mt-1 sm:mt-2"
-        />
+        <div className="mt-1 flex shrink-0 items-start gap-2 sm:mt-2">
+          <MessagesButton
+            threadId={`boat:${boat.id}`}
+            className="size-9"
+            ariaLabel={`Chat for ${boat.name}`}
+          />
+          <NotificationBellToggle
+            topic="BOAT_TRIPS_COMPLETED"
+            boatId={boat.id}
+            label={t('completedTrips')}
+          />
+        </div>
       </div>
 
       <div

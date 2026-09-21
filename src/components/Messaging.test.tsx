@@ -45,7 +45,7 @@ beforeEach(() => {
   mocks.api.mockImplementation(async (url: string) => {
     if (url.endsWith('/likes/query'))
       return {
-        likes: [{ messageId: message.id, likeCount: 0, likedByMe: false }],
+        likes: [{ messageId: message.id, likeCount: 0, myLikeCount: 0 }],
       }
     if (url === '/api/messaging/threads')
       return { threads: [thread], objects: [object] }
@@ -99,9 +99,9 @@ it('keeps failed drafts and retries with the same idempotency key', async () => 
 })
 
 function mockLikes(
-  options: { fail?: boolean; own?: boolean; liked?: boolean } = {},
+  options: { fail?: boolean; own?: boolean; myLikes?: number } = {},
 ) {
-  let liked = options.liked ?? false
+  let myLikeCount = options.myLikes ?? 0
   mocks.api.mockImplementation(async (url: string, init?: RequestInit) => {
     if (url === '/api/messaging/threads')
       return { threads: [thread], objects: [object] }
@@ -112,32 +112,31 @@ function mockLikes(
       }
     const value = () => ({
       messageId: message.id,
-      likeCount: 2 + Number(liked),
-      likedByMe: liked,
+      likeCount: 2 + myLikeCount,
+      myLikeCount,
     })
     if (url.endsWith('/likes/query')) return { likes: [value()] }
     if (url.endsWith('/like')) {
       if (options.fail) throw new Error('Offline')
-      liked = JSON.parse(init?.body as string).liked
+      myLikeCount += 1
       return value()
     }
     return { ok: true }
   })
 }
-it('fills the received-message heart, updates the shared count and animates only likes', async () => {
+it('fills the received-message heart, increments the count and animates on each like', async () => {
   mockLikes()
   render(<Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />)
   await screen.findByLabelText('2 likes')
   const button = screen.getByRole('button', { name: 'Like message' })
   expect(button.querySelector('svg')?.getAttribute('fill')).toBe('none')
   fireEvent.click(button)
+  await waitFor(() =>
+    expect((button as HTMLButtonElement).disabled).toBe(false),
+  )
   fireEvent.click(button)
-  await screen.findByLabelText('3 likes')
-  expect(
-    screen
-      .getByRole('button', { name: 'Unlike message' })
-      .getAttribute('aria-pressed'),
-  ).toBe('true')
+  await screen.findByLabelText('4 likes')
+  expect(button.getAttribute('aria-pressed')).toBe('true')
   expect(button.querySelector('svg')?.getAttribute('fill')).toBe('currentColor')
   const floating = document.querySelector('.message-floating-heart')!
   expect(floating).toBeTruthy()
@@ -151,11 +150,10 @@ it('fills the received-message heart, updates the shared count and animates only
   )
   expect(
     mocks.api.mock.calls.filter(([url]) => url.endsWith('/like')),
-  ).toHaveLength(1)
+  ).toHaveLength(2)
   fireEvent.click(button)
-  await screen.findByLabelText('2 likes')
-  await waitFor(() => expect(button.getAttribute('aria-pressed')).toBe('false'))
-  expect(document.querySelector('.message-floating-heart')).toBeNull()
+  await screen.findByLabelText('5 likes')
+  expect(button.getAttribute('aria-pressed')).toBe('true')
 })
 it('restores the previous count and empty heart if saving fails', async () => {
   mockLikes({ fail: true })
@@ -177,20 +175,20 @@ it('shows likes to the sender without a self-like button', async () => {
   expect(screen.queryByRole('button', { name: 'Like message' })).toBeNull()
 })
 it('restores a saved red heart and respects reduced motion', async () => {
-  mockLikes({ liked: true })
+  mockLikes({ myLikes: 1 })
   vi.stubGlobal('matchMedia', () => ({ matches: true }))
   try {
     render(
       <Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />,
     )
     await screen.findByLabelText('3 likes')
-    const button = screen.getByRole('button', { name: 'Unlike message' })
+    const button = screen.getByRole('button', { name: 'Like message' })
+    expect(button.getAttribute('aria-pressed')).toBe('true')
     fireEvent.click(button)
     await waitFor(() =>
       expect((button as HTMLButtonElement).disabled).toBe(false),
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Like message' }))
-    await screen.findByLabelText('3 likes')
+    await screen.findByLabelText('4 likes')
     expect(document.querySelector('.message-floating-heart')).toBeNull()
   } finally {
     vi.unstubAllGlobals()

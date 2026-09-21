@@ -7,7 +7,10 @@ import {
 } from '../asset-intelligence-schema'
 import { Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
-import { pickAssetCoverPhoto } from '../asset-cover-photo'
+import {
+  catalogProductImageUrl,
+  pickAssetCoverPhoto,
+} from '../asset-cover-photo'
 import {
   createAndEnqueueAssetResearchJob,
   ensureResearchAppliedToAsset,
@@ -256,16 +259,10 @@ function serializeAsset(asset: {
   return {
     id: asset.id,
     productId: asset.productId ?? null,
-    productImageUrl:
-      asset.product?.reviewStatus !== 'rejected' &&
-      asset.product?.resources.some(
-        (r) =>
-          r.id === asset.product?.canonicalImageId &&
-          r.displayS3Key &&
-          r.reviewStatus === 'verified',
-      )
-        ? `/api/products/${asset.productId}/resources/${asset.product.canonicalImageId}/content?display=1`
-        : null,
+    productImageUrl: catalogProductImageUrl(
+      asset.productId,
+      asset.product ?? null,
+    ),
     boatId: asset.boatId,
     kind: asset.kind ?? 'equipment',
     networkKey: asset.networkKey ?? null,

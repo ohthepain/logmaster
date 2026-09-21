@@ -11,7 +11,7 @@ afterEach(() => {
   vi.resetAllMocks()
 })
 it('refreshes older loaded messages and does not let a stale poll undo a like', async () => {
-  const initial = { messageId: 'older-message', likedByMe: false, likeCount: 2 }
+  const initial = { messageId: 'older-message', myLikeCount: 0, likeCount: 2 }
   let resolvePoll!: (value: { likes: MessageLikes[] }) => void
   let resolveSave!: (value: MessageLikes) => void
   let queries = 0
@@ -27,7 +27,7 @@ it('refreshes older loaded messages and does not let a stale poll undo a like', 
       })
     return Promise.resolve({
       likes: [
-        queries === 1 ? initial : { ...initial, likedByMe: true, likeCount: 5 },
+        queries === 1 ? initial : { ...initial, myLikeCount: 2, likeCount: 5 },
       ],
     })
   })
@@ -43,21 +43,21 @@ it('refreshes older loaded messages and does not let a stale poll undo a like', 
   await waitFor(() => expect(queries).toBe(2))
   let save!: Promise<void>
   act(() => {
-    save = result.current.toggle('older-message', vi.fn())
+    save = result.current.like('older-message', vi.fn())
   })
   expect(result.current.likes['older-message']).toMatchObject({
-    likedByMe: true,
+    myLikeCount: 1,
     likeCount: 3,
   })
   await act(async () => {
     resolvePoll({ likes: [initial] })
   })
   expect(result.current.likes['older-message']).toMatchObject({
-    likedByMe: true,
+    myLikeCount: 1,
     likeCount: 3,
   })
   await act(async () => {
-    resolveSave({ ...initial, likedByMe: true, likeCount: 4 })
+    resolveSave({ ...initial, myLikeCount: 1, likeCount: 4 })
     await save
   })
   await waitFor(() =>

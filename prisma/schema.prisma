@@ -1487,6 +1487,7 @@ model ChatMessage {
 model ChatMessageLike {
   messageId String
   userId    String
+  count     Int      @default(1)
   createdAt DateTime @default(now())
   message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
   user      User @relation(fields: [userId], references: [id], onDelete: Cascade)

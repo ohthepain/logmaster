@@ -14,7 +14,11 @@ import {
 import { ASSET_CATEGORIES } from '../domain/asset-intelligence'
 import type { BoatAsset } from '../domain/boat-assets'
 import type { ResourceMember } from '../domain/member-invite'
+import type { ChatThread } from '../domain/messaging'
+import { AssetChatShortcutButton } from './AssetChatShortcutButton'
 import { fetchBoatAssets } from '../lib/boat-assets-api'
+import { apiJson } from '../lib/api-client'
+import { useSession } from '../lib/auth-client'
 import { cn } from '../lib/cn'
 import { useTranslation } from '../lib/i18n'
 import {
@@ -42,7 +46,11 @@ export function BoatAssetsTab({
 }: BoatAssetsTabProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { data: session } = useSession()
   const [assets, setAssets] = useState<BoatAsset[]>([])
+  const [assetChatHasMessages, setAssetChatHasMessages] = useState<
+    Record<string, boolean>
+  >({})
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -82,6 +90,30 @@ export function BoatAssetsTab({
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (!session?.user) {
+      setAssetChatHasMessages({})
+      return
+    }
+    const abort = new AbortController()
+    void apiJson<{ threads: ChatThread[] }>('/api/messaging/threads', {
+      signal: abort.signal,
+    })
+      .then((data) => {
+        const next: Record<string, boolean> = {}
+        for (const thread of data.threads) {
+          if (!thread.id.startsWith('asset:')) continue
+          const assetId = thread.id.slice('asset:'.length)
+          next[assetId] = Boolean(thread.lastMessage)
+        }
+        setAssetChatHasMessages(next)
+      })
+      .catch(() => {
+        if (!abort.signal.aborted) setAssetChatHasMessages({})
+      })
+    return () => abort.abort()
+  }, [session?.user, boatId])
 
   if (loading) {
     return <p className="text-sm text-[var(--sea-ink-soft)]">Loading assets…</p>
@@ -168,12 +200,12 @@ export function BoatAssetsTab({
             const hasCover = Boolean(asset.coverPhoto || asset.productImageUrl)
             return (
               <li key={asset.id}>
-                <Link
-                  to="/boats/$boatId/assets/$assetId"
-                  params={{ boatId, assetId: asset.id }}
-                  className="flex h-full flex-col overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] no-underline transition hover:border-[var(--btn-bg)] hover:bg-[var(--chip-bg)]"
-                >
-                  <div className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-[var(--chip-bg)]">
+                <div className="flex h-full flex-col overflow-hidden rounded-xl border border-[var(--panel-border)] bg-[var(--panel)] transition hover:border-[var(--btn-bg)] hover:bg-[var(--chip-bg)]">
+                  <Link
+                    to="/boats/$boatId/assets/$assetId"
+                    params={{ boatId, assetId: asset.id }}
+                    className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-[var(--chip-bg)] no-underline"
+                  >
                     {hasCover ? (
                       <AssetCoverPhoto
                         cover={asset.coverPhoto}
@@ -189,37 +221,56 @@ export function BoatAssetsTab({
                         aria-hidden
                       />
                     )}
-                  </div>
+                  </Link>
                   <div className="flex min-w-0 flex-1 flex-col p-3">
-                    <AssetBrandLogo brand={identity.brand} />
-                    <p className="m-0 mt-2 line-clamp-2 text-base font-semibold leading-snug text-[var(--sea-ink)]">
-                      {identity.title}
-                    </p>
-                    {identity.subtitle ? (
-                      <p className="m-0 mt-1 line-clamp-2 text-sm text-[var(--sea-ink-soft)]">
-                        {identity.subtitle}
-                      </p>
-                    ) : null}
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <span className="rounded-full bg-[var(--chip-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sea-ink-soft)]">
-                        {asset.ownerLabel}
-                      </span>
-                      <BoatNetworkSoapBars
-                        boatId={boatId}
-                        networks={connectedBoatNetworks(asset.connections)}
+                    <div className="flex items-center justify-between gap-2">
+                      <Link
+                        to="/boats/$boatId/assets/$assetId"
+                        params={{ boatId, assetId: asset.id }}
+                        className="min-w-0 flex-1 no-underline"
+                      >
+                        <AssetBrandLogo brand={identity.brand} />
+                      </Link>
+                      <AssetChatShortcutButton
+                        assetId={asset.id}
+                        assetName={identity.title}
+                        hasMessages={assetChatHasMessages[asset.id] ?? false}
                       />
-                      <span className="text-[10px] text-[var(--sea-ink-soft)]">
-                        {asset.category ?? 'Uncategorized'}
-                      </span>
                     </div>
-                    {asset.description &&
-                    asset.description !== identity.productName ? (
-                      <p className="mt-2 mb-0 line-clamp-2 text-xs text-[var(--sea-ink-soft)]">
-                        {asset.description}
+                    <Link
+                      to="/boats/$boatId/assets/$assetId"
+                      params={{ boatId, assetId: asset.id }}
+                      className="mt-2 block min-w-0 flex-1 no-underline text-inherit"
+                    >
+                      <p className="m-0 line-clamp-2 text-base font-semibold leading-snug text-[var(--sea-ink)]">
+                        {identity.title}
                       </p>
-                    ) : null}
+                      {identity.subtitle ? (
+                        <p className="m-0 mt-1 line-clamp-2 text-sm text-[var(--sea-ink-soft)]">
+                          {identity.subtitle}
+                        </p>
+                      ) : null}
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span className="rounded-full bg-[var(--chip-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sea-ink-soft)]">
+                          {asset.ownerLabel}
+                        </span>
+                        <BoatNetworkSoapBars
+                          boatId={boatId}
+                          networks={connectedBoatNetworks(asset.connections)}
+                        />
+                        <span className="text-[10px] text-[var(--sea-ink-soft)]">
+                          {asset.category ?? 'Uncategorized'}
+                        </span>
+                      </div>
+                      {asset.description &&
+                      asset.description !== identity.productName ? (
+                        <p className="mt-2 mb-0 line-clamp-2 text-xs text-[var(--sea-ink-soft)]">
+                          {asset.description}
+                        </p>
+                      ) : null}
+                    </Link>
                   </div>
-                </Link>
+                </div>
               </li>
             )
           })}

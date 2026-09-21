@@ -70,14 +70,13 @@ export function useMessageLikes(
     return () => abort.abort()
   }, [scope, threadId, ids, active, revision, refresh])
 
-  async function toggle(messageId: string, onLike: () => void) {
+  async function like(messageId: string, onLike: () => void) {
     const previous = likes[messageId]
     const key = `${scope}/${messageId}`
     if (!active || !threadId || !previous || locks.current.has(key)) return
     locks.current.add(key)
     setPending(new Set(locks.current))
     generation.current++
-    const liked = !previous.likedByMe
     setError(null)
     setState((value) => ({
       scope,
@@ -85,16 +84,16 @@ export function useMessageLikes(
         ...value.likes,
         [messageId]: {
           ...previous,
-          likedByMe: liked,
-          likeCount: Math.max(0, previous.likeCount + (liked ? 1 : -1)),
+          myLikeCount: previous.myLikeCount + 1,
+          likeCount: previous.likeCount + 1,
         },
       },
     }))
-    if (liked) onLike()
+    onLike()
     try {
       const result = await apiJson<MessageLikes>(
         `/api/messaging/threads/${encodeURIComponent(threadId)}/messages/${encodeURIComponent(messageId)}/like`,
-        { method: 'PUT', body: JSON.stringify({ liked }) },
+        { method: 'PUT', body: JSON.stringify({}) },
       )
       if (currentScope.current === scope)
         setState((value) => ({
@@ -118,7 +117,7 @@ export function useMessageLikes(
   }
   return {
     likes,
-    toggle,
+    like,
     error: error ?? refreshError,
     isPending: (id: string) => pending.has(`${scope}/${id}`),
   }
