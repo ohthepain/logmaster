@@ -198,6 +198,7 @@ export function resolveDefaultBoatIdForNewTrip(
   lastTripBoatId?: string | null,
 ): string | null {
   if (boats.length === 0) return null
+  if (boats.length === 1) return boats[0].id
   if (lastTripBoatId && boats.some((boat) => boat.id === lastTripBoatId)) {
     return lastTripBoatId
   }

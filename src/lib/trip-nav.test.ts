@@ -13,12 +13,10 @@ describe('resolveMapModeTrip', () => {
     expect(resolveMapModeTrip([planned, active])).toBe(active)
   })
 
-  it('returns a planned trip when there is no active trip', () => {
-    const planned = trip('PLANNED', 'planned')
-
-    expect(resolveMapModeTrip([trip('COMPLETED', 'done'), planned])).toBe(
-      planned,
-    )
+  it('does not reopen a planned trip in map mode', () => {
+    expect(
+      resolveMapModeTrip([trip('COMPLETED', 'done'), trip('PLANNED', 'planned')]),
+    ).toBeNull()
   })
 
   it('does not reopen a completed trip in map mode', () => {

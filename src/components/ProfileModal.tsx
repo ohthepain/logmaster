@@ -1,10 +1,15 @@
 import { Link } from '@tanstack/react-router'
-import { useEffect, useId, useRef, useState } from 'react'
-import type { FormEvent } from 'react'
 import { Camera, Trash2, User } from 'lucide-react'
+import type { FormEvent } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { Modal } from './Modal'
 import { useSession } from '../lib/auth-client'
+import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
+import {
+  fetchNotificationDefaults,
+  updateNotificationDefaults,
+} from '../lib/notifications-api'
 import {
   deleteProfilePhoto,
   isCustomProfilePhoto,
@@ -12,13 +17,8 @@ import {
   updateProfileName,
   uploadProfilePhoto,
 } from '../lib/profile-api'
-import { cn } from '../lib/cn'
-import {
-  fetchNotificationDefaults,
-  updateNotificationDefaults,
-} from '../lib/notifications-api'
+import { Modal } from './Modal'
 import { enablePushOnDevice } from './PushNotificationsRegister'
-import { useTranslation } from '../lib/i18n'
 
 type ProfileModalProps = {
   open: boolean
@@ -137,6 +137,7 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
     <Modal
       title={t('profile')}
       onClose={handleClose}
+      desktopCentered
       devComponentName="ProfileModal"
     >
       <form onSubmit={(e) => void handleSaveName(e)} className="space-y-5">

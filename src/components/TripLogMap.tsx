@@ -469,7 +469,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
 
           map.addControl(
             new maplibregl.AttributionControl({ compact: true }),
-            'bottom-right',
+            'bottom-left',
           )
 
           map.on('load', () => {

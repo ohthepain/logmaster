@@ -9,7 +9,7 @@ export const MAP_CHROME_DIVIDER_CLASS =
   'border-t border-[rgba(126,200,232,0.2)]' as const
 
 export const MAP_CHROME_CELL_CLASS =
-  'flex size-[29px] items-center justify-center transition' as const
+  'flex size-[35px] items-center justify-center transition' as const
 
 /** Operational toggles on the trip map — 50% larger touch targets. */
 export const MAP_CHROME_OPERATIONAL_CELL_CLASS =

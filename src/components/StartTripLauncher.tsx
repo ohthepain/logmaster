@@ -221,7 +221,7 @@ export function StartTripLauncher({ open, onClose }: StartTripLauncherProps) {
 
   return (
     <>
-      <Modal title="Create Trip" onClose={handleClose}>
+      <Modal title="Create Trip" centered onClose={handleClose}>
         <form className="space-y-4" onSubmit={(e) => void handleStartTrip(e)}>
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">

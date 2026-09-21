@@ -6,8 +6,7 @@
 #   ./scripts/platform-admin-via-ecs.sh production grant cremoni@gmail.com
 #   ./scripts/platform-admin-via-ecs.sh production list
 #
-# Requires: AWS CLI, jq, and an image already deployed that includes scripts/platform-admin.ts
-# and the platformAdminAt migration.
+# Requires: AWS CLI, jq, and a deployed app image (uses src/server/db.ts already in the image).
 set -euo pipefail
 
 ENV="${1:?usage: platform-admin-via-ecs.sh staging|production <list|grant|revoke> [email]}"
@@ -42,14 +41,61 @@ SUBNETS="$(echo "$NET" | jq -r '.subnets | join(",")')"
 SGS="$(echo "$NET" | jq -r '.securityGroups | join(",")')"
 PUBLIC_IP="$(echo "$NET" | jq -r '.assignPublicIp')"
 
-CMD_JSON="$(jq -n \
+# Older images omit scripts/platform-admin.ts. Drive the CLI from env + src/server/db.ts.
+PLATFORM_ADMIN_JS="import { prisma } from './src/server/db.ts'
+const cmd = process.env.PLATFORM_ADMIN_CMD
+const email = (process.env.PLATFORM_ADMIN_EMAIL ?? '').trim().toLowerCase()
+const fail = (message) => { console.error(message); process.exit(1) }
+const main = async () => {
+  if (cmd === 'list') {
+    const rows = await prisma.user.findMany({
+      where: { platformAdminAt: { not: null } },
+      orderBy: { email: 'asc' },
+      select: { email: true, platformAdminAt: true },
+    })
+    if (rows.length === 0) console.info('No platform admins in the database.')
+    else for (const row of rows) console.info(\`\${row.email}\\t\${row.platformAdminAt?.toISOString() ?? ''}\`)
+    return
+  }
+  if (cmd !== 'grant' && cmd !== 'revoke') fail(\`Unknown command: \${cmd}\`)
+  if (!email) fail('Email required')
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, email: true, platformAdminAt: true },
+  })
+  if (!user) fail(\`No user with email \${email}. They must sign in once, then run grant again.\`)
+  if (cmd === 'grant') {
+    if (user.platformAdminAt) {
+      console.info(\`Already platform admin: \${user.email}\`)
+      return
+    }
+    await prisma.user.update({ where: { id: user.id }, data: { platformAdminAt: new Date() } })
+    console.info(\`Granted platform admin: \${user.email}\`)
+    return
+  }
+  if (!user.platformAdminAt) {
+    console.info(\`Not a platform admin: \${user.email}\`)
+    return
+  }
+  await prisma.user.update({ where: { id: user.id }, data: { platformAdminAt: null } })
+  console.info(\`Revoked platform admin: \${user.email}\`)
+}
+await main().finally(() => prisma.\$disconnect())"
+
+OVERRIDES="$(jq -n \
+  --arg js "$PLATFORM_ADMIN_JS" \
   --arg subcmd "$SUBCMD" \
   --arg email "$EMAIL" \
-  '["node", "--import", "tsx", "scripts/platform-admin.ts", $subcmd]
-   + (if $email != "" then [$email] else [] end)')"
-
-OVERRIDES="$(jq -n --argjson cmd "$CMD_JSON" \
-  '{containerOverrides: [{name: "app", command: $cmd}]}')"
+  '{
+    containerOverrides: [{
+      name: "app",
+      command: ["node", "--import", "tsx", "--input-type=module", "-e", $js],
+      environment: [
+        {name: "PLATFORM_ADMIN_CMD", value: $subcmd},
+        {name: "PLATFORM_ADMIN_EMAIL", value: $email}
+      ]
+    }]
+  }')"
 
 echo "Starting one-off task on ${CLUSTER} (${SUBCMD}${EMAIL:+ $EMAIL})…"
 

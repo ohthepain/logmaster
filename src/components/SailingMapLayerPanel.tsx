@@ -250,7 +250,7 @@ export function SailingMapLayerPanel({
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        <Layers className="size-4" strokeWidth={2.25} />
+        <Layers className="size-5" strokeWidth={2.25} />
       </MapControlButton>
 
       {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}

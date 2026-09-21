@@ -1,6 +1,6 @@
+import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useId } from 'react'
 import { createPortal } from 'react-dom'
-import type { CSSProperties, ReactNode } from 'react'
 import { useVisualViewportFrame } from '../lib/use-visual-viewport-frame'
 import { DevComponentLabel } from './DevComponentLabel'
 
@@ -13,6 +13,10 @@ type ModalProps = {
   showKicker?: boolean
   /** Backdrop tap closes the modal. Default true; keep false for in-progress flows. */
   closeOnOutside?: boolean
+  /** Center the dialog on all viewports. Default is bottom-sheet on small screens. */
+  centered?: boolean
+  /** Center the dialog horizontally on desktop while keeping the mobile sheet layout. */
+  desktopCentered?: boolean
   wide?: boolean
   layer?: 'base' | 'overlay'
   devComponentName?: string
@@ -26,6 +30,8 @@ export function Modal({
   headerBelow,
   showKicker = true,
   closeOnOutside = true,
+  centered = false,
+  desktopCentered = false,
   wide = false,
   layer = 'base',
   devComponentName = 'Modal',
@@ -75,7 +81,13 @@ export function Modal({
           if (closeOnOutside && event.target === event.currentTarget) onClose()
         }}
       >
-        <div className="flex min-h-full flex-col justify-end p-3 sm:min-h-min sm:justify-center">
+        <div
+          className={
+            centered
+              ? 'flex min-h-full flex-col items-center justify-center p-3'
+              : `flex min-h-full flex-col justify-end p-3 sm:min-h-min sm:justify-center ${desktopCentered ? 'sm:items-center' : ''}`
+          }
+        >
           <div
             role="dialog"
             aria-modal="true"

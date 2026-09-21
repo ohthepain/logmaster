@@ -56,10 +56,10 @@ export function SailingMapControlStack({
         )}
       >
         <MapControlButton label={t('zoomIn')} onClick={onZoomIn}>
-          <Plus className="size-4" strokeWidth={2.25} />
+          <Plus className="size-5" strokeWidth={2.25} />
         </MapControlButton>
         <MapControlButton label={t('zoomOut')} onClick={onZoomOut} bordered>
-          <Minus className="size-4" strokeWidth={2.25} />
+          <Minus className="size-5" strokeWidth={2.25} />
         </MapControlButton>
         {onLocate ? (
           <MapControlButton
@@ -67,7 +67,7 @@ export function SailingMapControlStack({
             onClick={onLocate}
             bordered
           >
-            <LocateFixed className="size-4" strokeWidth={2.25} />
+            <LocateFixed className="size-5" strokeWidth={2.25} />
           </MapControlButton>
         ) : null}
         {layers ? (
@@ -81,7 +81,7 @@ export function SailingMapControlStack({
             onClick={onExpand}
             bordered
           >
-            <Maximize2 className="size-4" strokeWidth={2.25} />
+            <Maximize2 className="size-5" strokeWidth={2.25} />
           </MapControlButton>
         ) : null}
       </div>

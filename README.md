@@ -50,8 +50,7 @@ NauticExpo catalog seeding uses Apify when `APIFY_TOKEN` is set (`pnpm catalog:n
 Platform admins are stored on `User.platformAdminAt`. RDS is **private** (ECS tasks only), so
 `pnpm admin:platform …` with a production `DATABASE_URL` from your laptop will usually **time out**.
 
-**Production / staging** — run inside the VPC via a one-off ECS task (deploy first so the image
-includes `scripts/platform-admin.ts` and the migration):
+**Production / staging** — run inside the VPC via a one-off ECS task:
 
 ```bash
 ./scripts/platform-admin-via-ecs.sh production grant you@example.com

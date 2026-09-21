@@ -1,12 +1,14 @@
-import { Link, useNavigate } from '@tanstack/react-router'
-import { Sailboat } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { Plus } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { DevComponentLabel } from './DevComponentLabel'
+import { StartTripLauncher } from './StartTripLauncher'
 import { TripLogMap } from './TripLogMap'
 import type { Trip } from '../domain/logbook'
+import { useSession } from '../lib/auth-client'
+import { useTranslation } from '../lib/i18n'
 import { resolveMapModeTrip } from '../lib/trip-nav'
 import { useLogbookStore } from '../stores/logbook'
-import { useTranslation } from '../lib/i18n'
 
 const EMPTY_MAP_TRIP: Trip = {
   id: 'map-without-trip',
@@ -20,7 +22,9 @@ const EMPTY_MAP_TRIP: Trip = {
 export function MapDefaultView() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const session = useSession()
   const store = useLogbookStore()
+  const [createTripOpen, setCreateTripOpen] = useState(false)
   const trip = useMemo(() => resolveMapModeTrip(store.trips), [store.trips])
 
   useEffect(() => {
@@ -36,6 +40,17 @@ export function MapDefaultView() {
       replace: true,
     })
   }, [store.booted, trip, navigate])
+
+  const openCreateTrip = () => {
+    if (!session.data?.user) {
+      void navigate({
+        to: '/sign-in',
+        search: { redirect: '/trips?startTrip=1' },
+      })
+      return
+    }
+    setCreateTripOpen(true)
+  }
 
   if (!store.booted) {
     return (
@@ -61,21 +76,24 @@ export function MapDefaultView() {
           showCurrentPosition
           interactive
         />
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3"
+        <button
+          type="button"
+          onClick={openCreateTrip}
+          aria-label={t('newTrip')}
+          title={t('newTrip')}
+          data-map-touch-zone
+          className="ios-map-touch-target pointer-events-auto absolute z-30 inline-flex size-14 items-center justify-center rounded-full bg-btn-bg text-btn-text shadow-lg transition hover:-translate-y-px"
           style={{
-            paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+            right: 16,
+            bottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
           }}
         >
-          <Link
-            to="/trips"
-            search={{ startTrip: true }}
-            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-btn-bg px-5 py-3 text-base font-bold text-btn-text no-underline shadow-lg transition hover:-translate-y-px hover:text-btn-text"
-          >
-            <Sailboat className="size-5" />
-            {t('startTrip')}
-          </Link>
-        </div>
+          <Plus className="size-7" strokeWidth={2.5} aria-hidden />
+        </button>
+        <StartTripLauncher
+          open={createTripOpen}
+          onClose={() => setCreateTripOpen(false)}
+        />
       </main>
     )
   }
