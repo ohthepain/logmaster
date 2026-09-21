@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { spawn } from 'node:child_process'
 /**
  * TanStack Start's Vite build emits a Web Fetch handler only (no HTTP listen).
  * Running `node dist/server/server.js` loads the module and exits — ECS sees
@@ -15,6 +16,26 @@ const hostname = process.env.HOST ?? '0.0.0.0'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+
+// Resume durable jobs immediately after every ECS restart, even without traffic.
+const worker = spawn(process.execPath, ['--import', 'tsx', 'src/worker.ts'], {
+	cwd: __dirname,
+	stdio: 'inherit',
+})
+worker.on('error', () => {
+	console.error('[worker] unable to start background jobs')
+	process.exit(1)
+})
+worker.on('exit', (code) => {
+	console.error('[worker] background jobs stopped; restarting container')
+	process.exit(code || 1)
+})
+for (const signal of ['SIGTERM', 'SIGINT']) {
+	process.on(signal, () => {
+		worker.kill(signal)
+		process.exit(0)
+	})
+}
 
 const viteClientDir = path.join(__dirname, 'dist', 'client')
 

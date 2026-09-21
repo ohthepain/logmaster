@@ -1,39 +1,51 @@
 import { spawnSync } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { config } from 'dotenv'
 
 type AwsRunner = (args: string[], input?: Record<string, unknown>) => unknown
 
 function awsJson(args: string[], input?: Record<string, unknown>): unknown {
-  const result = spawnSync(
-    'aws',
-    [
-      ...args,
-      '--region',
-      process.env.AWS_REGION || 'eu-central-1',
-      '--output',
-      'json',
-      '--no-cli-pager',
-    ],
-    {
-      encoding: 'utf8',
-      // Secret values travel on stdin, never in argv, shell history or a temporary file.
-      input: input ? JSON.stringify(input) : undefined,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, AWS_CLI_AUTO_PROMPT: 'off', AWS_PAGER: '' },
-    },
-  )
-  if (result.error || result.status !== 0) {
-    const code = result.stderr?.match(
-      /An error occurred \(([A-Za-z0-9]+)\)/,
-    )?.[1]
-    // SDK/CLI errors can include request payloads; never forward their raw output.
-    throw new Error(
-      `AWS ${args[0]} ${args[1]} failed${code ? ` (${code})` : ''}. Check AWS login and permissions.`,
+  // AWS CLI cannot reopen Node's stdin on macOS. Use an owner-only temporary
+  // directory/file and always remove it, including on CLI errors.
+  const directory = input
+    ? mkdtempSync(resolve(tmpdir(), 'logmaster-ssm-'))
+    : undefined
+  try {
+    const inputPath = directory ? resolve(directory, 'input.json') : undefined
+    if (inputPath) writeFileSync(inputPath, JSON.stringify(input), { mode: 0o600 })
+    const result = spawnSync(
+      'aws',
+      [
+        ...args,
+        ...(inputPath ? ['--cli-input-json', `file://${inputPath}`] : []),
+        '--region',
+        process.env.AWS_REGION || 'eu-central-1',
+        '--output',
+        'json',
+        '--no-cli-pager',
+      ],
+      {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: { ...process.env, AWS_CLI_AUTO_PROMPT: 'off', AWS_PAGER: '' },
+      },
     )
+    if (result.error || result.status !== 0) {
+      const code = result.stderr?.match(
+        /An error occurred \(([A-Za-z0-9]+)\)/,
+      )?.[1]
+      // SDK/CLI errors can include request payloads; never forward their raw output.
+      throw new Error(
+        `AWS ${args[0]} ${args[1]} failed${code ? ` (${code})` : ''}. Check AWS login and permissions.`,
+      )
+    }
+    return result.stdout.trim() ? JSON.parse(result.stdout) : {}
+  } finally {
+    if (directory) rmSync(directory, { recursive: true, force: true })
   }
-  return result.stdout.trim() ? JSON.parse(result.stdout) : {}
 }
 
 export function setStreamSecrets(
@@ -78,7 +90,7 @@ export function setStreamSecrets(
     )
   }
   for (const parameter of parameters) {
-    runAws(['ssm', 'put-parameter', '--cli-input-json', 'file:///dev/stdin'], {
+    runAws(['ssm', 'put-parameter'], {
       ...parameter,
       Type: 'SecureString',
       Overwrite: true,

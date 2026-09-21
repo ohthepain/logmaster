@@ -62,6 +62,7 @@ it('provisions a read-only channel type with Stream push disabled', async () => 
   expect(mocks.createType.mock.calls[0][0]).toMatchObject({
     name: 'logmaster_events',
     push_notifications: false,
+    message_retention: '7',
     grants: { user: [], channel_member: ['read-channel'] },
   })
 })

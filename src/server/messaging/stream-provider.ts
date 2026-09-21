@@ -23,7 +23,8 @@ export async function configureStream() {
   const api = stream()
   const config = {
     push_notifications: false,
-    message_retention: '7d',
+    // Stream expects the number of days as a numeric string.
+    message_retention: '7',
     connect_events: false,
     typing_events: false,
     read_events: false,
