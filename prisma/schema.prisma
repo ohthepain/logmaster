@@ -1465,3 +1465,57 @@ model CatalogSourceLink {
   @@index([productId])
   @@map("catalog_source_link")
 }
+
+// Logmaster owns history and identity. Stream is a replaceable live event transport.
+model ChatMessage {
+  id           String   @id
+  threadId     String
+  senderId     String
+  text         String
+  references   Json
+  responseCard Json?
+  createdAt    DateTime @default(now())
+  publishedAt  DateTime?
+  @@index([threadId, createdAt, id])
+  @@index([publishedAt, createdAt])
+  @@index([senderId, createdAt])
+  @@map("chat_message")
+}
+
+model ChatRead {
+  userId   String
+  threadId String
+  readAt   DateTime
+  readMessageId String
+  @@id([userId, threadId])
+  @@map("chat_read")
+}
+
+model ChatPresence {
+  userId    String
+  sessionId String
+  expiresAt DateTime
+  @@id([userId, sessionId])
+  @@index([expiresAt])
+  @@map("chat_presence")
+}
+
+// Durable, globally ordered push outbox shared by all notification producers.
+model PushDispatch {
+  id             String   @id
+  userId         String
+  title          String
+  body           String
+  linkUrl        String?
+  notificationId String
+  chatMessageId  String?
+  priority       Int      @default(0)
+  availableAt    DateTime @default(now())
+  leaseUntil     DateTime?
+  attempts       Int      @default(0)
+  deliveredAt    DateTime?
+  failedAt       DateTime?
+  createdAt      DateTime @default(now())
+  @@index([deliveredAt, failedAt, availableAt, priority])
+  @@map("push_dispatch")
+}

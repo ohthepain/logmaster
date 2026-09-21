@@ -51,7 +51,8 @@
     "ios:beta": "pnpm cap:sync:prod && pnpm ios:prearchive && cd ios && bundle exec fastlane beta",
     "cap:run:ios": "CAP_DEV_SERVER_URL=http://localhost:3020 cap run ios --target 80B83655-1822-458A-958C-C3CE82A2FDD6",
     "cap:dev": "CAP_DEV_SERVER_URL=http://localhost:3020 cap run ios --target 80B83655-1822-458A-958C-C3CE82A2FDD6",
-    "ios:sim": "bash scripts/ios-simulator-dev.sh"
+    "ios:sim": "bash scripts/ios-simulator-dev.sh",
+    "messaging:configure": "node --import tsx scripts/configure-messaging.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1037.0",
@@ -108,6 +109,7 @@
     "react-dom": "^19.2.0",
     "sharp": "^0.35.3",
     "sonner": "^2.0.7",
+    "stream-chat": "^9.53.0",
     "tailwindcss": "^4.1.18",
     "tinymce": "^8.9.0",
     "web-push": "^3.6.7",

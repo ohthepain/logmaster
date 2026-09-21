@@ -1,6 +1,6 @@
 import type { PgBoss } from 'pg-boss'
 import { sendNotificationEmail } from '../email/notifications'
-import { sendPushToUser } from './push'
+import { pushNotificationManager } from './manager'
 import { prisma } from '../db'
 import type {
   NotificationEmailJobPayload,
@@ -66,7 +66,7 @@ export async function enqueueNotificationDeliveries(
       await boss.send(SEND_NOTIFICATION_EMAIL_QUEUE, job)
     }
     for (const job of pushJobs) {
-      await boss.send(SEND_NOTIFICATION_PUSH_QUEUE, job)
+      await pushNotificationManager.schedule(job)
     }
     return
   }
@@ -99,7 +99,7 @@ export async function processNotificationEmailJob(
 export async function processNotificationPushJob(
   payload: NotificationPushJobPayload,
 ): Promise<void> {
-  await sendPushToUser({
+  await pushNotificationManager.schedule({
     userId: payload.userId,
     title: payload.title,
     body: payload.body,

@@ -1,3 +1,4 @@
+import { messagingRoutes } from './routes/messaging'
 import { productsRoutes } from './routes/products'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
@@ -110,3 +111,5 @@ app.route('/translations', translationsRoutes)
 app.route('/products', productsRoutes)
 app.route('/places', placesRoutes)
 app.route('/ais', aisRoutes)
+
+app.route('/messaging', messagingRoutes)

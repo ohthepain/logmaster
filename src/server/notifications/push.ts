@@ -47,6 +47,7 @@ export async function sendPushToUser(args: {
   body: string
   linkUrl: string | null
   notificationId: string
+  retryFailures?: boolean
 }): Promise<void> {
   const devices = await db.pushDevice.findMany({
     where: { userId: args.userId },
@@ -71,10 +72,14 @@ export async function sendPushToUser(args: {
     notificationId: args.notificationId,
   })
 
+  let failed = false
   for (const device of devices) {
     try {
       if (device.platform === 'web') {
-        if (!ensureWebPushConfigured()) continue
+        if (!ensureWebPushConfigured()) {
+          failed = true
+          continue
+        }
         if (!device.endpoint || !device.p256dh || !device.auth) continue
         await webpush.sendNotification(
           {
@@ -105,6 +110,7 @@ export async function sendPushToUser(args: {
           })
           await db.pushDevice.delete({ where: { id: device.id } })
         } else if (result === 'skipped') {
+          failed = true
           logServerEvent({
             action: 'notification.push',
             resourceType: 'push_device',
@@ -114,6 +120,7 @@ export async function sendPushToUser(args: {
             errorCode: 'apns_not_configured',
           })
         } else if (result === 'failed') {
+          failed = true
           logServerEvent({
             action: 'notification.push',
             resourceType: 'push_device',
@@ -131,6 +138,7 @@ export async function sendPushToUser(args: {
           linkUrl,
           notificationId: args.notificationId,
         })
+        if (result === 'failed' || result === 'skipped') failed = true
         if (result === 'invalid-token') {
           await db.pushDevice.delete({ where: { id: device.id } })
         }
@@ -144,7 +152,9 @@ export async function sendPushToUser(args: {
         await db.pushDevice.delete({ where: { id: device.id } })
         continue
       }
-      console.warn('[notifications] push send failed', device.id, error)
+      failed = true
+      console.warn('[notifications] push send failed', device.id)
     }
   }
+  if (failed && args.retryFailures) throw new Error('Push transport failed')
 }

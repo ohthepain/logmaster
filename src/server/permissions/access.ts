@@ -106,7 +106,12 @@ async function canAccessTrip(
 ): Promise<boolean> {
   const trip = await db.trip.findUnique({
     where: { id: tripId },
-    select: { userId: true, boatId: true, storyShareToken: true },
+    select: {
+      userId: true,
+      boatId: true,
+      storyShareToken: true,
+      crewMemberIds: true,
+    },
   })
   if (!trip) return false
 
@@ -116,6 +121,21 @@ async function canAccessTrip(
     trip.storyShareToken === opts.shareToken
   ) {
     return true
+  }
+
+  if (userId && privilege === 'view' && Array.isArray(trip.crewMemberIds)) {
+    const crew = await db.crewMember.findFirst({
+      where: {
+        id: {
+          in: trip.crewMemberIds.filter(
+            (id: unknown) => typeof id === 'string',
+          ),
+        },
+        linkedUserId: userId,
+      },
+      select: { id: true },
+    })
+    if (crew) return true
   }
 
   if (userId && trip.userId === userId) {
@@ -286,10 +306,17 @@ async function accessibleBoatIds(userId: string): Promise<string[]> {
 
 export async function tripAccessFilter(userId: string) {
   const boatIds = await accessibleBoatIds(userId)
+  const crew = await db.crewMember.findMany({
+    where: { linkedUserId: userId },
+    select: { id: true },
+  })
 
   return {
     OR: [
       { userId },
+      ...crew.map((member: { id: string }) => ({
+        crewMemberIds: { array_contains: [member.id] },
+      })),
       ...(boatIds.length > 0 ? [{ boatId: { in: boatIds } }] : []),
     ],
   }

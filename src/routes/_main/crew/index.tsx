@@ -15,7 +15,7 @@ import {
 } from '../../../lib/crew-api'
 import { useTranslation } from '../../../lib/i18n'
 
-type CrewSearch = { addCrew?: boolean }
+type CrewSearch = { addCrew?: boolean; userId?: string }
 
 export const Route = createFileRoute('/_main/crew/')({
   validateSearch: (search: Record<string, unknown>): CrewSearch => {
@@ -23,7 +23,9 @@ export const Route = createFileRoute('/_main/crew/')({
     if (value === true || value === 'true' || value === '1' || value === 1) {
       return { addCrew: true }
     }
-    return {}
+    return {
+      userId: typeof search.userId === 'string' ? search.userId : undefined,
+    }
   },
   component: CrewPage,
 })
@@ -32,7 +34,7 @@ function CrewPage() {
   const { t } = useTranslation()
   const session = useSession()
   const navigate = useNavigate()
-  const { addCrew: addCrewSearch } = Route.useSearch()
+  const { addCrew: addCrewSearch, userId: selectedUserId } = Route.useSearch()
   const user = session.data?.user
   const [data, setData] = useState<CrewPayload | null>(null)
   const [loading, setLoading] = useState(true)
@@ -68,6 +70,18 @@ function CrewPage() {
     setAddOpen(true)
     void navigate({ to: '/crew', search: {}, replace: true })
   }, [addCrewSearch, user, navigate])
+
+  useEffect(() => {
+    if (!selectedUserId || !data) return
+    const member = data.members.find(
+      (item) => item.linkedUserId === selectedUserId,
+    )
+    if (member) setSelectedMember(member)
+    else
+      document
+        .getElementById(`friend-${selectedUserId}`)
+        ?.scrollIntoView({ block: 'center' })
+  }, [selectedUserId, data])
 
   const handleMemberUpdated = async () => {
     const refreshed = await fetchCrew()
@@ -256,7 +270,8 @@ function CrewPage() {
                 {data.friends.map((friend) => (
                   <article
                     key={friend.id}
-                    className="rounded-2xl bg-[var(--panel)] p-4 text-center"
+                    id={`friend-${friend.id}`}
+                    className={`rounded-2xl bg-[var(--panel)] p-4 text-center ${selectedUserId === friend.id ? 'ring-2 ring-[var(--brand)]' : ''}`}
                   >
                     <CrewAvatar
                       name={friend.name}

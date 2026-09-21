@@ -3,6 +3,7 @@ const AUTH_REQUIRED_PREFIXES = [
   '/orgs',
   '/crew',
   '/settings',
+  '/messages',
   '/admin',
 ] as const
 

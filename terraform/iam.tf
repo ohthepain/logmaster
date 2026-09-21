@@ -32,6 +32,8 @@ resource "aws_iam_role_policy" "ecs_execution_ssm" {
           "ssm:GetParameter",
         ]
         Resource = [
+          aws_ssm_parameter.stream_api_key.arn,
+          aws_ssm_parameter.stream_api_secret.arn,
           aws_ssm_parameter.database_url.arn,
           aws_ssm_parameter.fcm_project_id.arn,
           aws_ssm_parameter.fcm_service_account_json.arn,
@@ -95,6 +97,8 @@ resource "aws_iam_role_policy" "ecs_task_uploads" {
           "s3:ListBucket",
         ]
         Resource = [
+          "arn:aws:s3:::${var.message_media_bucket_name}",
+          "arn:aws:s3:::${var.message_media_bucket_name}/*",
           aws_s3_bucket.uploads.arn,
           "${aws_s3_bucket.uploads.arn}/*",
         ]

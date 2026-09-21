@@ -1,4 +1,6 @@
 import { PgBoss } from 'pg-boss'
+import { registerPushManager } from '../notifications/manager'
+import { registerMessagingWorkers } from '../messaging/delivery'
 import {
   BUILD_GEO_FEATURES_QUEUE,
   handleBuildGeoFeaturesBatches,
@@ -110,6 +112,8 @@ export async function getBoss(): Promise<PgBoss> {
           handleProductCatalogNauticExpoBatches,
         ),
       )
+      await registerPushManager(b)
+      await registerMessagingWorkers(b)
       await registerNotificationWorkers(b)
       registered = true
     }

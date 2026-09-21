@@ -46,6 +46,7 @@ resource "aws_ecs_task_definition" "app" {
         { name = "NODE_ENV", value = "production" },
         { name = "PORT", value = tostring(var.app_port) },
         { name = "AWS_REGION", value = var.aws_region },
+        { name = "S3_BUCKET_MESSAGE_MEDIA", value = var.message_media_bucket_name },
         { name = "S3_BUCKET_PHOTOS", value = aws_s3_bucket.uploads.bucket },
         { name = "S3_BUCKET_GEOJSON", value = aws_s3_bucket.uploads.bucket },
         { name = "BETTER_AUTH_URL", value = local.better_auth_url },
@@ -57,6 +58,8 @@ resource "aws_ecs_task_definition" "app" {
       ]
 
       secrets = [
+        { name = "STREAM_API_KEY", valueFrom = aws_ssm_parameter.stream_api_key.arn },
+        { name = "STREAM_API_SECRET", valueFrom = aws_ssm_parameter.stream_api_secret.arn },
         {
           name      = "FCM_PROJECT_ID"
           valueFrom = aws_ssm_parameter.fcm_project_id.arn

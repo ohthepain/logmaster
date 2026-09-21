@@ -4,6 +4,7 @@ import DevModeToggle from './DevModeToggle'
 import { DevComponentLabel } from './DevComponentLabel'
 import ThemeToggle from './ThemeToggle'
 import { NotificationInbox } from './NotificationInbox'
+import { MessagesButton } from './MessagesButton'
 import { UserMenu } from './UserMenu'
 import { useTranslation } from '../lib/i18n'
 
@@ -81,6 +82,7 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
           <DevModeToggle mapOverlay={mapOverlay} />
           {!mapOverlay ? <ThemeToggle /> : null}
           <NotificationInbox mapOverlay={mapOverlay} />
+          <MessagesButton mapOverlay={mapOverlay} />
           <UserMenu mapOverlay={mapOverlay} />
         </div>
       </div>

@@ -46,3 +46,17 @@ it.each([
     expect(mocks.remove).not.toHaveBeenCalled()
   }
 })
+
+it('propagates retryable transport failures to the centralized manager', async () => {
+  mocks.fcm.mockResolvedValue('failed')
+  await expect(
+    sendPushToUser({
+      userId: 'user-1',
+      title: 'Title',
+      body: 'Body',
+      linkUrl: null,
+      notificationId: 'notice-1',
+      retryFailures: true,
+    }),
+  ).rejects.toThrow('Push transport failed')
+})
