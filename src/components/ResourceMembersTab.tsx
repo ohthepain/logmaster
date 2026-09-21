@@ -71,6 +71,7 @@ export function InviteMemberModal({
     <Modal
       title={title}
       onClose={handleClose}
+      centered
       devComponentName="InviteMemberModal"
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
