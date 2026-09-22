@@ -492,8 +492,12 @@ function OrgDetailPage() {
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
         title="Invite member"
-        onSubmit={async ({ email, role }) => {
-          const result = await inviteOrgMember(orgId, { email, role })
+        onSubmit={async ({ email, role, inviteLocale }) => {
+          const result = await inviteOrgMember(orgId, {
+            email,
+            role,
+            inviteLocale,
+          })
           if (result.member) {
             setMembers((current) => [...current, result.member])
             return { kind: 'member' as const, message: `Added ${email}` }

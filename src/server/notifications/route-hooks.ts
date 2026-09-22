@@ -1,3 +1,4 @@
+import type { NotificationAction } from '../notifications/events'
 import {
   fireNotification,
   notifyBoatSection,
@@ -7,7 +8,7 @@ import {
 export function fireBoatPhotosNotification(
   userId: string,
   boat: { id: string; name: string },
-  action: string,
+  action: NotificationAction,
 ) {
   fireNotification(
     notifyBoatSection({
@@ -23,7 +24,7 @@ export function fireBoatPhotosNotification(
 export function fireBoatDocumentsNotification(
   userId: string,
   boat: { id: string; name: string },
-  action: string,
+  action: NotificationAction,
 ) {
   fireNotification(
     notifyBoatSection({
@@ -39,7 +40,7 @@ export function fireBoatDocumentsNotification(
 export function fireBoatAssetsNotification(
   userId: string,
   boat: { id: string; name: string },
-  action: string,
+  action: NotificationAction,
 ) {
   fireNotification(
     notifyBoatSection({
@@ -55,7 +56,7 @@ export function fireBoatAssetsNotification(
 export function fireBoatMembersNotification(
   userId: string,
   boat: { id: string; name: string },
-  action: string,
+  action: NotificationAction,
 ) {
   fireNotification(
     notifyBoatSection({
@@ -71,7 +72,7 @@ export function fireBoatMembersNotification(
 export function fireBoatContactsNotification(
   userId: string,
   boat: { id: string; name: string },
-  action: string,
+  action: NotificationAction,
 ) {
   fireNotification(
     notifyBoatSection({
@@ -87,7 +88,7 @@ export function fireBoatContactsNotification(
 export function fireBoatSharesNotification(
   userId: string,
   boat: { id: string; name: string },
-  action: string,
+  action: NotificationAction,
 ) {
   fireNotification(
     notifyBoatSection({
@@ -103,7 +104,7 @@ export function fireBoatSharesNotification(
 export function fireOrgMembersNotification(
   userId: string,
   org: { id: string; name: string },
-  action: string,
+  action: NotificationAction,
 ) {
   fireNotification(
     notifyOrgSection({
@@ -119,7 +120,7 @@ export function fireOrgMembersNotification(
 export function fireOrgDocumentsNotification(
   userId: string,
   org: { id: string; name: string },
-  action: string,
+  action: NotificationAction,
 ) {
   fireNotification(
     notifyOrgSection({
@@ -135,7 +136,7 @@ export function fireOrgDocumentsNotification(
 export function fireOrgContactsNotification(
   userId: string,
   org: { id: string; name: string },
-  action: string,
+  action: NotificationAction,
 ) {
   fireNotification(
     notifyOrgSection({
@@ -151,7 +152,7 @@ export function fireOrgContactsNotification(
 export function fireOrgBoatsNotification(
   userId: string,
   org: { id: string; name: string },
-  action: string,
+  action: NotificationAction,
 ) {
   fireNotification(
     notifyOrgSection({

@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
+import { navigateToAppLink } from '../lib/app-link-navigation'
 import { isNativePlatform, getNativePlatform } from '../lib/platform'
 import { useSession } from '../lib/auth-client'
 import {
@@ -46,7 +47,7 @@ async function registerNativePush(): Promise<void> {
   PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
     const linkUrl = action.notification.data?.linkUrl
     if (typeof linkUrl === 'string' && linkUrl.length > 0) {
-      window.location.assign(linkUrl)
+      navigateToAppLink(linkUrl)
     }
   })
 

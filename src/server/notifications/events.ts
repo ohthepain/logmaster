@@ -1,4 +1,9 @@
 import type { NotificationTopic } from '../../domain/notifications'
+import {
+  renderActivityNotification,
+  type ActivityNotificationLocalization,
+  type NotificationAction,
+} from './activity-message'
 import { emitActivityEvent } from './emit'
 
 function appLink(path: string): string {
@@ -13,6 +18,7 @@ async function notifyBoat(args: {
   title: string
   body: string
   path: string
+  localization?: ActivityNotificationLocalization
 }) {
   await emitActivityEvent({
     topic: args.topic,
@@ -22,6 +28,7 @@ async function notifyBoat(args: {
     body: args.body,
     linkUrl: appLink(args.path),
     metadata: { boatId: args.boatId, boatName: args.boatName },
+    localization: args.localization,
   })
 }
 
@@ -33,6 +40,7 @@ async function notifyOrg(args: {
   title: string
   body: string
   path: string
+  localization?: ActivityNotificationLocalization
 }) {
   await emitActivityEvent({
     topic: args.topic,
@@ -42,6 +50,7 @@ async function notifyOrg(args: {
     body: args.body,
     linkUrl: appLink(args.path),
     metadata: { orgId: args.orgId, orgName: args.orgName },
+    localization: args.localization,
   })
 }
 
@@ -127,14 +136,23 @@ export async function notifyBoatTripCompleted(args: {
   tripTitle: string
   actorUserId: string
 }) {
+  const actorName = await getActorName(args.actorUserId)
+  const localization: ActivityNotificationLocalization = {
+    kind: 'tripCompleted',
+    boatName: args.boatName,
+    tripTitle: args.tripTitle,
+    actorName,
+  }
+  const en = renderActivityNotification(localization, 'en')
   await notifyBoat({
     boatId: args.boatId,
     boatName: args.boatName,
     topic: 'BOAT_TRIPS_COMPLETED',
     actorUserId: args.actorUserId,
-    title: `${args.boatName}: trip completed`,
-    body: `${args.tripTitle} was marked complete.`,
+    title: en.title,
+    body: en.body,
     path: `/trips/${args.tripId}`,
+    localization,
   })
 }
 
@@ -204,17 +222,26 @@ export async function notifyAdminJobFinished(args: {
   success: boolean
   summary: string
 }) {
+  const localization: ActivityNotificationLocalization = {
+    kind: 'adminJob',
+    success: args.success,
+    queueName: args.queueName,
+    jobId: args.jobId,
+    summary: args.summary,
+  }
+  const en = renderActivityNotification(localization, 'en')
   await emitActivityEvent({
     topic: 'ADMIN_JOBS',
     actorUserId: null,
-    title: args.success ? 'Background job completed' : 'Background job failed',
-    body: `${args.queueName} (${args.jobId}): ${args.summary}`,
+    title: en.title,
+    body: en.body,
     linkUrl: appLink('/admin/job-management'),
     metadata: {
       jobId: args.jobId,
       queueName: args.queueName,
       success: args.success,
     },
+    localization,
   })
 }
 
@@ -257,18 +284,27 @@ export async function notifyBoatSection(args: {
   boatId: string
   boatName: string
   actorUserId: string
-  action: string
+  action: NotificationAction
 }) {
-  const actor = await getActorName(args.actorUserId)
+  const actorName = await getActorName(args.actorUserId)
   const tab = BOAT_TOPIC_TABS[args.topic] ?? 'photos'
+  const localization: ActivityNotificationLocalization = {
+    kind: 'resourceSection',
+    topic: args.topic,
+    resourceName: args.boatName,
+    actorName,
+    action: args.action,
+  }
+  const en = renderActivityNotification(localization, 'en')
   await notifyBoat({
     boatId: args.boatId,
     boatName: args.boatName,
     topic: args.topic,
     actorUserId: args.actorUserId,
-    title: `${args.boatName}: ${NOTIFICATION_SECTION_LABELS[args.topic] ?? 'updates'}`,
-    body: `${actor} ${args.action}`,
+    title: en.title,
+    body: en.body,
     path: `/boats/${args.boatId}?tab=${tab}`,
+    localization,
   })
 }
 
@@ -277,34 +313,31 @@ export async function notifyOrgSection(args: {
   orgId: string
   orgName: string
   actorUserId: string
-  action: string
+  action: NotificationAction
 }) {
-  const actor = await getActorName(args.actorUserId)
+  const actorName = await getActorName(args.actorUserId)
   const tab = ORG_TOPIC_TABS[args.topic] ?? 'members'
+  const localization: ActivityNotificationLocalization = {
+    kind: 'resourceSection',
+    topic: args.topic,
+    resourceName: args.orgName,
+    actorName,
+    action: args.action,
+  }
+  const en = renderActivityNotification(localization, 'en')
   await notifyOrg({
     orgId: args.orgId,
     orgName: args.orgName,
     topic: args.topic,
     actorUserId: args.actorUserId,
-    title: `${args.orgName}: ${NOTIFICATION_SECTION_LABELS[args.topic] ?? 'updates'}`,
-    body: `${actor} ${args.action}`,
+    title: en.title,
+    body: en.body,
     path: `/orgs/${args.orgId}?tab=${tab}`,
+    localization,
   })
 }
 
-const NOTIFICATION_SECTION_LABELS: Partial<Record<NotificationTopic, string>> =
-  {
-    BOAT_PHOTOS: 'photos updated',
-    BOAT_DOCUMENTS: 'documents updated',
-    BOAT_ASSETS: 'assets updated',
-    BOAT_MEMBERS: 'members updated',
-    BOAT_CONTACTS: 'contacts updated',
-    BOAT_SHARES: 'shares updated',
-    ORG_MEMBERS: 'members updated',
-    ORG_DOCUMENTS: 'documents updated',
-    ORG_CONTACTS: 'contacts updated',
-    ORG_BOATS: 'boats updated',
-  }
+export type { NotificationAction }
 
 export function fireNotification(promise: Promise<void>) {
   void promise.catch((error) => {

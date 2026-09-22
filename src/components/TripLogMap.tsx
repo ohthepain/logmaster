@@ -35,6 +35,7 @@ import {
   updateBoatMapMarkerElement,
 } from '../lib/map-boat-marker'
 import { boatIconSrc } from '../lib/boat-icons'
+import { addSailingMapAttributionControl } from '../lib/maplibre-attribution-control'
 import {
   addOpenSeaMapSeamarkOverlay,
   addOpenSeaMapBathymetryOverlays,
@@ -467,10 +468,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
 
           unbindTerrainGuard = guardSailingMapAgainstTerrain(map)
 
-          map.addControl(
-            new maplibregl.AttributionControl({ compact: true }),
-            'bottom-left',
-          )
+          addSailingMapAttributionControl(map, 'bottom-left')
 
           map.on('load', () => {
             if (!map) return
@@ -990,7 +988,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
             <SailingMapControlStack
               className={cn(
                 playbackMode &&
-                  'top-auto bottom-[calc(13.5rem+env(safe-area-inset-bottom,0px))] translate-y-0',
+                  'top-auto bottom-[calc(13.5rem+var(--lm-safe-bottom))] translate-y-0',
                 controlStackClassName,
               )}
               onZoomIn={handleZoomIn}

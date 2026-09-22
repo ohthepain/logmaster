@@ -1,9 +1,14 @@
 import { Hono } from 'hono'
+import { normalizeInviteLocale } from '../../lib/invite-locale'
 import { sendCrewInviteEmail } from '../email/ses'
 import { inviteeHasAccount } from '../invite-signup'
 import { prisma } from '../db'
 import { ensureConsortiumMember } from '../permissions'
 import { getSessionUserId } from '../session'
+import {
+  parseProfilePhotoCrop,
+  renderProfilePhotoBytes,
+} from '../profile-photo-image'
 import {
   crewMemberPhotoS3Key,
   deletePhotoObject,
@@ -181,11 +186,13 @@ async function sendInviteEmail(args: {
   to: string
   token: string
   inviterName: string
+  locale?: string | null
 }) {
   await sendCrewInviteEmail({
     to: args.to,
     url: crewInviteUrl(args.token),
     inviterName: args.inviterName,
+    locale: args.locale,
   })
 }
 
@@ -227,9 +234,11 @@ async function createInviteForMember(args: {
   inviterUserId: string
   inviterName: string
   email: string
+  inviteLocale?: string | null
   sendEmail?: boolean
 }) {
   const email = normalizeEmail(args.email)
+  const inviteLocale = normalizeInviteLocale(args.inviteLocale)
   const token = crypto.randomUUID().replace(/-/g, '')
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS)
   const invite = await db.crewInvite.create({
@@ -237,6 +246,7 @@ async function createInviteForMember(args: {
       crewMemberId: args.memberId,
       inviterUserId: args.inviterUserId,
       inviteeEmail: email,
+      inviteLocale,
       token,
       expiresAt,
     },
@@ -247,6 +257,7 @@ async function createInviteForMember(args: {
         to: email,
         token,
         inviterName: args.inviterName,
+        locale: inviteLocale,
       })
     } catch (error) {
       console.error('[crew] invite email failed', error)
@@ -408,6 +419,8 @@ crewRoutes.post('/members', async (c) => {
   const body = await c.req.parseBody()
   const name = typeof body.name === 'string' ? body.name.trim() : ''
   const emailRaw = typeof body.email === 'string' ? body.email.trim() : ''
+  const inviteLocaleRaw =
+    typeof body.inviteLocale === 'string' ? body.inviteLocale : null
   const photo = body.photo
 
   if (!name) return c.json({ error: 'Name is required' }, 400)
@@ -454,6 +467,7 @@ crewRoutes.post('/members', async (c) => {
       inviterUserId: user.id,
       inviterName: user.name,
       email,
+      inviteLocale: inviteLocaleRaw,
     })
     member.invites = await db.crewInvite.findMany({
       where: { crewMemberId: member.id, status: 'PENDING' },
@@ -490,6 +504,7 @@ crewRoutes.patch('/members/:memberId', async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as {
     name?: string
     email?: string | null
+    inviteLocale?: string | null
   }
 
   const updates: { displayName?: string } = {}
@@ -531,6 +546,7 @@ crewRoutes.patch('/members/:memberId', async (c) => {
         inviterUserId: user.id,
         inviterName: user.name,
         email,
+        inviteLocale: body.inviteLocale,
       })
     }
   }
@@ -833,6 +849,7 @@ crewRoutes.post('/invites/:inviteId/resend', async (c) => {
       to: invite.inviteeEmail,
       token: invite.token,
       inviterName: user.name,
+      locale: invite.inviteLocale,
     })
   } catch (error) {
     console.error('[crew] resend failed', error)
@@ -853,10 +870,19 @@ crewRoutes.get('/users/:userId/photo', async (c) => {
   const stored = await readStoredProfilePhoto(targetUserId)
   if (!stored) return c.json({ error: 'Photo not found' }, 404)
 
-  const bytes = await stored.object.Body!.transformToByteArray()
-  return new Response(Buffer.from(bytes), {
+  const target = await db.user.findUnique({
+    where: { id: targetUserId },
+    select: { profilePhotoCrop: true },
+  })
+  const bytes = Buffer.from(await stored.object.Body!.transformToByteArray())
+  const rendered = await renderProfilePhotoBytes(
+    bytes,
+    parseProfilePhotoCrop(target?.profilePhotoCrop),
+    stored.object.ContentType || 'image/jpeg',
+  )
+  return new Response(new Uint8Array(rendered.buffer), {
     headers: {
-      'Content-Type': stored.object.ContentType || 'image/jpeg',
+      'Content-Type': rendered.contentType,
       'Cache-Control': 'private, max-age=3600',
     },
   })

@@ -6,6 +6,8 @@ import { getMessagingProvider } from './provider'
 import { pushNotificationManager } from '../notifications/manager'
 import { getUserNotificationDefaults } from '../notifications/subscriptions'
 import { getNotificationPreferenceNode } from '../notifications/preferences'
+import { renderChatMessageNotification } from '../notifications/activity-message'
+import { normalizeInviteLocale } from '../../lib/invite-locale'
 
 const QUEUE = 'publish_chat_outbox'
 
@@ -89,15 +91,26 @@ export async function scheduleChatNotifications(messageId: string) {
     if (error instanceof Error && error.message === 'Chat not found') return
     throw error
   }
-  for (const userId of thread.memberIds) {
-    if (userId === message.senderId) continue
+  const recipientIds = thread.memberIds.filter((id) => id !== message.senderId)
+  if (recipientIds.length === 0) return
+
+  const recipients = await prisma.user.findMany({
+    where: { id: { in: recipientIds } },
+    select: { id: true, preferredLanguage: true },
+  })
+
+  for (const recipient of recipients) {
+    const copy = renderChatMessageNotification({
+      locale: normalizeInviteLocale(recipient.preferredLanguage),
+      isDirectMessage: thread.object.kind === 'user',
+      threadName: thread.object.name,
+    })
     await pushNotificationManager.schedule({
-      userId,
+      userId: recipient.id,
       notificationId: `message:${message.id}`,
       chatMessageId: message.id,
-      // Keep lock-screen content private, and avoid using the sender's name for a DM title.
-      title: thread.object.kind === 'user' ? 'New message' : thread.object.name,
-      body: 'You have a new message in Logmaster.',
+      title: copy.title,
+      body: copy.body,
       linkUrl: `/messages?thread=${encodeURIComponent(message.threadId)}`,
       priority: 10,
       scheduledAt: new Date(message.createdAt.getTime() + 3000),

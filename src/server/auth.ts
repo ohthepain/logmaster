@@ -1,12 +1,14 @@
 import { betterAuth } from 'better-auth'
 import { magicLink } from 'better-auth/plugins'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
+import { normalizeInviteLocale } from '../lib/invite-locale'
 import { prisma } from './db'
 import {
   sendMagicLinkEmail,
   sendPasswordResetEmail,
   sendVerifyEmailEmail,
 } from './email/ses'
+import { resolveEmailLocale } from './email/locale'
 import {
   emailVerificationCallbackUrl,
   passwordResetEmailUrl,
@@ -96,7 +98,14 @@ export const auth = betterAuth({
         'callbackURL',
         emailVerificationCallbackUrl(baseURL),
       )
-      await sendVerifyEmailEmail(user.email, verifyUrl.toString())
+      const locale = await resolveEmailLocale({
+        email: user.email,
+        preferredLanguage:
+          'preferredLanguage' in user
+            ? (user as { preferredLanguage?: string | null }).preferredLanguage
+            : null,
+      })
+      await sendVerifyEmailEmail(user.email, verifyUrl.toString(), { locale })
     },
   },
   emailAndPassword: {
@@ -104,7 +113,14 @@ export const auth = betterAuth({
     requireEmailVerification,
     sendResetPassword: async ({ user, token }) => {
       const url = passwordResetEmailUrl({ origin: baseURL, token })
-      await sendPasswordResetEmail(user.email, url)
+      const locale = await resolveEmailLocale({
+        email: user.email,
+        preferredLanguage:
+          'preferredLanguage' in user
+            ? (user as { preferredLanguage?: string | null }).preferredLanguage
+            : null,
+      })
+      await sendPasswordResetEmail(user.email, url, { locale })
     },
   },
   socialProviders: {
@@ -112,8 +128,15 @@ export const auth = betterAuth({
   },
   plugins: [
     magicLink({
-      sendMagicLink: async ({ email, url }) => {
-        await sendMagicLinkEmail(email, url)
+      sendMagicLink: async ({ email, url, metadata }) => {
+        const locale = await resolveEmailLocale({
+          email,
+          explicit:
+            metadata && typeof metadata.locale === 'string'
+              ? metadata.locale
+              : undefined,
+        })
+        await sendMagicLinkEmail(email, url, { locale })
       },
     }),
   ],
@@ -121,10 +144,24 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => {
-          if (await hasPendingInviteForEmail(user.email)) {
-            return { data: { ...user, emailVerified: true } }
+          const rawPreferredLanguage =
+            'preferredLanguage' in user
+              ? (user as { preferredLanguage?: unknown }).preferredLanguage
+              : undefined
+          const preferredLanguage =
+            typeof rawPreferredLanguage === 'string'
+              ? normalizeInviteLocale(rawPreferredLanguage)
+              : undefined
+
+          let data = {
+            ...user,
+            ...(preferredLanguage ? { preferredLanguage } : {}),
           }
-          return { data: user }
+
+          if (await hasPendingInviteForEmail(user.email)) {
+            data = { ...data, emailVerified: true }
+          }
+          return { data }
         },
       },
     },

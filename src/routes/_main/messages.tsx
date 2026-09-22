@@ -27,6 +27,9 @@ function MessagesPage() {
       onSelect={(id) => {
         void navigate({ search: { thread: id }, replace: true })
       }}
+      onBackFromInbox={() => {
+        void navigate({ to: '/' })
+      }}
     />
   )
 }

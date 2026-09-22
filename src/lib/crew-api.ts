@@ -12,11 +12,13 @@ export async function fetchCrew(): Promise<CrewPayload> {
 export async function createCrewMember(args: {
   name: string
   email?: string
+  inviteLocale?: string
   photo?: File
 }): Promise<{ member: CrewMember }> {
   const form = new FormData()
   form.set('name', args.name.trim())
   if (args.email?.trim()) form.set('email', args.email.trim())
+  if (args.inviteLocale?.trim()) form.set('inviteLocale', args.inviteLocale.trim())
   if (args.photo) form.set('photo', args.photo)
   return api<{ member: CrewMember }>('/members', { method: 'POST', body: form })
 }
@@ -27,7 +29,7 @@ export async function deleteCrewMember(memberId: string): Promise<void> {
 
 export async function updateCrewMember(
   memberId: string,
-  args: { name?: string; email?: string | null },
+  args: { name?: string; email?: string | null; inviteLocale?: string },
 ): Promise<{ member: CrewMember }> {
   return api<{ member: CrewMember }>(`/members/${memberId}`, {
     method: 'PATCH',

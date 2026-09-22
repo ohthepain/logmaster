@@ -4,6 +4,9 @@ import { Camera, User } from 'lucide-react'
 import { toast } from 'sonner'
 import type { CrewMember } from '../domain/crew'
 import { createCrewMember } from '../lib/crew-api'
+import { useTranslation } from '../lib/i18n'
+import type { InviteLocale } from '../lib/invite-locale'
+import { InviteLanguageSelect } from './InviteLanguageSelect'
 import { Modal } from './Modal'
 
 type AddCrewMemberModalProps = {
@@ -17,8 +20,10 @@ export function AddCrewMemberModal({
   onClose,
   onCreated,
 }: AddCrewMemberModalProps) {
+  const { language } = useTranslation()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [inviteLocale, setInviteLocale] = useState<InviteLocale>(language)
   const [photo, setPhoto] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -30,6 +35,7 @@ export function AddCrewMemberModal({
   const reset = () => {
     setName('')
     setEmail('')
+    setInviteLocale(language)
     setPhoto(null)
     if (photoPreview) URL.revokeObjectURL(photoPreview)
     setPhotoPreview(null)
@@ -68,6 +74,7 @@ export function AddCrewMemberModal({
       const { member } = await createCrewMember({
         name: trimmedName,
         email: email.trim() || undefined,
+        inviteLocale: email.trim() ? inviteLocale : undefined,
         photo: photo ?? undefined,
       })
       toast.success(
@@ -172,6 +179,14 @@ export function AddCrewMemberModal({
             replaced with their account details.
           </p>
         </label>
+
+        {email.trim() ? (
+          <InviteLanguageSelect
+            value={inviteLocale}
+            onChange={setInviteLocale}
+            disabled={loading}
+          />
+        ) : null}
 
         <div className="flex flex-wrap gap-2">
           <button

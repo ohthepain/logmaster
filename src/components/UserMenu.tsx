@@ -214,7 +214,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                 aria-labelledby={`${menuId}-title`}
                 className="ios-map-touch-target pointer-events-auto flex h-[100dvh] w-full touch-manipulation flex-col overflow-hidden bg-[var(--surface-strong)] sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:max-w-2xl sm:rounded-[2rem] sm:border sm:border-[var(--panel-border)] sm:shadow-2xl"
               >
-                <header className="flex shrink-0 items-center justify-between gap-4 px-5 pb-3 pt-[calc(env(safe-area-inset-top,0px)+1rem)] sm:px-7 sm:pt-6">
+                <header className="flex shrink-0 items-center justify-between gap-4 px-5 pb-3 pt-[calc(var(--lm-safe-top)+1rem)] sm:px-7 sm:pt-6">
                   <h2
                     id={`${menuId}-title`}
                     className="m-0 text-[2rem] font-extrabold tracking-[-0.035em] text-[var(--sea-ink)]"
@@ -232,7 +232,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                   </button>
                 </header>
 
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-2 sm:px-7 sm:pb-7">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(var(--lm-safe-bottom)+1.5rem)] pt-2 sm:px-7 sm:pb-7">
                   <div className="grid grid-cols-2 gap-4">
                     <MenuCard
                       className="col-span-2 min-h-40"

@@ -222,7 +222,7 @@ export function TripDetailBottomSheet({
           data-map-touch-zone
           className="ios-map-touch-target pointer-events-auto min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-3 pb-8 [-webkit-overflow-scrolling:touch] sm:px-4"
         >
-          <div className="mx-auto max-w-3xl space-y-5 pb-[env(safe-area-inset-bottom,0px)]">
+          <div className="mx-auto max-w-3xl space-y-5 pb-[var(--lm-safe-bottom)]">
             {children}
           </div>
         </div>

@@ -1,4 +1,12 @@
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses'
+import type { InviteLocale } from '../../lib/invite-locale'
+import {
+  buildMagicLinkEmail,
+  buildPasswordResetEmail,
+  buildVerifyEmailEmail,
+} from './auth-copy'
+import { buildCrewInviteEmail, buildMemberInviteEmail } from './invite-copy'
+import { renderSimpleEmail } from './html'
 
 /** Must match the region where SES identities are verified (see terraform `aws_region`). */
 const region = process.env.AWS_REGION || 'eu-central-1'
@@ -62,74 +70,105 @@ export async function sendTransactionalEmail(args: {
   }
 }
 
+/** @deprecated Prefer transactional email builders. */
 export function emailWrap(bodyHtml: string) {
-  return `<!DOCTYPE html><html><body style="font-family: system-ui, sans-serif; line-height: 1.5; color: #0f1a1e;">
-  <p>${bodyHtml}</p>
-  <p style="color: #416166; font-size: 12px;">— ${appName()}</p>
-  </body></html>`
+  return renderSimpleEmail({ appName: appName(), bodyHtml })
 }
 
-export async function sendMagicLinkEmail(to: string, url: string) {
-  const name = appName()
-  const subject = `Sign in to ${name}`
-  const text = `Click the link to sign in: ${url}\n\nThis link expires in a few minutes.`
-  const html = emailWrap(
-    `Sign in to <strong>${name}</strong> — <a href="${url}">click here</a>. This link expires in a few minutes.`,
-  )
-  await sendTransactionalEmail({ to, subject, text, html })
+export async function sendMagicLinkEmail(
+  to: string,
+  url: string,
+  options?: { locale?: InviteLocale | string | null },
+) {
+  const content = buildMagicLinkEmail({
+    locale: options?.locale,
+    appName: appName(),
+    url,
+  })
+  await sendTransactionalEmail({
+    to,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
+  })
 }
 
-export async function sendPasswordResetEmail(to: string, url: string) {
-  const name = appName()
-  const subject = `Reset your ${name} password`
-  const text = `Click the link to set a new password: ${url}\n\nIf you did not request this, you can ignore this email.`
-  const html = emailWrap(
-    `Reset your <strong>${name}</strong> password — <a href="${url}">set a new password</a>. If you did not request this, ignore this email.`,
-  )
-  await sendTransactionalEmail({ to, subject, text, html })
+export async function sendPasswordResetEmail(
+  to: string,
+  url: string,
+  options?: { locale?: InviteLocale | string | null },
+) {
+  const content = buildPasswordResetEmail({
+    locale: options?.locale,
+    appName: appName(),
+    url,
+  })
+  await sendTransactionalEmail({
+    to,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
+  })
 }
 
-export async function sendVerifyEmailEmail(to: string, url: string) {
-  const name = appName()
-  const subject = `Verify your email for ${name}`
-  const text = `Verify your address: ${url}\n\nIf you did not create an account, you can ignore this email.`
-  const html = emailWrap(
-    `Please verify your email for <strong>${name}</strong> — <a href="${url}">verify</a>.`,
-  )
-  await sendTransactionalEmail({ to, subject, text, html })
+export async function sendVerifyEmailEmail(
+  to: string,
+  url: string,
+  options?: { locale?: InviteLocale | string | null },
+) {
+  const content = buildVerifyEmailEmail({
+    locale: options?.locale,
+    appName: appName(),
+    url,
+  })
+  await sendTransactionalEmail({
+    to,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
+  })
 }
 
 export async function sendCrewInviteEmail(args: {
   to: string
   url: string
   inviterName: string
+  locale?: InviteLocale | string | null
 }) {
-  const name = appName()
-  const inviter = args.inviterName.trim() || 'Someone'
-  const subject = `${inviter} invited you to join their crew on ${name}`
-  const text = `${inviter} added you as crew on ${name}. Open the link to connect your account:\n\n${args.url}\n\nIf you were not expecting this, you can ignore this email.`
-  const html = emailWrap(
-    `<strong>${inviter}</strong> invited you to join their crew on <strong>${name}</strong>. <a href="${args.url}">Accept the invite</a> after signing in. If you were not expecting this, ignore this email.`,
-  )
-  await sendTransactionalEmail({ to: args.to, subject, text, html })
+  const content = buildCrewInviteEmail({
+    locale: args.locale,
+    appName: appName(),
+    inviterName: args.inviterName,
+    url: args.url,
+  })
+  await sendTransactionalEmail({
+    to: args.to,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
+  })
 }
 
 export async function sendMemberInviteEmail(args: {
   to: string
   url: string
   inviterName: string
-  targetName: string
+  targetName: string | null | undefined
   targetKind: 'org' | 'boat'
+  locale?: InviteLocale | string | null
 }) {
-  const name = appName()
-  const inviter = args.inviterName.trim() || 'Someone'
-  const target =
-    args.targetName.trim() ||
-    (args.targetKind === 'org' ? 'an organization' : 'a boat')
-  const subject = `${inviter} invited you to ${target} on ${name}`
-  const text = `${inviter} invited you to join ${target} on ${name}. Create an account or sign in, then open this link to accept:\n\n${args.url}\n\nIf you were not expecting this, you can ignore this email.`
-  const html = emailWrap(
-    `<strong>${inviter}</strong> invited you to join <strong>${target}</strong> on <strong>${name}</strong>. <a href="${args.url}">Accept the invite</a> after signing in. If you don't have an account yet, sign in with this email to create one.`,
-  )
-  await sendTransactionalEmail({ to: args.to, subject, text, html })
+  const content = buildMemberInviteEmail({
+    locale: args.locale,
+    appName: appName(),
+    inviterName: args.inviterName,
+    targetName: args.targetName,
+    targetKind: args.targetKind,
+    url: args.url,
+  })
+  await sendTransactionalEmail({
+    to: args.to,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
+  })
 }

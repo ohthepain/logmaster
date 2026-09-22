@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   defaults: vi.fn(),
   preference: vi.fn(),
   schedule: vi.fn(),
+  users: vi.fn(),
 }))
 vi.mock('./provider', () => ({
   getMessagingProvider: async () => ({ publish: mocks.publish }),
@@ -37,6 +38,7 @@ vi.mock('../db', () => ({
       findFirst: mocks.presence,
       deleteMany: mocks.clearPresence,
     },
+    user: { findMany: mocks.users },
   },
 }))
 vi.mock('./threads', () => ({ requireThread: mocks.thread }))
@@ -65,6 +67,9 @@ beforeEach(() => {
   mocks.presence.mockResolvedValue(null)
   mocks.defaults.mockResolvedValue({ push: true })
   mocks.preference.mockResolvedValue({ effective: true })
+  mocks.users.mockResolvedValue([
+    { id: 'recipient', preferredLanguage: 'en' },
+  ])
 })
 it('sends to inactive recipients but never the sender', async () => {
   expect(await chatPushDisposition('recipient', 'message')).toBe('send')

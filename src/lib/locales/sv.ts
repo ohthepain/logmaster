@@ -191,6 +191,8 @@ const catalog: TranslationCatalog = {
   pendingCount: '· {count} väntande',
   expiresOn: 'går ut {date}',
   invite: 'Bjud in',
+  inviteEmailLanguage: 'Språk för inbjudan',
+  inviteEmailLanguageHint: 'Inbjudningsmejlet skickas på det här språket.',
   inviteLink: 'Inbjudningslänk',
   resendInvite: 'Skicka inbjudan igen',
   copyLink: 'Kopiera länk',

@@ -189,6 +189,8 @@ const catalog: TranslationCatalog = {
   pendingCount: '· {count} 待处理',
   expiresOn: '{date} 到期',
   invite: '邀请',
+  inviteEmailLanguage: '邀请邮件语言',
+  inviteEmailLanguageHint: '邀请邮件将使用该语言发送。',
   inviteLink: '邀请链接',
   resendInvite: '重新发送邀请',
   copyLink: '复制链接',

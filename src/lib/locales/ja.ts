@@ -191,6 +191,8 @@ const catalog: TranslationCatalog = {
   pendingCount: '· {count}件の保留',
   expiresOn: '{date}に期限切れ',
   invite: '招待',
+  inviteEmailLanguage: '招待メールの言語',
+  inviteEmailLanguageHint: '招待メールはこの言語で送信されます。',
   inviteLink: '招待リンク',
   resendInvite: '招待を再送信',
   copyLink: 'リンクをコピー',

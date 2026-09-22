@@ -192,6 +192,8 @@ const catalog: TranslationCatalog = {
   pendingCount: '· {count} pendientes',
   expiresOn: 'caduca {date}',
   invite: 'Invitar',
+  inviteEmailLanguage: 'Idioma de la invitación',
+  inviteEmailLanguageHint: 'El correo de invitación se enviará en este idioma.',
   inviteLink: 'Enlace de invitación',
   resendInvite: 'Reenviar invitación',
   copyLink: 'Copiar enlace',

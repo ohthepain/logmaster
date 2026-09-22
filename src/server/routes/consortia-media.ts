@@ -533,7 +533,7 @@ consortiaMediaRoutes.post('/:orgId/document-categories', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireOrgDocumentsNotification(userId, consortium, 'added a document category.')
+  fireOrgDocumentsNotification(userId, consortium, ({ key: 'addedDocumentCategory' }))
 
   return c.json({ category: serializeDocumentCategory(category) }, 201)
 })
@@ -622,7 +622,7 @@ consortiaMediaRoutes.post('/:orgId/documents', async (c) => {
       data: { updatedAt: new Date() },
     })
 
-    fireOrgDocumentsNotification(userId, consortium, 'uploaded a document.')
+    fireOrgDocumentsNotification(userId, consortium, ({ key: 'uploadedDocument' }))
 
     return c.json({ document: serializeDocument(document) }, 201)
   }
@@ -679,7 +679,7 @@ consortiaMediaRoutes.post('/:orgId/documents', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireOrgDocumentsNotification(userId, consortium, 'added a document link.')
+  fireOrgDocumentsNotification(userId, consortium, ({ key: 'addedDocumentLink' }))
 
   return c.json({ document: serializeDocument(document) }, 201)
 })
@@ -757,7 +757,7 @@ consortiaMediaRoutes.patch('/documents/:documentId', async (c) => {
     fireOrgDocumentsNotification(
       userId,
       existing.consortium,
-      'updated a document.',
+      ({ key: 'updatedDocument' }),
     )
 
     return c.json({ document: serializeDocument(document) })
@@ -838,7 +838,7 @@ consortiaMediaRoutes.patch('/documents/:documentId', async (c) => {
   fireOrgDocumentsNotification(
     userId,
     existing.consortium,
-    'updated a document.',
+    ({ key: 'updatedDocument' }),
   )
 
   return c.json({ document: serializeDocument(document) })
@@ -883,7 +883,7 @@ consortiaMediaRoutes.delete('/documents/:documentId', async (c) => {
   fireOrgDocumentsNotification(
     userId,
     existing.consortium,
-    'deleted a document.',
+    ({ key: 'deletedDocument' }),
   )
 
   return c.json({ ok: true })

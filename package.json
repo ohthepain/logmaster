@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "vite dev --port 3020",
     "predev": "prisma generate",
-    "build": "prisma generate && vite build && node scripts/verify-client-build.mjs && node scripts/generate-sw.mjs",
+    "build": "prisma generate && node scripts/generate-universal-link-well-known.mjs && vite build && node scripts/verify-client-build.mjs && node scripts/generate-sw.mjs",
+    "app-links:generate": "node scripts/generate-universal-link-well-known.mjs",
     "start": "node server-production.mjs",
     "preview": "vite preview",
     "postinstall": "prisma generate",

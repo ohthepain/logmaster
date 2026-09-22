@@ -8,6 +8,7 @@ import { AppShell } from '../../components/AppShell'
 import { AppToaster } from '../../components/AppToaster'
 import { DevTanStackDevtools } from '../../components/DevTanStackDevtools'
 import { NativeAppLinks } from '../../components/NativeAppLinks'
+import { NativeSystemBars } from '../../components/NativeSystemBars'
 import { PwaRegister } from '../../components/PwaRegister'
 import { PushNotificationsRegister } from '../../components/PushNotificationsRegister'
 import { I18nProvider } from '../../lib/i18n'
@@ -30,6 +31,7 @@ function MainLayout() {
           <PwaRegister />
           <PushNotificationsRegister />
           <NativeAppLinks />
+          <NativeSystemBars />
           <AppShell>
             <Outlet />
           </AppShell>

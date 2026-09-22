@@ -68,10 +68,14 @@ model User {
   email                String
   emailVerified        Boolean   @default(false)
   image                String?
+  /** Square crop frame for custom profile photos ({ x, y, s } in image space). */
+  profilePhotoCrop     Json?
   tutorialCompletedAt  DateTime?
   /** Set via `pnpm admin:platform grant` — site-wide /admin access (not org boat roles). */
   platformAdminAt      DateTime?
   notificationDefaults Json?
+  /** App UI language code (same set as invite locales). */
+  preferredLanguage    String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   sessions      Session[]
@@ -789,6 +793,7 @@ model MemberInvite {
   boatId           String?
   inviterUserId    String
   inviteeEmail     String?
+  inviteLocale     String               @default("en")
   token            String               @unique
   role             ConsortiumMemberRole @default(MEMBER)
   status           CrewInviteStatus     @default(PENDING)
@@ -840,6 +845,7 @@ model CrewInvite {
   inviterUserId    String
   inviter          User             @relation("SentCrewInvites", fields: [inviterUserId], references: [id], onDelete: Cascade)
   inviteeEmail     String
+  inviteLocale     String           @default("en")
   token            String           @unique
   status           CrewInviteStatus @default(PENDING)
   acceptedByUserId String?

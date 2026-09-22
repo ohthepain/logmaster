@@ -192,6 +192,8 @@ const catalog: TranslationCatalog = {
   pendingCount: '· {count} in behandeling',
   expiresOn: 'verloopt {date}',
   invite: 'Uitnodigen',
+  inviteEmailLanguage: 'Taal van de uitnodiging',
+  inviteEmailLanguageHint: 'De uitnodigingsmail wordt in deze taal verstuurd.',
   inviteLink: 'Uitnodigingslink',
   resendInvite: 'Uitnodiging opnieuw sturen',
   copyLink: 'Link kopiëren',

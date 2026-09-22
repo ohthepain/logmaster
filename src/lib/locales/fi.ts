@@ -192,6 +192,8 @@ const catalog: TranslationCatalog = {
   pendingCount: '· {count} odottaa',
   expiresOn: 'vanhenee {date}',
   invite: 'Kutsu',
+  inviteEmailLanguage: 'Kutsun kieli',
+  inviteEmailLanguageHint: 'Kutsusähköposti lähetetään tällä kielellä.',
   inviteLink: 'Kutsulinkki',
   resendInvite: 'Lähetä kutsu uudelleen',
   copyLink: 'Kopioi linkki',

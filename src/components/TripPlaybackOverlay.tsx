@@ -489,7 +489,7 @@ export function TripPlaybackOverlay({
       ) : null}
 
       {activeEntry ? (
-        <div className="pointer-events-none absolute inset-x-3 bottom-[calc(12.75rem+env(safe-area-inset-bottom,0px))] z-30 flex justify-center">
+        <div className="pointer-events-none absolute inset-x-3 bottom-[calc(12.75rem+var(--lm-safe-bottom))] z-30 flex justify-center">
           <div className="max-w-md rounded-2xl border border-white/25 bg-black/65 px-4 py-3 text-white shadow-xl backdrop-blur-md">
             <div className="flex items-start gap-3">
               <span className="text-xl" aria-hidden>
@@ -517,7 +517,7 @@ export function TripPlaybackOverlay({
         data-map-touch-zone
         aria-label="Trip playback"
         className="ios-map-touch-target pointer-events-auto absolute inset-x-0 bottom-0 z-30 border-t border-white/25 bg-black/65 px-3 pt-3 text-white shadow-[0_-12px_36px_rgba(0,0,0,0.2)] backdrop-blur-xl sm:px-4"
-        style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 10px)' }}
+        style={{ paddingBottom: 'max(var(--lm-safe-bottom), 10px)' }}
       >
         <div className="mx-auto max-w-4xl">
           <div

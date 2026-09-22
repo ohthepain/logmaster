@@ -1,4 +1,5 @@
-import { emailWrap, sendTransactionalEmail } from './ses'
+import { buildNotificationEmail } from './notification-copy'
+import { sendTransactionalEmail } from './ses'
 
 function appOrigin(): string {
   return (
@@ -21,15 +22,21 @@ export async function sendNotificationEmail(args: {
   title: string
   body: string
   linkUrl: string | null
+  locale?: string | null
 }): Promise<void> {
   const appName = process.env.EMAIL_APP_NAME || 'logmaster'
-  const subject = args.title
   const url = absoluteLinkUrl(args.linkUrl)
-  const text = url ? `${args.body}\n\nOpen in ${appName}: ${url}` : args.body
-  const html = emailWrap(
-    `${args.body}${
-      url ? `<br><br><a href="${url}">Open in ${appName}</a>` : ''
-    }`,
-  )
-  await sendTransactionalEmail({ to: args.to, subject, text, html })
+  const content = buildNotificationEmail({
+    locale: args.locale,
+    appName,
+    title: args.title,
+    body: args.body,
+    url,
+  })
+  await sendTransactionalEmail({
+    to: args.to,
+    subject: content.subject,
+    text: content.text,
+    html: content.html,
+  })
 }

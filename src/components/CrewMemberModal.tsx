@@ -15,6 +15,8 @@ import {
 import { cn } from '../lib/cn'
 import { useTranslation } from '../lib/i18n'
 import type { TranslationKey, TranslationVars } from '../lib/i18n'
+import type { InviteLocale } from '../lib/invite-locale'
+import { InviteLanguageSelect } from './InviteLanguageSelect'
 
 type CrewMemberModalProps = {
   member: CrewMember | null
@@ -53,11 +55,12 @@ export function CrewMemberModal({
   onUpdated,
   onDeleted,
 }: CrewMemberModalProps) {
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const fileInputId = useId()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [inviteLocale, setInviteLocale] = useState<InviteLocale>(language)
   const [photoVersion, setPhotoVersion] = useState(0)
   const [saving, setSaving] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -73,8 +76,9 @@ export function CrewMemberModal({
     if (!open || !member) return
     setName(member.name)
     setEmail(member.pendingInvite?.inviteeEmail ?? member.email ?? '')
+    setInviteLocale(language)
     setPhotoVersion(0)
-  }, [open, member])
+  }, [open, member, language])
 
   if (!open || !member) return null
 
@@ -115,7 +119,12 @@ export function CrewMemberModal({
     try {
       await updateCrewMember(member.id, {
         ...(nameChanged ? { name: trimmedName } : {}),
-        ...(emailChanged ? { email: trimmedEmail || null } : {}),
+        ...(emailChanged
+          ? {
+              email: trimmedEmail || null,
+              ...(trimmedEmail ? { inviteLocale } : {}),
+            }
+          : {}),
       })
       onUpdated?.()
       toast.success('Crew member updated')
@@ -301,6 +310,14 @@ export function CrewMemberModal({
             </p>
           )}
         </label>
+
+        {editable && email.trim() ? (
+          <InviteLanguageSelect
+            value={inviteLocale}
+            onChange={setInviteLocale}
+            disabled={busy}
+          />
+        ) : null}
 
         {member.pendingInvite && (
           <div className="rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3">

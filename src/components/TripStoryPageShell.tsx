@@ -23,7 +23,7 @@ export function TripStoryPageShell({
         <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--bg-base)]/95 backdrop-blur-md supports-[backdrop-filter]:bg-[var(--bg-base)]/80">
           <div
             className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 py-3"
-            style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+            style={{ paddingTop: 'max(0.75rem, var(--lm-safe-top))' }}
           >
             {toolbar}
           </div>

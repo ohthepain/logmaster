@@ -54,7 +54,7 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
     <header
       data-app-header
       className={cn(
-        'top-0 z-50 shrink-0 pt-[env(safe-area-inset-top,0px)]',
+        'top-0 z-50 shrink-0 pt-[var(--lm-safe-top)]',
         mapOverlay
           ? 'pointer-events-none fixed inset-x-0 bg-transparent'
           : 'sticky bg-transparent',

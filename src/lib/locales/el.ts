@@ -194,6 +194,8 @@ const catalog: TranslationCatalog = {
   pendingCount: '· {count} σε εκκρεμότητα',
   expiresOn: 'λήγει {date}',
   invite: 'Πρόσκληση',
+  inviteEmailLanguage: 'Γλώσσα πρόσκλησης',
+  inviteEmailLanguageHint: 'Το email πρόσκλησης θα σταλεί σε αυτή τη γλώσσα.',
   inviteLink: 'Σύνδεσμος πρόσκλησης',
   resendInvite: 'Επανάληψη πρόσκλησης',
   copyLink: 'Αντιγραφή συνδέσμου',

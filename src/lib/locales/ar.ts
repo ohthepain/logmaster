@@ -189,6 +189,8 @@ const catalog: TranslationCatalog = {
   pendingCount: '· {count} قيد الانتظار',
   expiresOn: 'تنتهي في {date}',
   invite: 'دعوة',
+  inviteEmailLanguage: 'لغة الدعوة',
+  inviteEmailLanguageHint: 'سيتم إرسال رسالة الدعوة بهذه اللغة.',
   inviteLink: 'رابط الدعوة',
   resendInvite: 'إعادة إرسال الدعوة',
   copyLink: 'نسخ الرابط',

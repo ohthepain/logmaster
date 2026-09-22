@@ -11,6 +11,7 @@ import {
   mapBrandColor,
 } from '../lib/logbook-map-geo'
 import type { MapLngLat } from '../lib/logbook-map-geo'
+import { addSailingMapAttributionControl } from '../lib/maplibre-attribution-control'
 import {
   addOpenSeaMapSeamarkOverlay,
   addOpenSeaMapBathymetryOverlays,
@@ -152,10 +153,7 @@ export function LogEntryPositionMap({
 
         unbindTerrainGuard = guardSailingMapAgainstTerrain(map)
 
-        map.addControl(
-          new maplibregl.AttributionControl({ compact: true }),
-          'bottom-right',
-        )
+        addSailingMapAttributionControl(map, 'bottom-left')
 
         map.on('load', () => {
           if (!map) return

@@ -1,3 +1,5 @@
+import type { InviteLocale } from '../lib/invite-locale'
+import { normalizeInviteLocale } from '../lib/invite-locale'
 import { sendMemberInviteEmail } from './email/ses'
 import { prisma } from './db'
 import { inviteeHasAccount } from './invite-signup'
@@ -35,6 +37,7 @@ export function serializeMemberInvite(invite: {
   orgId: string | null
   boatId: string | null
   inviteeEmail: string | null
+  inviteLocale?: string | null
   token: string
   role: string
   status: string
@@ -48,6 +51,7 @@ export function serializeMemberInvite(invite: {
     orgId: invite.orgId,
     boatId: invite.boatId,
     inviteeEmail: invite.inviteeEmail,
+    inviteLocale: normalizeInviteLocale(invite.inviteLocale),
     token: invite.token,
     role: invite.role,
     status: invite.status,
@@ -64,6 +68,7 @@ type CreateOrgInviteArgs = {
   inviterName: string
   role: ConsortiumMemberRole
   inviteeEmail?: string | null
+  inviteLocale?: InviteLocale | string | null
   sendEmail?: boolean
 }
 
@@ -73,6 +78,7 @@ type CreateBoatInviteArgs = {
   inviterName: string
   role: ConsortiumMemberRole
   inviteeEmail?: string | null
+  inviteLocale?: InviteLocale | string | null
   sendEmail?: boolean
 }
 
@@ -185,12 +191,14 @@ export async function createOrgMemberInvite(args: CreateOrgInviteArgs) {
   }
 
   const token = createInviteToken()
+  const inviteLocale = normalizeInviteLocale(args.inviteLocale)
   const invite = await db.memberInvite.create({
     data: {
       kind: 'ORG',
       orgId: args.orgId,
       inviterUserId: args.inviterUserId,
       inviteeEmail: email,
+      inviteLocale,
       token,
       role: args.role,
       expiresAt: new Date(Date.now() + MEMBER_INVITE_TTL_MS),
@@ -207,8 +215,9 @@ export async function createOrgMemberInvite(args: CreateOrgInviteArgs) {
         to: email,
         url: memberInviteUrl(token),
         inviterName: args.inviterName,
-        targetName: org?.name ?? 'an organization',
+        targetName: org?.name,
         targetKind: 'org',
+        locale: inviteLocale,
       })
     } catch (error) {
       console.error('[member-invite] org invite email failed', error)
@@ -233,12 +242,14 @@ export async function createBoatMemberInvite(args: CreateBoatInviteArgs) {
   }
 
   const token = createInviteToken()
+  const inviteLocale = normalizeInviteLocale(args.inviteLocale)
   const invite = await db.memberInvite.create({
     data: {
       kind: 'BOAT',
       boatId: args.boatId,
       inviterUserId: args.inviterUserId,
       inviteeEmail: email,
+      inviteLocale,
       token,
       role: args.role,
       expiresAt: new Date(Date.now() + MEMBER_INVITE_TTL_MS),
@@ -255,8 +266,9 @@ export async function createBoatMemberInvite(args: CreateBoatInviteArgs) {
         to: email,
         url: memberInviteUrl(token),
         inviterName: args.inviterName,
-        targetName: boat?.name ?? 'a boat',
+        targetName: boat?.name,
         targetKind: 'boat',
+        locale: inviteLocale,
       })
     } catch (error) {
       console.error('[member-invite] boat invite email failed', error)
@@ -295,20 +307,20 @@ export async function resendMemberInvite(args: {
     data: { expiresAt, updatedAt: new Date() },
   })
 
-  let targetName = 'an organization'
+  let targetName: string | null = null
   let targetKind: 'org' | 'boat' = 'org'
   if (args.kind === 'ORG' && invite.orgId) {
     const org = await db.consortium.findUnique({
       where: { id: invite.orgId },
       select: { name: true },
     })
-    targetName = org?.name ?? targetName
+    targetName = org?.name ?? null
   } else if (invite.boatId) {
     const boat = await db.boat.findUnique({
       where: { id: invite.boatId },
       select: { name: true },
     })
-    targetName = boat?.name ?? 'a boat'
+    targetName = boat?.name ?? null
     targetKind = 'boat'
   }
 
@@ -318,6 +330,7 @@ export async function resendMemberInvite(args: {
     inviterName: args.inviterName,
     targetName,
     targetKind,
+    locale: invite.inviteLocale,
   })
 }
 
@@ -452,7 +465,7 @@ export async function acceptMemberInvite(args: {
   }
 
   if (invite.kind === 'ORG' && invite.orgId && invite.org && !wasOrgMember) {
-    fireOrgMembersNotification(args.userId, invite.org, 'joined the org.')
+    fireOrgMembersNotification(args.userId, invite.org, ({ key: 'joinedOrg' }))
   }
 
   return {

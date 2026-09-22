@@ -192,6 +192,8 @@ const catalog: TranslationCatalog = {
   pendingCount: '· {count} pendente',
   expiresOn: 'expira {date}',
   invite: 'Convidar',
+  inviteEmailLanguage: 'Idioma do convite',
+  inviteEmailLanguageHint: 'O e-mail de convite será enviado neste idioma.',
   inviteLink: 'Ligação de convite',
   resendInvite: 'Reenviar convite',
   copyLink: 'Copiar ligação',

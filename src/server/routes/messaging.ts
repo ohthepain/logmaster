@@ -32,6 +32,10 @@ import type {
   ObjectReference,
   ResponseCard,
 } from '../../domain/messaging'
+import {
+  parseProfilePhotoCrop,
+  renderProfilePhotoBytes,
+} from '../profile-photo-image'
 import { getPhotoObject, profilePhotoS3Key } from '../s3-photos'
 import {
   MAX_MESSAGE_ATTACHMENTS,
@@ -477,7 +481,7 @@ messagingRoutes.get('/users/:userId/avatar', async (c) => {
   if (!threads.some((t) => t.memberIds.includes(peerId))) return c.notFound()
   const peer = await prisma.user.findUnique({
     where: { id: peerId },
-    select: { image: true },
+    select: { image: true, profilePhotoCrop: true },
   })
   if (!peer?.image) return c.notFound()
   if (/^https:\/\//.test(peer.image)) return c.redirect(peer.image)
@@ -485,16 +489,20 @@ messagingRoutes.get('/users/:userId/avatar', async (c) => {
   for (const ext of ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic']) {
     try {
       const image = await getPhotoObject(profilePhotoS3Key(peerId, ext))
-      if (image.Body)
-        return new Response(
-          new Uint8Array(await image.Body.transformToByteArray()),
-          {
-            headers: {
-              'Content-Type': image.ContentType ?? 'image/jpeg',
-              'Cache-Control': 'private, max-age=300',
-            },
-          },
+      if (image.Body) {
+        const bytes = Buffer.from(await image.Body.transformToByteArray())
+        const rendered = await renderProfilePhotoBytes(
+          bytes,
+          parseProfilePhotoCrop(peer.profilePhotoCrop),
+          image.ContentType ?? 'image/jpeg',
         )
+        return new Response(new Uint8Array(rendered.buffer), {
+          headers: {
+            'Content-Type': rendered.contentType,
+            'Cache-Control': 'private, max-age=300',
+          },
+        })
+      }
     } catch {
       /* Try the next supported stored extension. */
     }

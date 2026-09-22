@@ -19,6 +19,7 @@ import {
   supportsNativeGoogleSignIn,
 } from '../lib/native/google-sign-in'
 import { DevComponentLabel } from './DevComponentLabel'
+import { useTranslation } from '../lib/i18n'
 
 type Tab = 'password' | 'magic'
 
@@ -41,6 +42,7 @@ export function SignInPanel({
   initialMode = 'sign-in',
   inviteRedirectPath,
 }: SignInPanelProps) {
+  const { language } = useTranslation()
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>(initialMode)
   const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
@@ -151,6 +153,7 @@ export function SignInPanel({
           const result = await signIn.magicLink({
             email,
             callbackURL: afterAuthPath,
+            metadata: { locale: language },
           })
           if (result.error) {
             toast.error(result.error.message ?? 'Magic link failed')
@@ -164,7 +167,8 @@ export function SignInPanel({
           password,
           name: name || email,
           callbackURL: emailVerificationCallbackUrl(getAppOrigin()),
-        })
+          preferredLanguage: language,
+        } as Parameters<typeof signUp.email>[0])
         if (result.error) {
           toast.error(result.error.message ?? 'Sign up failed')
           return
@@ -262,7 +266,7 @@ export function SignInPanel({
   if (pendingVerificationEmail) {
     return (
       <div
-        className={`ios-map-touch-target w-full max-w-md touch-manipulation scroll-mt-[calc(env(safe-area-inset-top,0px)+3rem)]${
+        className={`ios-map-touch-target w-full max-w-md touch-manipulation scroll-mt-[calc(var(--lm-safe-top)+3rem)]${
           embedded ? ' pt-2' : ''
         }`}
       >
@@ -322,14 +326,14 @@ export function SignInPanel({
 
   return (
     <div
-      className={`ios-map-touch-target w-full max-w-md touch-manipulation scroll-mt-[calc(env(safe-area-inset-top,0px)+3rem)]${
+      className={`ios-map-touch-target w-full max-w-md touch-manipulation scroll-mt-[calc(var(--lm-safe-top)+3rem)]${
         embedded ? ' pt-2' : ''
       }`}
     >
       <DevComponentLabel name="SignInPanel" />
       <div className="mb-8">
         <h2
-          className="text-[var(--sea-ink)] mb-2 scroll-mt-[calc(env(safe-area-inset-top,0px)+3rem)]"
+          className="text-[var(--sea-ink)] mb-2 scroll-mt-[calc(var(--lm-safe-top)+3rem)]"
           style={{ fontSize: '1.875rem', fontWeight: 700 }}
         >
           {mode === 'sign-in' ? 'Sign in' : 'Create account'}

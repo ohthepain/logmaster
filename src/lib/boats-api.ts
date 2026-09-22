@@ -93,7 +93,12 @@ export async function fetchBoatMembers(boatId: string): Promise<{
 
 export async function inviteBoatMember(
   boatId: string,
-  input: { email: string; role?: OrgMemberRole; sendEmail?: boolean },
+  input: {
+    email: string
+    role?: OrgMemberRole
+    sendEmail?: boolean
+    inviteLocale?: string
+  },
 ): Promise<InviteMemberResult> {
   return api<InviteMemberResult>(`/api/boats/${boatId}/members`, {
     method: 'POST',

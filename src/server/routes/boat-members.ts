@@ -14,6 +14,7 @@ import {
   serializeMemberInvite,
 } from '../member-invites'
 import { getSessionUserId } from '../session'
+import type { NotificationAction } from '../notifications/events'
 import { fireBoatMembersNotification } from '../notifications/route-hooks'
 
 const db = prisma as any
@@ -50,7 +51,7 @@ async function getBoatSummary(boatId: string) {
 function notifyBoatMembers(
   userId: string,
   boat: { id: string; name: string },
-  action: string,
+  action: NotificationAction,
 ) {
   fireBoatMembersNotification(userId, boat, action)
 }
@@ -168,6 +169,7 @@ boatMembersRoutes.post('/:boatId/members', async (c) => {
     userId?: string
     role?: string
     sendEmail?: boolean
+    inviteLocale?: string
   }
 
   const role = body.role && isMemberRole(body.role) ? body.role : 'MEMBER'
@@ -189,11 +191,12 @@ boatMembersRoutes.post('/:boatId/members', async (c) => {
           inviterName: user.name,
           role,
           inviteeEmail: email,
+          inviteLocale: body.inviteLocale,
           sendEmail: body.sendEmail !== false,
         })
         const boatSummary = await getBoatSummary(boatId)
         if (boatSummary) {
-          notifyBoatMembers(user.id, boatSummary, 'sent a member invite.')
+          notifyBoatMembers(user.id, boatSummary, ({ key: 'sentMemberInvite' }))
         }
         return c.json({ invite: serializeMemberInvite(invite) }, 201)
       } catch (error) {
@@ -235,7 +238,7 @@ boatMembersRoutes.post('/:boatId/members', async (c) => {
 
   const boatSummary = await getBoatSummary(boatId)
   if (boatSummary) {
-    notifyBoatMembers(user.id, boatSummary, 'added a member.')
+    notifyBoatMembers(user.id, boatSummary, ({ key: 'addedMember' }))
   }
 
   return c.json({ member: serializeMember(member) }, 201)
@@ -263,7 +266,7 @@ boatMembersRoutes.post('/:boatId/invite-link', async (c) => {
     })
     const boatSummary = await getBoatSummary(boatId)
     if (boatSummary) {
-      notifyBoatMembers(user.id, boatSummary, 'created a member invite link.')
+      notifyBoatMembers(user.id, boatSummary, ({ key: 'createdMemberInviteLink' }))
     }
     return c.json({ invite: serializeMemberInvite(invite) }, 201)
   } catch (error) {
@@ -305,7 +308,7 @@ boatMembersRoutes.patch('/:boatId/members/:memberUserId', async (c) => {
 
   const boatSummary = await getBoatSummary(boatId)
   if (boatSummary) {
-    notifyBoatMembers(userId, boatSummary, 'changed a member role.')
+    notifyBoatMembers(userId, boatSummary, ({ key: 'changedMemberRole' }))
   }
 
   return c.json({ member: serializeMember(member) })
@@ -338,7 +341,7 @@ boatMembersRoutes.delete('/:boatId/members/:memberUserId', async (c) => {
 
   const boatSummary = await getBoatSummary(boatId)
   if (boatSummary) {
-    notifyBoatMembers(userId, boatSummary, 'removed a member.')
+    notifyBoatMembers(userId, boatSummary, ({ key: 'removedMember' }))
   }
 
   return c.json({ ok: true })

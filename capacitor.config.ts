@@ -16,6 +16,8 @@ const config: CapacitorConfig = {
   webDir: 'dist/client',
   android: {
     useLegacyBridge: true,
+    /** Edge-to-edge WebView; insets come from SystemBars CSS vars + --lm-safe-* in the web app. */
+    adjustMarginsForEdgeToEdge: 'disable',
   },
   server: devServerUrl
     ? {
@@ -27,6 +29,9 @@ const config: CapacitorConfig = {
         cleartext: remoteAppUrl.startsWith('http://'),
       },
   plugins: {
+    SystemBars: {
+      insetsHandling: 'css',
+    },
     LocalNotifications: {
       smallIcon: 'ic_stat_icon_config_sample',
     },

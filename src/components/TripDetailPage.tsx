@@ -945,7 +945,7 @@ export function TripDetailPage({
           <div
             className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-3"
             style={{
-              paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+              paddingBottom: 'max(var(--lm-safe-bottom), 16px)',
             }}
           >
             <button

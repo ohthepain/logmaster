@@ -191,6 +191,8 @@ const catalog: TranslationCatalog = {
   pendingCount: '· {count} bekliyor',
   expiresOn: '{date} tarihinde sona erer',
   invite: 'Davet et',
+  inviteEmailLanguage: 'Davet dili',
+  inviteEmailLanguageHint: 'Davet e-postası bu dilde gönderilir.',
   inviteLink: 'Davet bağlantısı',
   resendInvite: 'Daveti yeniden gönder',
   copyLink: 'Bağlantıyı kopyala',

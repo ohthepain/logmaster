@@ -51,12 +51,12 @@ export function FtueOverlay({ onComplete }: FtueOverlayProps) {
     >
       <DevComponentLabel
         name="FtueOverlay"
-        className="absolute left-3 top-[calc(env(safe-area-inset-top,0px)+0.75rem)] z-20 sm:left-4"
+        className="absolute left-3 top-[calc(var(--lm-safe-top)+0.75rem)] z-20 sm:left-4"
       />
       <FtueTopoBackground />
 
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-4 pt-[calc(env(safe-area-inset-top,0px)+2.5rem)] sm:px-8 sm:pt-[calc(env(safe-area-inset-top,0px)+3rem)]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-4 pt-[calc(var(--lm-safe-top)+2.5rem)] sm:px-8 sm:pt-[calc(var(--lm-safe-top)+3rem)]">
           {step === 0 && <FtueFeaturesStep />}
           {!skipPwaStep && step === 1 && (
             <FtuePwaStep
@@ -70,7 +70,7 @@ export function FtueOverlay({ onComplete }: FtueOverlayProps) {
         </div>
 
         {!showAuthStep ? (
-          <footer className="ios-map-touch-target relative z-10 shrink-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+2rem)] pt-2 sm:px-8">
+          <footer className="ios-map-touch-target relative z-10 shrink-0 px-6 pb-[calc(var(--lm-safe-bottom)+2rem)] pt-2 sm:px-8">
             <button
               type="button"
               onClick={goNext}
@@ -84,7 +84,7 @@ export function FtueOverlay({ onComplete }: FtueOverlayProps) {
       </div>
 
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center gap-2 px-6 pt-[calc(env(safe-area-inset-top,0px)+1.25rem)]"
+        className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-center gap-2 px-6 pt-[calc(var(--lm-safe-top)+1.25rem)]"
         aria-label="Tutorial progress"
       >
         {Array.from({ length: stepCount }, (_, index) => (

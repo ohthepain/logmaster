@@ -1,10 +1,23 @@
 import type { BoatActivityTranslationKey } from './boat-activity-copy'
 import type { TripLogTranslationKey } from './trip-log-copy'
 import type { productUiCopy } from './product-ui-copy'
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import type { ReactNode } from 'react'
 import englishCatalog from './locales/en'
+import { useSession } from './auth-client'
 import { apiUrl } from './app-origin'
+import {
+  fetchProfile,
+  updateProfilePreferredLanguage,
+} from './profile-api'
 
 export type TranslationKey =
   | BoatActivityTranslationKey
@@ -188,6 +201,8 @@ export type TranslationKey =
   | 'pendingCount'
   | 'expiresOn'
   | 'invite'
+  | 'inviteEmailLanguage'
+  | 'inviteEmailLanguageHint'
   | 'inviteLink'
   | 'resendInvite'
   | 'copyLink'
@@ -492,11 +507,9 @@ function matchBrowserLanguage(tag: string): Language | undefined {
   return languages.find((item) => item.code === prefix)?.code
 }
 
-function preferredLanguage(): Language {
+/** OS / browser locale only — never reads localStorage. */
+export function osLanguage(): Language {
   if (typeof window === 'undefined') return 'en'
-  const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY)
-  const storedLanguage = languages.find((item) => item.code === stored)?.code
-  if (storedLanguage) return storedLanguage
   return matchBrowserLanguage(navigator.language) ?? 'en'
 }
 
@@ -530,6 +543,11 @@ type I18nContextValue = {
 
 const I18nContext = createContext<I18nContextValue | null>(null)
 
+function languageFromCode(code: string | null | undefined): Language | null {
+  if (!code) return null
+  return languages.find((item) => item.code === code)?.code ?? null
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
   // Start from the server-rendered English catalog, then switch after
   // hydration so locale-dependent labels never cause a hydration mismatch.
@@ -537,11 +555,54 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [catalog, setCatalog] = useState<TranslationCatalog>(englishCatalog)
   const [loading, setLoading] = useState(false)
   const [hydrated, setHydrated] = useState(false)
+  const session = useSession()
+  const userId = session.data?.user?.id
+  const syncedLanguageForUser = useRef<string | null>(null)
 
   useEffect(() => {
-    setLanguageState(preferredLanguage())
+    setLanguageState(osLanguage())
     setHydrated(true)
   }, [])
+
+  useEffect(() => {
+    if (!hydrated || !userId) {
+      syncedLanguageForUser.current = null
+      return
+    }
+    if (syncedLanguageForUser.current === userId) return
+
+    let cancelled = false
+    void fetchProfile()
+      .then(async (profile) => {
+        if (cancelled) return
+        syncedLanguageForUser.current = userId
+
+        const stored = languageFromCode(profile.preferredLanguage)
+        if (stored) {
+          setLanguageState(stored)
+          return
+        }
+
+        const deviceLanguage = osLanguage()
+        setLanguageState(deviceLanguage)
+        await updateProfilePreferredLanguage(deviceLanguage).catch(() => {})
+      })
+      .catch(() => {})
+
+    return () => {
+      cancelled = true
+    }
+  }, [hydrated, userId])
+
+  const setLanguage = useCallback(
+    (next: Language) => {
+      setLanguageState(next)
+      if (userId) {
+        void updateProfilePreferredLanguage(next).catch(() => {})
+      }
+    },
+    [userId],
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -560,18 +621,20 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     if (!hydrated) return
     document.documentElement.lang = language
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr'
-    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
-  }, [hydrated, language])
+    if (userId) {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
+    }
+  }, [hydrated, language, userId])
 
   const value = useMemo<I18nContextValue>(
     () => ({
       language,
       loading,
-      setLanguage: setLanguageState,
+      setLanguage,
       t: (key, vars) =>
         interpolateTranslation(catalog[key] ?? englishCatalog[key], vars),
     }),
-    [catalog, language, loading],
+    [catalog, language, loading, setLanguage],
   )
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
 }

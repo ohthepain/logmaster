@@ -84,7 +84,7 @@ export function EquipmentFlowDialog({
         aria-labelledby={id}
         className="equipment-flow ios-map-touch-target flex h-[100dvh] w-full flex-col overflow-hidden bg-[var(--surface-strong)] text-[var(--sea-ink)] shadow-2xl sm:h-[min(780px,calc(100dvh-3rem))] sm:max-w-xl sm:rounded-[2rem] sm:border sm:border-[var(--panel-border)]"
       >
-        <header className="shrink-0 px-6 pb-5 pt-[max(1.5rem,env(safe-area-inset-top))] sm:px-8 sm:pt-7">
+        <header className="shrink-0 px-6 pb-5 pt-[max(1.5rem,var(--lm-safe-top))] sm:px-8 sm:pt-7">
           <div className="flex items-center justify-between gap-4">
             <h2
               ref={heading}
@@ -134,7 +134,7 @@ export function EquipmentFlowDialog({
             {children}
           </div>
         </div>
-        <footer className="shrink-0 border-t border-[var(--line)] bg-[var(--surface-strong)] px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 sm:px-8 sm:pb-6">
+        <footer className="shrink-0 border-t border-[var(--line)] bg-[var(--surface-strong)] px-6 pb-[max(1.25rem,var(--lm-safe-bottom))] pt-4 sm:px-8 sm:pb-6">
           {footer}
         </footer>
       </div>

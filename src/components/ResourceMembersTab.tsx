@@ -12,6 +12,8 @@ import { Modal } from './Modal'
 import { profilePhotoUrl } from '../lib/profile-api'
 import { cn } from '../lib/cn'
 import { useTranslation } from '../lib/i18n'
+import type { InviteLocale } from '../lib/invite-locale'
+import { InviteLanguageSelect } from './InviteLanguageSelect'
 import {
   NotificationBellToggle,
   ResourceRefreshButton,
@@ -25,6 +27,7 @@ type InviteMemberModalProps = {
   onSubmit: (input: {
     email: string
     role: OrgMemberRole
+    inviteLocale: InviteLocale
   }) => Promise<{ kind: 'member' | 'invite'; message: string }>
 }
 
@@ -34,9 +37,10 @@ export function InviteMemberModal({
   title,
   onSubmit,
 }: InviteMemberModalProps) {
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<OrgMemberRole>('MEMBER')
+  const [inviteLocale, setInviteLocale] = useState<InviteLocale>(language)
   const [loading, setLoading] = useState(false)
 
   if (!open) return null
@@ -45,6 +49,7 @@ export function InviteMemberModal({
     if (loading) return
     setEmail('')
     setRole('MEMBER')
+    setInviteLocale(language)
     onClose()
   }
 
@@ -57,7 +62,7 @@ export function InviteMemberModal({
     }
     setLoading(true)
     try {
-      const result = await onSubmit({ email: trimmed, role })
+      const result = await onSubmit({ email: trimmed, role, inviteLocale })
       toast.success(result.message)
       handleClose()
     } catch (e) {
@@ -104,6 +109,11 @@ export function InviteMemberModal({
             ))}
           </select>
         </label>
+        <InviteLanguageSelect
+          value={inviteLocale}
+          onChange={setInviteLocale}
+          disabled={loading}
+        />
         <p className="m-0 text-xs leading-5 text-[var(--sea-ink-soft)]">
           If they don&apos;t have an account yet, we&apos;ll email them a link
           to sign up and join automatically.

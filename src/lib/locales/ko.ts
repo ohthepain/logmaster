@@ -191,6 +191,8 @@ const catalog: TranslationCatalog = {
   pendingCount: '· {count}건 대기',
   expiresOn: '{date}에 만료',
   invite: '초대',
+  inviteEmailLanguage: '초대 이메일 언어',
+  inviteEmailLanguageHint: '초대 이메일은 이 언어로 발송됩니다.',
   inviteLink: '초대 링크',
   resendInvite: '초대 다시 보내기',
   copyLink: '링크 복사',

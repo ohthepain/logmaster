@@ -85,7 +85,7 @@ export function MapDefaultView() {
           className="ios-map-touch-target pointer-events-auto absolute z-30 inline-flex size-14 items-center justify-center rounded-full bg-btn-bg text-btn-text shadow-lg transition hover:-translate-y-px"
           style={{
             right: 16,
-            bottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+            bottom: 'max(var(--lm-safe-bottom), 16px)',
           }}
         >
           <Plus className="size-7" strokeWidth={2.5} aria-hidden />

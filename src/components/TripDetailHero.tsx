@@ -363,7 +363,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
           <SailingMapControlStack
             className={cn(
               showPlaybackOverlay &&
-                'top-auto bottom-[calc(13.5rem+env(safe-area-inset-bottom,0px))] translate-y-0',
+                'top-auto bottom-[calc(13.5rem+var(--lm-safe-bottom))] translate-y-0',
             )}
             onZoomIn={() => mapRef.current?.zoomIn()}
             onZoomOut={() => mapRef.current?.zoomOut()}
@@ -465,7 +465,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
             aria-label="Completed trip log"
             className="ios-map-touch-target pointer-events-auto absolute inset-x-0 bottom-0 z-30 border-t border-white/25 bg-black/65 px-3 py-3 text-white shadow-[0_-12px_36px_rgba(0,0,0,0.2)] backdrop-blur-xl sm:px-4"
             style={{
-              paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 10px)',
+              paddingBottom: 'max(var(--lm-safe-bottom), 10px)',
             }}
           >
             <div className="mx-auto grid max-w-4xl grid-cols-[1fr_auto_1fr] items-center">

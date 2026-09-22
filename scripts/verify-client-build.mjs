@@ -8,6 +8,7 @@ const stylesRefPattern = /\/assets\/(styles-[A-Za-z0-9_-]+\.css)/g
 
 await access(resolve(clientDir, 'offline.html'))
 await access(resolve(clientDir, '.well-known/apple-app-site-association'))
+await access(resolve(clientDir, '.well-known/assetlinks.json'))
 
 const assets = await readdir(assetsDir)
 const clientStylesFiles = assets.filter((name) => name.startsWith('styles-') && name.endsWith('.css'))

@@ -8,6 +8,7 @@ export type MemberInvite = {
   orgId: string | null
   boatId: string | null
   inviteeEmail: string | null
+  inviteLocale?: string
   token: string
   role: OrgMemberRole
   status: string

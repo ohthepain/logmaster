@@ -191,6 +191,8 @@ const catalog: TranslationCatalog = {
   pendingCount: '· {count} đang chờ',
   expiresOn: 'hết hạn {date}',
   invite: 'Mời',
+  inviteEmailLanguage: 'Ngôn ngữ lời mời',
+  inviteEmailLanguageHint: 'Email mời sẽ được gửi bằng ngôn ngữ này.',
   inviteLink: 'Liên kết mời',
   resendInvite: 'Gửi lại lời mời',
   copyLink: 'Sao chép liên kết',

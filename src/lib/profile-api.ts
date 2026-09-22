@@ -1,5 +1,7 @@
 import { apiJson } from './api-client'
 import { apiUrl } from './app-origin'
+import type { InviteLocale } from './invite-locale'
+import type { ProfilePhotoCrop } from './profile-photo-crop'
 
 export type ProfileUser = {
   id: string
@@ -7,6 +9,7 @@ export type ProfileUser = {
   email: string
   image: string | null
   tutorialCompleted: boolean
+  preferredLanguage: string | null
 }
 
 const PROFILE_IMAGE_PATH = '/api/profile/photo'
@@ -48,9 +51,23 @@ export async function updateProfileName(name: string): Promise<ProfileUser> {
   return data.user
 }
 
-export async function uploadProfilePhoto(file: File): Promise<ProfileUser> {
+export async function updateProfilePreferredLanguage(
+  language: InviteLocale,
+): Promise<ProfileUser> {
+  const data = await api<{ user: ProfileUser }>('/api/profile/language', {
+    method: 'PATCH',
+    body: JSON.stringify({ language }),
+  })
+  return data.user
+}
+
+export async function uploadProfilePhoto(
+  file: File,
+  crop: ProfilePhotoCrop,
+): Promise<ProfileUser> {
   const form = new FormData()
   form.append('file', file)
+  form.append('crop', JSON.stringify(crop))
   const data = await api<{ user: ProfileUser }>('/api/profile/photo', {
     method: 'POST',
     body: form,

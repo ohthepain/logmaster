@@ -15,7 +15,12 @@ import {
   filterUsersNotBlockedByMutes,
   pathsForActivityEvent,
 } from './preference-gate'
+import { normalizeInviteLocale } from '../../lib/invite-locale'
 import { logServerEvent } from '../lib/server-log'
+import {
+  renderActivityNotification,
+  type ActivityNotificationLocalization,
+} from './activity-message'
 
 const db = prisma as any
 
@@ -28,6 +33,7 @@ export type ActivityEventInput = {
   body: string
   linkUrl?: string | null
   metadata?: Record<string, unknown> | null
+  localization?: ActivityNotificationLocalization
 }
 
 function isAdminTopic(topic: NotificationTopic): boolean {
@@ -182,15 +188,39 @@ export async function emitActivityEvent(
       }
     }
 
-    const notifications = recipientIds.map((userId) => ({
-      userId,
-      topic: input.topic,
-      title: input.title,
-      body: input.body,
-      linkUrl: input.linkUrl ?? null,
-      actorUserId: input.actorUserId,
-      metadata: input.metadata ?? null,
-    }))
+    let localeByUser = new Map<string, ReturnType<typeof normalizeInviteLocale>>()
+    if (input.localization) {
+      const users = await db.user.findMany({
+        where: { id: { in: recipientIds } },
+        select: { id: true, preferredLanguage: true },
+      })
+      localeByUser = new Map(
+        users.map(
+          (user: { id: string; preferredLanguage: string | null }) => [
+            user.id,
+            normalizeInviteLocale(user.preferredLanguage),
+          ],
+        ),
+      )
+    }
+
+    const notifications = recipientIds.map((userId) => {
+      const localized = input.localization
+        ? renderActivityNotification(
+            input.localization,
+            localeByUser.get(userId) ?? 'en',
+          )
+        : { title: input.title, body: input.body }
+      return {
+        userId,
+        topic: input.topic,
+        title: localized.title,
+        body: localized.body,
+        linkUrl: input.linkUrl ?? null,
+        actorUserId: input.actorUserId,
+        metadata: input.metadata ?? null,
+      }
+    })
 
     const created = await db.notification.createManyAndReturn({
       data: notifications,

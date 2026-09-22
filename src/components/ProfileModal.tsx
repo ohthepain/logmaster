@@ -17,7 +17,9 @@ import {
   updateProfileName,
   uploadProfilePhoto,
 } from '../lib/profile-api'
+import type { ProfilePhotoCrop } from '../lib/profile-photo-crop'
 import { Modal } from './Modal'
+import { ProfilePhotoCropModal } from './ProfilePhotoCropModal'
 import { enablePushOnDevice } from './PushNotificationsRegister'
 
 type ProfileModalProps = {
@@ -42,6 +44,10 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
   const [savingNotificationDefaults, setSavingNotificationDefaults] =
     useState(false)
   const [enablingPush, setEnablingPush] = useState(false)
+  const [pendingPhoto, setPendingPhoto] = useState<{
+    file: File
+    previewUrl: string
+  } | null>(null)
   useEffect(() => {
     if (!open || !user) return
     setName(user.name || '')
@@ -54,6 +60,14 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
         // ignore
       })
   }, [open, user])
+
+  useEffect(() => {
+    if (open) return
+    setPendingPhoto((current) => {
+      if (current) URL.revokeObjectURL(current.previewUrl)
+      return null
+    })
+  }, [open])
 
   if (!open || !user) return null
 
@@ -100,20 +114,42 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
     }
   }
 
-  const handlePhotoPick = async (file: File | undefined) => {
+  const clearPendingPhoto = () => {
+    setPendingPhoto((current) => {
+      if (current) URL.revokeObjectURL(current.previewUrl)
+      return null
+    })
+  }
+
+  const handlePhotoPick = (file: File | undefined) => {
     if (!file) return
+    clearPendingPhoto()
+    setPendingPhoto({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    })
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handlePhotoCropCancel = () => {
+    if (uploadingPhoto) return
+    clearPendingPhoto()
+  }
+
+  const handlePhotoCropAccept = async (crop: ProfilePhotoCrop) => {
+    if (!pendingPhoto) return
     setUploadingPhoto(true)
     try {
-      await uploadProfilePhoto(file)
+      await uploadProfilePhoto(pendingPhoto.file, crop)
       setPhotoVersion((value) => value + 1)
       await refreshSession()
       onUpdated?.()
       toast.success('Profile photo updated')
+      clearPendingPhoto()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to upload photo')
     } finally {
       setUploadingPhoto(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -134,6 +170,7 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
   }
 
   return (
+    <>
     <Modal
       title={t('profile')}
       onClose={handleClose}
@@ -212,7 +249,6 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Your name"
-            autoFocus
             className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
           />
         </label>
@@ -319,5 +355,13 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
         </div>
       </form>
     </Modal>
+    <ProfilePhotoCropModal
+      open={pendingPhoto != null}
+      imageUrl={pendingPhoto?.previewUrl ?? ''}
+      busy={uploadingPhoto}
+      onCancel={handlePhotoCropCancel}
+      onAccept={(crop) => void handlePhotoCropAccept(crop)}
+    />
+    </>
   )
 }

@@ -1,8 +1,8 @@
-/** CSS env() for the top safe area (Dynamic Island / status bar). Requires viewport-fit=cover. */
-export const SAFE_AREA_TOP = 'env(safe-area-inset-top, 0px)'
+/** Top inset (status bar / Dynamic Island). Uses Capacitor --safe-area-inset-* on Android. */
+export const SAFE_AREA_TOP = 'var(--lm-safe-top)'
 
-/** CSS env() for the bottom safe area (home indicator). Requires viewport-fit=cover. */
-export const SAFE_AREA_BOTTOM = 'env(safe-area-inset-bottom, 0px)'
+/** Bottom inset (home indicator / gesture bar). */
+export const SAFE_AREA_BOTTOM = 'var(--lm-safe-bottom)'
 
 /** Measured bottom safe-area inset (iOS home indicator). Requires viewport-fit=cover. */
 export function measureSafeAreaInsetBottom(): number {
@@ -10,7 +10,7 @@ export function measureSafeAreaInsetBottom(): number {
 
   const probe = document.createElement('div')
   probe.style.cssText =
-    'position:fixed;visibility:hidden;pointer-events:none;padding-bottom:env(safe-area-inset-bottom,0px)'
+    'position:fixed;visibility:hidden;pointer-events:none;padding-bottom:var(--lm-safe-bottom)'
   document.documentElement.appendChild(probe)
   const value = parseFloat(getComputedStyle(probe).paddingBottom) || 0
   probe.remove()
@@ -18,8 +18,7 @@ export function measureSafeAreaInsetBottom(): number {
 }
 
 /** Top offset for toasts and other chrome below Header (safe area + min-h-16 + py-2). */
-export const APP_HEADER_TOP_OFFSET =
-  'calc(env(safe-area-inset-top, 0px) + 5rem)'
+export const APP_HEADER_TOP_OFFSET = 'calc(var(--lm-safe-top) + 5rem)'
 
 /** Header inner chrome (min-h-16 + py-2) excluding the top safe-area inset. */
 export const APP_HEADER_INNER_HEIGHT_PX = 80
@@ -30,7 +29,7 @@ export function measureSafeAreaInsetTop(): number {
 
   const probe = document.createElement('div')
   probe.style.cssText =
-    'position:fixed;visibility:hidden;pointer-events:none;padding-top:env(safe-area-inset-top,0px)'
+    'position:fixed;visibility:hidden;pointer-events:none;padding-top:var(--lm-safe-top)'
   document.documentElement.appendChild(probe)
   const value = parseFloat(getComputedStyle(probe).paddingTop) || 0
   probe.remove()

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { DEV_FALLBACK_POSITION } from '../lib/logbook-context'
 import type { MapLngLat } from '../lib/logbook-map-geo'
 import { isValidMapLngLat, mapBrandColor } from '../lib/logbook-map-geo'
+import { addSailingMapAttributionControl } from '../lib/maplibre-attribution-control'
 import {
   addOpenSeaMapSeamarkOverlay,
   addOpenSeaMapBathymetryOverlays,
@@ -105,10 +106,7 @@ export function WaypointPositionEditor({
         })
 
         unbindTerrainGuard = guardSailingMapAgainstTerrain(map)
-        map.addControl(
-          new maplibregl.AttributionControl({ compact: true }),
-          'bottom-right',
-        )
+        addSailingMapAttributionControl(map, 'bottom-right')
 
         map.on('load', () => {
           if (!map) return

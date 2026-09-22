@@ -42,6 +42,11 @@
   --active-border: rgba(0, 0, 0, 0.22);
   --hero-a: rgba(0, 0, 0, 0.03);
   --hero-b: rgba(0, 0, 0, 0.02);
+  /* Capacitor Android injects --safe-area-inset-* when env() is wrong (WebView < 140). */
+  --lm-safe-top: var(--safe-area-inset-top, var(--lm-safe-top));
+  --lm-safe-bottom: var(--safe-area-inset-bottom, var(--lm-safe-bottom));
+  --lm-safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --lm-safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
 }
 
 /* Tailwind v4 treats text-[var(--x)] as font-size, so filled buttons
@@ -497,12 +502,54 @@ a {
 }
 
 .sailing-map .maplibregl-ctrl-attrib {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.88);
   color: #000;
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.sailing-map .maplibregl-ctrl-attrib.maplibregl-compact {
+  min-height: 14px;
+  margin: 4px 6px;
+  padding: 0 18px 0 0;
+  border-radius: 8px;
+}
+
+.sailing-map .maplibregl-ctrl-attrib.maplibregl-compact-show {
+  padding: 1px 20px 1px 4px;
+}
+
+.sailing-map
+  .maplibregl-ctrl-bottom-left
+  > .maplibregl-ctrl-attrib.maplibregl-compact-show,
+.sailing-map
+  .maplibregl-ctrl-top-left
+  > .maplibregl-ctrl-attrib.maplibregl-compact-show {
+  padding: 1px 4px 1px 20px;
+}
+
+.sailing-map .maplibregl-ctrl-attrib summary.maplibregl-ctrl-attrib-button {
+  width: 18px;
+  height: 18px;
+  border-radius: 8px;
+  background-size: 11px 11px;
+}
+
+.sailing-map .maplibregl-ctrl-attrib-inner {
+  font-size: 9px;
+  line-height: 1.25;
+  max-width: min(72vw, 240px);
 }
 
 .sailing-map .maplibregl-ctrl-attrib a {
   color: #000;
+}
+
+.sailing-map .maplibregl-ctrl-attrib-inner img {
+  height: 12px !important;
+  width: auto !important;
+  max-width: 72px;
+  vertical-align: middle;
 }
 
 .sailing-map .maplibregl-canvas {
@@ -594,7 +641,7 @@ a {
 
 /* Sonner — below Dynamic Island + Header (see AppToaster / APP_HEADER_TOP_OFFSET) */
 [data-sonner-toaster][data-y-position="top"] {
-  top: calc(env(safe-area-inset-top, 0px) + 5rem) !important;
+  top: calc(var(--lm-safe-top) + 5rem) !important;
 }
 
 .app-toast {

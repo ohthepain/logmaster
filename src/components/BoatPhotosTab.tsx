@@ -480,7 +480,7 @@ export function BoatPhotosTab({
 
       {activePhoto && activeIndex != null ? (
         <div className="fixed inset-0 z-[90] flex flex-col bg-[var(--overlay)] backdrop-blur-sm">
-          <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-2 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]">
+          <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-2 pt-[calc(var(--lm-safe-top)+0.75rem)]">
             <p className="m-0 text-sm font-semibold text-white">
               {activeIndex + 1} / {photos.length}
             </p>
@@ -522,7 +522,7 @@ export function BoatPhotosTab({
             ) : null}
           </div>
 
-          <div className="max-h-[45vh] shrink-0 overflow-y-auto rounded-t-[1.75rem] border-t border-[var(--panel-border)] bg-[var(--surface-strong)] p-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:p-6">
+          <div className="max-h-[45vh] shrink-0 overflow-y-auto rounded-t-[1.75rem] border-t border-[var(--panel-border)] bg-[var(--surface-strong)] p-4 pb-[calc(var(--lm-safe-bottom)+1rem)] sm:p-6">
             <h2 className="m-0 text-lg font-bold text-[var(--sea-ink)]">
               {boat.name}
             </h2>

@@ -26,6 +26,7 @@ import {
   routeLinePaint,
   syncRouteMapMarkerImages,
 } from '../lib/route-map-icons'
+import { addSailingMapAttributionControl } from '../lib/maplibre-attribution-control'
 import {
   addOpenSeaMapSeamarkOverlay,
   addOpenSeaMapBathymetryOverlays,
@@ -253,10 +254,7 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(
           })
 
           unbindTerrainGuard = guardSailingMapAgainstTerrain(map)
-          map.addControl(
-            new maplibregl.AttributionControl({ compact: true }),
-            'bottom-right',
-          )
+          addSailingMapAttributionControl(map, 'bottom-right')
 
           map.on('load', () => {
             if (!map) return

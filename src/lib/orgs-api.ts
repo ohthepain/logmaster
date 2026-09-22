@@ -61,7 +61,12 @@ export async function fetchOrgMembers(orgId: string): Promise<{
 
 export async function inviteOrgMember(
   orgId: string,
-  input: { email: string; role?: OrgMemberRole; sendEmail?: boolean },
+  input: {
+    email: string
+    role?: OrgMemberRole
+    sendEmail?: boolean
+    inviteLocale?: string
+  },
 ): Promise<InviteMemberResult> {
   return api<InviteMemberResult>(`/api/orgs/${orgId}/members`, {
     method: 'POST',

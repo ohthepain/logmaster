@@ -84,7 +84,7 @@ export async function processNotificationEmailJob(
 ): Promise<void> {
   const user = await db.user.findUnique({
     where: { id: payload.userId },
-    select: { email: true, emailVerified: true },
+    select: { email: true, emailVerified: true, preferredLanguage: true },
   })
   if (!user?.email || !user.emailVerified) return
 
@@ -93,6 +93,7 @@ export async function processNotificationEmailJob(
     title: payload.title,
     body: payload.body,
     linkUrl: payload.linkUrl,
+    locale: user.preferredLanguage,
   })
 }
 
