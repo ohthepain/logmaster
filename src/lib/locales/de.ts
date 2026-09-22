@@ -196,7 +196,8 @@ const catalog: TranslationCatalog = {
   expiresOn: 'läuft ab {date}',
   invite: 'Einladen',
   inviteEmailLanguage: 'Sprache der Einladung',
-  inviteEmailLanguageHint: 'Die Einladungs-E-Mail wird in dieser Sprache gesendet.',
+  inviteEmailLanguageHint:
+    'Die Einladungs-E-Mail wird in dieser Sprache gesendet.',
   inviteLink: 'Einladungslink',
   resendInvite: 'Einladung erneut senden',
   copyLink: 'Link kopieren',

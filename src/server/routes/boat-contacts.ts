@@ -137,11 +137,10 @@ boatContactsRoutes.post('/:boatId/contacts', async (c) => {
 
   const boat = await getBoatSummary(boatId)
   if (boat) {
-    fireBoatContactsNotification(
-      userId,
-      boat,
-      { key: 'addedContact', name: displayName },
-    )
+    fireBoatContactsNotification(userId, boat, {
+      key: 'addedContact',
+      name: displayName,
+    })
   }
 
   return c.json({ contact: serializeBoatContact(contact) }, 201)
@@ -244,7 +243,7 @@ boatContactsRoutes.patch('/:boatId/contacts/:contactId', async (c) => {
 
   const boat = await getBoatSummary(boatId)
   if (boat) {
-    fireBoatContactsNotification(userId, boat, ({ key: 'updatedContact' }))
+    fireBoatContactsNotification(userId, boat, { key: 'updatedContact' })
   }
 
   return c.json({ contact: serializeBoatContact(contact) })
@@ -271,7 +270,7 @@ boatContactsRoutes.delete('/:boatId/contacts/:contactId', async (c) => {
 
   const boat = await getBoatSummary(boatId)
   if (boat) {
-    fireBoatContactsNotification(userId, boat, ({ key: 'removedContact' }))
+    fireBoatContactsNotification(userId, boat, { key: 'removedContact' })
   }
 
   return c.json({ ok: true })

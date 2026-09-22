@@ -170,7 +170,9 @@ export function renderChatMessageNotification(args: {
   isDirectMessage: boolean
   threadName: string
 }): { title: string; body: string } {
-  const strings = getActivityNotificationStrings(normalizeInviteLocale(args.locale))
+  const strings = getActivityNotificationStrings(
+    normalizeInviteLocale(args.locale),
+  )
   return {
     title: args.isDirectMessage ? strings.chatNewMessageTitle : args.threadName,
     body: strings.chatNewMessageBody,

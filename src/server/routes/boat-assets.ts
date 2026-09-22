@@ -954,11 +954,10 @@ boatAssetsRoutes.post(
         console.warn('[assets] product enrichment could not start', error)
       }
     }
-    fireBoatAssetsNotification(
-      userId,
-      boat,
-      { key: 'addedAsset', name: input.data.name },
-    )
+    fireBoatAssetsNotification(userId, boat, {
+      key: 'addedAsset',
+      name: input.data.name,
+    })
 
     return c.json({ asset: serializeAsset(asset) }, 201)
   },
@@ -1380,11 +1379,10 @@ boatAssetsRoutes.post('/:boatId/assets/:assetId/work', async (c) => {
     },
   })
 
-  fireBoatAssetsNotification(
-    userId,
-    boat,
-    { key: 'loggedWorkOnAsset', name: work.asset.name },
-  )
+  fireBoatAssetsNotification(userId, boat, {
+    key: 'loggedWorkOnAsset',
+    name: work.asset.name,
+  })
 
   return c.json({ work: serializeWork(work) }, 201)
 })

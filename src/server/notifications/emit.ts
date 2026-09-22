@@ -18,9 +18,10 @@ import {
 import { normalizeInviteLocale } from '../../lib/invite-locale'
 import { logServerEvent } from '../lib/server-log'
 import {
-  renderActivityNotification,
-  type ActivityNotificationLocalization,
+  renderActivityNotification
+  
 } from './activity-message'
+import type {ActivityNotificationLocalization} from './activity-message';
 
 const db = prisma as any
 
@@ -188,19 +189,20 @@ export async function emitActivityEvent(
       }
     }
 
-    let localeByUser = new Map<string, ReturnType<typeof normalizeInviteLocale>>()
+    let localeByUser = new Map<
+      string,
+      ReturnType<typeof normalizeInviteLocale>
+    >()
     if (input.localization) {
       const users = await db.user.findMany({
         where: { id: { in: recipientIds } },
         select: { id: true, preferredLanguage: true },
       })
       localeByUser = new Map(
-        users.map(
-          (user: { id: string; preferredLanguage: string | null }) => [
-            user.id,
-            normalizeInviteLocale(user.preferredLanguage),
-          ],
-        ),
+        users.map((user: { id: string; preferredLanguage: string | null }) => [
+          user.id,
+          normalizeInviteLocale(user.preferredLanguage),
+        ]),
       )
     }
 

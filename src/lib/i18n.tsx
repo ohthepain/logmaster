@@ -14,10 +14,7 @@ import type { ReactNode } from 'react'
 import englishCatalog from './locales/en'
 import { useSession } from './auth-client'
 import { apiUrl } from './app-origin'
-import {
-  fetchProfile,
-  updateProfilePreferredLanguage,
-} from './profile-api'
+import { fetchProfile, updateProfilePreferredLanguage } from './profile-api'
 
 export type TranslationKey =
   | BoatActivityTranslationKey

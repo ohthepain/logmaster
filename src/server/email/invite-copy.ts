@@ -184,7 +184,8 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'kutsui sinut miehistöönsä palvelussa {appName}. Kirjaudu sisään tällä sähköpostilla ja hyväksy kutsu yhdistääksesi tilisi.',
     crewFootnote:
       'Linkki avaa palvelun {appName}. Jos sinulla ei vielä ole tiliä, kirjaudu sisään tällä sähköpostilla luodaksesi sellaisen.',
-    memberSubject: '{inviter} kutsui sinut kohteeseen {target} palvelussa {appName}',
+    memberSubject:
+      '{inviter} kutsui sinut kohteeseen {target} palvelussa {appName}',
     memberPreheader: 'Liity kohteeseen {target} palvelussa {appName}.',
     memberIntroSuffix:
       'kutsui sinut kohteeseen {target} palvelussa {appName}. Kirjaudu sisään tällä sähköpostilla ja hyväksy kutsu.',
@@ -197,7 +198,8 @@ const copy: Record<InviteLocale, InviteCopy> = {
     boatFallback: 'ένα σκάφος',
     ctaAccept: 'Αποδοχή πρόσκλησης',
     ignoreEmail: 'Αν δεν περιμένατε αυτό το email, μπορείτε να το αγνοήσετε.',
-    crewSubject: 'Ο/Η {inviter} σας προσκάλεσε στο πλήρωμά του/της στο {appName}',
+    crewSubject:
+      'Ο/Η {inviter} σας προσκάλεσε στο πλήρωμά του/της στο {appName}',
     crewPreheader: 'Συνδέστε τον λογαριασμό σας για να ενταχθείτε στο πλήρωμα.',
     crewIntroSuffix:
       'σας προσκάλεσε να ενταχθείτε στο πλήρωμά του/της στο {appName}. Συνδεθείτε με αυτό το email και αποδεχτείτε την πρόσκληση.',
@@ -222,7 +224,8 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'sizi {appName} ekibine davet etti. Bu e-posta ile giriş yapın ve hesabınızı bağlamak için daveti kabul edin.',
     crewFootnote:
       'Bağlantı {appName} uygulamasını açar. Henüz hesabınız yoksa, bu e-posta ile giriş yaparak oluşturabilirsiniz.',
-    memberSubject: '{inviter} sizi {appName} üzerinde {target} hedefine davet etti',
+    memberSubject:
+      '{inviter} sizi {appName} üzerinde {target} hedefine davet etti',
     memberPreheader: '{appName} üzerinde {target} hedefine katılın.',
     memberIntroSuffix:
       'sizi {appName} üzerinde {target} hedefine davet etti. Bu e-posta ile giriş yapın ve daveti kabul edin.',
@@ -389,16 +392,23 @@ export function buildCrewInviteEmail(args: {
     appName,
     target: '',
   })
-  const introHtml = `<strong>${inviter}</strong> ${fill(strings.crewIntroSuffix, {
-    appName: escapeHtml(appName),
-    target: '',
-    inviter: '',
-  })}`
+  const introHtml = `<strong>${inviter}</strong> ${fill(
+    strings.crewIntroSuffix,
+    {
+      appName: escapeHtml(appName),
+      target: '',
+      inviter: '',
+    },
+  )}`
   const text = `${vars.inviter} ${fill(strings.crewIntroSuffix, { appName, target: '', inviter: '' })}\n\n${args.url}\n\n${strings.crewFootnote.replace('{appName}', appName)}\n\n${strings.ignoreEmail}`
   const html = renderTransactionalEmail({
     locale,
     appName,
-    preheader: fill(strings.crewPreheader, { appName, inviter: vars.inviter, target: '' }),
+    preheader: fill(strings.crewPreheader, {
+      appName,
+      inviter: vars.inviter,
+      target: '',
+    }),
     title: subject,
     introHtml,
     ctaLabel: strings.ctaAccept,
@@ -433,11 +443,14 @@ export function buildMemberInviteEmail(args: {
     appName,
     target: targetPlain,
   })
-  const introHtml = `<strong>${inviter}</strong> ${fill(strings.memberIntroSuffix, {
-    appName: escapeHtml(appName),
-    target,
-    inviter: '',
-  })}`
+  const introHtml = `<strong>${inviter}</strong> ${fill(
+    strings.memberIntroSuffix,
+    {
+      appName: escapeHtml(appName),
+      target,
+      inviter: '',
+    },
+  )}`
   const text = `${inviter.replace(/<\/?[^>]+>/g, '')} ${fill(strings.memberIntroSuffix, { appName, target: targetPlain, inviter: '' })}\n\n${args.url}\n\n${fill(strings.memberFootnote, { appName, inviter: '', target: targetPlain })}\n\n${strings.ignoreEmail}`
   const html = renderTransactionalEmail({
     locale,

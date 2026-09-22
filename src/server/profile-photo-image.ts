@@ -1,9 +1,10 @@
 import sharp from 'sharp'
 import {
   cropToPixelRect,
-  parseProfilePhotoCrop,
-  type ProfilePhotoCrop,
+  parseProfilePhotoCrop
+  
 } from '../lib/profile-photo-crop'
+import type {ProfilePhotoCrop} from '../lib/profile-photo-crop';
 
 export { parseProfilePhotoCrop, type ProfilePhotoCrop }
 
@@ -26,15 +27,17 @@ export async function renderProfilePhotoBytes(
   if (!crop) {
     return {
       buffer: bytes,
-      contentType: contentType || mimeFromFormat(metadata.format) || 'image/jpeg',
+      contentType:
+        contentType || mimeFromFormat(metadata.format) || 'image/jpeg',
     }
   }
 
-  const { left, top, width: cropWidth, height: cropHeight } = cropToPixelRect(
-    crop,
-    width,
-    height,
-  )
+  const {
+    left,
+    top,
+    width: cropWidth,
+    height: cropHeight,
+  } = cropToPixelRect(crop, width, height)
 
   const buffer = await sharp(bytes, { limitInputPixels: 50_000_000 })
     .extract({ left, top, width: cropWidth, height: cropHeight })

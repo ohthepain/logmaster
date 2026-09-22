@@ -76,7 +76,7 @@ boatSharesRoutes.patch('/:boatId/shares', async (c) => {
     })
     const shares = await loadBoatShares(boatId)
     if (boat) {
-      fireBoatSharesNotification(userId, boat, ({ key: 'updatedShareStructure' }))
+      fireBoatSharesNotification(userId, boat, { key: 'updatedShareStructure' })
     }
     return c.json({ shareCount: boat?.shareCount ?? shares.length, shares })
   } catch (error) {
@@ -110,7 +110,7 @@ boatSharesRoutes.patch('/:boatId/shares/:shareId', async (c) => {
     select: { shareCount: true, name: true },
   })
   if (boat) {
-    fireBoatSharesNotification(userId, boat, ({ key: 'updatedShareLabel' }))
+    fireBoatSharesNotification(userId, boat, { key: 'updatedShareLabel' })
   }
   return c.json({ shareCount: boat?.shareCount ?? shares.length, shares })
 })
@@ -161,7 +161,9 @@ boatSharesRoutes.post('/:boatId/shares/:shareId/owners', async (c) => {
     select: { shareCount: true, name: true },
   })
   if (updatedBoat) {
-    fireBoatSharesNotification(userId, updatedBoat, ({ key: 'assignedShareOwner' }))
+    fireBoatSharesNotification(userId, updatedBoat, {
+      key: 'assignedShareOwner',
+    })
   }
   return c.json({
     shareCount: updatedBoat?.shareCount ?? result.shares.length,
@@ -192,7 +194,7 @@ boatSharesRoutes.delete(
       select: { shareCount: true, name: true },
     })
     if (boat) {
-      fireBoatSharesNotification(userId, boat, ({ key: 'removedShareOwner' }))
+      fireBoatSharesNotification(userId, boat, { key: 'removedShareOwner' })
     }
     return c.json({
       shareCount: boat?.shareCount ?? result.shares.length,

@@ -67,9 +67,7 @@ beforeEach(() => {
   mocks.presence.mockResolvedValue(null)
   mocks.defaults.mockResolvedValue({ push: true })
   mocks.preference.mockResolvedValue({ effective: true })
-  mocks.users.mockResolvedValue([
-    { id: 'recipient', preferredLanguage: 'en' },
-  ])
+  mocks.users.mockResolvedValue([{ id: 'recipient', preferredLanguage: 'en' }])
 })
 it('sends to inactive recipients but never the sender', async () => {
   expect(await chatPushDisposition('recipient', 'message')).toBe('send')

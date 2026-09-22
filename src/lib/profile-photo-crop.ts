@@ -50,7 +50,7 @@ export function normalizeProfilePhotoCrop(
   const minSide = Math.max(1, Math.round(MIN_CROP_FRACTION * minDim))
   const maxSide = minDim
 
-  let side = clamp(Math.round(crop.s * minDim), minSide, maxSide)
+  const side = clamp(Math.round(crop.s * minDim), minSide, maxSide)
   let left = Math.round(crop.x * imageWidth)
   let top = Math.round(crop.y * imageHeight)
 
@@ -74,7 +74,11 @@ export function parseProfilePhotoCrop(value: unknown): ProfilePhotoCrop | null {
   ) {
     return null
   }
-  if (!Number.isFinite(row.x) || !Number.isFinite(row.y) || !Number.isFinite(row.s)) {
+  if (
+    !Number.isFinite(row.x) ||
+    !Number.isFinite(row.y) ||
+    !Number.isFinite(row.s)
+  ) {
     return null
   }
   if (row.s <= 0 || row.x < 0 || row.y < 0) return null

@@ -46,7 +46,10 @@
   --lm-safe-top: var(--safe-area-inset-top, var(--lm-safe-top));
   --lm-safe-bottom: var(--safe-area-inset-bottom, var(--lm-safe-bottom));
   --lm-safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
-  --lm-safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --lm-safe-right: var(
+    --safe-area-inset-right,
+    env(safe-area-inset-right, 0px)
+  );
 }
 
 /* Tailwind v4 treats text-[var(--x)] as font-size, so filled buttons

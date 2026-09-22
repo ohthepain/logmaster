@@ -18,7 +18,8 @@ export async function createCrewMember(args: {
   const form = new FormData()
   form.set('name', args.name.trim())
   if (args.email?.trim()) form.set('email', args.email.trim())
-  if (args.inviteLocale?.trim()) form.set('inviteLocale', args.inviteLocale.trim())
+  if (args.inviteLocale?.trim())
+    form.set('inviteLocale', args.inviteLocale.trim())
   if (args.photo) form.set('photo', args.photo)
   return api<{ member: CrewMember }>('/members', { method: 'POST', body: form })
 }

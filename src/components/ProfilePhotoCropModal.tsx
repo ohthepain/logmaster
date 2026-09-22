@@ -4,9 +4,10 @@ import {
   defaultProfilePhotoCrop,
   moveProfilePhotoCrop,
   normalizeProfilePhotoCrop,
-  resizeProfilePhotoCrop,
-  type ProfilePhotoCrop,
+  resizeProfilePhotoCrop
+  
 } from '../lib/profile-photo-crop'
+import type {ProfilePhotoCrop} from '../lib/profile-photo-crop';
 import { cn } from '../lib/cn'
 import { Modal } from './Modal'
 
@@ -92,9 +93,9 @@ export function ProfilePhotoCropModal({
           naturalHeight,
         ),
       )
-      setCrop((current) =>
-        current ??
-        defaultProfilePhotoCrop(naturalWidth, naturalHeight),
+      setCrop(
+        (current) =>
+          current ?? defaultProfilePhotoCrop(naturalWidth, naturalHeight),
       )
     },
     [],
@@ -200,8 +201,8 @@ export function ProfilePhotoCropModal({
     >
       <div className="space-y-4">
         <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">
-          Drag the square to choose the area. Pull the corner handle to zoom
-          in or out.
+          Drag the square to choose the area. Pull the corner handle to zoom in
+          or out.
         </p>
 
         <div

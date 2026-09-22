@@ -792,7 +792,7 @@ consortiaRoutes.patch('/:orgId/contacts/:contactId', async (c) => {
 
   const org = await getOrgSummary(consortiumId)
   if (org) {
-    fireOrgContactsNotification(userId, org, ({ key: 'updatedContact' }))
+    fireOrgContactsNotification(userId, org, { key: 'updatedContact' })
   }
 
   return c.json({ contact: serializeContact(contact) })
@@ -824,7 +824,7 @@ consortiaRoutes.delete('/:orgId/contacts/:contactId', async (c) => {
   await db.consortiumContact.delete({ where: { id: contactId } })
   const org = await getOrgSummary(consortiumId)
   if (org) {
-    fireOrgContactsNotification(userId, org, ({ key: 'removedContact' }))
+    fireOrgContactsNotification(userId, org, { key: 'removedContact' })
   }
   return c.json({ ok: true })
 })
@@ -948,7 +948,7 @@ consortiaRoutes.post('/:orgId/members', async (c) => {
 
   const org = await getOrgSummary(consortiumId)
   if (org) {
-    fireOrgMembersNotification(user.id, org, ({ key: 'addedMember' }))
+    fireOrgMembersNotification(user.id, org, { key: 'addedMember' })
   }
 
   return c.json({ member: serializeMember(member, linked?.id ?? null) }, 201)
@@ -1087,7 +1087,7 @@ consortiaRoutes.patch('/:orgId/members/:memberUserId', async (c) => {
 
   const org = await getOrgSummary(consortiumId)
   if (org) {
-    fireOrgMembersNotification(userId, org, ({ key: 'changedMemberRole' }))
+    fireOrgMembersNotification(userId, org, { key: 'changedMemberRole' })
   }
 
   return c.json({
@@ -1122,7 +1122,7 @@ consortiaRoutes.delete('/:orgId/members/:memberUserId', async (c) => {
 
   const org = await getOrgSummary(consortiumId)
   if (org) {
-    fireOrgMembersNotification(userId, org, ({ key: 'removedMember' }))
+    fireOrgMembersNotification(userId, org, { key: 'removedMember' })
   }
 
   return c.json({ ok: true })

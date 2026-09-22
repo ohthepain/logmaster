@@ -571,7 +571,7 @@ boatsRoutes.post('/:boatId/photos', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireBoatPhotosNotification(userId, boat, ({ key: 'uploadedPhoto' }))
+  fireBoatPhotosNotification(userId, boat, { key: 'uploadedPhoto' })
 
   return c.json({ photo: serializePhoto(photo) }, 201)
 })
@@ -611,7 +611,7 @@ boatsRoutes.patch('/photos/:photoId', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireBoatPhotosNotification(userId, existing.boat, ({ key: 'updatedPhoto' }))
+  fireBoatPhotosNotification(userId, existing.boat, { key: 'updatedPhoto' })
 
   return c.json({ photo: serializePhoto(photo) })
 })
@@ -653,7 +653,7 @@ boatsRoutes.delete('/photos/:photoId', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireBoatPhotosNotification(userId, existing.boat, ({ key: 'deletedPhoto' }))
+  fireBoatPhotosNotification(userId, existing.boat, { key: 'deletedPhoto' })
 
   return c.json({ ok: true })
 })
@@ -754,7 +754,7 @@ boatsRoutes.post('/:boatId/document-categories', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireBoatDocumentsNotification(userId, boat, ({ key: 'addedDocumentCategory' }))
+  fireBoatDocumentsNotification(userId, boat, { key: 'addedDocumentCategory' })
 
   return c.json({ category: serializeDocumentCategory(category) }, 201)
 })
@@ -833,7 +833,7 @@ boatsRoutes.post('/:boatId/documents', async (c) => {
       data: { updatedAt: new Date() },
     })
 
-    fireBoatDocumentsNotification(userId, boat, ({ key: 'uploadedDocument' }))
+    fireBoatDocumentsNotification(userId, boat, { key: 'uploadedDocument' })
 
     return c.json({ document: serializeDocument(document) }, 201)
   }
@@ -890,7 +890,7 @@ boatsRoutes.post('/:boatId/documents', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireBoatDocumentsNotification(userId, boat, ({ key: 'addedDocumentLink' }))
+  fireBoatDocumentsNotification(userId, boat, { key: 'addedDocumentLink' })
 
   return c.json({ document: serializeDocument(document) }, 201)
 })
@@ -965,7 +965,9 @@ boatsRoutes.patch('/documents/:documentId', async (c) => {
       data: { updatedAt: new Date() },
     })
 
-    fireBoatDocumentsNotification(userId, existing.boat, ({ key: 'updatedDocument' }))
+    fireBoatDocumentsNotification(userId, existing.boat, {
+      key: 'updatedDocument',
+    })
 
     return c.json({ document: serializeDocument(document) })
   }
@@ -1041,7 +1043,9 @@ boatsRoutes.patch('/documents/:documentId', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireBoatDocumentsNotification(userId, existing.boat, ({ key: 'updatedDocument' }))
+  fireBoatDocumentsNotification(userId, existing.boat, {
+    key: 'updatedDocument',
+  })
 
   return c.json({ document: serializeDocument(document) })
 })
@@ -1077,7 +1081,9 @@ boatsRoutes.delete('/documents/:documentId', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireBoatDocumentsNotification(userId, existing.boat, ({ key: 'deletedDocument' }))
+  fireBoatDocumentsNotification(userId, existing.boat, {
+    key: 'deletedDocument',
+  })
 
   return c.json({ ok: true })
 })

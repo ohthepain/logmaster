@@ -38,7 +38,8 @@ const copy: Record<InviteLocale, AuthCopy> = {
       'If you did not request a password reset, you can safely ignore this email.',
     passwordResetCta: 'Reset password',
     verifyEmailSubject: 'Verify your email for {appName}',
-    verifyEmailPreheader: 'Confirm your email address to finish setting up your account.',
+    verifyEmailPreheader:
+      'Confirm your email address to finish setting up your account.',
     verifyEmailIntro:
       'Please verify your email address to start using {appName}.',
     verifyEmailFootnote:
@@ -57,12 +58,12 @@ const copy: Record<InviteLocale, AuthCopy> = {
     passwordResetPreheader: 'Skapa ett nytt lösenord för ditt konto.',
     passwordResetIntro:
       'Vi fick en begäran om att återställa ditt lösenord för {appName}. Använd knappen nedan.',
-    passwordResetFootnote:
-      'Om du inte begärde detta kan du ignorera mejlet.',
+    passwordResetFootnote: 'Om du inte begärde detta kan du ignorera mejlet.',
     passwordResetCta: 'Återställ lösenord',
     verifyEmailSubject: 'Verifiera din e-post för {appName}',
     verifyEmailPreheader: 'Bekräfta din e-postadress för att slutföra kontot.',
-    verifyEmailIntro: 'Verifiera din e-postadress för att börja använda {appName}.',
+    verifyEmailIntro:
+      'Verifiera din e-postadress för att börja använda {appName}.',
     verifyEmailFootnote: 'Om du inte skapade kontot kan du ignorera mejlet.',
     verifyEmailCta: 'Verifiera e-post',
   },
@@ -82,9 +83,11 @@ const copy: Record<InviteLocale, AuthCopy> = {
       'Hvis du ikke anmodede om dette, kan du ignorere e-mailen.',
     passwordResetCta: 'Nulstil adgangskode',
     verifyEmailSubject: 'Bekræft din e-mail til {appName}',
-    verifyEmailPreheader: 'Bekræft din e-mailadresse for at færdiggøre kontoen.',
+    verifyEmailPreheader:
+      'Bekræft din e-mailadresse for at færdiggøre kontoen.',
     verifyEmailIntro: 'Bekræft din e-mailadresse for at bruge {appName}.',
-    verifyEmailFootnote: 'Hvis du ikke oprettede kontoen, kan du ignorere e-mailen.',
+    verifyEmailFootnote:
+      'Hvis du ikke oprettede kontoen, kan du ignorere e-mailen.',
     verifyEmailCta: 'Bekræft e-mail',
   },
   de: {
@@ -104,7 +107,8 @@ const copy: Record<InviteLocale, AuthCopy> = {
       'Wenn du das nicht angefordert hast, kannst du diese E-Mail ignorieren.',
     passwordResetCta: 'Passwort zurücksetzen',
     verifyEmailSubject: 'E-Mail für {appName} bestätigen',
-    verifyEmailPreheader: 'Bestätige deine E-Mail-Adresse, um das Konto abzuschließen.',
+    verifyEmailPreheader:
+      'Bestätige deine E-Mail-Adresse, um das Konto abzuschließen.',
     verifyEmailIntro:
       'Bitte bestätige deine E-Mail-Adresse, um {appName} zu nutzen.',
     verifyEmailFootnote:
@@ -126,7 +130,8 @@ const copy: Record<InviteLocale, AuthCopy> = {
     passwordResetFootnote: 'Si no lo solicitaste, puedes ignorar el correo.',
     passwordResetCta: 'Restablecer contraseña',
     verifyEmailSubject: 'Verifica tu correo para {appName}',
-    verifyEmailPreheader: 'Confirma tu correo para terminar de crear la cuenta.',
+    verifyEmailPreheader:
+      'Confirma tu correo para terminar de crear la cuenta.',
     verifyEmailIntro: 'Verifica tu correo para empezar a usar {appName}.',
     verifyEmailFootnote: 'Si no creaste la cuenta, puedes ignorar el correo.',
     verifyEmailCta: 'Verificar correo',
@@ -140,15 +145,19 @@ const copy: Record<InviteLocale, AuthCopy> = {
     magicLinkFootnote: 'Pour votre sécurité, ne partagez pas ce lien.',
     magicLinkCta: 'Se connecter',
     passwordResetSubject: 'Réinitialiser votre mot de passe {appName}',
-    passwordResetPreheader: 'Choisissez un nouveau mot de passe pour votre compte.',
+    passwordResetPreheader:
+      'Choisissez un nouveau mot de passe pour votre compte.',
     passwordResetIntro:
       'Nous avons reçu une demande de réinitialisation de votre mot de passe {appName}. Utilisez le bouton ci-dessous.',
-    passwordResetFootnote: 'Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail.',
+    passwordResetFootnote:
+      'Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail.',
     passwordResetCta: 'Réinitialiser le mot de passe',
     verifyEmailSubject: 'Vérifiez votre e-mail pour {appName}',
-    verifyEmailPreheader: 'Confirmez votre adresse e-mail pour finaliser le compte.',
+    verifyEmailPreheader:
+      'Confirmez votre adresse e-mail pour finaliser le compte.',
     verifyEmailIntro: 'Veuillez vérifier votre e-mail pour utiliser {appName}.',
-    verifyEmailFootnote: 'Si vous n’avez pas créé de compte, ignorez cet e-mail.',
+    verifyEmailFootnote:
+      'Si vous n’avez pas créé de compte, ignorez cet e-mail.',
     verifyEmailCta: 'Vérifier l’e-mail',
   },
   nl: {
@@ -163,12 +172,14 @@ const copy: Record<InviteLocale, AuthCopy> = {
     passwordResetPreheader: 'Kies een nieuw wachtwoord voor je account.',
     passwordResetIntro:
       'We hebben een verzoek ontvangen om je wachtwoord voor {appName} te resetten. Gebruik de knop hieronder.',
-    passwordResetFootnote: 'Als je dit niet hebt aangevraagd, negeer de e-mail.',
+    passwordResetFootnote:
+      'Als je dit niet hebt aangevraagd, negeer de e-mail.',
     passwordResetCta: 'Wachtwoord resetten',
     verifyEmailSubject: 'Bevestig je e-mail voor {appName}',
     verifyEmailPreheader: 'Bevestig je e-mailadres om je account af te ronden.',
     verifyEmailIntro: 'Bevestig je e-mailadres om {appName} te gebruiken.',
-    verifyEmailFootnote: 'Als je geen account hebt aangemaakt, negeer de e-mail.',
+    verifyEmailFootnote:
+      'Als je geen account hebt aangemaakt, negeer de e-mail.',
     verifyEmailCta: 'E-mail bevestigen',
   },
   pt: {
@@ -203,11 +214,13 @@ const copy: Record<InviteLocale, AuthCopy> = {
     passwordResetPreheader: 'Luo tilillesi uusi salasana.',
     passwordResetIntro:
       'Saimme pyynnön vaihtaa {appName}-salasanasi. Käytä alla olevaa painiketta.',
-    passwordResetFootnote: 'Jos et pyytänyt tätä, voit jättää viestin huomiotta.',
+    passwordResetFootnote:
+      'Jos et pyytänyt tätä, voit jättää viestin huomiotta.',
     passwordResetCta: 'Vaihda salasana',
     verifyEmailSubject: 'Vahvista sähköpostisi palvelussa {appName}',
     verifyEmailPreheader: 'Vahvista sähköpostiosoite viimeistelläksesi tilin.',
-    verifyEmailIntro: 'Vahvista sähköpostisi aloittaaksesi {appName}-palvelun käytön.',
+    verifyEmailIntro:
+      'Vahvista sähköpostisi aloittaaksesi {appName}-palvelun käytön.',
     verifyEmailFootnote: 'Jos et luonut tiliä, voit jättää viestin huomiotta.',
     verifyEmailCta: 'Vahvista sähköposti',
   },
@@ -226,8 +239,10 @@ const copy: Record<InviteLocale, AuthCopy> = {
     passwordResetFootnote: 'Αν δεν το ζητήσατε, αγνοήστε το email.',
     passwordResetCta: 'Επαναφορά κωδικού',
     verifyEmailSubject: 'Επιβεβαιώστε το email για {appName}',
-    verifyEmailPreheader: 'Επιβεβαιώστε τη διεύθυνση email για να ολοκληρώσετε τον λογαριασμό.',
-    verifyEmailIntro: 'Επιβεβαιώστε το email σας για να χρησιμοποιήσετε το {appName}.',
+    verifyEmailPreheader:
+      'Επιβεβαιώστε τη διεύθυνση email για να ολοκληρώσετε τον λογαριασμό.',
+    verifyEmailIntro:
+      'Επιβεβαιώστε το email σας για να χρησιμοποιήσετε το {appName}.',
     verifyEmailFootnote: 'Αν δεν δημιουργήσατε λογαριασμό, αγνοήστε το email.',
     verifyEmailCta: 'Επιβεβαίωση email',
   },
@@ -247,7 +262,8 @@ const copy: Record<InviteLocale, AuthCopy> = {
     passwordResetCta: 'Parolayı sıfırla',
     verifyEmailSubject: '{appName} için e-postanızı doğrulayın',
     verifyEmailPreheader: 'Hesabınızı tamamlamak için e-postanızı onaylayın.',
-    verifyEmailIntro: '{appName} kullanmaya başlamak için e-postanızı doğrulayın.',
+    verifyEmailIntro:
+      '{appName} kullanmaya başlamak için e-postanızı doğrulayın.',
     verifyEmailFootnote: 'Hesap oluşturmadıysanız e-postayı yok sayın.',
     verifyEmailCta: 'E-postayı doğrula',
   },
@@ -283,11 +299,14 @@ const copy: Record<InviteLocale, AuthCopy> = {
     passwordResetPreheader: 'アカウントの新しいパスワードを設定してください。',
     passwordResetIntro:
       '{appName}のパスワードリセット要求を受け取りました。下のボタンをご利用ください。',
-    passwordResetFootnote: '心当たりがない場合は、このメールを無視してください。',
+    passwordResetFootnote:
+      '心当たりがない場合は、このメールを無視してください。',
     passwordResetCta: 'パスワードをリセット',
     verifyEmailSubject: '{appName}のメールアドレスを確認',
-    verifyEmailPreheader: 'アカウント設定を完了するにはメールを確認してください。',
-    verifyEmailIntro: '{appName}を使い始めるにはメールアドレスを確認してください。',
+    verifyEmailPreheader:
+      'アカウント設定を完了するにはメールを確認してください。',
+    verifyEmailIntro:
+      '{appName}を使い始めるにはメールアドレスを確認してください。',
     verifyEmailFootnote: 'アカウントを作成していない場合は無視してください。',
     verifyEmailCta: 'メールを確認',
   },

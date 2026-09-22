@@ -533,7 +533,9 @@ consortiaMediaRoutes.post('/:orgId/document-categories', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireOrgDocumentsNotification(userId, consortium, ({ key: 'addedDocumentCategory' }))
+  fireOrgDocumentsNotification(userId, consortium, {
+    key: 'addedDocumentCategory',
+  })
 
   return c.json({ category: serializeDocumentCategory(category) }, 201)
 })
@@ -622,7 +624,9 @@ consortiaMediaRoutes.post('/:orgId/documents', async (c) => {
       data: { updatedAt: new Date() },
     })
 
-    fireOrgDocumentsNotification(userId, consortium, ({ key: 'uploadedDocument' }))
+    fireOrgDocumentsNotification(userId, consortium, {
+      key: 'uploadedDocument',
+    })
 
     return c.json({ document: serializeDocument(document) }, 201)
   }
@@ -679,7 +683,7 @@ consortiaMediaRoutes.post('/:orgId/documents', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireOrgDocumentsNotification(userId, consortium, ({ key: 'addedDocumentLink' }))
+  fireOrgDocumentsNotification(userId, consortium, { key: 'addedDocumentLink' })
 
   return c.json({ document: serializeDocument(document) }, 201)
 })
@@ -754,11 +758,9 @@ consortiaMediaRoutes.patch('/documents/:documentId', async (c) => {
       data: { updatedAt: new Date() },
     })
 
-    fireOrgDocumentsNotification(
-      userId,
-      existing.consortium,
-      ({ key: 'updatedDocument' }),
-    )
+    fireOrgDocumentsNotification(userId, existing.consortium, {
+      key: 'updatedDocument',
+    })
 
     return c.json({ document: serializeDocument(document) })
   }
@@ -835,11 +837,9 @@ consortiaMediaRoutes.patch('/documents/:documentId', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireOrgDocumentsNotification(
-    userId,
-    existing.consortium,
-    ({ key: 'updatedDocument' }),
-  )
+  fireOrgDocumentsNotification(userId, existing.consortium, {
+    key: 'updatedDocument',
+  })
 
   return c.json({ document: serializeDocument(document) })
 })
@@ -880,11 +880,9 @@ consortiaMediaRoutes.delete('/documents/:documentId', async (c) => {
     data: { updatedAt: new Date() },
   })
 
-  fireOrgDocumentsNotification(
-    userId,
-    existing.consortium,
-    ({ key: 'deletedDocument' }),
-  )
+  fireOrgDocumentsNotification(userId, existing.consortium, {
+    key: 'deletedDocument',
+  })
 
   return c.json({ ok: true })
 })

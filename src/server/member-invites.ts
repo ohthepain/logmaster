@@ -465,7 +465,7 @@ export async function acceptMemberInvite(args: {
   }
 
   if (invite.kind === 'ORG' && invite.orgId && invite.org && !wasOrgMember) {
-    fireOrgMembersNotification(args.userId, invite.org, ({ key: 'joinedOrg' }))
+    fireOrgMembersNotification(args.userId, invite.org, { key: 'joinedOrg' })
   }
 
   return {

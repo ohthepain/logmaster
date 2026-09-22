@@ -159,7 +159,9 @@ profileRoutes.post('/photo', async (c) => {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer())
-  const metadata = await sharp(buffer, { limitInputPixels: 50_000_000 }).metadata()
+  const metadata = await sharp(buffer, {
+    limitInputPixels: 50_000_000,
+  }).metadata()
   const imageWidth = metadata.width
   const imageHeight = metadata.height
   if (!imageWidth || !imageHeight) {

@@ -24,7 +24,9 @@ export type TransactionalEmailLayout = {
   footnoteHtml: string
 }
 
-export function renderTransactionalEmail(layout: TransactionalEmailLayout): string {
+export function renderTransactionalEmail(
+  layout: TransactionalEmailLayout,
+): string {
   const dir = emailDirection(layout.locale)
   const appName = escapeHtml(layout.appName)
   const preheader = layout.preheader

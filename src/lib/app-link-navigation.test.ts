@@ -3,9 +3,9 @@ import { resolveAppLinkPath } from './app-link-navigation'
 
 describe('resolveAppLinkPath', () => {
   it('maps production URLs to in-app paths', () => {
-    expect(
-      resolveAppLinkPath('https://logmaster.live/trips/abc?tab=log'),
-    ).toBe('/trips/abc?tab=log')
+    expect(resolveAppLinkPath('https://logmaster.live/trips/abc?tab=log')).toBe(
+      '/trips/abc?tab=log',
+    )
   })
 
   it('rejects unknown hosts', () => {

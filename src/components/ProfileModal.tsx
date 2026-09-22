@@ -171,197 +171,199 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
 
   return (
     <>
-    <Modal
-      title={t('profile')}
-      onClose={handleClose}
-      desktopCentered
-      devComponentName="ProfileModal"
-    >
-      <form onSubmit={(e) => void handleSaveName(e)} className="space-y-5">
-        <div className="flex items-center gap-4">
-          <div className="relative shrink-0">
-            <div className="flex size-20 items-center justify-center overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)]">
-              {photoSrc ? (
-                <img
-                  src={photoSrc}
-                  alt=""
-                  className="size-full object-cover"
-                  width={80}
-                  height={80}
-                  decoding="async"
-                />
-              ) : (
-                <User
-                  className="size-8 text-[var(--sea-ink-soft)]"
-                  strokeWidth={1.75}
-                />
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={busy}
-              className={cn(
-                'absolute -bottom-1 -right-1 inline-flex size-8 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--surface-strong)] text-[var(--sea-ink)] shadow-sm transition hover:bg-[var(--link-bg-hover)]',
-                busy && 'opacity-60',
-              )}
-              aria-label="Upload profile photo"
-            >
-              <Camera className="size-4" />
-            </button>
-            <input
-              ref={fileInputRef}
-              id={fileInputId}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(e) => void handlePhotoPick(e.target.files?.[0])}
-            />
-          </div>
-
-          <div className="min-w-0">
-            <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
-              Profile photo
-            </p>
-            <p className="m-0 mt-1 text-xs leading-5 text-[var(--sea-ink-soft)]">
-              Upload a photo for your account. Stored in the same bucket as boat
-              photos.
-            </p>
-            {hasCustomPhoto && (
+      <Modal
+        title={t('profile')}
+        onClose={handleClose}
+        desktopCentered
+        devComponentName="ProfileModal"
+      >
+        <form onSubmit={(e) => void handleSaveName(e)} className="space-y-5">
+          <div className="flex items-center gap-4">
+            <div className="relative shrink-0">
+              <div className="flex size-20 items-center justify-center overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)]">
+                {photoSrc ? (
+                  <img
+                    src={photoSrc}
+                    alt=""
+                    className="size-full object-cover"
+                    width={80}
+                    height={80}
+                    decoding="async"
+                  />
+                ) : (
+                  <User
+                    className="size-8 text-[var(--sea-ink-soft)]"
+                    strokeWidth={1.75}
+                  />
+                )}
+              </div>
               <button
                 type="button"
-                onClick={() => void handleRemovePhoto()}
+                onClick={() => fileInputRef.current?.click()}
                 disabled={busy}
-                className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 transition hover:text-red-800 disabled:opacity-60 dark:text-red-300 dark:hover:text-red-200"
+                className={cn(
+                  'absolute -bottom-1 -right-1 inline-flex size-8 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--surface-strong)] text-[var(--sea-ink)] shadow-sm transition hover:bg-[var(--link-bg-hover)]',
+                  busy && 'opacity-60',
+                )}
+                aria-label="Upload profile photo"
               >
-                <Trash2 className="size-3.5" />
-                {removingPhoto ? 'Removing…' : 'Remove photo'}
+                <Camera className="size-4" />
               </button>
-            )}
+              <input
+                ref={fileInputRef}
+                id={fileInputId}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(e) => void handlePhotoPick(e.target.files?.[0])}
+              />
+            </div>
+
+            <div className="min-w-0">
+              <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
+                Profile photo
+              </p>
+              <p className="m-0 mt-1 text-xs leading-5 text-[var(--sea-ink-soft)]">
+                Upload a photo for your account. Stored in the same bucket as
+                boat photos.
+              </p>
+              {hasCustomPhoto && (
+                <button
+                  type="button"
+                  onClick={() => void handleRemovePhoto()}
+                  disabled={busy}
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 transition hover:text-red-800 disabled:opacity-60 dark:text-red-300 dark:hover:text-red-200"
+                >
+                  <Trash2 className="size-3.5" />
+                  {removingPhoto ? 'Removing…' : 'Remove photo'}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
 
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
-            Display name
-          </span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
-            className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
-          />
-        </label>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
+              Display name
+            </span>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+              className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
+            />
+          </label>
 
-        <p className="m-0 text-xs leading-6 text-[var(--sea-ink-soft)]">
-          Signed in as {user.email}
-        </p>
-
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
-              Notification defaults
-            </p>
-            <Link
-              to="/settings/notifications"
-              onClick={handleClose}
-              className="text-xs font-semibold text-[var(--brand)] underline-offset-2 hover:underline"
-            >
-              Notifications
-            </Link>
-          </div>
-          <p className="mt-1 mb-3 text-xs leading-5 text-[var(--sea-ink-soft)]">
-            Used for email and push when a topic has no per-boat or per-org
-            override. Topics are on by default.
+          <p className="m-0 text-xs leading-6 text-[var(--sea-ink-soft)]">
+            Signed in as {user.email}
           </p>
-          <label className="mb-2 flex items-center gap-2 text-sm text-[var(--sea-ink)]">
-            <input
-              type="checkbox"
-              checked={emailNotifications}
-              onChange={(e) => setEmailNotifications(e.target.checked)}
-              disabled={busy}
-            />
-            Email notifications
-          </label>
-          <label className="flex items-center gap-2 text-sm text-[var(--sea-ink)]">
-            <input
-              type="checkbox"
-              checked={pushNotifications}
-              onChange={(e) => setPushNotifications(e.target.checked)}
-              disabled={busy}
-            />
-            Push notifications
-          </label>
-          <div className="mt-3 flex flex-wrap gap-2">
+
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
+                Notification defaults
+              </p>
+              <Link
+                to="/settings/notifications"
+                onClick={handleClose}
+                className="text-xs font-semibold text-[var(--brand)] underline-offset-2 hover:underline"
+              >
+                Notifications
+              </Link>
+            </div>
+            <p className="mt-1 mb-3 text-xs leading-5 text-[var(--sea-ink-soft)]">
+              Used for email and push when a topic has no per-boat or per-org
+              override. Topics are on by default.
+            </p>
+            <label className="mb-2 flex items-center gap-2 text-sm text-[var(--sea-ink)]">
+              <input
+                type="checkbox"
+                checked={emailNotifications}
+                onChange={(e) => setEmailNotifications(e.target.checked)}
+                disabled={busy}
+              />
+              Email notifications
+            </label>
+            <label className="flex items-center gap-2 text-sm text-[var(--sea-ink)]">
+              <input
+                type="checkbox"
+                checked={pushNotifications}
+                onChange={(e) => setPushNotifications(e.target.checked)}
+                disabled={busy}
+              />
+              Push notifications
+            </label>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setSavingNotificationDefaults(true)
+                  void updateNotificationDefaults({
+                    email: emailNotifications,
+                    push: pushNotifications,
+                  })
+                    .then(() => toast.success('Notification defaults saved'))
+                    .catch((e) =>
+                      toast.error(
+                        e instanceof Error
+                          ? e.message
+                          : 'Failed to save defaults',
+                      ),
+                    )
+                    .finally(() => setSavingNotificationDefaults(false))
+                }}
+                className="rounded-full border border-[var(--chip-line)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)] disabled:opacity-60"
+              >
+                {savingNotificationDefaults ? 'Saving…' : 'Save defaults'}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setEnablingPush(true)
+                  void enablePushOnDevice()
+                    .catch((e) =>
+                      toast.error(
+                        e instanceof Error
+                          ? e.message
+                          : 'Failed to enable push',
+                      ),
+                    )
+                    .finally(() => setEnablingPush(false))
+                }}
+                className="rounded-full border border-[var(--chip-line)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)] disabled:opacity-60"
+              >
+                {enablingPush ? 'Enabling…' : 'Enable push on this device'}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
             <button
-              type="button"
+              type="submit"
               disabled={busy}
-              onClick={() => {
-                setSavingNotificationDefaults(true)
-                void updateNotificationDefaults({
-                  email: emailNotifications,
-                  push: pushNotifications,
-                })
-                  .then(() => toast.success('Notification defaults saved'))
-                  .catch((e) =>
-                    toast.error(
-                      e instanceof Error
-                        ? e.message
-                        : 'Failed to save defaults',
-                    ),
-                  )
-                  .finally(() => setSavingNotificationDefaults(false))
-              }}
-              className="rounded-full border border-[var(--chip-line)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)] disabled:opacity-60"
+              className="inline-flex rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
             >
-              {savingNotificationDefaults ? 'Saving…' : 'Save defaults'}
+              {savingName ? 'Saving…' : 'Save profile'}
             </button>
             <button
               type="button"
+              onClick={handleClose}
               disabled={busy}
-              onClick={() => {
-                setEnablingPush(true)
-                void enablePushOnDevice()
-                  .catch((e) =>
-                    toast.error(
-                      e instanceof Error ? e.message : 'Failed to enable push',
-                    ),
-                  )
-                  .finally(() => setEnablingPush(false))
-              }}
-              className="rounded-full border border-[var(--chip-line)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)] disabled:opacity-60"
+              className="inline-flex rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] disabled:opacity-60"
             >
-              {enablingPush ? 'Enabling…' : 'Enable push on this device'}
+              Cancel
             </button>
           </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="submit"
-            disabled={busy}
-            className="inline-flex rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
-          >
-            {savingName ? 'Saving…' : 'Save profile'}
-          </button>
-          <button
-            type="button"
-            onClick={handleClose}
-            disabled={busy}
-            className="inline-flex rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] disabled:opacity-60"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </Modal>
-    <ProfilePhotoCropModal
-      open={pendingPhoto != null}
-      imageUrl={pendingPhoto?.previewUrl ?? ''}
-      busy={uploadingPhoto}
-      onCancel={handlePhotoCropCancel}
-      onAccept={(crop) => void handlePhotoCropAccept(crop)}
-    />
+        </form>
+      </Modal>
+      <ProfilePhotoCropModal
+        open={pendingPhoto != null}
+        imageUrl={pendingPhoto?.previewUrl ?? ''}
+        busy={uploadingPhoto}
+        onCancel={handlePhotoCropCancel}
+        onAccept={(crop) => void handlePhotoCropAccept(crop)}
+      />
     </>
   )
 }
