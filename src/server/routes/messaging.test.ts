@@ -3,6 +3,7 @@ import { createHmac } from 'node:crypto'
 import { messagingRoutes } from './messaging'
 
 const mocks = vi.hoisted(() => ({
+  boatContent: vi.fn(),
   card: vi.fn(),
   session: vi.fn(),
   threads: vi.fn(),
@@ -25,6 +26,10 @@ const mocks = vi.hoisted(() => ({
   sharedMedia: vi.fn(),
   readMedia: vi.fn(),
   mediaCount: vi.fn(),
+}))
+vi.mock('../messaging/boat-activity', () => ({
+  boatActivityMessageContent: async () => new Map(),
+  boatActivityContent: mocks.boatContent,
 }))
 vi.mock('../messaging/cards', () => ({
   responseCardSnapshot: mocks.card,
@@ -456,4 +461,25 @@ it('checks thread membership before resolving a card', async () => {
   const response = await post('/threads/boat:boat/messages', { id, cardId: id })
   expect(response.status).toBe(404)
   expect(mocks.card).not.toHaveBeenCalled()
+})
+
+it('reauthorizes boat previews before accessing their stored files', async () => {
+  mocks.requireThread.mockRejectedValueOnce(new Error('Chat not found'))
+  expect(
+    (await messagingRoutes.request('/threads/boat:boat/activity/event/content'))
+      .status,
+  ).toBe(404)
+  expect(mocks.boatContent).not.toHaveBeenCalled()
+  mocks.boatContent.mockResolvedValueOnce(new Response('preview'))
+  expect(
+    (await messagingRoutes.request('/threads/boat:boat/activity/event/content'))
+      .status,
+  ).toBe(200)
+  expect(mocks.boatContent).toHaveBeenCalledWith('boat', 'event', undefined)
+  mocks.boatContent.mockClear()
+  expect(
+    (await messagingRoutes.request('/threads/trip:trip/activity/event/content'))
+      .status,
+  ).toBe(404)
+  expect(mocks.boatContent).not.toHaveBeenCalled()
 })

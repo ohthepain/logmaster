@@ -10,9 +10,17 @@ import { getNotificationPreferenceNode } from '../notifications/preferences'
 const QUEUE = 'publish_chat_outbox'
 
 async function logDeliveryOwner(message: {
+  boatActivityId?: string | null
   logEntryId?: string | null
   senderId: string
 }) {
+  if (message.boatActivityId) {
+    const activity = await prisma.boatActivity.findUnique({
+      where: { id: message.boatActivityId },
+      select: { boat: { select: { userId: true } } },
+    })
+    return activity?.boat.userId ?? null
+  }
   if (!message.logEntryId) return message.senderId
   const entry = await prisma.logEntry.findUnique({
     where: { id: message.logEntryId },
@@ -30,7 +38,8 @@ export async function chatPushDisposition(
   const message = await prisma.chatMessage.findUnique({
     where: { id: messageId },
   })
-  if (!message || message.senderId === userId) return 'suppress'
+  if (!message || message.boatActivityId || message.senderId === userId)
+    return 'suppress'
   if (message.logEntryId && !(await logDeliveryOwner(message)))
     return 'suppress'
   let thread: ThreadAccess
@@ -68,7 +77,9 @@ export async function scheduleChatNotifications(messageId: string) {
   const message = await prisma.chatMessage.findUnique({
     where: { id: messageId },
   })
-  if (!message) return
+  // Domain notifications already use the central scheduler and boat preferences.
+  // Activity posts must not produce a second push for that same change.
+  if (!message || message.boatActivityId) return
   const owner = await logDeliveryOwner(message)
   if (!owner) return
   let thread

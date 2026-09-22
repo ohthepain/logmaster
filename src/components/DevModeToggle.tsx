@@ -6,10 +6,7 @@ import { cn } from '../lib/cn'
 import { isDevModeAvailable } from '../lib/dev-mode'
 import { useAppOptionsStore } from '../stores/app-options'
 import { DevComponentLabel } from './DevComponentLabel'
-import {
-  POPUP_MENU_Z_CLASS,
-  PopupOutsideDismiss,
-} from './PopupOutsideDismiss'
+import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 import { TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS } from '../lib/trip-map-overlay'
 
 type MenuPosition = {

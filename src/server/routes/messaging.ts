@@ -1,4 +1,8 @@
 import {
+  boatActivityMessageContent,
+  boatActivityContent,
+} from '../messaging/boat-activity'
+import {
   tripLogMessageContent,
   visibleChatMessage,
   legacyTripLogMedia,
@@ -134,6 +138,19 @@ messagingRoutes.get('/threads/:threadId/log-media/:id', async (c) => {
   )
 })
 
+messagingRoutes.get('/threads/:threadId/activity/:id/content', async (c) => {
+  const threadId = c.req.param('threadId')
+  await requireThread(c.get('userId'), threadId)
+  if (!threadId.startsWith('boat:')) return c.notFound()
+  return (
+    (await boatActivityContent(
+      threadId.slice(5),
+      c.req.param('id'),
+      c.req.header('range'),
+    )) ?? c.notFound()
+  )
+})
+
 async function serializeMessages(
   rows: Awaited<ReturnType<typeof prisma.chatMessage.findMany>>,
 ): Promise<ChatMessage[]> {
@@ -149,6 +166,7 @@ async function serializeMessages(
       })
     : []
   const logs = await tripLogMessageContent(rows)
+  const activities = await boatActivityMessageContent(rows)
   return rows.map((row) => ({
     id: row.id,
     threadId: row.threadId,
@@ -156,6 +174,9 @@ async function serializeMessages(
     senderName:
       users.find((u) => u.id === row.senderId)?.name ?? 'Former member',
     text: row.text,
+    boatActivity: row.boatActivityId
+      ? (activities.get(row.boatActivityId) ?? null)
+      : null,
     logEntry: row.logEntryId
       ? (logs.get(row.logEntryId)?.logEntry ?? null)
       : null,
@@ -272,7 +293,7 @@ messagingRoutes.post('/threads/:threadId/logs/query', async (c) => {
     where: {
       id: { in: ids },
       threadId,
-      logEntryId: { not: null },
+      OR: [{ logEntryId: { not: null } }, { boatActivityId: { not: null } }],
       AND: [visibleChatMessage],
     },
   })

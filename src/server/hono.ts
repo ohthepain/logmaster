@@ -1,3 +1,4 @@
+import { wakeChatWorker } from './messaging/delivery'
 import { logbookMediaRoutes } from './routes/logbook-media'
 import { messagingRoutes } from './routes/messaging'
 import { productsRoutes } from './routes/products'
@@ -84,6 +85,15 @@ app.route('/logbook', logbookRoutes)
 app.route('/logbook', logbookTrackRoutes)
 app.route('/logbook', logbookStoryMediaRoutes)
 app.route('/logbook', logbookMediaRoutes)
+// Trigger-created outbox rows are durable; this only reduces delivery latency.
+app.use('/boats/*', async (c, next) => {
+  await next()
+  if (
+    ['POST', 'PATCH', 'PUT', 'DELETE'].includes(c.req.method) &&
+    c.res.status < 400
+  )
+    void wakeChatWorker()
+})
 app.route('/boats', boatsRoutes)
 app.route('/boats', boatSharesRoutes)
 app.route('/boats', boatMembersRoutes)

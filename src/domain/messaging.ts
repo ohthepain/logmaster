@@ -1,4 +1,5 @@
 /** Provider-neutral contracts. No Stream types may escape the adapters. */
+import type { BoatChatActivity } from './boat-activity'
 import type { LogEntryType } from './logbook'
 import type { ChatAttachment } from './message-media'
 import type { ImageResponseCard } from './response-cards'
@@ -30,6 +31,7 @@ export type TripChatLog = {
   legacyMedia: { id: string; kind: 'photo' | 'video' | 'voice'; url: string }[]
 }
 export type ChatMessage = {
+  boatActivity?: BoatChatActivity | null
   logEntry?: TripChatLog | null
   id: string
   threadId: string

@@ -4,6 +4,7 @@ import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist'
 type PdfDocumentPagesProps = {
   contentUrl: string
   title: string
+  maxPages?: number
 }
 
 type LoadedPdf = {
@@ -83,7 +84,11 @@ function PdfPageCanvas({
   )
 }
 
-export function PdfDocumentPages({ contentUrl, title }: PdfDocumentPagesProps) {
+export function PdfDocumentPages({
+  contentUrl,
+  title,
+  maxPages = Infinity,
+}: PdfDocumentPagesProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const loadedRef = useRef<LoadedPdf | null>(null)
   const [numPages, setNumPages] = useState(0)
@@ -181,7 +186,7 @@ export function PdfDocumentPages({ contentUrl, title }: PdfDocumentPagesProps) {
         <p className="m-0 p-6 text-sm text-[var(--sea-ink-soft)]">Loading…</p>
       ) : (
         <div className="flex flex-col gap-3">
-          {Array.from({ length: numPages }, (_, index) => (
+          {Array.from({ length: Math.min(numPages, maxPages) }, (_, index) => (
             <PdfPageCanvas
               key={`${title}-${index + 1}`}
               pageNumber={index + 1}

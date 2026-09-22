@@ -1,7 +1,16 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-import { chatPushDisposition, scheduleChatNotifications } from './delivery'
+import {
+  chatPushDisposition,
+  scheduleChatNotifications,
+  publishPendingMessages,
+} from './delivery'
 
 const mocks = vi.hoisted(() => ({
+  boatActivity: vi.fn(),
+  pending: vi.fn(),
+  published: vi.fn(),
+  clearPresence: vi.fn(),
+  publish: vi.fn(),
   logEntry: vi.fn(),
   message: vi.fn(),
   thread: vi.fn(),
@@ -11,12 +20,23 @@ const mocks = vi.hoisted(() => ({
   preference: vi.fn(),
   schedule: vi.fn(),
 }))
+vi.mock('./provider', () => ({
+  getMessagingProvider: async () => ({ publish: mocks.publish }),
+}))
 vi.mock('../db', () => ({
   prisma: {
+    boatActivity: { findUnique: mocks.boatActivity },
     logEntry: { findUnique: mocks.logEntry },
-    chatMessage: { findUnique: mocks.message },
+    chatMessage: {
+      findUnique: mocks.message,
+      findMany: mocks.pending,
+      update: mocks.published,
+    },
     chatRead: { findUnique: mocks.read },
-    chatPresence: { findFirst: mocks.presence },
+    chatPresence: {
+      findFirst: mocks.presence,
+      deleteMany: mocks.clearPresence,
+    },
   },
 }))
 vi.mock('./threads', () => ({ requireThread: mocks.thread }))
@@ -137,4 +157,41 @@ it('uses current trip membership for log posts and suppresses deleted log notifi
   await scheduleChatNotifications('message')
   expect(mocks.schedule).not.toHaveBeenCalled()
   expect(await chatPushDisposition('recipient', 'message')).toBe('suppress')
+})
+
+it('does not duplicate existing domain push notifications for boat activity', async () => {
+  mocks.message.mockResolvedValue({
+    id: 'activity-message',
+    boatActivityId: 'activity',
+    senderId: 'system:boat',
+  })
+  await scheduleChatNotifications('activity-message')
+  expect(await chatPushDisposition('recipient', 'activity-message')).toBe(
+    'suppress',
+  )
+  expect(mocks.schedule).not.toHaveBeenCalled()
+})
+
+it('publishes boat activity to current members using the current owner for authorization', async () => {
+  const message = {
+    id: 'event-message',
+    boatActivityId: 'event',
+    senderId: 'system:boat',
+    threadId: 'boat:boat',
+    createdAt: new Date(),
+  }
+  mocks.pending.mockResolvedValue([message])
+  mocks.message.mockResolvedValue(message)
+  mocks.boatActivity.mockResolvedValue({ boat: { userId: 'current-owner' } })
+  mocks.thread.mockResolvedValue({ memberIds: ['current-owner', 'new-member'] })
+  await publishPendingMessages()
+  expect(mocks.thread).toHaveBeenCalledWith('current-owner', 'boat:boat')
+  expect(
+    mocks.publish.mock.calls.map(([signal]) => signal.recipientId),
+  ).toEqual(['current-owner', 'new-member'])
+  expect(mocks.published).toHaveBeenCalledWith({
+    where: { id: 'event-message' },
+    data: { publishedAt: expect.any(Date) },
+  })
+  expect(mocks.schedule).not.toHaveBeenCalled()
 })

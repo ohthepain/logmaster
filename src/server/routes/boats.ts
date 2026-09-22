@@ -940,21 +940,21 @@ boatsRoutes.patch('/documents/:documentId', async (c) => {
         )._max.versionNumber ??
         0) + 1
 
-    await db.boatDocumentVersion.create({
-      data: {
-        id: versionId,
-        documentId: existing.id,
-        versionNumber: nextVersion,
-        kind: 'upload',
-        s3Key,
-        mimeType: file.type || 'application/octet-stream',
-        fileName: file.name || null,
-      },
-    })
-
     const document = await db.boatDocument.update({
       where: { id: existing.id },
-      data: { updatedAt: new Date() },
+      data: {
+        updatedAt: new Date(),
+        versions: {
+          create: {
+            id: versionId,
+            versionNumber: nextVersion,
+            kind: 'upload',
+            s3Key,
+            mimeType: file.type || 'application/octet-stream',
+            fileName: file.name || null,
+          },
+        },
+      },
       include: {
         versions: { orderBy: { versionNumber: 'desc' }, take: 1 },
       },
@@ -1004,6 +1004,9 @@ boatsRoutes.patch('/documents/:documentId', async (c) => {
     data.categoryId = category.id
   }
 
+  let versionData:
+    | { versionNumber: number; kind: 'link'; url: string }
+    | undefined
   if (body.url !== undefined) {
     const url = body.url.trim()
     if (!url) return c.json({ error: 'URL is required' }, 400)
@@ -1019,19 +1022,15 @@ boatsRoutes.patch('/documents/:documentId', async (c) => {
         )._max.versionNumber ??
         0) + 1
 
-    await db.boatDocumentVersion.create({
-      data: {
-        documentId: existing.id,
-        versionNumber: nextVersion,
-        kind: 'link',
-        url,
-      },
-    })
+    versionData = { versionNumber: nextVersion, kind: 'link', url }
   }
 
   const document = await db.boatDocument.update({
     where: { id: existing.id },
-    data,
+    data: {
+      ...data,
+      ...(versionData ? { versions: { create: versionData } } : {}),
+    },
     include: {
       versions: { orderBy: { versionNumber: 'desc' }, take: 1 },
     },

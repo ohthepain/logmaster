@@ -1,3 +1,4 @@
+import { BoatActivityContent } from './BoatChatActivity'
 import { plainTripLog, TripChatLogItem, TripLogContent } from './TripChatLog'
 import { useTranslation } from '../lib/i18n'
 import { MessageResponseCard, ResponseCardSuggestions } from './ResponseCards'
@@ -180,7 +181,11 @@ function senderAvatarUrl(senderId: string, objects: ChatObject[]) {
 
 const senderPhotoProbeCache = new Map<string, boolean>()
 
-function useSenderHasProfilePhoto(senderId: string, objects: ChatObject[]) {
+function useSenderHasProfilePhoto(
+  senderId: string,
+  objects: ChatObject[],
+  disabled = false,
+) {
   const src = useMemo(
     () => senderAvatarUrl(senderId, objects),
     [senderId, objects],
@@ -190,6 +195,10 @@ function useSenderHasProfilePhoto(senderId: string, objects: ChatObject[]) {
     cached !== undefined ? cached : null,
   )
   useEffect(() => {
+    if (disabled) {
+      setHasPhoto(false)
+      return
+    }
     if (senderPhotoProbeCache.has(src)) {
       setHasPhoto(senderPhotoProbeCache.get(src)!)
       return
@@ -209,7 +218,7 @@ function useSenderHasProfilePhoto(senderId: string, objects: ChatObject[]) {
       probe.onload = null
       probe.onerror = null
     }
-  }, [src])
+  }, [src, disabled])
   return { src, hasPhoto }
 }
 
@@ -222,12 +231,16 @@ const messageTimeClassName =
 const messageRowSpacingClassName = 'pb-5'
 const messageBubbleWidthClassName =
   'relative min-w-0 max-w-[85%] sm:max-w-[75%]'
+const messageLikeHeartColorClass = 'text-[#e51b35]'
 
 function MessageLikeCountPill({ count }: { count: number }) {
   return (
     <span
       aria-label={`${count} ${count === 1 ? 'like' : 'likes'}`}
-      className="inline-flex items-center gap-1 rounded-full border border-black/[0.06] bg-white px-2 py-0.5 text-xs font-semibold text-red-500 shadow-sm"
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full border border-black/[0.06] bg-white px-2 py-0.5 text-xs font-semibold shadow-sm',
+        messageLikeHeartColorClass,
+      )}
     >
       <Heart size={12} fill="currentColor" aria-hidden />
       {count}
@@ -252,7 +265,11 @@ function ReceivedMessageRow({
   likePending: boolean
   onToggleLike: (origin: { x: number; y: number }) => void | Promise<void>
 }) {
-  const { src, hasPhoto } = useSenderHasProfilePhoto(message.senderId, objects)
+  const { src, hasPhoto } = useSenderHasProfilePhoto(
+    message.senderId,
+    objects,
+    Boolean(message.boatActivity),
+  )
   return (
     <div className={cn('flex items-start gap-2', messageRowSpacingClassName)}>
       {hasPhoto ? (
@@ -262,6 +279,9 @@ function ReceivedMessageRow({
       ) : null}
       <div className={messageBubbleWidthClassName}>
         <div className={receivedBubbleClassName}>
+          {message.boatActivity && (
+            <BoatActivityContent activity={message.boatActivity} />
+          )}
           {message.logEntry && <TripLogContent entry={message.logEntry} />}
           <MessageResponseCard responseCard={message.responseCard} />
           <MessageMedia
@@ -269,7 +289,7 @@ function ReceivedMessageRow({
             threadId={message.threadId}
             media={message.media}
           />
-          {hasPhoto === false ? (
+          {hasPhoto === false && !message.boatActivity ? (
             <p className="mb-1 mt-0 text-xs font-semibold text-[var(--sea-ink-soft)]">
               {message.senderName}
             </p>
@@ -303,7 +323,7 @@ function ReceivedMessageRow({
             className={cn(
               'flex size-9 items-center justify-center rounded-full border border-black/[0.08] bg-white shadow-md transition disabled:opacity-50',
               (like?.myLikeCount ?? 0) > 0
-                ? 'text-red-500'
+                ? messageLikeHeartColorClass
                 : 'text-[var(--sea-ink-soft)]',
             )}
           >
@@ -496,7 +516,7 @@ export function Messaging({
     )
       .then(async (data) => {
         const logIds = latestMessages.current
-          .filter((message) => message.logEntry)
+          .filter((message) => message.logEntry || message.boatActivity)
           .map((message) => message.id)
         const updatedLogs: ChatMessage[] = []
         const removed = new Set<string>()
@@ -760,7 +780,7 @@ export function Messaging({
                       </span>
                       <span className="mt-1 block truncate text-sm text-[var(--sea-ink-soft)]">
                         {thread.lastMessage
-                          ? `${thread.lastMessage.senderId === userId ? 'You: ' : ''}${(thread.lastMessage.logEntry ? translate(`tripLog_${thread.lastMessage.logEntry.type}`) : '') || thread.lastMessage.text || (thread.lastMessage.responseCard ? 'Response card' : '') || (thread.lastMessage.media?.some((item) => item.contentType.startsWith('video/')) ? 'Video' : 'Photo')}`
+                          ? `${thread.lastMessage.senderId === userId ? 'You: ' : ''}${(thread.lastMessage.boatActivity ? `${translate(`boatActivity_${thread.lastMessage.boatActivity.kind}`)}${thread.lastMessage.boatActivity.label ? ` · ${thread.lastMessage.boatActivity.label}` : ''}` : '') || (thread.lastMessage.logEntry ? translate(`tripLog_${thread.lastMessage.logEntry.type}`) : '') || thread.lastMessage.text || (thread.lastMessage.responseCard ? 'Response card' : '') || (thread.lastMessage.media?.some((item) => item.contentType.startsWith('video/')) ? 'Video' : 'Photo')}`
                           : 'Start the conversation'}
                       </span>
                     </span>
@@ -818,6 +838,22 @@ export function Messaging({
                   </div>
                 )}
                 {messages.map((message) => {
+                  if (message.boatActivity && !message.boatActivity.preview)
+                    return (
+                      <div
+                        key={message.id}
+                        className="mx-auto max-w-sm py-2 text-center"
+                        data-testid="boat-activity-row"
+                      >
+                        <BoatActivityContent activity={message.boatActivity} />
+                        <time
+                          dateTime={message.createdAt}
+                          className="text-[11px] text-slate-500"
+                        >
+                          {timeLabel(message.createdAt)}
+                        </time>
+                      </div>
+                    )
                   if (message.logEntry && plainTripLog(message.logEntry))
                     return (
                       <TripChatLogItem
@@ -1038,7 +1074,10 @@ export function Messaging({
             {hearts.map((heart) => (
               <Heart
                 key={heart.id}
-                className="message-floating-heart absolute size-9 text-red-500 drop-shadow-md"
+                className={cn(
+                  'message-floating-heart absolute size-9 drop-shadow-md',
+                  messageLikeHeartColorClass,
+                )}
                 fill="currentColor"
                 style={
                   {

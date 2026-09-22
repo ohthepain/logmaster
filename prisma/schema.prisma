@@ -612,6 +612,7 @@ model Boat {
   createdAt          DateTime               @default(now())
   updatedAt          DateTime               @updatedAt
   consortium         Consortium?            @relation(fields: [consortiumId], references: [id], onDelete: SetNull)
+  activities         BoatActivity[]
   photos             BoatPhoto[]
   documentCategories BoatDocumentCategory[]
   documents          BoatDocument[]
@@ -1472,7 +1473,28 @@ model CatalogSourceLink {
 }
 
 // Logmaster owns history and identity. Stream is a replaceable live event transport.
+// Transactional change capture is installed by the boat_chat_activity migration.
+model BoatActivity {
+  id String @id
+  boatId String
+  boat Boat @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  kind String
+  resourceType String
+  resourceId String
+  label String
+  targetLabel String?
+  versionId String?
+  transactionId String
+  createdAt DateTime @default(now())
+  message ChatMessage?
+  @@unique([boatId, kind, resourceType, resourceId, transactionId], map: "boat_activity_change_key")
+  @@index([boatId, createdAt])
+  @@map("boat_activity")
+}
+
 model ChatMessage {
+  boatActivityId String? @unique
+  boatActivity BoatActivity? @relation(fields: [boatActivityId], references: [id], onDelete: Cascade)
   logEntryId   String? @unique
   logEntry     LogEntry? @relation(fields: [logEntryId], references: [id], onDelete: Cascade)
   id           String   @id
