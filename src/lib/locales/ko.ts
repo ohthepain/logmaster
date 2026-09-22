@@ -98,6 +98,8 @@ const catalog: TranslationCatalog = {
   openFullScreenMap: '전체 화면 지도 열기',
   mapLayers: '지도 레이어',
   logEntry: '항해 일지',
+  tripChat_showMap: '지도 표시',
+  tripChat_hideMap: '지도 숨기기',
   fitRoute: '항로에 맞추기',
   startRecording: '기록 시작',
   pauseRecording: '기록 일시 중지',

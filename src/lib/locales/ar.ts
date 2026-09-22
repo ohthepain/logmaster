@@ -97,6 +97,8 @@ const catalog: TranslationCatalog = {
   openFullScreenMap: 'فتح الخريطة بملء الشاشة',
   mapLayers: 'طبقات الخريطة',
   logEntry: 'قيد السجل',
+  tripChat_showMap: 'إظهار الخريطة',
+  tripChat_hideMap: 'إخفاء الخريطة',
   fitRoute: 'ملاءمة المسار',
   startRecording: 'بدء التسجيل',
   pauseRecording: 'إيقاف التسجيل مؤقتًا',

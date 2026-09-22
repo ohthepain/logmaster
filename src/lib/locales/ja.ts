@@ -98,6 +98,8 @@ const catalog: TranslationCatalog = {
   openFullScreenMap: '地図を全画面で開く',
   mapLayers: '地図レイヤー',
   logEntry: '航海日誌',
+  tripChat_showMap: '地図を表示',
+  tripChat_hideMap: '地図を隠す',
   fitRoute: '航路に合わせる',
   startRecording: '記録を開始',
   pauseRecording: '記録を一時停止',

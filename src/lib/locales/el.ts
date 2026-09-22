@@ -98,6 +98,8 @@ const catalog: TranslationCatalog = {
   openFullScreenMap: 'Άνοιγμα χάρτη σε πλήρη οθόνη',
   mapLayers: 'Επίπεδα χάρτη',
   logEntry: 'Καταχώριση ημερολογίου',
+  tripChat_showMap: 'Εμφάνιση χάρτη',
+  tripChat_hideMap: 'Απόκρυψη χάρτη',
   fitRoute: 'Προσαρμογή στη διαδρομή',
   startRecording: 'Έναρξη εγγραφής',
   pauseRecording: 'Παύση εγγραφής',

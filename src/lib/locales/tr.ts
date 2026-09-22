@@ -98,6 +98,8 @@ const catalog: TranslationCatalog = {
   openFullScreenMap: 'Haritayı tam ekran aç',
   mapLayers: 'Harita katmanları',
   logEntry: 'Seyir defteri kaydı',
+  tripChat_showMap: 'Haritayı göster',
+  tripChat_hideMap: 'Haritayı gizle',
   fitRoute: 'Rotaya sığdır',
   startRecording: 'Kayıt başlat',
   pauseRecording: 'Kaydı duraklat',

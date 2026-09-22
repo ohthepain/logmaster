@@ -98,6 +98,8 @@ const catalog: TranslationCatalog = {
   openFullScreenMap: 'Abrir mapa a pantalla completa',
   mapLayers: 'Capas del mapa',
   logEntry: 'Entrada del diario',
+  tripChat_showMap: 'Mostrar mapa',
+  tripChat_hideMap: 'Ocultar mapa',
   fitRoute: 'Ajustar a la ruta',
   startRecording: 'Empezar a grabar',
   pauseRecording: 'Pausar grabación',

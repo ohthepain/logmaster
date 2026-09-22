@@ -98,6 +98,8 @@ const catalog: TranslationCatalog = {
   openFullScreenMap: 'Åbn kortet i fuld skærm',
   mapLayers: 'Kortlag',
   logEntry: 'Logpost',
+  tripChat_showMap: 'Vis kort',
+  tripChat_hideMap: 'Skjul kort',
   fitRoute: 'Tilpas til rute',
   startRecording: 'Start optagelse',
   pauseRecording: 'Sæt optagelse på pause',

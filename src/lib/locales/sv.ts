@@ -98,6 +98,8 @@ const catalog: TranslationCatalog = {
   openFullScreenMap: 'Öppna kartan i helskärm',
   mapLayers: 'Kartlager',
   logEntry: 'Loggpost',
+  tripChat_showMap: 'Visa karta',
+  tripChat_hideMap: 'Dölj karta',
   fitRoute: 'Anpassa till rutt',
   startRecording: 'Börja spela in',
   pauseRecording: 'Pausa inspelningen',

@@ -97,6 +97,8 @@ const catalog: TranslationCatalog = {
   openFullScreenMap: '開啟全螢幕地圖',
   mapLayers: '地圖圖層',
   logEntry: '航海日誌',
+  tripChat_showMap: '顯示地圖',
+  tripChat_hideMap: '隱藏地圖',
   fitRoute: '配合航線',
   startRecording: '開始記錄',
   pauseRecording: '暫停記錄',

@@ -98,6 +98,8 @@ const catalog: TranslationCatalog = {
   openFullScreenMap: 'Mở bản đồ toàn màn hình',
   mapLayers: 'Lớp bản đồ',
   logEntry: 'Mục nhật ký',
+  tripChat_showMap: 'Hiện bản đồ',
+  tripChat_hideMap: 'Ẩn bản đồ',
   fitRoute: 'Vừa với tuyến',
   startRecording: 'Bắt đầu ghi',
   pauseRecording: 'Tạm dừng ghi',

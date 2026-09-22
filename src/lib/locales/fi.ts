@@ -98,6 +98,8 @@ const catalog: TranslationCatalog = {
   openFullScreenMap: 'Avaa kartta koko näytölle',
   mapLayers: 'Karttatasot',
   logEntry: 'Lokimerkintä',
+  tripChat_showMap: 'Näytä kartta',
+  tripChat_hideMap: 'Piilota kartta',
   fitRoute: 'Sovita reittiin',
   startRecording: 'Aloita tallennus',
   pauseRecording: 'Keskeytä tallennus',
