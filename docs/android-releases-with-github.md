@@ -108,7 +108,11 @@ defaults to the store password. Use Java 21 and your installed Android SDK.
 ## Notify Sailors
 
 1. Verify in Play Console that the intended release is available to internal testers.
-2. Run **Notify Sailors Android testers** with a release label such as `1.0 (build 2)`.
+2. Run **Notify Sailors Android testers**. **Display version** defaults to `1.0`.
+   **Play version code** defaults to `auto`, which reads the latest value from the
+   same DynamoDB counter as **Android test build** — change it to the exact code
+   shown in Play Console if you need to override after verifying the upload. The job
+   summary shows the composed label (e.g. `1.0 (build 4)`) before any email is sent.
    Leave **Preview only** checked first. The run prints the message and recipient
    count without sending email or printing the addresses.
 3. Run again with **Preview only** unchecked and **I verified this release is available**

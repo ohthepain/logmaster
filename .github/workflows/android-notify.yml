@@ -3,9 +3,15 @@ name: Notify Sailors Android testers
 on:
   workflow_dispatch:
     inputs:
-      release_label:
-        description: 'Available release, e.g. 1.0 (build 2)'
+      version_name:
+        description: 'Display version shown to testers'
         required: true
+        default: '1.0'
+        type: string
+      build_number:
+        description: 'Play version code — default auto uses DynamoDB; edit to match Play Console after verifying upload'
+        required: true
+        default: auto
         type: string
       dry_run:
         description: 'Preview only (no email sent)'
@@ -41,15 +47,69 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Configure AWS credentials (build numbers)
+        if: ${{ inputs.build_number == 'auto' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_BUILD_NUMBERS }}
+          aws-region: eu-central-1
+          audience: sts.amazonaws.com
+      - name: Read latest allocated version code
+        id: dynamo
+        if: ${{ inputs.build_number == 'auto' }}
+        uses: ohthepain/global-build-numbers@main
+        with:
+          OPERATION: get
+          DYNAMO_TABLE_NAME: global-build-numbers
+          DYNAMO_PARTITION_KEY: project-name
+          PRODUCT_ID: logmaster-android
+      - name: Compose release label
+        id: release
+        env:
+          VERSION_NAME: ${{ inputs.version_name }}
+          BUILD_INPUT: ${{ inputs.build_number }}
+          BUILD_DYNAMO: ${{ steps.dynamo.outputs.result }}
+        run: |
+          set -euo pipefail
+          if [[ "$BUILD_INPUT" == "auto" ]]; then
+            BUILD="$BUILD_DYNAMO"
+            SOURCE="DynamoDB (latest allocated CI version code)"
+          else
+            BUILD="$BUILD_INPUT"
+            SOURCE="workflow input (confirm against Play Console)"
+          fi
+          if [[ -z "$BUILD" ]]; then
+            echo "Could not resolve build number. Seed global-build-numbers or enter the Play version code instead of auto."
+            exit 1
+          fi
+          if ! [[ "$BUILD" =~ ^[1-9][0-9]{0,9}$ ]]; then
+            echo "Invalid build number: must be a positive integer (1–2100000000)."
+            exit 1
+          fi
+          LABEL="${VERSION_NAME} (build ${BUILD})"
+          {
+            echo "label=$LABEL"
+            echo "build=$BUILD"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "### Release label"
+            echo ""
+            echo "**${LABEL}**"
+            echo ""
+            echo "Build number source: ${SOURCE}."
+            echo ""
+            echo "Confirm this matches the release available to internal testers in Play Console before turning off preview and sending."
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Authenticate to SES
         if: ${{ !inputs.dry_run && inputs.release_available }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_NOTIFY }}
           aws-region: eu-central-1
+          audience: sts.amazonaws.com
       - name: Preview or send announcement
         env:
-          ANDROID_RELEASE_LABEL: ${{ inputs.release_label }}
+          ANDROID_RELEASE_LABEL: ${{ steps.release.outputs.label }}
           NOTIFY_DRY_RUN: ${{ inputs.dry_run }}
           ANDROID_RELEASE_AVAILABLE: ${{ inputs.release_available }}
           ANDROID_TESTER_EMAILS: ${{ secrets.ANDROID_TESTER_EMAILS }}
