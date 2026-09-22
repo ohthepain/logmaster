@@ -17,11 +17,8 @@ import {
 } from './preference-gate'
 import { normalizeInviteLocale } from '../../lib/invite-locale'
 import { logServerEvent } from '../lib/server-log'
-import {
-  renderActivityNotification
-  
-} from './activity-message'
-import type {ActivityNotificationLocalization} from './activity-message';
+import { renderActivityNotification } from './activity-message'
+import type { ActivityNotificationLocalization } from './activity-message'
 
 const db = prisma as any
 

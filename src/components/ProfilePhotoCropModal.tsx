@@ -4,10 +4,9 @@ import {
   defaultProfilePhotoCrop,
   moveProfilePhotoCrop,
   normalizeProfilePhotoCrop,
-  resizeProfilePhotoCrop
-  
+  resizeProfilePhotoCrop,
 } from '../lib/profile-photo-crop'
-import type {ProfilePhotoCrop} from '../lib/profile-photo-crop';
+import type { ProfilePhotoCrop } from '../lib/profile-photo-crop'
 import { cn } from '../lib/cn'
 import { Modal } from './Modal'
 

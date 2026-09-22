@@ -14,7 +14,8 @@ COPY plugins ./plugins
 COPY prisma ./prisma
 COPY prisma.config.ts tsconfig.json vite.config.ts eslint.config.js ./
 COPY server-production.mjs ./
-COPY scripts/generate-sw.mjs scripts/verify-client-build.mjs scripts/platform-admin.ts ./scripts/
+COPY scripts/generate-sw.mjs scripts/verify-client-build.mjs scripts/generate-universal-link-well-known.mjs scripts/platform-admin.ts ./scripts/
+COPY config/universal-link-paths.json config/android-app-link-fingerprints.json ./config/
 COPY src ./src
 COPY public ./public
 

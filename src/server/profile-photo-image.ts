@@ -1,10 +1,9 @@
 import sharp from 'sharp'
 import {
   cropToPixelRect,
-  parseProfilePhotoCrop
-  
+  parseProfilePhotoCrop,
 } from '../lib/profile-photo-crop'
-import type {ProfilePhotoCrop} from '../lib/profile-photo-crop';
+import type { ProfilePhotoCrop } from '../lib/profile-photo-crop'
 
 export { parseProfilePhotoCrop, type ProfilePhotoCrop }
 

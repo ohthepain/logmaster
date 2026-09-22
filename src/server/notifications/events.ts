@@ -1,10 +1,9 @@
 import type { NotificationTopic } from '../../domain/notifications'
-import {
-  renderActivityNotification
-  
-  
+import { renderActivityNotification } from './activity-message'
+import type {
+  ActivityNotificationLocalization,
+  NotificationAction,
 } from './activity-message'
-import type {ActivityNotificationLocalization, NotificationAction} from './activity-message';
 import { emitActivityEvent } from './emit'
 
 function appLink(path: string): string {
