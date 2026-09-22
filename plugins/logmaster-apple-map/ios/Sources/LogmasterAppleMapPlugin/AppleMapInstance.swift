@@ -379,6 +379,7 @@ final class AppleMapInstance {
     var onEntrySelected: ((String) -> Void)?
     var onEntryPreview: ((String, CGPoint) -> Void)?
     var interactive = false
+    private var lastPassThroughRects: [CGRect] = []
     private weak var webView: WKWebView?
 
     init() {
@@ -516,10 +517,12 @@ final class AppleMapInstance {
             touchForwarder.passThroughRects = [fullScreenPassThrough]
         } else if interactive {
             touchForwarder.isUserInteractionEnabled = true
+            touchForwarder.passThroughRects = lastPassThroughRects
         }
     }
 
     func applyPassThroughRects(_ rects: [CGRect]) {
+        lastPassThroughRects = rects
         touchForwarder.passThroughRects = rects
     }
 

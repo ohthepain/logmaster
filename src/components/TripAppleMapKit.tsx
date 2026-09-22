@@ -18,6 +18,7 @@ import type {
 import { LogmasterAppleMap } from '../lib/native/logmaster-apple-map'
 import { readMapPassThroughZones } from '../lib/native/apple-map-layout'
 import { IOS_MAP_TOUCH_SYNC_EVENT } from '../lib/native/ios-map-touch-suspend'
+import { getNativePlatform } from '../lib/platform'
 import {
   DEV_FALLBACK_POSITION,
   getCurrentPosition,
@@ -274,12 +275,12 @@ export const TripAppleMapKit = forwardRef<
   }, [boatIconDataUrl, mapId, mapReady, playbackPosition, showCurrentPosition])
 
   const syncInteractionChrome = useCallback(async () => {
-    if (!mapReady || !interactive) return
+    if (!mapReady || !embedded || getNativePlatform() !== 'ios') return
     await LogmasterAppleMap.setLayout({
       mapId,
       passThrough: readMapPassThroughZones(),
     })
-  }, [interactive, mapId, mapReady])
+  }, [embedded, mapId, mapReady])
 
   const syncOverlays = useCallback(async () => {
     if (!mapReady) return
@@ -476,9 +477,9 @@ export const TripAppleMapKit = forwardRef<
   }, [mapId, mapReady])
 
   useEffect(() => {
-    if (!mapReady || !interactive) return
+    if (!mapReady || !embedded) return
     void syncInteractionChrome()
-  }, [entryPreview, interactive, mapReady, syncInteractionChrome])
+  }, [embedded, entryPreview, mapReady, syncInteractionChrome])
 
   useEffect(() => {
     if (!mapReady || !onEntrySelect) return
@@ -564,7 +565,7 @@ export const TripAppleMapKit = forwardRef<
   ])
 
   useEffect(() => {
-    if (!mapReady || !interactive) return
+    if (!mapReady || !embedded) return
 
     let syncFrame = 0
     const syncChrome = () => {
@@ -598,12 +599,12 @@ export const TripAppleMapKit = forwardRef<
       window.removeEventListener('resize', syncChrome)
       window.removeEventListener(IOS_MAP_TOUCH_SYNC_EVENT, syncChrome)
     }
-  }, [interactive, mapReady, syncInteractionChrome])
+  }, [embedded, mapReady, syncInteractionChrome])
 
   useEffect(() => {
-    if (!mapReady || !interactive) return
+    if (!mapReady || !embedded) return
     void syncInteractionChrome()
-  }, [interactive, mapReady, syncInteractionChrome])
+  }, [embedded, mapReady, syncInteractionChrome])
 
   const releaseFollowForManualViewport = useCallback(async () => {
     userControlledViewportRef.current = true

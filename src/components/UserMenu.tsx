@@ -158,8 +158,9 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
         <button
           ref={triggerRef}
           type="button"
+          data-map-touch-zone
           className={cn(
-            'flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border transition outline-none',
+            'ios-map-touch-target flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border transition outline-none',
             mapOverlay
               ? cn(
                   TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS,

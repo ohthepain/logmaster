@@ -19,9 +19,10 @@ export function MessagesButton({
     <Link
       to="/messages"
       search={threadId ? { thread: threadId } : undefined}
+      data-map-touch-zone
       aria-label={ariaLabel}
       className={cn(
-        'inline-flex size-10 items-center justify-center rounded-full border no-underline transition',
+        'ios-map-touch-target inline-flex size-10 items-center justify-center rounded-full border no-underline transition',
         mapOverlay
           ? 'border-white/20 bg-black/30 text-white hover:bg-black/45'
           : 'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] hover:bg-[var(--link-bg-hover)]',

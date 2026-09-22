@@ -15,6 +15,7 @@ import {
 import { useLogbookStore } from '../stores/logbook'
 import { getNativePlatform } from '../lib/platform'
 import { useIosNativeMapTouchPassthrough } from '../lib/native/ios-map-touch-passthrough'
+import { requestIosMapTouchSync } from '../lib/native/ios-map-touch-suspend'
 import { IosBlockingOverlayTouchBridge } from './IosBlockingOverlayTouchBridge'
 
 const NO_CHROME = new Set(['/sign-in', '/reset-password'])
@@ -44,6 +45,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     isTripStoryRoute(pathname) ||
     (mobileViewport && pathname === '/messages')
   const mapOverlayHeader = isNativeAppleMapUnderlayRoute(pathname)
+
+  useEffect(() => {
+    if (getNativePlatform() !== 'ios' || !mapOverlayHeader) return
+    requestIosMapTouchSync()
+  }, [mapOverlayHeader, pathname])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
