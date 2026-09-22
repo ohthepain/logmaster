@@ -1,5 +1,10 @@
 import { BoatActivityContent } from './BoatChatActivity'
-import { plainTripLog, TripChatLogItem, TripLogContent } from './TripChatLog'
+import {
+  plainTripLog,
+  tripChatThreadTripId,
+  TripChatLogItem,
+  TripLogContent,
+} from './TripChatLog'
 import { useTranslation } from '../lib/i18n'
 import { MessageResponseCard, ResponseCardSuggestions } from './ResponseCards'
 import type { CardSummary } from '../domain/response-cards'
@@ -278,7 +283,12 @@ function ReceivedMessageRow({
           {message.boatActivity && (
             <BoatActivityContent activity={message.boatActivity} />
           )}
-          {message.logEntry && <TripLogContent entry={message.logEntry} />}
+          {message.logEntry && (
+            <TripLogContent
+              entry={message.logEntry}
+              tripId={tripChatThreadTripId(message.threadId)}
+            />
+          )}
           <MessageResponseCard responseCard={message.responseCard} />
           <MessageMedia
             userId={userId}
@@ -899,7 +909,10 @@ export function Messaging({
                       <div className={messageBubbleWidthClassName}>
                         <div className={ownBubbleClassName}>
                           {message.logEntry && (
-                            <TripLogContent entry={message.logEntry} />
+                            <TripLogContent
+                              entry={message.logEntry}
+                              tripId={tripChatThreadTripId(message.threadId)}
+                            />
                           )}
                           <MessageResponseCard
                             responseCard={message.responseCard}

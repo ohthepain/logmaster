@@ -61,6 +61,7 @@ it('hydrates canonical edited content and only verified media', async () => {
   ).get('entry')!
   expect(content.logEntry.notes).toBe('Edited note')
   expect(content.logEntry.latitude).toBe(0)
+  expect(content.logEntry.place).toBeNull()
   expect(content.logEntry.legacyMedia[0].url).toContain('/log-media/old')
   expect(content.media.map((item) => item.id)).toEqual(['verified'])
   expect(mocks.entries.mock.calls[0][0].where).toEqual({

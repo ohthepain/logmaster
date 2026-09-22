@@ -1,92 +1,183 @@
-import { MapPin } from 'lucide-react'
-import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ChatMessage, TripChatLog } from '../domain/messaging'
+import type { LogEntry } from '../domain/logbook'
+import { AUTO_GENERATED_ENTRY_NOTE } from '../domain/instrument-data'
 import { useTranslation } from '../lib/i18n'
 import { apiUrl } from '../lib/app-origin'
+import { formatPosition } from '../lib/logbook-format'
+import { formatLogEntryPlace, lookupLogEntryPlace } from '../lib/logbook-place'
+import { generateLegColor } from '../lib/leg-colors'
+import { cn } from '../lib/cn'
 import { MessageMedia } from './MessageMedia'
+import { PlaybackTimelineLogEntryMarker } from './PlaybackTimelineLogEntryMarker'
+import { TripChatPositionMap } from './TripChatPositionMap'
 
 export function plainTripLog(entry: TripChatLog) {
   return !['PHOTO', 'MEDIA', 'VOICE_NOTE'].includes(entry.type)
 }
-export function TripChatPosition({
-  latitude,
-  longitude,
-}: {
-  latitude: number
-  longitude: number
-}) {
-  const [failed, setFailed] = useState(false)
-  const z = 12,
-    n = 2 ** z
-  const x = ((longitude + 180) / 360) * n
-  const lat = (Math.max(-85.0511, Math.min(85.0511, latitude)) * Math.PI) / 180
-  const y = ((1 - Math.asinh(Math.tan(lat)) / Math.PI) / 2) * n
+
+function hasValidCoordinates(entry: TripChatLog) {
   return (
-    <figure className="mx-auto my-0 w-72 max-w-full overflow-hidden rounded-xl bg-slate-200">
-      <div
-        role="img"
-        aria-label={`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`}
-        className="relative aspect-[4/3] overflow-hidden"
-      >
-        {!failed &&
-          [-1, 0, 1].flatMap((dy) =>
-            [-1, 0, 1].map((dx) => {
-              const tx = Math.floor(x) + dx,
-                ty = Math.floor(y) + dy
-              if (ty < 0 || ty >= n) return null
-              return (
-                <img
-                  key={`${dx}:${dy}`}
-                  alt=""
-                  loading="lazy"
-                  draggable={false}
-                  src={apiUrl(
-                    `/api/map-tiles/${z}/${((tx % n) + n) % n}/${ty}.png`,
-                  )}
-                  onError={() => setFailed(true)}
-                  className="absolute size-64 max-w-none"
-                  style={{
-                    left: `calc(50% + ${(tx - x) * 256}px)`,
-                    top: `calc(50% + ${(ty - y) * 256}px)`,
-                  }}
-                />
-              )
-            }),
-          )}
-        <MapPin className="absolute left-1/2 top-1/2 size-8 -translate-x-1/2 -translate-y-full fill-blue-600 text-white drop-shadow" />
-        <span className="absolute inset-x-0 bottom-0 bg-white/85 p-1 text-center text-xs tabular-nums text-slate-700">
-          {latitude.toFixed(4)}, {longitude.toFixed(4)}
-        </span>
-      </div>
-      <figcaption className="bg-white px-2 text-right text-[9px] text-slate-600">
-        <a
-          href="https://www.maptiler.com/copyright/"
-          target="_blank"
-          rel="noreferrer"
-        >
-          © MapTiler
-        </a>{' '}
-        ·{' '}
-        <a
-          href="https://www.openstreetmap.org/copyright"
-          target="_blank"
-          rel="noreferrer"
-        >
-          © OpenStreetMap
-        </a>
-      </figcaption>
-    </figure>
-  )
-}
-export function TripLogContent({ entry }: { entry: TripChatLog }) {
-  const { t, language } = useTranslation()
-  const coordinates =
     entry.latitude != null &&
     entry.longitude != null &&
     Number.isFinite(entry.latitude) &&
     Number.isFinite(entry.longitude) &&
     Math.abs(entry.latitude) <= 90 &&
     Math.abs(entry.longitude) <= 180
+  )
+}
+
+export function tripChatThreadTripId(threadId: string): string | null {
+  return threadId.startsWith('trip:') ? threadId.slice(5) : null
+}
+
+function TripHourlyLogContent({
+  entry,
+  tripId,
+}: {
+  entry: TripChatLog
+  tripId: string | null
+}) {
+  const { t, language } = useTranslation()
+  const [mapOpen, setMapOpen] = useState(false)
+  const coordinates = hasValidCoordinates(entry)
+  const [placeLabel, setPlaceLabel] = useState<string | null>(() =>
+    entry.place ? formatLogEntryPlace(entry.place) : null,
+  )
+
+  const markerEntry = useMemo(
+    (): LogEntry => ({
+      id: entry.id,
+      tripId: tripId ?? '',
+      type: 'HOURLY_LOG',
+      timestamp: entry.timestamp,
+      notes: entry.notes,
+      data: null,
+      createdAt: entry.timestamp,
+      updatedAt: entry.timestamp,
+      synced: true,
+      deleted: false,
+    }),
+    [entry.id, entry.notes, entry.timestamp, tripId],
+  )
+
+  useEffect(() => {
+    if (entry.place) {
+      setPlaceLabel(formatLogEntryPlace(entry.place))
+      return
+    }
+    if (!coordinates) {
+      setPlaceLabel(null)
+      return
+    }
+    let cancelled = false
+    void lookupLogEntryPlace(entry.latitude!, entry.longitude!).then(
+      (place) => {
+        if (cancelled) return
+        setPlaceLabel(place ? formatLogEntryPlace(place) : null)
+      },
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [coordinates, entry.latitude, entry.longitude, entry.place])
+
+  const notes =
+    entry.notes && entry.notes !== AUTO_GENERATED_ENTRY_NOTE
+      ? entry.notes
+      : null
+
+  const timeLabel = new Date(entry.timestamp).toLocaleTimeString(language, {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  const coordsLabel = coordinates
+    ? formatPosition(entry.latitude, entry.longitude)
+    : null
+  const mapLabel = mapOpen ? t('tripChat_hideMap') : t('tripChat_showMap')
+
+  return (
+    <div
+      className="mx-auto w-[22.5rem] max-w-full space-y-2 text-left"
+      data-trip-log-type={entry.type}
+    >
+      <button
+        type="button"
+        aria-expanded={mapOpen}
+        aria-label={
+          coordinates
+            ? `${timeLabel}${placeLabel ? ` · ${placeLabel}` : ''}${coordsLabel ? ` · ${coordsLabel}` : ''} · ${mapLabel}`
+            : mapLabel
+        }
+        disabled={!coordinates}
+        onClick={() => coordinates && setMapOpen((open) => !open)}
+        className={cn(
+          'flex w-full min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-left text-xs text-slate-700',
+          coordinates
+            ? 'transition hover:bg-slate-50'
+            : 'cursor-default opacity-80',
+        )}
+      >
+        <PlaybackTimelineLogEntryMarker
+          entry={markerEntry}
+          legColor={generateLegColor(0)}
+          className="shrink-0"
+        />
+        <time
+          dateTime={entry.timestamp}
+          className="shrink-0 tabular-nums font-semibold"
+        >
+          {timeLabel}
+        </time>
+        {placeLabel ? (
+          <span className="min-w-0 truncate text-slate-800">{placeLabel}</span>
+        ) : null}
+        {coordsLabel ? (
+          <span className="shrink-0 tabular-nums text-slate-500">
+            {coordsLabel}
+          </span>
+        ) : null}
+        {coordinates ? (
+          <ChevronDown
+            className={cn(
+              'ml-auto size-3.5 shrink-0 text-slate-500 transition',
+              mapOpen && 'rotate-180',
+            )}
+            aria-hidden
+          />
+        ) : null}
+      </button>
+      {mapOpen && coordinates ? (
+        <TripChatPositionMap
+          tripId={tripId}
+          timestamp={entry.timestamp}
+          latitude={entry.latitude!}
+          longitude={entry.longitude!}
+        />
+      ) : null}
+      {notes ? (
+        <p className="m-0 whitespace-pre-wrap break-words text-sm text-slate-800">
+          {notes}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+export function TripLogContent({
+  entry,
+  tripId = null,
+}: {
+  entry: TripChatLog
+  tripId?: string | null
+}) {
+  const { t, language } = useTranslation()
+
+  if (entry.type === 'HOURLY_LOG') {
+    return <TripHourlyLogContent entry={entry} tripId={tripId} />
+  }
+
   return (
     <div className="space-y-2" data-trip-log-type={entry.type}>
       <p className="m-0 text-xs text-slate-600">
@@ -100,12 +191,6 @@ export function TripLogContent({ entry }: { entry: TripChatLog }) {
           })}
         </time>
       </p>
-      {entry.type === 'HOURLY_LOG' && coordinates && (
-        <TripChatPosition
-          latitude={entry.latitude!}
-          longitude={entry.longitude!}
-        />
-      )}
       {entry.notes && (
         <p className="m-0 whitespace-pre-wrap break-words text-sm text-slate-800">
           {entry.notes}
@@ -146,6 +231,7 @@ export function TripLogContent({ entry }: { entry: TripChatLog }) {
     </div>
   )
 }
+
 export function TripChatLogItem({
   message,
   userId,
@@ -154,12 +240,13 @@ export function TripChatLogItem({
   userId: string
 }) {
   if (!message.logEntry) return null
+  const tripId = tripChatThreadTripId(message.threadId)
   return (
     <div
       className="mx-auto max-w-sm py-2 text-center"
       data-testid="trip-log-row"
     >
-      <TripLogContent entry={message.logEntry} />
+      <TripLogContent entry={message.logEntry} tripId={tripId} />
       <MessageMedia
         userId={userId}
         threadId={message.threadId}

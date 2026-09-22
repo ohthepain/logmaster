@@ -213,11 +213,19 @@ export function LogEntryCreateModal({
     })
   }, [open, step, tripId])
 
+  useEffect(() => {
+    if (!open || step !== 'compose' || !noteEditing) return
+    requestAnimationFrame(() => noteInputRef.current?.focus())
+  }, [open, step, noteEditing, selectedType])
+
   if (!open) return null
 
   const pickType = (type: LogEntryType) => {
     setSelectedType(type)
     setStep('compose')
+    if (type === 'NOTE') {
+      setNoteEditing(true)
+    }
   }
 
   const handlePhotoPick = (file: File | undefined) => {

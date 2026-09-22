@@ -109,6 +109,8 @@ export type TranslationKey =
   | 'openFullScreenMap'
   | 'mapLayers'
   | 'logEntry'
+  | 'tripChat_showMap'
+  | 'tripChat_hideMap'
   | 'fitRoute'
   | 'startRecording'
   | 'pauseRecording'

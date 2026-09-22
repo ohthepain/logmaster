@@ -555,6 +555,21 @@ a {
   vertical-align: middle;
 }
 
+.trip-chat-hourly-map.sailing-map .maplibregl-ctrl-attrib.maplibregl-compact {
+  margin: 2px 4px;
+  min-height: 12px;
+  border-radius: 6px;
+  opacity: 0.82;
+}
+
+.trip-chat-hourly-map.sailing-map
+  .maplibregl-ctrl-attrib
+  summary.maplibregl-ctrl-attrib-button {
+  width: 14px;
+  height: 14px;
+  background-size: 9px 9px;
+}
+
 .sailing-map .maplibregl-canvas {
   outline: none;
 }

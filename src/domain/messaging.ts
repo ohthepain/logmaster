@@ -1,6 +1,7 @@
 /** Provider-neutral contracts. No Stream types may escape the adapters. */
 import type { BoatChatActivity } from './boat-activity'
 import type { LogEntryType } from './logbook'
+import type { LogEntryPlace } from '../lib/logbook-place'
 import type { ChatAttachment } from './message-media'
 import type { ImageResponseCard } from './response-cards'
 
@@ -28,6 +29,7 @@ export type TripChatLog = {
   notes: string | null
   latitude: number | null
   longitude: number | null
+  place: LogEntryPlace | null
   legacyMedia: { id: string; kind: 'photo' | 'video' | 'voice'; url: string }[]
 }
 export type ChatMessage = {

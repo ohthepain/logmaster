@@ -115,7 +115,7 @@ export function LogEntryComposerModal({
 
     const notes = entry.notes ?? ''
     setDraftNote(notes)
-    setNoteEditing(notes.trim().length > 0)
+    setNoteEditing(entry.type === 'NOTE' || notes.trim().length > 0)
     setNoteOrder(readNoteOrder(entry.data))
     setVoiceOrder(readVoiceOrder(entry.data))
     setIncludeVoiceNote(
@@ -143,6 +143,11 @@ export function LogEntryComposerModal({
     entry?.notes,
     entry?.data,
   ])
+
+  useEffect(() => {
+    if (!open || !noteEditing) return
+    requestAnimationFrame(() => noteInputRef.current?.focus())
+  }, [open, noteEditing, entry?.id])
 
   const contentOrderInput = useMemo(
     () => ({

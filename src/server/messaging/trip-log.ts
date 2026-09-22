@@ -2,6 +2,7 @@ import { prisma } from '../db'
 import type { ChatMessage, TripChatLog } from '../../domain/messaging'
 import { mediaDescriptor } from './media'
 import { isVideoMediaFileName } from '../../lib/media-entry'
+import { entryPlaceFromData } from '../../lib/logbook-place'
 
 /** Keep IDs stable across offline retries. Content is read from the canonical log. */
 export function tripLogChatWrites(
@@ -70,6 +71,13 @@ export async function tripLogMessageContent(
           notes: entry.notes,
           latitude: entry.latitude,
           longitude: entry.longitude,
+          place: entryPlaceFromData(
+            entry.data &&
+              typeof entry.data === 'object' &&
+              !Array.isArray(entry.data)
+              ? (entry.data as Record<string, unknown>)
+              : null,
+          ),
           legacyMedia: entry.media
             .filter(
               (item) =>
