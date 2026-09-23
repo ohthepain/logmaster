@@ -18,7 +18,7 @@ import { useIosNativeMapTouchPassthrough } from '../lib/native/ios-map-touch-pas
 import { requestIosMapTouchSync } from '../lib/native/ios-map-touch-suspend'
 import { IosBlockingOverlayTouchBridge } from './IosBlockingOverlayTouchBridge'
 
-const NO_CHROME = new Set(['/sign-in', '/reset-password'])
+const NO_CHROME = new Set(['/sign-in', '/reset-password', '/about', '/contact'])
 
 function useMobileViewport() {
   const [mobile, setMobile] = useState(false)

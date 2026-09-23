@@ -9,6 +9,24 @@ export function LegalFooter({ className = '' }: { className?: string }) {
         className={`text-center text-xs text-[var(--sea-ink-soft)] ${className}`.trim()}
       >
         <Link
+          to="/about"
+          className="underline underline-offset-2 hover:text-[var(--sea-ink)]"
+        >
+          About
+        </Link>
+        <span aria-hidden="true" className="mx-2">
+          ·
+        </span>
+        <Link
+          to="/contact"
+          className="underline underline-offset-2 hover:text-[var(--sea-ink)]"
+        >
+          Contact & Support
+        </Link>
+        <span aria-hidden="true" className="mx-2">
+          ·
+        </span>
+        <Link
           to="/terms"
           className="underline underline-offset-2 hover:text-[var(--sea-ink)]"
         >

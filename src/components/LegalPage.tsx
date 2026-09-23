@@ -68,6 +68,12 @@ export function LegalPage({ kicker, title, intro, sections }: LegalPageProps) {
 
         <footer className="mt-12 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[var(--line)] pt-6 text-sm">
           <Link
+            to="/contact"
+            className="font-medium underline underline-offset-2"
+          >
+            Contact & Support
+          </Link>
+          <Link
             to="/"
             className="font-medium text-[var(--sea-ink)] underline decoration-[var(--sea-ink)]/30 underline-offset-2 hover:decoration-[var(--sea-ink)]"
           >

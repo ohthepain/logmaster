@@ -30,7 +30,14 @@ type FtueContextValue = {
 
 const FtueContext = createContext<FtueContextValue | null>(null)
 
-const FTUE_SKIP_PATHS = new Set(['/reset-password', '/sign-in'])
+const FTUE_SKIP_PATHS = new Set([
+  '/reset-password',
+  '/sign-in',
+  '/about',
+  '/contact',
+  '/privacy',
+  '/terms',
+])
 
 export function useFtue() {
   const context = useContext(FtueContext)
