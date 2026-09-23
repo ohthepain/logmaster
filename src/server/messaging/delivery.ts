@@ -56,6 +56,7 @@ export async function chatPushDisposition(
       return 'suppress'
     throw error
   }
+  if (!thread.memberIds.includes(userId)) return 'suppress'
   const read = await prisma.chatRead.findUnique({
     where: { userId_threadId: { userId, threadId: message.threadId } },
   })

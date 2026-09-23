@@ -1,3 +1,7 @@
+import {
+  syncTripParticipants,
+  withTripParticipants,
+} from '../trip-participants'
 import { reconcileTripMileage } from '../economy/mileage'
 import { visibleLogbook } from '../economy/visibility'
 import { tripLogChatWrites } from '../messaging/trip-log'
@@ -292,7 +296,7 @@ logbookRoutes.get('/bootstrap', async (c) => {
     ])
   return c.json(
     await visibleLogbook({
-      trips,
+      trips: await withTripParticipants(trips),
       legs,
       logEntries,
       tripTracks: tripTracks.map((track: Record<string, unknown>) =>
@@ -499,51 +503,58 @@ logbookRoutes.post('/sync', async (c) => {
           ])
         }
       }
-      await prisma.$transaction([
-        ...preparedTrips.map((trip) =>
-          db.trip.upsert({
-            where: { id: trip.id },
-            create: trip as any,
-            update: trip as any,
-          }),
-        ),
-        ...legsToUpsert.map((leg) =>
-          db.leg.upsert({
-            where: { id: String(leg.id) },
-            create: toLeg(leg) as any,
-            update: toLeg(leg) as any,
-          }),
-        ),
-        ...entriesToUpsert.map((entry) =>
-          db.logEntry.upsert({
-            where: { id: String(entry.id) },
-            create: toLogEntry(entry) as any,
-            update: toLogEntry(entry) as any,
-          }),
-        ),
-        ...tracksToUpsert.map((track) =>
-          db.tripTrack.upsert({
-            where: { id: String(track.id) },
-            create: toTripTrack(track) as any,
-            update: toTripTrack(track) as any,
-          }),
-        ),
-        ...mediaToUpsert.map((item) =>
-          db.media.upsert({
-            where: { id: String(item.id) },
-            create: toMedia(item) as any,
-            update: toMedia(item) as any,
-          }),
-        ),
-        ...tripLogChatWrites(
-          entriesToUpsert as {
-            id: unknown
-            tripId: unknown
-            deleted?: unknown
-          }[],
-          userId,
-        ),
-      ])
+      await prisma.$transaction(
+        async (tx) => {
+          for (const trip of preparedTrips) {
+            await syncTripParticipants(
+              tx,
+              trip as any,
+              tripsToUpsert.find((t) => String(t.id) === trip.id)!,
+              userId,
+            )
+          }
+          await Promise.all([
+            ...legsToUpsert.map((leg) =>
+              tx.leg.upsert({
+                where: { id: String(leg.id) },
+                create: toLeg(leg) as any,
+                update: toLeg(leg) as any,
+              }),
+            ),
+            ...entriesToUpsert.map((entry) =>
+              tx.logEntry.upsert({
+                where: { id: String(entry.id) },
+                create: toLogEntry(entry) as any,
+                update: toLogEntry(entry) as any,
+              }),
+            ),
+            ...tracksToUpsert.map((track) =>
+              tx.tripTrack.upsert({
+                where: { id: String(track.id) },
+                create: toTripTrack(track) as any,
+                update: toTripTrack(track) as any,
+              }),
+            ),
+            ...mediaToUpsert.map((item) =>
+              tx.media.upsert({
+                where: { id: String(item.id) },
+                create: toMedia(item) as any,
+                update: toMedia(item) as any,
+              }),
+            ),
+            ...tripLogChatWrites(
+              entriesToUpsert as {
+                id: unknown
+                tripId: unknown
+                deleted?: unknown
+              }[],
+              userId,
+              tx,
+            ),
+          ])
+        },
+        { timeout: 30000 },
+      )
       if (entriesToUpsert.some((entry) => !entry.deleted))
         await wakeChatWorker()
     }
@@ -623,7 +634,7 @@ logbookRoutes.post('/sync', async (c) => {
 
     return c.json(
       await visibleLogbook({
-        trips: savedTrips,
+        trips: await withTripParticipants(savedTrips),
         legs: savedLegs,
         logEntries: savedEntries,
         tripTracks: savedTracks.map((track: Record<string, unknown>) =>

@@ -110,7 +110,7 @@ async function canAccessTrip(
       userId: true,
       boatId: true,
       storyShareToken: true,
-      crewMemberIds: true,
+      participants: { select: { userId: true } },
     },
   })
   if (!trip) return false
@@ -123,20 +123,12 @@ async function canAccessTrip(
     return true
   }
 
-  if (userId && privilege === 'view' && Array.isArray(trip.crewMemberIds)) {
-    const crew = await db.crewMember.findFirst({
-      where: {
-        id: {
-          in: trip.crewMemberIds.filter(
-            (id: unknown) => typeof id === 'string',
-          ),
-        },
-        linkedUserId: userId,
-      },
-      select: { id: true },
-    })
-    if (crew) return true
-  }
+  if (
+    userId &&
+    privilege === 'view' &&
+    trip.participants.some((p: { userId: string }) => p.userId === userId)
+  )
+    return true
 
   if (userId && trip.userId === userId) {
     return roleHasPrivilege('OWNER', privilege)
@@ -306,17 +298,11 @@ async function accessibleBoatIds(userId: string): Promise<string[]> {
 
 export async function tripAccessFilter(userId: string) {
   const boatIds = await accessibleBoatIds(userId)
-  const crew = await db.crewMember.findMany({
-    where: { linkedUserId: userId },
-    select: { id: true },
-  })
 
   return {
     OR: [
       { userId },
-      ...crew.map((member: { id: string }) => ({
-        crewMemberIds: { array_contains: [member.id] },
-      })),
+      { participants: { some: { userId } } },
       ...(boatIds.length > 0 ? [{ boatId: { in: boatIds } }] : []),
     ],
   }

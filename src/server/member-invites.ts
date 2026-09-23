@@ -4,9 +4,7 @@ import { normalizeInviteLocale } from '../lib/invite-locale'
 import { sendMemberInviteEmail } from './email/ses'
 import { prisma } from './db'
 import { inviteeHasAccount } from './invite-signup'
-import { linkContactToMember } from './org-contacts'
 import { fireOrgMembersNotification } from './notifications/route-hooks'
-import { ensureOrgMemberForBoatMember } from './permissions/consortium'
 import type { ConsortiumMemberRole } from './permissions/roles'
 
 const db = prisma as any
@@ -432,7 +430,6 @@ export async function acceptMemberInvite(args: {
         },
         update: {},
       })
-      await linkContactToMember(invite.orgId, args.userId)
     } else if (invite.kind === 'BOAT' && invite.boatId) {
       const boat = invite.boat
       if (boat && boat.userId === args.userId) {
@@ -461,10 +458,6 @@ export async function acceptMemberInvite(args: {
       },
     })
   })
-
-  if (invite.kind === 'BOAT' && invite.boatId) {
-    await ensureOrgMemberForBoatMember(invite.boatId, args.userId)
-  }
 
   if (invite.kind === 'ORG' && invite.orgId && invite.org && !wasOrgMember) {
     fireOrgMembersNotification(args.userId, invite.org, { key: 'joinedOrg' })

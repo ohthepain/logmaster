@@ -1,3 +1,4 @@
+import { prisma } from '../db'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createHmac } from 'node:crypto'
 import { messagingRoutes } from './messaging'
@@ -51,6 +52,7 @@ vi.mock('../db', () => ({
     chatMessageMedia: { findMany: mocks.attachments },
     chatMedia: { count: mocks.mediaCount },
     $executeRaw: mocks.read,
+    $transaction: async (work: (tx: unknown) => unknown) => work(prisma),
   },
 }))
 vi.mock('../messaging/media', () => ({
@@ -482,4 +484,28 @@ it('reauthorizes boat previews before accessing their stored files', async () =>
       .status,
   ).toBe(404)
   expect(mocks.boatContent).not.toHaveBeenCalled()
+})
+
+it('rejects new messages, likes and uploads in a private chat after someone leaves', async () => {
+  const readOnly = { ...thread, canSend: false }
+  mocks.threads.mockResolvedValue([readOnly])
+  mocks.requireThread.mockResolvedValue(readOnly)
+  expect(
+    (await post('/threads/boat:boat/messages', { id, text: 'Hello' })).status,
+  ).toBe(403)
+  expect((await post('/threads/boat:boat/media/prepare', {})).status).toBe(403)
+  expect(
+    (
+      await messagingRoutes.request(`/threads/boat:boat/messages/${id}/like`, {
+        method: 'PUT',
+        body: '{}',
+      })
+    ).status,
+  ).toBe(403)
+  expect(mocks.create).not.toHaveBeenCalled()
+  expect(mocks.upsertLike).not.toHaveBeenCalled()
+  expect(mocks.prepareMedia).not.toHaveBeenCalled()
+  expect(
+    (await messagingRoutes.request('/threads/boat:boat/messages')).status,
+  ).toBe(200)
 })

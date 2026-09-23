@@ -1,3 +1,4 @@
+import { connectionAction } from '../lib/connections-api'
 import { BoatActivityContent } from './BoatChatActivity'
 import {
   plainTripLog,
@@ -602,6 +603,42 @@ export function Messaging({
       messageList.current.scrollTop = messageList.current.scrollHeight
   }, [lastId, selectedId])
 
+  async function connectPeer() {
+    if (!selected || selected.object.kind !== 'user') return
+    try {
+      await connectionAction(selected.object.id, 'request')
+      refresh()
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'Could not send connection request',
+      )
+    }
+  }
+
+  async function participation(
+    action: 'leave' | 'invite' | 'accept' | 'decline',
+  ) {
+    if (!selectedId) return
+    if (
+      action === 'leave' &&
+      !window.confirm(
+        'Leave this private chat? Your history stays available. Rejoining requires an accepted invitation.',
+      )
+    )
+      return
+    try {
+      await apiJson(
+        `/api/messaging/threads/${encodeURIComponent(selectedId)}/participation/${action}`,
+        { method: 'POST' },
+      )
+      refresh()
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'Could not update chat participation',
+      )
+    }
+  }
+
   async function loadOlder() {
     if (!cursor || !selectedId) return
     const threadId = selectedId
@@ -631,6 +668,7 @@ export function Messaging({
   async function send() {
     if (
       !selectedId ||
+      selected?.canSend === false ||
       (!draft.trim() && !selectedFiles.length && !selectedCard) ||
       sendingRef.current ||
       !active
@@ -794,6 +832,16 @@ export function Messaging({
                       <span className="block truncate font-semibold">
                         {thread.object.name}
                       </span>
+                      {thread.direct?.invited && (
+                        <span className="block text-xs font-semibold text-[var(--brand)]">
+                          Invitation to rejoin
+                        </span>
+                      )}
+                      {thread.direct?.left && !thread.direct.invited && (
+                        <span className="block text-xs text-[var(--sea-ink-soft)]">
+                          Left chat · history saved
+                        </span>
+                      )}
                       <span className="mt-1 block truncate text-sm text-[var(--sea-ink-soft)]">
                         {thread.lastMessage
                           ? `${thread.lastMessage.senderId === userId ? 'You: ' : ''}${(thread.lastMessage.boatActivity ? `${translate(`boatActivity_${thread.lastMessage.boatActivity.kind}`)}${thread.lastMessage.boatActivity.label ? ` · ${thread.lastMessage.boatActivity.label}` : ''}` : '') || (thread.lastMessage.logEntry ? translate(`tripLog_${thread.lastMessage.logEntry.type}`) : '') || thread.lastMessage.text || (thread.lastMessage.responseCard ? 'Response card' : '') || (thread.lastMessage.media?.some((item) => item.contentType.startsWith('video/')) ? 'Video' : 'Photo')}`
@@ -828,6 +876,61 @@ export function Messaging({
           {selected ? (
             <>
               <ThreadChatHeader thread={selected} onBack={() => onSelect()} />
+              {selected.direct && (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] bg-white px-4 py-2 text-sm">
+                  <span>
+                    {selected.direct.left
+                      ? 'You left this chat. Your history is preserved.'
+                      : selected.direct.peerLeft
+                        ? `${selected.object.name} left this chat. Your history is preserved.`
+                        : 'Private conversation'}
+                  </span>
+                  <div className="flex gap-3">
+                    {!selected.direct.connectionStatus && (
+                      <button
+                        className="font-semibold text-[var(--brand)]"
+                        onClick={() => void connectPeer()}
+                      >
+                        Connect
+                      </button>
+                    )}
+                    {selected.direct.connectionStatus === 'PENDING' && (
+                      <span>Connection request pending</span>
+                    )}
+                    {selected.direct.invited && (
+                      <>
+                        <button
+                          className="font-semibold text-[var(--brand)]"
+                          onClick={() => void participation('accept')}
+                        >
+                          Accept invitation
+                        </button>
+                        <button onClick={() => void participation('decline')}>
+                          Decline
+                        </button>
+                      </>
+                    )}
+                    {selected.direct.peerLeft && (
+                      <button
+                        disabled={selected.direct.invitationSent}
+                        className="font-semibold text-[var(--brand)] disabled:opacity-50"
+                        onClick={() => void participation('invite')}
+                      >
+                        {selected.direct.invitationSent
+                          ? 'Invitation sent'
+                          : selected.direct.left
+                            ? 'Invite to resume chat'
+                            : 'Invite back'}
+                      </button>
+                    )}
+                    {selected.direct.established && !selected.direct.left && (
+                      <button onClick={() => void participation('leave')}>
+                        Leave chat
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
               <div
                 ref={messageList}
                 role="log"
@@ -903,7 +1006,7 @@ export function Messaging({
                         message={message}
                         objects={objects}
                         like={like}
-                        active={active}
+                        active={active && selected.canSend !== false}
                         likePending={messageLikes.isPending(message.id)}
                         onToggleLike={(origin) =>
                           messageLikes.like(message.id, () =>
@@ -957,118 +1060,123 @@ export function Messaging({
                   )
                 })}
               </div>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  void send()
-                }}
-                className="shrink-0 bg-white pb-[var(--lm-safe-bottom)]"
-              >
-                <ResponseCardSuggestions
-                  key={`cards:${selected.id}`}
-                  text={draft}
-                  selected={selectedCard}
-                  disabled={sending || !active}
-                  onSelect={(card) => {
-                    setCardDrafts((all) => ({ ...all, [selected.id]: card }))
-                    setMediaOpen(false)
+              {selected.canSend !== false && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    void send()
                   }}
-                />
-                <MediaSelector
-                  key={selected.id}
-                  open={mediaOpen}
-                  files={selectedFiles}
-                  disabled={sending}
-                  onFiles={(files) =>
-                    setMediaDrafts((all) => ({ ...all, [selected.id]: files }))
-                  }
-                  onClose={() => setMediaOpen(false)}
-                  onError={setError}
-                />
-                {uploadProgress && (
-                  <p
-                    role="status"
-                    className="m-0 px-3 pt-2 text-xs text-slate-600"
-                  >
-                    {uploadProgress}
-                  </p>
-                )}
-                {draftReferences.length > 0 && (
-                  <div
-                    aria-label="Linked objects"
-                    className="flex flex-wrap gap-2 px-3 pt-2 text-xs text-black"
-                  >
-                    {[
-                      ...new Map(
-                        draftReferences.map((r) => [r.kind + r.id, r]),
-                      ).values(),
-                    ].map((ref) => (
-                      <ChatObjectAnchor
-                        key={ref.kind + ref.id}
-                        object={ref}
-                        className="text-black"
-                      >
-                        {ref.name}
-                      </ChatObjectAnchor>
-                    ))}
-                  </div>
-                )}
-                <div className="flex items-stretch">
-                  <textarea
-                    aria-label="Message"
-                    rows={2}
-                    maxLength={5000}
-                    value={draft}
-                    onFocus={() => setMediaOpen(false)}
-                    onClick={() => setMediaOpen(false)}
-                    onChange={(e) => {
+                  className="shrink-0 bg-white pb-[var(--lm-safe-bottom)]"
+                >
+                  <ResponseCardSuggestions
+                    key={`cards:${selected.id}`}
+                    text={draft}
+                    selected={selectedCard}
+                    disabled={sending || !active}
+                    onSelect={(card) => {
+                      setCardDrafts((all) => ({ ...all, [selected.id]: card }))
                       setMediaOpen(false)
-                      setDrafts((all) => ({
-                        ...all,
-                        [selected.id]: e.target.value,
-                      }))
                     }}
-                    onKeyDown={(e) => {
-                      if (
-                        e.key === 'Enter' &&
-                        !e.shiftKey &&
-                        !e.nativeEvent.isComposing
-                      ) {
-                        e.preventDefault()
-                        void send()
-                      }
-                    }}
-                    placeholder={`Message ${selected.object.name}…`}
-                    className="max-h-36 min-h-11 flex-1 resize-none rounded-none border-0 bg-white px-3 py-2.5 text-[15px] text-black caret-[#0385ff] outline-none placeholder:text-[var(--sea-ink-soft)]"
                   />
-                  {!draft.length && (
-                    <button
-                      type="button"
-                      aria-label="Add photos or videos"
-                      aria-expanded={mediaOpen}
-                      disabled={sending}
-                      onClick={() => {
-                        if (document.activeElement instanceof HTMLElement)
-                          document.activeElement.blur()
-                        setMediaOpen((value) => !value)
-                      }}
-                      className="flex w-12 shrink-0 items-center justify-center bg-white text-[#0385ff] disabled:opacity-40"
+                  <MediaSelector
+                    key={selected.id}
+                    open={mediaOpen}
+                    files={selectedFiles}
+                    disabled={sending}
+                    onFiles={(files) =>
+                      setMediaDrafts((all) => ({
+                        ...all,
+                        [selected.id]: files,
+                      }))
+                    }
+                    onClose={() => setMediaOpen(false)}
+                    onError={setError}
+                  />
+                  {uploadProgress && (
+                    <p
+                      role="status"
+                      className="m-0 px-3 pt-2 text-xs text-slate-600"
                     >
-                      <ImageIcon size={24} />
-                    </button>
+                      {uploadProgress}
+                    </p>
                   )}
-                  {draft.trim() || selectedFiles.length || selectedCard ? (
-                    <button
-                      type="submit"
-                      aria-label="Send message"
-                      disabled={sending || !active}
-                      className="flex w-12 shrink-0 items-center justify-center bg-white text-[#0385ff] disabled:opacity-40"
+                  {draftReferences.length > 0 && (
+                    <div
+                      aria-label="Linked objects"
+                      className="flex flex-wrap gap-2 px-3 pt-2 text-xs text-black"
                     >
-                      <ArrowUp size={22} strokeWidth={2.5} />
-                    </button>
-                  ) : null}
-                </div>
-              </form>
+                      {[
+                        ...new Map(
+                          draftReferences.map((r) => [r.kind + r.id, r]),
+                        ).values(),
+                      ].map((ref) => (
+                        <ChatObjectAnchor
+                          key={ref.kind + ref.id}
+                          object={ref}
+                          className="text-black"
+                        >
+                          {ref.name}
+                        </ChatObjectAnchor>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex items-stretch">
+                    <textarea
+                      aria-label="Message"
+                      rows={2}
+                      maxLength={5000}
+                      value={draft}
+                      onFocus={() => setMediaOpen(false)}
+                      onClick={() => setMediaOpen(false)}
+                      onChange={(e) => {
+                        setMediaOpen(false)
+                        setDrafts((all) => ({
+                          ...all,
+                          [selected.id]: e.target.value,
+                        }))
+                      }}
+                      onKeyDown={(e) => {
+                        if (
+                          e.key === 'Enter' &&
+                          !e.shiftKey &&
+                          !e.nativeEvent.isComposing
+                        ) {
+                          e.preventDefault()
+                          void send()
+                        }
+                      }}
+                      placeholder={`Message ${selected.object.name}…`}
+                      className="max-h-36 min-h-11 flex-1 resize-none rounded-none border-0 bg-white px-3 py-2.5 text-[15px] text-black caret-[#0385ff] outline-none placeholder:text-[var(--sea-ink-soft)]"
+                    />
+                    {!draft.length && (
+                      <button
+                        type="button"
+                        aria-label="Add photos or videos"
+                        aria-expanded={mediaOpen}
+                        disabled={sending}
+                        onClick={() => {
+                          if (document.activeElement instanceof HTMLElement)
+                            document.activeElement.blur()
+                          setMediaOpen((value) => !value)
+                        }}
+                        className="flex w-12 shrink-0 items-center justify-center bg-white text-[#0385ff] disabled:opacity-40"
+                      >
+                        <ImageIcon size={24} />
+                      </button>
+                    )}
+                    {draft.trim() || selectedFiles.length || selectedCard ? (
+                      <button
+                        type="submit"
+                        aria-label="Send message"
+                        disabled={sending || !active}
+                        className="flex w-12 shrink-0 items-center justify-center bg-white text-[#0385ff] disabled:opacity-40"
+                      >
+                        <ArrowUp size={22} strokeWidth={2.5} />
+                      </button>
+                    ) : null}
+                  </div>
+                </form>
+              )}
             </>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-[#eef2f6] p-8 text-center text-[var(--sea-ink-soft)]">

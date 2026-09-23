@@ -298,7 +298,7 @@ export function buildTripFromGpxFiles(
     registration: null,
     skipper: null,
     skipperKey: null,
-    crewMemberIds: null,
+    crewUserIds: null,
     title: gpxImportTripTitle(boatName, startedAt),
     coverKind: 'map',
     coverPhotoDataUrl: null,

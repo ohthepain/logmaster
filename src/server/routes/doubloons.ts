@@ -22,16 +22,9 @@ doubloonRoutes.use('*', async (c, next) => {
 doubloonRoutes.get('/', async (c) => {
   const userId = (await getSessionUserId(c.req.raw.headers))!
   const wallet = await economyTransaction((tx) => ensureWallet(tx, userId))
-  const crew = await prisma.crewMember.findMany({
-    where: { linkedUserId: userId },
-    select: { id: true },
-  })
   const trips = await prisma.trip.findMany({
     where: {
-      OR: [
-        { userId },
-        ...crew.map((m) => ({ crewMemberIds: { array_contains: [m.id] } })),
-      ],
+      OR: [{ userId }, { participants: { some: { userId } } }],
     },
     orderBy: { startedAt: 'desc' },
   })

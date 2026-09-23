@@ -1,5 +1,4 @@
 import { prisma } from '../db'
-import { linkContactToMember } from '../org-contacts'
 import type { ConsortiumMemberRole } from './roles'
 
 const db = prisma as any
@@ -23,7 +22,6 @@ export async function createConsortiumWithOwner(
         role: 'OWNER',
       },
     })
-    await linkContactToMember(consortium.id, ownerUserId)
     return consortium
   })
 }
@@ -107,14 +105,6 @@ export async function assertCanRemoveMember(
     }
   }
 
-  if (await hasOrgBoatMembership(consortiumId, targetUserId)) {
-    return {
-      ok: false,
-      error:
-        'Remove this person from all org boats before removing org membership.',
-    }
-  }
-
   return { ok: true }
 }
 
@@ -131,18 +121,6 @@ export async function hasOrgBoatMembership(
   return count > 0
 }
 
-export async function ensureOrgMemberForBoatMember(
-  boatId: string,
-  userId: string,
-) {
-  const boat = await db.boat.findUnique({
-    where: { id: boatId },
-    select: { consortiumId: true },
-  })
-  if (!boat?.consortiumId) return null
-  return ensureConsortiumMember(boat.consortiumId, userId, 'MEMBER')
-}
-
 export async function ensureConsortiumMember(
   consortiumId: string,
   userId: string,
@@ -155,6 +133,5 @@ export async function ensureConsortiumMember(
     create: { consortiumId, userId, role },
     update: {},
   })
-  await linkContactToMember(consortiumId, userId)
   return member
 }

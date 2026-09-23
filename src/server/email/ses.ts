@@ -6,7 +6,7 @@ import {
   buildVerifyEmailEmail,
 } from './auth-copy'
 import { buildCrewInviteEmail, buildMemberInviteEmail } from './invite-copy'
-import { renderSimpleEmail } from './html'
+import { escapeHtml, renderSimpleEmail } from './html'
 
 /** Must match the region where SES identities are verified (see terraform `aws_region`). */
 const region = process.env.AWS_REGION || 'eu-central-1'
@@ -170,5 +170,22 @@ export async function sendMemberInviteEmail(args: {
     subject: content.subject,
     text: content.text,
     html: content.html,
+  })
+}
+
+export async function sendConnectionInviteEmail(args: {
+  to: string
+  inviterName: string
+  url: string
+}) {
+  const text = `${args.inviterName} invited you to connect on ${appName()}. Accept this invitation to save a lasting connection and message each other.\n\n${args.url}\n\nThis invitation expires in seven days.`
+  await sendTransactionalEmail({
+    to: args.to,
+    subject: `Connect with ${args.inviterName} on ${appName()}`,
+    text,
+    html: renderSimpleEmail({
+      appName: appName(),
+      bodyHtml: `<p>${escapeHtml(text).replaceAll('\n', '<br>')}</p>`,
+    }),
   })
 }

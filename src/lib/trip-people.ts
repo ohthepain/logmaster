@@ -1,4 +1,4 @@
-import type { CrewMember } from '../domain/crew'
+import type { TripCrewUser } from '../domain/connections'
 import { profilePhotoUrl } from './profile-api'
 
 export type TripPersonKind = 'user' | 'crew'
@@ -32,7 +32,7 @@ export function buildSkipperOptions(args: {
   userId: string
   userName: string
   userImage: string | null | undefined
-  crewMembers: CrewMember[]
+  crewMembers: TripCrewUser[]
 }): TripPersonOption[] {
   const self: TripPersonOption = {
     key: userTripPersonKey(args.userId),
@@ -44,12 +44,12 @@ export function buildSkipperOptions(args: {
 
   const crew = args.crewMembers.map(
     (member): TripPersonOption => ({
-      key: crewTripPersonKey(member.id),
-      kind: 'crew',
+      key: userTripPersonKey(member.id),
+      kind: 'user',
       id: member.id,
       name: member.name,
       imageUrl: member.imageUrl,
-      linkedUserId: member.linkedUserId,
+      linkedUserId: member.id,
     }),
   )
 

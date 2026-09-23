@@ -2,15 +2,16 @@ import { Check, Plus } from 'lucide-react'
 import { Modal } from './Modal'
 import { DevComponentLabel } from './DevComponentLabel'
 import { CrewAvatar } from './CrewAvatar'
-import type { CrewMember } from '../domain/crew'
+import type { TripCrewUser } from '../domain/connections'
 import { cn } from '../lib/cn'
 
 type TripCrewPickerModalProps = {
   open: boolean
-  crewMembers: CrewMember[]
+  crewMembers: TripCrewUser[]
   selectedIds: string[]
   onClose: () => void
   onChange: (ids: string[]) => void
+  requiredIds?: string[]
   stacked?: boolean
 }
 
@@ -21,10 +22,12 @@ export function TripCrewPickerModal({
   onClose,
   onChange,
   stacked = false,
+  requiredIds = [],
 }: TripCrewPickerModalProps) {
   if (!open) return null
 
   const toggle = (memberId: string) => {
+    if (requiredIds.includes(memberId)) return
     if (selectedIds.includes(memberId)) {
       onChange(selectedIds.filter((id) => id !== memberId))
       return
@@ -62,18 +65,13 @@ export function TripCrewPickerModal({
                   <CrewAvatar
                     name={member.name}
                     imageUrl={member.imageUrl}
-                    userId={member.linkedUserId ?? undefined}
+                    userId={member.id}
                     className="size-12"
                   />
                   <div className="min-w-0 flex-1">
                     <p className="m-0 truncate text-sm font-semibold text-[var(--sea-ink)]">
                       {member.name}
                     </p>
-                    {member.email && (
-                      <p className="m-0 mt-0.5 truncate text-xs text-[var(--sea-ink-soft)]">
-                        {member.email}
-                      </p>
-                    )}
                   </div>
                   {selected && (
                     <span className="inline-flex size-8 items-center justify-center rounded-full bg-green-600 text-white dark:bg-green-500">
@@ -88,7 +86,8 @@ export function TripCrewPickerModal({
       ) : (
         <div className="mt-4 rounded-2xl bg-[var(--panel)] px-4 py-8 text-center">
           <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-            No crew on your roster yet. Add crew from the Crew page first.
+            Connect with a registered user or invite someone to your boat before
+            selecting crew.
           </p>
         </div>
       )}
@@ -107,7 +106,7 @@ export function TripCrewPickerModal({
 }
 
 type TripCrewSectionProps = {
-  crewMembers: CrewMember[]
+  crewMembers: TripCrewUser[]
   selectedIds: string[]
   onAddClick: () => void
 }
@@ -143,7 +142,7 @@ export function TripCrewSection({
               <CrewAvatar
                 name={member.name}
                 imageUrl={member.imageUrl}
-                userId={member.linkedUserId ?? undefined}
+                userId={member.id}
                 className="size-11"
               />
             </div>

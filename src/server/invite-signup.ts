@@ -17,7 +17,7 @@ export async function hasPendingInviteForEmail(
 ): Promise<boolean> {
   const normalized = normalizeInviteEmail(email)
   const now = new Date()
-  const [memberCount, crewCount] = await Promise.all([
+  const [memberCount, crewCount, connectionCount] = await Promise.all([
     db.memberInvite.count({
       where: {
         inviteeEmail: normalized,
@@ -32,6 +32,13 @@ export async function hasPendingInviteForEmail(
         expiresAt: { gt: now },
       },
     }),
+    db.connectionInvite.count({
+      where: {
+        inviteeEmail: normalized,
+        status: 'PENDING',
+        expiresAt: { gt: now },
+      },
+    }),
   ])
-  return memberCount > 0 || crewCount > 0
+  return memberCount > 0 || crewCount > 0 || connectionCount > 0
 }

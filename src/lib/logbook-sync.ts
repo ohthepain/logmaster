@@ -149,6 +149,14 @@ function mergeSnapshots(
         ...existing,
         ...trip,
         unpaidRanges: existing.unpaidRanges,
+        ...(existing.status === 'COMPLETED'
+          ? {
+              status: existing.status,
+              crewUserIds: existing.crewUserIds,
+              skipperKey: existing.skipperKey,
+              skipper: existing.skipper,
+            }
+          : {}),
         coverPhotoDataUrl:
           trip.coverPhotoDataUrl ?? existing.coverPhotoDataUrl ?? null,
       })

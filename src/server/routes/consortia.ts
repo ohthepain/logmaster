@@ -14,7 +14,6 @@ import {
   assertCanRemoveMember,
   canAccess,
   createConsortiumWithOwner,
-  ensureConsortiumMember,
   getOrgContactGrants,
   getUserConsortiumIds,
   parseContactGrants,
@@ -23,11 +22,7 @@ import {
 import type { ContactResourceArea } from '../../domain/contact'
 import { ORG_CONTACT_AREAS } from '../../domain/contact'
 import type { ConsortiumMemberRole } from '../permissions'
-import {
-  getContactIdsForMembers,
-  linkContactToMember,
-  unlinkContactFromMember,
-} from '../org-contacts'
+import { getContactIdsForMembers, linkContactToMember } from '../org-contacts'
 import { getSessionUserId } from '../session'
 import {
   fireOrgBoatsNotification,
@@ -464,14 +459,6 @@ consortiaRoutes.post('/:orgId/boats', async (c) => {
     select: { id: true, name: true },
   })
 
-  const boatMembers = await db.boatMember.findMany({
-    where: { boatId },
-    select: { userId: true },
-  })
-  for (const member of boatMembers) {
-    await ensureConsortiumMember(consortiumId, member.userId, 'MEMBER')
-  }
-
   const org = await getOrgSummary(consortiumId)
   if (org) {
     fireOrgBoatsNotification(userId, org, {
@@ -814,13 +801,6 @@ consortiaRoutes.delete('/:orgId/contacts/:contactId', async (c) => {
     where: { id: contactId, consortiumId },
   })
   if (!existing) return c.json({ error: 'Contact not found' }, 404)
-  if (existing.userId) {
-    return c.json(
-      { error: 'Remove org membership before deleting this contact' },
-      400,
-    )
-  }
-
   await db.consortiumContact.delete({ where: { id: contactId } })
   const org = await getOrgSummary(consortiumId)
   if (org) {
@@ -1117,8 +1097,6 @@ consortiaRoutes.delete('/:orgId/members/:memberUserId', async (c) => {
       consortiumId_userId: { consortiumId, userId: memberUserId },
     },
   })
-
-  await unlinkContactFromMember(consortiumId, memberUserId)
 
   const org = await getOrgSummary(consortiumId)
   if (org) {

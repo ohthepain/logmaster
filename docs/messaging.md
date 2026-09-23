@@ -14,15 +14,15 @@ To stop using Stream, set `MESSAGING_PROVIDER=polling`, restart the app and work
 
 ## Membership
 
-Membership is calculated from current account relationships for every list/read/send and again at push delivery. There is no vendor membership cache to reconcile.
+Group membership is calculated from current relationships on every request and again at push delivery. Private conversations have durable participant records. See [Connections and crew](connections-and-crew.md) for the complete lifecycle and migration.
 
-- Organisation: creator plus all organisation members.
-- Boat: owner, explicit members, share owners, and members/creator of its organisation.
-- Asset: inherits its boat's members.
-- Trip: **only the trip creator and linked users in that trip's selected `crewMemberIds`**. Boat access alone does not grant trip-chat access. Unlinked local crew records cannot sign in and receive chat.
-- Private: accepted friend connections, one thread per pair regardless of direction.
+- Organisation: current organisation members, including its owners.
+- Boat: owner, explicit members and share owners. Consortium membership alone does not grant boat chat.
+- Asset: inherits its boat's chat members.
+- Trip: creator and registered `TripParticipant` accounts. Completing a trip locks its roster and preserves their access.
+- Private: accepted connections or current co-members can start one conversation per user pair. Established conversations survive membership/connection removal. Leaving preserves history and stops participation; rejoining requires an accepted invitation.
 
-Public or unlisted object visibility and scoped contact grants do not grant chat access. Current members can read the conversation's history; removed members lose access on the next request. Selected trip crew can view the linked trip, but this does not grant boat or trip editing privileges. Disconnected/private thread history remains in our database for a future reconnection.
+Public visibility and contact resource grants do not grant chat access. Removed group members lose group chat access on the next request. Departed private participants retain read access to their history, with sending and message delivery disabled until rejoining. Trip participation does not grant boat editing privileges.
 
 Object names are recognized case-insensitively at whole-name boundaries. The server canonicalizes capitalization and saves reference offsets. The renderer only turns a reference into a link if its target is currently accessible to the viewer. Ambiguous names, email addresses and URL fragments are not guessed. Text is rendered as React text, never raw HTML.
 

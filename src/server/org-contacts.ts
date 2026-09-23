@@ -44,14 +44,7 @@ export async function linkContactToMember(
     }
   }
 
-  return db.consortiumContact.create({
-    data: {
-      consortiumId,
-      userId,
-      displayName: user.name,
-      email: user.email,
-    },
-  })
+  return null
 }
 
 export async function unlinkContactFromMember(

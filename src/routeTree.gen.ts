@@ -23,6 +23,7 @@ import { Route as MainRoutesIndexRouteImport } from './routes/_main/routes/index
 import { Route as MainResetPasswordIndexRouteImport } from './routes/_main/reset-password/index'
 import { Route as MainOrgsIndexRouteImport } from './routes/_main/orgs/index'
 import { Route as MainCrewIndexRouteImport } from './routes/_main/crew/index'
+import { Route as MainConnectionsIndexRouteImport } from './routes/_main/connections/index'
 import { Route as MainBoatsIndexRouteImport } from './routes/_main/boats/index'
 import { Route as MainAdminIndexRouteImport } from './routes/_main/admin/index'
 import { Route as MainTripsTripIdRouteImport } from './routes/_main/trips/$tripId'
@@ -52,6 +53,7 @@ import { Route as MainAdminRegionsIndexRouteImport } from './routes/_main/admin/
 import { Route as MainAdminJobsIndexRouteImport } from './routes/_main/admin/jobs/index'
 import { Route as MainAdminCatalogCrawlsIndexRouteImport } from './routes/_main/admin/catalog-crawls/index'
 import { Route as MainCrewInviteTokenRouteImport } from './routes/_main/crew/invite/$token'
+import { Route as MainConnectionsInviteTokenRouteImport } from './routes/_main/connections/invite/$token'
 import { Route as MainAdminJobsSystemRouteImport } from './routes/_main/admin/jobs/system'
 import { Route as MainAdminJobsMarinasRouteImport } from './routes/_main/admin/jobs/marinas'
 import { Route as MainAdminJobsGeoFeaturesRouteImport } from './routes/_main/admin/jobs/geo-features'
@@ -129,6 +131,11 @@ const MainOrgsIndexRoute = MainOrgsIndexRouteImport.update({
 const MainCrewIndexRoute = MainCrewIndexRouteImport.update({
   id: '/crew/',
   path: '/crew/',
+  getParentRoute: () => MainRouteRoute,
+} as any)
+const MainConnectionsIndexRoute = MainConnectionsIndexRouteImport.update({
+  id: '/connections/',
+  path: '/connections/',
   getParentRoute: () => MainRouteRoute,
 } as any)
 const MainBoatsIndexRoute = MainBoatsIndexRouteImport.update({
@@ -278,6 +285,12 @@ const MainCrewInviteTokenRoute = MainCrewInviteTokenRouteImport.update({
   path: '/crew/invite/$token',
   getParentRoute: () => MainRouteRoute,
 } as any)
+const MainConnectionsInviteTokenRoute =
+  MainConnectionsInviteTokenRouteImport.update({
+    id: '/connections/invite/$token',
+    path: '/connections/invite/$token',
+    getParentRoute: () => MainRouteRoute,
+  } as any)
 const MainAdminJobsSystemRoute = MainAdminJobsSystemRouteImport.update({
   id: '/admin/jobs/system',
   path: '/admin/jobs/system',
@@ -362,6 +375,7 @@ export interface FileRoutesByFullPath {
   '/trips/$tripId': typeof MainTripsTripIdRouteWithChildren
   '/admin/': typeof MainAdminIndexRoute
   '/boats/': typeof MainBoatsIndexRoute
+  '/connections/': typeof MainConnectionsIndexRoute
   '/crew/': typeof MainCrewIndexRoute
   '/orgs/': typeof MainOrgsIndexRoute
   '/reset-password/': typeof MainResetPasswordIndexRoute
@@ -371,6 +385,7 @@ export interface FileRoutesByFullPath {
   '/admin/jobs/geo-features': typeof MainAdminJobsGeoFeaturesRoute
   '/admin/jobs/marinas': typeof MainAdminJobsMarinasRoute
   '/admin/jobs/system': typeof MainAdminJobsSystemRoute
+  '/connections/invite/$token': typeof MainConnectionsInviteTokenRoute
   '/crew/invite/$token': typeof MainCrewInviteTokenRoute
   '/admin/catalog-crawls/': typeof MainAdminCatalogCrawlsIndexRoute
   '/admin/jobs/': typeof MainAdminJobsIndexRoute
@@ -412,6 +427,7 @@ export interface FileRoutesByTo {
   '/settings/notifications': typeof MainSettingsNotificationsRoute
   '/admin': typeof MainAdminIndexRoute
   '/boats': typeof MainBoatsIndexRoute
+  '/connections': typeof MainConnectionsIndexRoute
   '/crew': typeof MainCrewIndexRoute
   '/orgs': typeof MainOrgsIndexRoute
   '/reset-password': typeof MainResetPasswordIndexRoute
@@ -421,6 +437,7 @@ export interface FileRoutesByTo {
   '/admin/jobs/geo-features': typeof MainAdminJobsGeoFeaturesRoute
   '/admin/jobs/marinas': typeof MainAdminJobsMarinasRoute
   '/admin/jobs/system': typeof MainAdminJobsSystemRoute
+  '/connections/invite/$token': typeof MainConnectionsInviteTokenRoute
   '/crew/invite/$token': typeof MainCrewInviteTokenRoute
   '/admin/catalog-crawls': typeof MainAdminCatalogCrawlsIndexRoute
   '/admin/jobs': typeof MainAdminJobsIndexRoute
@@ -467,6 +484,7 @@ export interface FileRoutesById {
   '/_main/trips/$tripId': typeof MainTripsTripIdRouteWithChildren
   '/_main/admin/': typeof MainAdminIndexRoute
   '/_main/boats/': typeof MainBoatsIndexRoute
+  '/_main/connections/': typeof MainConnectionsIndexRoute
   '/_main/crew/': typeof MainCrewIndexRoute
   '/_main/orgs/': typeof MainOrgsIndexRoute
   '/_main/reset-password/': typeof MainResetPasswordIndexRoute
@@ -476,6 +494,7 @@ export interface FileRoutesById {
   '/_main/admin/jobs/geo-features': typeof MainAdminJobsGeoFeaturesRoute
   '/_main/admin/jobs/marinas': typeof MainAdminJobsMarinasRoute
   '/_main/admin/jobs/system': typeof MainAdminJobsSystemRoute
+  '/_main/connections/invite/$token': typeof MainConnectionsInviteTokenRoute
   '/_main/crew/invite/$token': typeof MainCrewInviteTokenRoute
   '/_main/admin/catalog-crawls/': typeof MainAdminCatalogCrawlsIndexRoute
   '/_main/admin/jobs/': typeof MainAdminJobsIndexRoute
@@ -522,6 +541,7 @@ export interface FileRouteTypes {
     | '/trips/$tripId'
     | '/admin/'
     | '/boats/'
+    | '/connections/'
     | '/crew/'
     | '/orgs/'
     | '/reset-password/'
@@ -531,6 +551,7 @@ export interface FileRouteTypes {
     | '/admin/jobs/geo-features'
     | '/admin/jobs/marinas'
     | '/admin/jobs/system'
+    | '/connections/invite/$token'
     | '/crew/invite/$token'
     | '/admin/catalog-crawls/'
     | '/admin/jobs/'
@@ -572,6 +593,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/admin'
     | '/boats'
+    | '/connections'
     | '/crew'
     | '/orgs'
     | '/reset-password'
@@ -581,6 +603,7 @@ export interface FileRouteTypes {
     | '/admin/jobs/geo-features'
     | '/admin/jobs/marinas'
     | '/admin/jobs/system'
+    | '/connections/invite/$token'
     | '/crew/invite/$token'
     | '/admin/catalog-crawls'
     | '/admin/jobs'
@@ -626,6 +649,7 @@ export interface FileRouteTypes {
     | '/_main/trips/$tripId'
     | '/_main/admin/'
     | '/_main/boats/'
+    | '/_main/connections/'
     | '/_main/crew/'
     | '/_main/orgs/'
     | '/_main/reset-password/'
@@ -635,6 +659,7 @@ export interface FileRouteTypes {
     | '/_main/admin/jobs/geo-features'
     | '/_main/admin/jobs/marinas'
     | '/_main/admin/jobs/system'
+    | '/_main/connections/invite/$token'
     | '/_main/crew/invite/$token'
     | '/_main/admin/catalog-crawls/'
     | '/_main/admin/jobs/'
@@ -752,6 +777,13 @@ declare module '@tanstack/react-router' {
       path: '/crew'
       fullPath: '/crew/'
       preLoaderRoute: typeof MainCrewIndexRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
+    '/_main/connections/': {
+      id: '/_main/connections/'
+      path: '/connections'
+      fullPath: '/connections/'
+      preLoaderRoute: typeof MainConnectionsIndexRouteImport
       parentRoute: typeof MainRouteRoute
     }
     '/_main/boats/': {
@@ -957,6 +989,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainCrewInviteTokenRouteImport
       parentRoute: typeof MainRouteRoute
     }
+    '/_main/connections/invite/$token': {
+      id: '/_main/connections/invite/$token'
+      path: '/connections/invite/$token'
+      fullPath: '/connections/invite/$token'
+      preLoaderRoute: typeof MainConnectionsInviteTokenRouteImport
+      parentRoute: typeof MainRouteRoute
+    }
     '/_main/admin/jobs/system': {
       id: '/_main/admin/jobs/system'
       path: '/admin/jobs/system'
@@ -1099,6 +1138,7 @@ interface MainRouteRouteChildren {
   MainTripsTripIdRoute: typeof MainTripsTripIdRouteWithChildren
   MainAdminIndexRoute: typeof MainAdminIndexRoute
   MainBoatsIndexRoute: typeof MainBoatsIndexRoute
+  MainConnectionsIndexRoute: typeof MainConnectionsIndexRoute
   MainCrewIndexRoute: typeof MainCrewIndexRoute
   MainOrgsIndexRoute: typeof MainOrgsIndexRoute
   MainResetPasswordIndexRoute: typeof MainResetPasswordIndexRoute
@@ -1108,6 +1148,7 @@ interface MainRouteRouteChildren {
   MainAdminJobsGeoFeaturesRoute: typeof MainAdminJobsGeoFeaturesRoute
   MainAdminJobsMarinasRoute: typeof MainAdminJobsMarinasRoute
   MainAdminJobsSystemRoute: typeof MainAdminJobsSystemRoute
+  MainConnectionsInviteTokenRoute: typeof MainConnectionsInviteTokenRoute
   MainCrewInviteTokenRoute: typeof MainCrewInviteTokenRoute
   MainAdminCatalogCrawlsIndexRoute: typeof MainAdminCatalogCrawlsIndexRoute
   MainAdminJobsIndexRoute: typeof MainAdminJobsIndexRoute
@@ -1144,6 +1185,7 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainTripsTripIdRoute: MainTripsTripIdRouteWithChildren,
   MainAdminIndexRoute: MainAdminIndexRoute,
   MainBoatsIndexRoute: MainBoatsIndexRoute,
+  MainConnectionsIndexRoute: MainConnectionsIndexRoute,
   MainCrewIndexRoute: MainCrewIndexRoute,
   MainOrgsIndexRoute: MainOrgsIndexRoute,
   MainResetPasswordIndexRoute: MainResetPasswordIndexRoute,
@@ -1153,6 +1195,7 @@ const MainRouteRouteChildren: MainRouteRouteChildren = {
   MainAdminJobsGeoFeaturesRoute: MainAdminJobsGeoFeaturesRoute,
   MainAdminJobsMarinasRoute: MainAdminJobsMarinasRoute,
   MainAdminJobsSystemRoute: MainAdminJobsSystemRoute,
+  MainConnectionsInviteTokenRoute: MainConnectionsInviteTokenRoute,
   MainCrewInviteTokenRoute: MainCrewInviteTokenRoute,
   MainAdminCatalogCrawlsIndexRoute: MainAdminCatalogCrawlsIndexRoute,
   MainAdminJobsIndexRoute: MainAdminJobsIndexRoute,

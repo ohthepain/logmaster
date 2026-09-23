@@ -1,12 +1,24 @@
-import { createHash } from 'node:crypto'
+import { directThreadId } from './direct-conversations'
+import { availablePeople } from '../connections'
 import { prisma } from '../db'
 import { resolveAssetDisplayImageUrl } from '../asset-cover-photo'
 import type { ChatObject, ChatObjectKind } from '../../domain/messaging'
+
+export { directThreadId } from './direct-conversations'
 
 export type ThreadAccess = {
   id: string
   object: ChatObject
   memberIds: string[]
+  canSend?: boolean
+  direct?: {
+    established?: boolean
+    connectionStatus?: string | null
+    left: boolean
+    peerLeft: boolean
+    invited: boolean
+    invitationSent: boolean
+  }
   notificationPath?: string
 }
 const photos = {
@@ -17,31 +29,18 @@ const boatInclude = {
   photos,
   members: true,
   shares: { include: { owners: true } },
-  consortium: { include: { members: true } },
 } as const
 
-export function directThreadId(a: string, b: string) {
-  return `user:${createHash('sha256')
-    .update(JSON.stringify([a, b].sort()))
-    .digest('hex')}`
-}
 export function boatMembers(boat: {
   userId: string
   members: { userId: string }[]
   shares: { owners: { userId: string }[] }[]
-  consortium: { createdByUserId: string; members: { userId: string }[] } | null
 }): string[] {
   return [
     ...new Set([
       boat.userId,
       ...boat.members.map((m) => m.userId),
       ...boat.shares.flatMap((s) => s.owners.map((o) => o.userId)),
-      ...(boat.consortium
-        ? [
-            boat.consortium.createdByUserId,
-            ...boat.consortium.members.map((m) => m.userId),
-          ]
-        : []),
     ]),
   ]
 }
@@ -57,48 +56,36 @@ function object(
 
 /** Private membership only: public visibility and scoped contact grants never confer chat access. */
 export async function discoverThreads(userId: string): Promise<ThreadAccess[]> {
-  const [boats, orgs, friendships, linkedCrew] = await Promise.all([
+  const [boats, orgs, people, conversations] = await Promise.all([
     prisma.boat.findMany({
       where: {
         OR: [
           { userId },
           { members: { some: { userId } } },
           { shares: { some: { owners: { some: { userId } } } } },
-          { consortium: { members: { some: { userId } } } },
-          { consortium: { createdByUserId: userId } },
         ],
       },
       include: boatInclude,
     }),
     prisma.consortium.findMany({
       where: {
-        OR: [{ createdByUserId: userId }, { members: { some: { userId } } }],
+        members: { some: { userId } },
       },
       include: { members: true, photos },
     }),
-    prisma.friendRequest.findMany({
-      where: {
-        status: 'ACCEPTED',
-        OR: [{ requesterUserId: userId }, { addresseeUserId: userId }],
-      },
-      include: { requester: true, addressee: true },
-    }),
-    prisma.crewMember.findMany({
-      where: { linkedUserId: userId },
-      select: { id: true },
+    availablePeople(userId),
+    prisma.directConversation.findMany({
+      where: { participants: { some: { userId } } },
+      include: { participants: true },
     }),
   ])
   const boatIds = boats.map((b) => b.id)
   const [trips, assets] = await Promise.all([
     prisma.trip.findMany({
       where: {
-        OR: [
-          { userId },
-          ...linkedCrew.map((crew) => ({
-            crewMemberIds: { array_contains: [crew.id] },
-          })),
-        ],
+        OR: [{ userId }, { participants: { some: { userId } } }],
       },
+      include: { participants: true },
     }),
     prisma.boatAsset.findMany({
       where: { boatId: { in: boatIds } },
@@ -128,9 +115,7 @@ export async function discoverThreads(userId: string): Promise<ThreadAccess[]> {
         `/orgs/${org.id}`,
         org.photos[0] ? `/api/orgs/photos/${org.photos[0].id}/content` : null,
       ),
-      memberIds: [
-        ...new Set([org.createdByUserId, ...org.members.map((m) => m.userId)]),
-      ],
+      memberIds: [...new Set(org.members.map((m) => m.userId))],
     })
   for (const boat of boats)
     threads.push({
@@ -162,18 +147,10 @@ export async function discoverThreads(userId: string): Promise<ThreadAccess[]> {
     })
   }
   for (const trip of trips) {
-    const crewIds = Array.isArray(trip.crewMemberIds)
-      ? trip.crewMemberIds.filter((id): id is string => typeof id === 'string')
-      : []
-    const crew = crewIds.length
-      ? await prisma.crewMember.findMany({
-          where: { id: { in: crewIds }, linkedUserId: { not: null } },
-        })
-      : []
     const memberIds = [
       ...new Set([
         ...(trip.userId ? [trip.userId] : []),
-        ...crew.flatMap((c) => (c.linkedUserId ? [c.linkedUserId] : [])),
+        ...trip.participants.map((p) => p.userId),
       ]),
     ]
     if (!memberIds.includes(userId)) continue
@@ -189,24 +166,62 @@ export async function discoverThreads(userId: string): Promise<ThreadAccess[]> {
       memberIds,
     })
   }
-  for (const friendship of friendships) {
-    const peer =
-      friendship.requesterUserId === userId
-        ? friendship.addressee
-        : friendship.requester
+  const peers = new Map(
+    people
+      .filter((p) => p.connectionStatus === 'ACCEPTED' || p.contexts.length)
+      .map((p) => [p.id, { id: p.id, name: p.name }]),
+  )
+  const pastUsers = await prisma.user.findMany({
+    where: {
+      id: {
+        in: conversations.map((c) =>
+          c.userLowId === userId ? c.userHighId : c.userLowId,
+        ),
+      },
+    },
+    select: { id: true, name: true },
+  })
+  for (const c of conversations) {
+    const peerId = c.userLowId === userId ? c.userHighId : c.userLowId
+    peers.set(
+      peerId,
+      pastUsers.find((p) => p.id === peerId) ?? {
+        id: peerId,
+        name: 'Former user',
+      },
+    )
+  }
+  for (const peer of peers.values()) {
     const id = directThreadId(userId, peer.id)
-    if (threads.some((t) => t.id === id)) continue
-    // The private avatar route below also supports users with a custom profile image.
+    const conversation = conversations.find((c) => c.id === id)
+    const me = conversation?.participants.find((p) => p.userId === userId)
+    const other = conversation?.participants.find((p) => p.userId === peer.id)
+    const left = Boolean(me?.leftAt),
+      peerLeft = Boolean(other?.leftAt)
     threads.push({
       id,
       object: object(
         'user',
         peer.id,
         peer.name,
-        `/crew?userId=${encodeURIComponent(peer.id)}`,
+        `/connections?userId=${encodeURIComponent(peer.id)}`,
         `/api/messaging/users/${encodeURIComponent(peer.id)}/avatar`,
       ),
-      memberIds: [userId, peer.id],
+      memberIds: conversation
+        ? conversation.participants
+            .filter((p) => !p.leftAt)
+            .map((p) => p.userId)
+        : [userId, peer.id],
+      canSend: !left && !peerLeft,
+      direct: {
+        established: Boolean(conversation),
+        connectionStatus:
+          people.find((p) => p.id === peer.id)?.connectionStatus ?? null,
+        left,
+        peerLeft,
+        invited: Boolean(me?.invitedAt),
+        invitationSent: Boolean(other?.invitedAt),
+      },
     })
   }
   return threads

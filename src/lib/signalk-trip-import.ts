@@ -345,7 +345,7 @@ export function buildTripFromSignalK(
     registration: null,
     skipper: null,
     skipperKey: null,
-    crewMemberIds: null,
+    crewUserIds: null,
     title:
       parsed.name?.trim() || defaultTripTitle(boatName, new Date(startedAt)),
     subtitle: null,

@@ -8,7 +8,7 @@ between trips. Only whole miles are billed.
 
 ## Payments
 
-The skipper pays by default. A selected, linked crew member can volunteer using
+The skipper pays by default. A registered trip participant can volunteer using
 the gifting toggle. One giver may be active per trip. Consent is timestamped;
 turning it off, leaving crew, ending the trip, or exhausting the giver's wallet
 closes it. A gift posts a debit to the crew wallet, a credit to the skipper and a
@@ -31,8 +31,7 @@ there is no public arbitrary-credit or balance-edit endpoint.
 
 ## Invitations and messages
 
-Accepting crew/boat/organization invitations establishes an accepted friendship
-(the current contact representation). The first accepted qualifying invitation
+Referral accounting is independent of connections. Boat and consortium invitations grant only their requested membership. Explicit connection invitations establish a connection on acceptance. The first accepted qualifying invitation
 permanently records the inviter. Existing accounts invited to additional groups do
 not generate a new referral allowance. Welcome and earned doubloons both qualify
 when spent. The original inviter earns one doubloon per doubloon actually spent,
@@ -40,8 +39,7 @@ up to 100. Only the actual funder counts: a skipper's pass-through gift debit do
 not generate a second reward. Receiving a reward does not recursively reward anyone.
 
 Rewards and an automatic `referral_reward` chat message are committed together.
-Delivery uses the existing durable chat outbox and contact authorization. Removed
-contacts do not regain chat access merely because another reward is earned.
+Delivery uses the existing durable chat outbox. Reward messages only post into an established private conversation while both participants remain in it. Earning a reward never creates or reopens a conversation.
 
 ## Recording and visibility
 

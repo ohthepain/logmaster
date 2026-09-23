@@ -4,7 +4,7 @@ import { normalizeInviteLocale } from '../../lib/invite-locale'
 import { sendCrewInviteEmail } from '../email/ses'
 import { inviteeHasAccount } from '../invite-signup'
 import { prisma } from '../db'
-import { ensureConsortiumMember } from '../permissions'
+import { acceptConnection, availablePeople } from '../connections'
 import { getSessionUserId } from '../session'
 import {
   parseProfilePhotoCrop,
@@ -180,7 +180,18 @@ async function canViewUserPhoto(viewerId: string, targetUserId: string) {
       },
     }),
   ])
-  return Boolean(crewLink || friend)
+  return (
+    Boolean(crewLink || friend) ||
+    (await availablePeople(viewerId)).some((p) => p.id === targetUserId) ||
+    Boolean(
+      await db.tripParticipant.findFirst({
+        where: {
+          userId: targetUserId,
+          trip: { participants: { some: { userId: viewerId } } },
+        },
+      }),
+    )
+  )
 }
 
 async function sendInviteEmail(args: {
@@ -268,6 +279,23 @@ async function createInviteForMember(args: {
 }
 
 export const crewRoutes = new Hono()
+// Old installed clients may follow existing invite links or fetch historical photos.
+// Permanent crew-roster mutations have been retired in favor of Connections.
+crewRoutes.use('*', async (c, next) => {
+  if (
+    c.req.method !== 'GET' &&
+    (/\/members(?:\/|$)/.test(c.req.path) ||
+      /\/friend-requests\//.test(c.req.path))
+  )
+    return c.json(
+      {
+        error:
+          'Please update Logmaster and use Connections. Crew is selected on each trip.',
+      },
+      410,
+    )
+  await next()
+})
 
 crewRoutes.get('/', async (c) => {
   const user = await requireUser(c)
@@ -781,30 +809,9 @@ crewRoutes.post('/invites/accept', async (c) => {
       where: { id: invite.id },
       data: { status: 'ACCEPTED', acceptedByUserId: user.id },
     })
+    await acceptConnection(tx, invite.inviterUserId, user.id)
     await acceptEconomyInvite(tx, invite, user.id)
   })
-
-  const inviterBoatConsortia = await db.boat.findMany({
-    where: {
-      consortiumId: { not: null },
-      consortium: {
-        members: {
-          some: {
-            userId: invite.inviterUserId,
-            role: { in: ['OWNER', 'ADMIN'] },
-          },
-        },
-      },
-    },
-    select: { consortiumId: true },
-    distinct: ['consortiumId'],
-  })
-
-  for (const boat of inviterBoatConsortia) {
-    if (boat.consortiumId) {
-      await ensureConsortiumMember(boat.consortiumId, user.id, 'MEMBER')
-    }
-  }
 
   return c.json({ ok: true })
 })

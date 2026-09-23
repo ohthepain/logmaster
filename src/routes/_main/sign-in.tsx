@@ -173,7 +173,8 @@ function SignInPage() {
                 initialMode={modeParam}
                 inviteRedirectPath={
                   redirectParam?.startsWith('/invite/') ||
-                  redirectParam?.startsWith('/crew/invite/')
+                  redirectParam?.startsWith('/crew/invite/') ||
+                  redirectParam?.startsWith('/connections/invite/')
                     ? afterAuthPath
                     : undefined
                 }

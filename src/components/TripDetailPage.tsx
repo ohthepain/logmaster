@@ -25,9 +25,9 @@ import { TripRecordButton } from './TripRecordButton'
 import { TripLegSection } from './TripLegSection'
 import { NativeRecordingSettings } from './NativeRecordingSettings'
 import type { Media } from '../domain/logbook'
-import type { CrewMember } from '../domain/crew'
+import type { TripCrewUser } from '../domain/connections'
 import { decodeTripTrack } from '../domain/trip-track'
-import { fetchCrew } from '../lib/crew-api'
+import { fetchTripPeople } from '../lib/connections-api'
 import { readImageFile } from '../lib/image-file'
 import {
   tripMediaUploadToastMessage,
@@ -77,7 +77,7 @@ export function TripDetailPage({
   const mediaFileInputId = useId()
   const [busy, setBusy] = useState(false)
   const [uploadingMedia, setUploadingMedia] = useState(false)
-  const [crewMembers, setCrewMembers] = useState<CrewMember[]>([])
+  const [crewMembers, setCrewMembers] = useState<TripCrewUser[]>([])
   const [crewPickerOpen, setCrewPickerOpen] = useState(false)
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null)
   const [createEntryOpen, setCreateEntryOpen] = useState(false)
@@ -150,9 +150,9 @@ export function TripDetailPage({
   }, [navigate, startFromLiveActivity, store.booted, trip, tripId])
 
   useEffect(() => {
-    void fetchCrew()
+    void fetchTripPeople(tripId)
       .then((payload) => {
-        setCrewMembers(payload.members)
+        setCrewMembers(payload)
         triggerLogbookSyncRetry()
       })
       .catch(() => {})
@@ -753,7 +753,7 @@ export function TripDetailPage({
         registration: trip.registration ?? undefined,
         skipper: trip.skipper ?? undefined,
         skipperKey: trip.skipperKey,
-        crewMemberIds: trip.crewMemberIds ?? undefined,
+        crewUserIds: trip.crewUserIds ?? undefined,
       })
       if (!targetTrip) throw new Error('Could not create the replay trip.')
 
@@ -812,7 +812,8 @@ export function TripDetailPage({
   }
 
   const handleCrewChange = async (ids: string[]) => {
-    await store.updateTrip(trip.id, { crewMemberIds: ids })
+    if (trip.status === 'COMPLETED') return
+    await store.updateTrip(trip.id, { crewUserIds: ids })
   }
 
   return (
@@ -923,6 +924,24 @@ export function TripDetailPage({
                 )}
               </div>
 
+              <section className="mt-4 border-t border-[var(--line)] pt-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="m-0 text-sm font-semibold">Crew</h3>
+                  <button
+                    className="text-sm font-semibold text-[var(--brand)]"
+                    onClick={() => setCrewPickerOpen(true)}
+                  >
+                    Edit crew
+                  </button>
+                </div>
+                <p className="mb-0 text-sm text-[var(--sea-ink-soft)]">
+                  {crewMembers
+                    .filter((p) => trip.crewUserIds?.includes(p.id))
+                    .map((p) => p.name)
+                    .join(', ') || 'No additional crew'}
+                </p>
+              </section>
+
               {trip.status === 'IN_PROGRESS' && (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
@@ -1011,6 +1030,31 @@ export function TripDetailPage({
                   <MetaLine label="Skipper" value={trip.skipper} icon={User} />
                 ) : null}
               </div>
+              <section className="mt-4 border-t border-[var(--line)] pt-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="m-0 text-sm font-semibold">Crew</h3>
+                  {trip.status !== 'COMPLETED' && (
+                    <button
+                      className="text-sm font-semibold text-[var(--brand)]"
+                      onClick={() => setCrewPickerOpen(true)}
+                    >
+                      Edit crew
+                    </button>
+                  )}
+                </div>
+                <p className="mb-0 text-sm text-[var(--sea-ink-soft)]">
+                  {crewMembers
+                    .filter((p) => trip.crewUserIds?.includes(p.id))
+                    .map((p) => p.name)
+                    .join(', ') || 'No additional crew'}
+                </p>
+                {trip.status === 'COMPLETED' && (
+                  <p className="mb-0 text-xs text-[var(--sea-ink-soft)]">
+                    This trip’s crew is preserved. Everyone retains access to
+                    the trip and its chat.
+                  </p>
+                )}
+              </section>
             </div>
 
             <div className="border-t border-[var(--line)] pt-4">
@@ -1067,9 +1111,10 @@ export function TripDetailPage({
       />
 
       <TripCrewPickerModal
-        open={crewPickerOpen}
+        open={crewPickerOpen && trip.status !== 'COMPLETED'}
         crewMembers={crewMembers}
-        selectedIds={trip.crewMemberIds ?? []}
+        selectedIds={trip.crewUserIds ?? []}
+        requiredIds={trip.userId ? [trip.userId] : []}
         onClose={() => setCrewPickerOpen(false)}
         onChange={(ids) => void handleCrewChange(ids)}
       />

@@ -21,7 +21,9 @@
           "/crew/*",
           "/routes/*",
           "/admin/*",
-          "/settings/*"
+          "/settings/*",
+          "/connections",
+          "/connections/*"
         ]
       }
     ]

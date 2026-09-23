@@ -122,7 +122,7 @@ function serializeTrip(trip: {
   registration: string | null
   skipper: string | null
   skipperKey: string | null
-  crewMemberIds: unknown
+  participants: { userId: string }[]
   title: string | null
   subtitle: string | null
   coverPhotoDataUrl: string | null
@@ -148,9 +148,7 @@ function serializeTrip(trip: {
     registration: trip.registration,
     skipper: trip.skipper,
     skipperKey: trip.skipperKey,
-    crewMemberIds: Array.isArray(trip.crewMemberIds)
-      ? (trip.crewMemberIds as string[])
-      : null,
+    crewUserIds: trip.participants.map((p) => p.userId),
     title: trip.title,
     subtitle: trip.subtitle,
     coverPhotoDataUrl: trip.coverPhotoDataUrl,
@@ -210,6 +208,7 @@ adminRoutes.delete('/users/:userId', async (c) => {
 
 adminRoutes.get('/trips', async (c) => {
   const trips = await db.trip.findMany({
+    include: { participants: { select: { userId: true } } },
     orderBy: [{ updatedAt: 'desc' }],
   })
   return c.json({ trips: trips.map(serializeTrip) })

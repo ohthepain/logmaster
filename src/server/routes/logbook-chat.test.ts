@@ -1,3 +1,4 @@
+import { prisma } from '../db'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { logbookRoutes } from './logbook'
 
@@ -36,6 +37,7 @@ vi.mock('../messaging/media', () => ({
 vi.mock('../messaging/delivery', () => ({ wakeChatWorker: mocks.wake }))
 vi.mock('../db', () => ({
   prisma: {
+    tripParticipant: { findMany: async () => [] },
     trip: {
       findMany: async () => [],
       findUnique: async () => ({ id: 'trip', userId: 'creator' }),
@@ -58,6 +60,7 @@ vi.mock('../db', () => ({
 }))
 beforeEach(() => {
   vi.resetAllMocks()
+  mocks.transaction.mockImplementation(async (work) => work(prisma))
   mocks.access.mockResolvedValue(true)
   mocks.entry.mockResolvedValue({ tripId: 'trip' })
   mocks.entries.mockResolvedValue([
@@ -87,7 +90,10 @@ it('accepts media-only sync without rewriting the parent log or generating anoth
   })
   expect(response.status).toBe(200)
   expect(mocks.attachments).toHaveBeenCalledWith('editor', 'trip', ['uploaded'])
-  expect(mocks.transaction).toHaveBeenCalledWith(['media-write'])
+  expect(mocks.transaction).toHaveBeenCalledWith(expect.any(Function), {
+    timeout: 30000,
+  })
+  expect(mocks.upsertMedia).toHaveBeenCalledOnce()
   expect(mocks.upsertEntry).not.toHaveBeenCalled()
   expect(mocks.upsertChat).not.toHaveBeenCalled()
 })
@@ -103,7 +109,10 @@ it('commits a new log and its chat projection in one transaction before waking d
     ],
   })
   expect(response.status).toBe(200)
-  expect(mocks.transaction).toHaveBeenCalledWith(['entry-write', 'chat-write'])
+  expect(mocks.transaction).toHaveBeenCalledWith(expect.any(Function), {
+    timeout: 30000,
+  })
+  expect(mocks.upsertEntry).toHaveBeenCalledOnce()
   expect(mocks.upsertChat.mock.calls[0][0]).toMatchObject({
     where: { logEntryId: 'entry' },
     create: { threadId: 'trip:trip', senderId: 'editor' },

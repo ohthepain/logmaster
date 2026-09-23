@@ -1,4 +1,11 @@
 import {
+  changeDirectParticipation,
+  startDirectChat,
+  requireDirectSend,
+  ensureDirectChat,
+  lockDirectChat,
+} from '../messaging/direct-conversations'
+import {
   boatActivityMessageContent,
   boatActivityContent,
 } from '../messaging/boat-activity'
@@ -101,6 +108,26 @@ messagingRoutes.use('*', async (c, next) => {
   c.set('userId', userId)
   c.header('Cache-Control', 'private, no-store')
   await next()
+})
+
+messagingRoutes.post('/direct', async (c) => {
+  const { userId } = z
+    .object({ userId: z.string().min(1) })
+    .strict()
+    .parse(await c.req.json())
+  const chat = await startDirectChat(c.get('userId'), userId)
+  return c.json({ threadId: chat.id })
+})
+messagingRoutes.post('/threads/:threadId/participation/:action', async (c) => {
+  const action = z
+    .enum(['leave', 'invite', 'accept', 'decline'])
+    .parse(c.req.param('action'))
+  await changeDirectParticipation(
+    c.req.param('threadId'),
+    c.get('userId'),
+    action,
+  )
+  return c.json({ ok: true })
 })
 
 messagingRoutes.post('/cards/match', async (c) => {
@@ -240,8 +267,10 @@ messagingRoutes.get('/threads', async (c) => {
         id: thread.id,
         object: thread.object,
         memberCount: thread.memberIds.length,
+        canSend: thread.canSend ?? true,
+        direct: thread.direct,
         lastMessage: (await serializeMessages(latest))[0] ?? null,
-        unreadCount,
+        unreadCount: thread.direct?.left ? 0 : unreadCount,
       }
     }),
   )
@@ -314,6 +343,11 @@ messagingRoutes.post('/threads/:threadId/messages', async (c) => {
   const threads = await discoverThreads(userId)
   const thread = threads.find((t) => t.id === threadId)
   if (!thread) return c.json({ error: 'Chat not found' }, 404)
+  if (thread.canSend === false)
+    return c.json(
+      { error: 'Both people must be in this chat to send messages' },
+      403,
+    )
   const input = z
     .object({
       id: z.string().uuid(),
@@ -359,25 +393,32 @@ messagingRoutes.post('/threads/:threadId/messages', async (c) => {
   const responseCard = input.cardId
     ? await responseCardSnapshot(input.cardId)
     : null
-  const row = await prisma.chatMessage.create({
-    data: {
-      id: input.id,
-      threadId,
-      senderId: userId,
-      text: prepared.text,
-      references: prepared.references,
-      ...(responseCard ? { responseCard } : {}),
-      ...(input.mediaIds.length
-        ? {
-            media: {
-              create: input.mediaIds.map((mediaId, position) => ({
-                mediaId,
-                position,
-              })),
-            },
-          }
-        : {}),
-    },
+  const row = await prisma.$transaction(async (tx) => {
+    if (thread.object.kind === 'user') {
+      await lockDirectChat(tx, threadId)
+      await ensureDirectChat(tx, userId, thread.object.id)
+      await requireDirectSend(tx, threadId, userId)
+    }
+    return tx.chatMessage.create({
+      data: {
+        id: input.id,
+        threadId,
+        senderId: userId,
+        text: prepared.text,
+        references: prepared.references,
+        ...(responseCard ? { responseCard } : {}),
+        ...(input.mediaIds.length
+          ? {
+              media: {
+                create: input.mediaIds.map((mediaId, position) => ({
+                  mediaId,
+                  position,
+                })),
+              },
+            }
+          : {}),
+      },
+    })
   })
   // History and pending delivery are one durable write; provider failures never lose messages.
   await wakeChatWorker()
@@ -441,7 +482,10 @@ messagingRoutes.put(
   async (c) => {
     const userId = c.get('userId')
     const threadId = c.req.param('threadId')
-    await requireThread(userId, threadId)
+    if ((await requireThread(userId, threadId)).canSend === false)
+      throw new HTTPException(403, {
+        message: 'This chat is read-only until both people rejoin',
+      })
     const messageId = z.string().uuid().parse(c.req.param('messageId'))
     z.object({})
       .strict()
@@ -514,7 +558,10 @@ messagingRoutes.get('/users/:userId/avatar', async (c) => {
 messagingRoutes.post('/threads/:threadId/media/prepare', async (c) => {
   const userId = c.get('userId')
   const threadId = c.req.param('threadId')
-  await requireThread(userId, threadId)
+  if ((await requireThread(userId, threadId)).canSend === false)
+    throw new HTTPException(403, {
+      message: 'This chat is read-only until both people rejoin',
+    })
   const input = z
     .object({
       checksum: z.string().regex(/^[a-f0-9]{64}$/),

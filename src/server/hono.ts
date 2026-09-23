@@ -20,6 +20,7 @@ import { logbookTrackRoutes } from './routes/logbook-tracks'
 import { boatsRoutes } from './routes/boats'
 import { boatSharesRoutes } from './routes/boat-shares'
 import { profileRoutes } from './routes/profile'
+import { connectionsRoutes } from './routes/connections'
 import { crewRoutes } from './routes/crew'
 import { locationRoutes } from './routes/location'
 import { mapTileRoutes } from './routes/map-tiles'
@@ -104,6 +105,7 @@ app.route('/boats', boatContactsRoutes)
 app.route('/profile', profileRoutes)
 app.route('/doubloons', doubloonRoutes)
 app.route('/crew', crewRoutes)
+app.route('/connections', connectionsRoutes)
 app.route('/location', locationRoutes)
 app.route('/map-tiles', mapTileRoutes)
 app.route('/map-style-vector', mapStyleVectorRoutes)

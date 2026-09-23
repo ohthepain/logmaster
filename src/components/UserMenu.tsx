@@ -25,7 +25,7 @@ import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import { defaultBoatPhoto } from '../domain/boat'
 import type { Boat } from '../domain/boat'
-import type { CrewPayload } from '../domain/crew'
+import type { ConnectionPerson } from '../domain/connections'
 import { signOutToSignIn, useSession } from '../lib/auth-client'
 import { currentReturnPath, signInSearch } from '../lib/sign-in-redirect'
 import {
@@ -35,7 +35,7 @@ import {
 } from '../lib/app-build-info'
 import { fetchBoats } from '../lib/boats-api'
 import { cn } from '../lib/cn'
-import { fetchCrew } from '../lib/crew-api'
+import { fetchConnections } from '../lib/connections-api'
 import { profilePhotoUrl } from '../lib/profile-api'
 import { tripCoverPhotoUrl } from '../lib/trip-display'
 import { TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS } from '../lib/trip-map-overlay'
@@ -70,7 +70,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
   const [balance, setBalance] = useState<number | null>(null)
   const [photoVersion, setPhotoVersion] = useState(0)
   const [boats, setBoats] = useState<Boat[]>([])
-  const [crew, setCrew] = useState<CrewPayload | null>(null)
+  const [connections, setConnections] = useState<ConnectionPerson[]>([])
   const [loadedForUserId, setLoadedForUserId] = useState<string | null>(null)
   const [buildFooter, setBuildFooter] = useState(() =>
     formatAppBuildFooter(getAppEnvironmentLabel(), null),
@@ -144,11 +144,13 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
     setLoadedForUserId(null)
     void Promise.all([
       fetchBoats().catch(() => [] as Boat[]),
-      fetchCrew().catch(() => null),
-    ]).then(([nextBoats, nextCrew]) => {
+      fetchConnections().catch(() => []),
+    ]).then(([nextBoats, nextConnections]) => {
       if (cancelled) return
       setBoats(nextBoats)
-      setCrew(nextCrew)
+      setConnections(
+        nextConnections.filter((p) => p.connectionStatus === 'ACCEPTED'),
+      )
       setLoadedForUserId(user.id)
     })
 
@@ -440,59 +442,21 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     </MenuCard>
 
                     <MenuCard
-                      ariaLabel={
-                        crew?.members.length ? t('manageCrew') : t('addCrew')
-                      }
-                      addAction={
-                        crew?.members.length
-                          ? {
-                              label: t('addCrewMember'),
-                              onClick: () =>
-                                navigateFromMenu(() => {
-                                  void navigate({
-                                    to: '/crew',
-                                    search: { addCrew: true },
-                                  })
-                                }),
-                            }
-                          : undefined
-                      }
+                      ariaLabel="Connections"
                       onClick={() =>
                         navigateFromMenu(() => {
-                          void navigate({
-                            to: '/crew',
-                            search: crew?.members.length
-                              ? {}
-                              : { addCrew: true },
-                          })
+                          void navigate({ to: '/connections' })
                         })
                       }
                     >
                       <CollectionCardContent
-                        title={t('crew')}
-                        detail={t(
-                          (crew?.members.length ?? 0) === 1
-                            ? 'crewCountOne'
-                            : 'crewCountOther',
-                          { count: crew?.members.length ?? 0 },
-                        )}
+                        title="Connections"
+                        detail="Connect and keep in touch"
                         loading={loadingCollections}
-                        empty={!crew?.members.length}
+                        empty={!connections.length}
                       >
-                        <CrewMontage crew={crew} />
+                        <ConnectionsMontage connections={connections} />
                       </CollectionCardContent>
-                    </MenuCard>
-
-                    <MenuCard
-                      ariaLabel={`${t('connections')}, ${t('comingSoon').toLowerCase()}`}
-                      onClick={() => toast.message(t('connectionsComingSoon'))}
-                    >
-                      <CollectionCardContent
-                        title={t('connections')}
-                        detail={t('comingSoon')}
-                        empty
-                        loading={false}
-                      />
                     </MenuCard>
                   </div>
 
@@ -768,8 +732,12 @@ function PhotoMontage({ items }: { items: MontageItem[] }) {
   )
 }
 
-function CrewMontage({ crew }: { crew: CrewPayload | null }) {
-  const members = crew?.members ?? []
+function ConnectionsMontage({
+  connections,
+}: {
+  connections: ConnectionPerson[]
+}) {
+  const members = connections
   const shownMembers = members.slice(0, 6)
   const extraCount = members.length - shownMembers.length
 
@@ -781,7 +749,7 @@ function CrewMontage({ crew }: { crew: CrewPayload | null }) {
       {shownMembers.map((member) => (
         <Avatar
           key={member.id}
-          src={member.imageUrl}
+          src={member.image}
           className="size-18 rounded-full border-[3px] border-[var(--surface-strong)] shadow-sm sm:size-21"
         />
       ))}

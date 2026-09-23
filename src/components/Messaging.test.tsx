@@ -287,3 +287,81 @@ it('allows media-only messages and preserves the selection after an upload failu
   fireEvent.click(screen.getByRole('button', { name: 'Remove trip.mp4' }))
   expect(screen.queryByRole('button', { name: 'Send message' })).toBeNull()
 })
+
+it('preserves history while a departed participant reviews an invitation to rejoin', async () => {
+  let joined = false
+  mocks.api.mockImplementation(async (url: string) => {
+    if (url.endsWith('/participation/accept')) {
+      joined = true
+      return { ok: true }
+    }
+    if (url === '/api/messaging/threads')
+      return {
+        threads: [
+          {
+            ...thread,
+            canSend: joined,
+            direct: {
+              established: true,
+              left: !joined,
+              peerLeft: false,
+              invited: !joined,
+              invitationSent: false,
+            },
+          },
+        ],
+        objects: [object],
+      }
+    if (url.endsWith('/messages'))
+      return { messages: [message], nextCursor: null }
+    if (url.endsWith('/likes/query')) return { likes: [] }
+    return { ok: true }
+  })
+  render(<Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />)
+  await screen.findByText('You left this chat. Your history is preserved.')
+  expect(screen.queryByRole('textbox', { name: 'Message' })).toBeNull()
+  expect(screen.getByRole('log').textContent).toContain('Meet on')
+  fireEvent.click(screen.getByRole('button', { name: 'Accept invitation' }))
+  await screen.findByRole('textbox', { name: 'Message' })
+  expect(mocks.api).toHaveBeenCalledWith(
+    '/api/messaging/threads/boat%3Aboat/participation/accept',
+    { method: 'POST' },
+  )
+  expect(screen.getByRole('log').textContent).toContain('Meet on')
+})
+
+it('offers an invitation rather than a composer when the other participant has left', async () => {
+  mocks.api.mockImplementation(async (url: string) => {
+    if (url === '/api/messaging/threads')
+      return {
+        threads: [
+          {
+            ...thread,
+            canSend: false,
+            direct: {
+              established: true,
+              left: false,
+              peerLeft: true,
+              invited: false,
+              invitationSent: false,
+            },
+          },
+        ],
+        objects: [object],
+      }
+    if (url.endsWith('/messages'))
+      return { messages: [message], nextCursor: null }
+    if (url.endsWith('/likes/query')) return { likes: [] }
+    return { ok: true }
+  })
+  render(<Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />)
+  await screen.findByRole('button', { name: 'Invite back' })
+  expect(screen.queryByRole('textbox', { name: 'Message' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Invite back' }))
+  await waitFor(() =>
+    expect(mocks.api).toHaveBeenCalledWith(
+      '/api/messaging/threads/boat%3Aboat/participation/invite',
+      { method: 'POST' },
+    ),
+  )
+})

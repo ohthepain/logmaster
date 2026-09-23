@@ -1,3 +1,4 @@
+import type { Prisma } from '../../../generated/prisma/client'
 import { prisma } from '../db'
 import type { ChatMessage, TripChatLog } from '../../domain/messaging'
 import { mediaDescriptor } from './media'
@@ -13,6 +14,7 @@ export function tripLogChatWrites(
     timestamp?: unknown
   }[],
   actorId: string,
+  tx: Prisma.TransactionClient = prisma,
 ) {
   const arrival = Date.now()
   const time = (value: unknown) =>
@@ -21,7 +23,7 @@ export function tripLogChatWrites(
     .filter((entry) => !entry.deleted)
     .sort((a, b) => time(a.timestamp) - time(b.timestamp))
     .map((entry, index) =>
-      prisma.chatMessage.upsert({
+      tx.chatMessage.upsert({
         where: { logEntryId: String(entry.id) },
         create: {
           id: crypto.randomUUID(),

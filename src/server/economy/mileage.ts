@@ -13,21 +13,13 @@ import type { EconomyTx } from './wallet'
 export async function tripParticipants(tx: EconomyTx, tripId: string) {
   const trip = await tx.trip.findUniqueOrThrow({ where: { id: tripId } })
   if (!trip.userId) throw new Error('Trip has no skipper account')
-  const ids = Array.isArray(trip.crewMemberIds)
-    ? trip.crewMemberIds.filter((id): id is string => typeof id === 'string')
-    : []
-  const crew = await tx.crewMember.findMany({
-    where: {
-      id: { in: ids },
-      ownerUserId: trip.userId,
-      linkedUserId: { not: null },
-    },
-    select: { linkedUserId: true },
+  const crew = await tx.tripParticipant.findMany({
+    where: { tripId, userId: { not: trip.userId } },
   })
   return {
     trip,
     skipperId: trip.userId,
-    crewIds: crew.flatMap((c) => (c.linkedUserId ? [c.linkedUserId] : [])),
+    crewIds: crew.map((c) => c.userId),
   }
 }
 

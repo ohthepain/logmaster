@@ -3,14 +3,17 @@ import { afterAll, describe, expect, it } from 'vitest'
 // Opt-in only against the disposable local database, never the application's DB.
 const enabled =
   process.env.ECONOMY_INTEGRATION === '1' &&
-  process.env.DATABASE_URL ===
-    'postgresql://paulwilkinson@127.0.0.1:55439/postgres'
+  [
+    'postgresql://paulwilkinson@127.0.0.1:55439/postgres',
+    'postgresql://paulwilkinson@127.0.0.1:55441/postgres',
+  ].includes(process.env.DATABASE_URL ?? '')
 describe.skipIf(!enabled)('doubloons with PostgreSQL', async () => {
   if (!enabled) {
     it.skip('requires disposable database', () => {})
     return
   }
   const { prisma } = await import('../db')
+  const { ensureDirectChat } = await import('../messaging/direct-conversations')
   const {
     economyTransaction,
     ensureWallet,
@@ -34,16 +37,18 @@ describe.skipIf(!enabled)('doubloons with PostgreSQL', async () => {
   async function setup() {
     const skipper = await user(),
       crew = await user()
-    const member = await prisma.crewMember.create({
-      data: { ownerUserId: skipper.id, linkedUserId: crew.id },
-    })
     const trip = await prisma.trip.create({
       data: {
         userId: skipper.id,
         boatName: 'Test boat',
         startedAt: new Date(),
         status: 'IN_PROGRESS',
-        crewMemberIds: [member.id],
+        participants: {
+          create: [
+            { userId: skipper.id, nameSnapshot: skipper.name },
+            { userId: crew.id, nameSnapshot: crew.name },
+          ],
+        },
       },
     })
     await economyTransaction(async (tx) => {
@@ -127,12 +132,13 @@ describe.skipIf(!enabled)('doubloons with PostgreSQL', async () => {
       await prisma.friendRequest.count({
         where: { requesterUserId: invitee.id, status: 'ACCEPTED' },
       }),
-    ).toBe(2)
+    ).toBe(0)
   })
   it('counts a sponsored mile once, rewarding only the actual payer’s inviter', async () => {
     const { skipper, crew, trip } = await setup()
     const inviter = await user()
     await economyTransaction(async (tx) => {
+      await ensureDirectChat(tx, crew.id, inviter.id)
       await acceptEconomyInvite(
         tx,
         {

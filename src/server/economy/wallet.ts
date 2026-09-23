@@ -1,6 +1,9 @@
 import type { Prisma } from '../../../generated/prisma/client'
 import { prisma } from '../db'
-import { directThreadId } from '../messaging/threads'
+import {
+  directThreadId,
+  lockDirectChat,
+} from '../messaging/direct-conversations'
 import { referralAmount, WELCOME_DOUBLOONS } from '../../domain/doubloons'
 import type { DoubloonTransactionType } from '../../domain/doubloons'
 
@@ -119,11 +122,18 @@ export async function rewardReferral(
     where: { inviteeId: payerId },
     data: { rewarded: { increment: reward } },
   })
+  const threadId = directThreadId(payerId, referral.inviterId)
+  await lockDirectChat(tx, threadId)
+  const conversation = await tx.directConversation.findUnique({
+    where: { id: threadId },
+    include: { participants: true },
+  })
+  if (!conversation || conversation.participants.some((p) => p.leftAt)) return
   // The durable chat outbox publishes only after the wallet transaction commits.
   await tx.chatMessage.create({
     data: {
       id: transaction.id,
-      threadId: directThreadId(payerId, referral.inviterId),
+      threadId,
       senderId: payerId,
       text: `My sailing earned you ${reward} doubloon${reward === 1 ? '' : 's'}! ${referral.rewarded + reward} of 100 invitation doubloons collected.`,
       references: [],
@@ -190,32 +200,11 @@ export async function acceptEconomyInvite(
 ) {
   if (invite.inviterUserId === inviteeId) return
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(731924061)`
-  const connection = await tx.friendRequest.findFirst({
-    where: {
-      OR: [
-        { requesterUserId: inviteeId, addresseeUserId: invite.inviterUserId },
-        { requesterUserId: invite.inviterUserId, addresseeUserId: inviteeId },
-      ],
-    },
-  })
-  if (connection)
-    await tx.friendRequest.update({
-      where: { id: connection.id },
-      data: { status: 'ACCEPTED' },
-    })
-  else
-    await tx.friendRequest.create({
-      data: {
-        requesterUserId: inviteeId,
-        addresseeUserId: invite.inviterUserId,
-        status: 'ACCEPTED',
-      },
-    })
   const user = await tx.user.findUniqueOrThrow({
     where: { id: inviteeId },
     select: { createdAt: true },
   })
-  // Inviting an existing account creates a contact, not a fresh referral allowance.
+  // Existing accounts do not qualify for a fresh referral allowance.
   if (user.createdAt < invite.createdAt) return
   await tx.doubloonReferral.upsert({
     where: { inviteeId },

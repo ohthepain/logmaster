@@ -7,12 +7,12 @@ import { AddBoatModal } from './AddBoatModal'
 import { Modal } from './Modal'
 import { SkipperSelect } from './SkipperSelect'
 import { TripCrewPickerModal, TripCrewSection } from './TripCrewPickerModal'
-import type { CrewMember } from '../domain/crew'
+import type { TripCrewUser } from '../domain/connections'
 import type { Boat } from '../domain/boat'
 import { defaultBoatPhoto } from '../domain/boat'
 import { useSession } from '../lib/auth-client'
 import { fetchBoats } from '../lib/boats-api'
-import { fetchCrew } from '../lib/crew-api'
+import { fetchTripPeople } from '../lib/connections-api'
 import {
   buildSkipperOptions,
   resolveTripPersonOption,
@@ -44,7 +44,7 @@ export function StartTripLauncher({ open, onClose }: StartTripLauncherProps) {
     skipperKey: '',
   })
   const [tripCrewMemberIds, setTripCrewMemberIds] = useState<string[]>([])
-  const [crewMembers, setCrewMembers] = useState<CrewMember[]>([])
+  const [crewMembers, setCrewMembers] = useState<TripCrewUser[]>([])
   const [crewLoading, setCrewLoading] = useState(false)
   const [crewPickerOpen, setCrewPickerOpen] = useState(false)
   const [creatingTrip, setCreatingTrip] = useState(false)
@@ -133,9 +133,9 @@ export function StartTripLauncher({ open, onClose }: StartTripLauncherProps) {
       return
     }
     setCrewLoading(true)
-    void fetchCrew()
+    void fetchTripPeople()
       .then((payload) => {
-        setCrewMembers(payload.members)
+        setCrewMembers(payload)
         triggerLogbookSyncRetry()
       })
       .catch(() => {})
@@ -200,7 +200,15 @@ export function StartTripLauncher({ open, onClose }: StartTripLauncherProps) {
         registration: startForm.registration,
         skipper: skipper?.name,
         skipperKey: effectiveSkipperKey || null,
-        crewMemberIds: tripCrewMemberIds,
+        crewUserIds: [
+          ...new Set([
+            user.id,
+            ...(effectiveSkipperKey.startsWith('user:')
+              ? [effectiveSkipperKey.slice(5)]
+              : []),
+            ...tripCrewMemberIds,
+          ]),
+        ],
       })
       if (trip) {
         setLastTripBoatId(selectedBoatId)
@@ -279,7 +287,7 @@ export function StartTripLauncher({ open, onClose }: StartTripLauncherProps) {
           />
           {crewLoading && (
             <p className="m-0 text-xs text-[var(--sea-ink-soft)]">
-              Refreshing crew list…
+              Loading people…
             </p>
           )}
 

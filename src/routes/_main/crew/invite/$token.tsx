@@ -125,10 +125,10 @@ function CrewInvitePage() {
             </h1>
             <p className="text-sm text-[var(--sea-ink-soft)]">{error}</p>
             <Link
-              to="/crew"
+              to="/connections"
               className="inline-flex rounded-xl bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] no-underline"
             >
-              Go to Crew
+              View connections
             </Link>
           </>
         ) : !preview ? (
@@ -137,30 +137,30 @@ function CrewInvitePage() {
               Invite unavailable
             </h1>
             <Link
-              to="/crew"
+              to="/connections"
               className="font-medium text-[var(--sea-ink)] underline underline-offset-2"
             >
-              Go to Crew
+              View connections
             </Link>
           </>
         ) : showSuccess ? (
           <>
             <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
-              You&apos;re on the crew
+              You are connected
             </h1>
             <p className="text-sm text-[var(--sea-ink-soft)]">
               You have been added as{' '}
               <strong className="text-[var(--sea-ink)]">
                 {preview.crewMemberName}
               </strong>{' '}
-              on {preview.inviterName}&apos;s crew. You are now contacts and can
-              message each other.
+              in {preview.inviterName}&apos;s connections. You are now connected
+              and can message each other.
             </p>
             <Link
-              to="/crew"
+              to="/connections"
               className="inline-flex rounded-xl bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] no-underline"
             >
-              View Crew
+              View connections
             </Link>
           </>
         ) : preview.expired || preview.status !== 'PENDING' ? (
@@ -173,16 +173,16 @@ function CrewInvitePage() {
               page.
             </p>
             <Link
-              to="/crew"
+              to="/connections"
               className="font-medium text-[var(--sea-ink)] underline underline-offset-2"
             >
-              Go to Crew
+              View connections
             </Link>
           </>
         ) : accepting ? (
           <>
             <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
-              Crew invite
+              Connection invitation
             </h1>
             <p className="text-sm text-[var(--sea-ink-soft)]">Accepting…</p>
           </>
@@ -193,7 +193,7 @@ function CrewInvitePage() {
               className="mx-auto size-20"
             />
             <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
-              Crew invite
+              Connection invitation
             </h1>
             <p className="text-sm leading-7 text-[var(--sea-ink-soft)]">
               <strong className="text-[var(--sea-ink)]">
@@ -203,9 +203,9 @@ function CrewInvitePage() {
               <strong className="text-[var(--sea-ink)]">
                 {preview.crewMemberName}
               </strong>{' '}
-              on their crew. Accepting replaces their placeholder with your
-              account profile and makes you and {preview.inviterName} contacts.
-              Your sailing can earn them up to 100 doubloons.
+              to connect. Accepting links your account profile and makes you and{' '}
+              {preview.inviterName} connections. Your sailing can earn them up
+              to 100 doubloons.
             </p>
 
             {!user ? (
@@ -230,8 +230,8 @@ function CrewInvitePage() {
               preview.inviteeHasAccount ? (
                 <div className="space-y-3">
                   <p className="text-sm text-red-700 dark:text-red-300">
-                    Accepting makes you and {preview.inviterName} contacts. Sign
-                    in as {preview.inviteeEmail} to accept this invite.
+                    Accepting connects you and {preview.inviterName}. Sign in as{' '}
+                    {preview.inviteeEmail} to accept this invite.
                   </p>
                   <Link
                     to="/sign-in"

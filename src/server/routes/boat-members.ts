@@ -4,7 +4,6 @@ import {
   assertCanChangeBoatMemberRole,
   assertCanRemoveBoatMember,
   canAccess,
-  ensureOrgMemberForBoatMember,
 } from '../permissions'
 import type { ConsortiumMemberRole } from '../permissions'
 import {
@@ -233,8 +232,6 @@ boatMembersRoutes.post('/:boatId/members', async (c) => {
       user: { select: { id: true, name: true, email: true, image: true } },
     },
   })
-
-  await ensureOrgMemberForBoatMember(boatId, targetUserId)
 
   const boatSummary = await getBoatSummary(boatId)
   if (boatSummary) {

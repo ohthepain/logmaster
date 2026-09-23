@@ -1,6 +1,5 @@
 import { prisma } from '../db'
 import { serializeBoatShares } from '../../domain/boat-shares'
-import { ensureConsortiumMember } from './consortium'
 
 const db = prisma as any
 
@@ -108,7 +107,7 @@ export async function addBoatShareOwner(
   boatId: string,
   shareId: string,
   userId: string,
-  consortiumId: string | null,
+  _consortiumId: string | null,
 ) {
   const share = await db.boatShare.findFirst({
     where: { id: shareId, boatId },
@@ -122,9 +121,6 @@ export async function addBoatShareOwner(
     return { ok: false as const, error: 'User already owns this share' }
 
   await db.boatShareOwner.create({ data: { shareId, userId } })
-  if (consortiumId) {
-    await ensureConsortiumMember(consortiumId, userId, 'MEMBER')
-  }
 
   return { ok: true as const, shares: await loadBoatShares(boatId) }
 }

@@ -78,6 +78,7 @@ model User {
   preferredLanguage    String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+  tripParticipations TripParticipant[]
   sessions      Session[]
   accounts      Account[]
   boats         Boat[]
@@ -416,6 +417,7 @@ model Trip {
   updatedAt      DateTime    @updatedAt
 
   createdBy  User?        @relation("CreatedTrips", fields: [userId], references: [id], onDelete: SetNull)
+  participants   TripParticipant[]
   logEntries     LogEntry[]
   legs           Leg[]
   tripTracks     TripTrack[]
@@ -1711,4 +1713,63 @@ model DoubloonPolicy {
   id String @id
   activatedAt DateTime @default(now())
   @@map("doubloon_policy")
+}
+
+// Explicit, mutual connections. Membership and conversations are independent.
+model UserConnection {
+  userLowId String
+  userHighId String
+  requestedByUserId String
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@id([userLowId, userHighId])
+  @@index([userHighId, status])
+  @@map("user_connection")
+}
+
+model ConnectionInvite {
+  id String @id @default(cuid())
+  inviterUserId String
+  inviteeEmail String
+  token String @unique
+  status String @default("PENDING")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([inviteeEmail, status])
+  @@map("connection_invite")
+}
+
+model DirectConversation {
+  id String @id
+  userLowId String
+  userHighId String
+  createdAt DateTime @default(now())
+  participants DirectConversationParticipant[]
+  @@unique([userLowId, userHighId])
+  @@map("direct_conversation")
+}
+
+model DirectConversationParticipant {
+  conversationId String
+  userId String
+  leftAt DateTime?
+  invitedAt DateTime?
+  invitedByUserId String?
+  conversation DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  @@id([conversationId, userId])
+  @@index([userId])
+  @@map("direct_conversation_participant")
+}
+
+model TripParticipant {
+  tripId String
+  userId String
+  nameSnapshot String
+  createdAt DateTime @default(now())
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@id([tripId, userId])
+  @@index([userId])
+  @@map("trip_participant")
 }

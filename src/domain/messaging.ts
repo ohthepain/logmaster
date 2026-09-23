@@ -58,6 +58,15 @@ export type MessageLikes = {
   myLikeCount: number
 }
 export type ChatThread = {
+  canSend?: boolean
+  direct?: {
+    established?: boolean
+    connectionStatus?: string | null
+    left: boolean
+    peerLeft: boolean
+    invited: boolean
+    invitationSent: boolean
+  }
   id: string
   object: ChatObject
   memberCount: number

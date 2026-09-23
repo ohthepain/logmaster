@@ -94,7 +94,7 @@ type NewTripInput = {
   registration?: string
   skipper?: string
   skipperKey?: string | null
-  crewMemberIds?: string[]
+  crewUserIds?: string[]
 }
 
 type NewEntryInput = {
@@ -149,7 +149,7 @@ type UpdateTripInput = Partial<
     | 'boatName'
     | 'registration'
     | 'skipper'
-    | 'crewMemberIds'
+    | 'crewUserIds'
     | 'sailsUp'
     | 'engineOn'
     | 'moored'
@@ -571,7 +571,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       registration: input.registration?.trim() || null,
       skipper: input.skipper?.trim() || null,
       skipperKey: input.skipperKey ?? null,
-      crewMemberIds: input.crewMemberIds?.length ? input.crewMemberIds : null,
+      crewUserIds: input.crewUserIds?.length ? input.crewUserIds : null,
       title: defaultTripTitle(input.boatName, startedDate),
       coverKind: 'map',
       startedAt: context.timestamp,
@@ -605,6 +605,14 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
   updateTrip: async (tripId, patch) => {
     const current = get().trips.find((trip) => trip.id === tripId)
     if (!current) return
+    if (
+      current.status === 'COMPLETED' &&
+      ((patch.crewUserIds !== undefined &&
+        JSON.stringify([...new Set(patch.crewUserIds ?? [])].sort()) !==
+          JSON.stringify([...new Set(current.crewUserIds ?? [])].sort())) ||
+        (patch.skipper !== undefined && patch.skipper !== current.skipper))
+    )
+      throw new Error('The crew of a completed trip cannot be changed')
     const next: Trip = {
       ...current,
       ...patch,
@@ -616,12 +624,12 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
         patch.subtitle !== undefined
           ? patch.subtitle?.trim() || null
           : (current.subtitle ?? null),
-      crewMemberIds:
-        patch.crewMemberIds !== undefined
-          ? patch.crewMemberIds?.length
-            ? patch.crewMemberIds
+      crewUserIds:
+        patch.crewUserIds !== undefined
+          ? patch.crewUserIds?.length
+            ? patch.crewUserIds
             : null
-          : (current.crewMemberIds ?? null),
+          : (current.crewUserIds ?? null),
       updatedAt: nowIso(),
     }
     await putTrip(next)

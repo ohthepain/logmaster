@@ -40,13 +40,14 @@ export type WeatherSnapshot = {
 }
 
 export type Trip = {
+  userId?: string | null
   unpaidRanges?: UnpaidRange[]
   id: string
   boatName: string
   registration?: string | null
   skipper?: string | null
   skipperKey?: string | null
-  crewMemberIds?: string[] | null
+  crewUserIds?: string[] | null
   title?: string | null
   subtitle?: string | null
   coverPhotoDataUrl?: string | null
