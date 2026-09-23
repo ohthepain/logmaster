@@ -153,8 +153,8 @@ function CrewInvitePage() {
               <strong className="text-[var(--sea-ink)]">
                 {preview.crewMemberName}
               </strong>{' '}
-              on {preview.inviterName}&apos;s crew. They will need to accept
-              your friend request before you appear as friends.
+              on {preview.inviterName}&apos;s crew. You are now contacts and can
+              message each other.
             </p>
             <Link
               to="/crew"
@@ -204,8 +204,8 @@ function CrewInvitePage() {
                 {preview.crewMemberName}
               </strong>{' '}
               on their crew. Accepting replaces their placeholder with your
-              account profile. You won&apos;t become friends until they accept
-              your connection request.
+              account profile and makes you and {preview.inviterName} contacts.
+              Your sailing can earn them up to 100 doubloons.
             </p>
 
             {!user ? (
@@ -230,7 +230,8 @@ function CrewInvitePage() {
               preview.inviteeHasAccount ? (
                 <div className="space-y-3">
                   <p className="text-sm text-red-700 dark:text-red-300">
-                    Sign in as {preview.inviteeEmail} to accept this invite.
+                    Accepting makes you and {preview.inviterName} contacts. Sign
+                    in as {preview.inviteeEmail} to accept this invite.
                   </p>
                   <Link
                     to="/sign-in"

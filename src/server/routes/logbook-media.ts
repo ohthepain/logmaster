@@ -78,7 +78,13 @@ logbookMediaRoutes.get('/trips/:tripId/media/:id/content', async (c) => {
       id: c.req.param('id'),
       uploadedAt: { not: null },
       logMedia: {
-        some: { logEntry: { tripId: c.req.param('tripId'), deleted: false } },
+        some: {
+          logEntry: {
+            tripId: c.req.param('tripId'),
+            deleted: false,
+            economyHidden: false,
+          },
+        },
       },
     },
   })

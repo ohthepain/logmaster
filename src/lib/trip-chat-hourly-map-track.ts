@@ -31,6 +31,7 @@ function coordinatesFromPositionTracks(
       return ms != null && ms <= endMs
     })
     for (const sample of samples) {
+      if (sample.breakBefore) coordinates.length = 0
       const next: TripChatTrackCoordinate = [sample.longitude, sample.latitude]
       const previous = coordinates[coordinates.length - 1]
       if (!previous || !sameCoordinate(previous, next)) {
@@ -69,7 +70,17 @@ export function buildTripChatTrackCoordinates(input: {
   }
 
   const trackCoords = coordinatesFromPositionTracks(input.tracks, endMs)
-  const entryCoords = coordinatesFromEntries(input.entries, endMs)
+  const lastHidden = Math.max(
+    0,
+    ...input.tracks
+      .flatMap((t) => t.unpaidRanges ?? [])
+      .filter((r) => Date.parse(r.endedAt) <= endMs)
+      .map((r) => Date.parse(r.endedAt)),
+  )
+  const entryCoords = coordinatesFromEntries(
+    input.entries.filter((e) => Date.parse(e.timestamp) > lastHidden),
+    endMs,
+  )
   let coordinates =
     trackCoords.length >= 2
       ? trackCoords

@@ -1,3 +1,6 @@
+import { reconcileTripMileage } from '../economy/mileage'
+import { unpaidRanges, visibleTrack } from '../economy/visibility'
+import { deserializeTrackPayload } from '../../lib/trip-track-payload'
 import { Hono } from 'hono'
 import { prisma } from '../db'
 import { canAccess } from '../permissions'
@@ -87,9 +90,12 @@ logbookTrackRoutes.get('/trips/:tripId/tracks', async (c) => {
     where: { tripId },
     orderBy: [{ startedAt: 'asc' }],
   })
+  const ranges = await unpaidRanges([tripId])
   return c.json({
-    tripTracks: tracks.map((track: Record<string, unknown>) =>
-      serializeTripTrack(track, false),
+    tripTracks: await Promise.all(
+      tracks.map(async (track: any) =>
+        visibleTrack(serializeTripTrack(track, false) as any, ranges, false),
+      ),
     ),
   })
 })
@@ -106,7 +112,14 @@ logbookTrackRoutes.post('/tracks/sync', async (c) => {
     return c.json({ tripTracks: [] })
   }
 
+  if (tripTracks.length > 100) return c.json({ error: 'Too many tracks' }, 400)
   for (const track of tripTracks) {
+    const old = await db.tripTrack.findUnique({
+      where: { id: String(track.id) },
+      select: { tripId: true },
+    })
+    if (old && old.tripId !== String(track.tripId))
+      return c.json({ error: 'Cannot move a track to another trip' }, 403)
     const allowed = await canAccess(userId, 'edit', {
       type: 'trip',
       id: String(track.tripId),
@@ -133,9 +146,14 @@ logbookTrackRoutes.post('/tracks/sync', async (c) => {
     }),
   )
 
+  const ids = [...new Set(tripTracks.map((t) => String(t.tripId)))]
+  for (const id of ids) await reconcileTripMileage(id)
+  const ranges = await unpaidRanges(ids)
   return c.json({
-    tripTracks: saved.map((track: Record<string, unknown>) =>
-      serializeTripTrack(track, false),
+    tripTracks: await Promise.all(
+      saved.map(async (track: any) =>
+        visibleTrack(serializeTripTrack(track, false) as any, ranges, false),
+      ),
     ),
   })
 })
@@ -191,6 +209,24 @@ logbookTrackRoutes.get('/tracks/:trackId/content', async (c) => {
   })
   if (!allowed) return c.json({ error: 'Track not found' }, 404)
 
+  const ranges = await unpaidRanges([track.tripId])
+  if (ranges.length) {
+    const payload =
+      track.storage === 'inline'
+        ? track.payload
+        : await deserializeTrackPayload(
+            new Uint8Array(await readTrackObjectBytes(track.storageKey)),
+          )
+    const visible = await visibleTrack(
+      { ...track, payload, storage: 'inline' },
+      ranges,
+      true,
+    )
+    return c.json(visible.payload, 200, {
+      'Cache-Control': 'private, no-store',
+    })
+  }
+
   if (track.storage === 'inline') {
     if (!track.payload) return c.json({ error: 'Track payload missing' }, 404)
     const bytes = new TextEncoder().encode(JSON.stringify(track.payload))
@@ -198,7 +234,7 @@ logbookTrackRoutes.get('/tracks/:trackId/content', async (c) => {
       status: 200,
       headers: {
         'Content-Type': 'application/octet-stream',
-        'Cache-Control': 'private, max-age=3600',
+        'Cache-Control': 'private, no-store',
       },
     })
   }
@@ -212,7 +248,7 @@ logbookTrackRoutes.get('/tracks/:trackId/content', async (c) => {
     status: 200,
     headers: {
       'Content-Type': 'application/octet-stream',
-      'Cache-Control': 'private, max-age=3600',
+      'Cache-Control': 'private, no-store',
     },
   })
 })

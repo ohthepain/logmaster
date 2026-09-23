@@ -1,3 +1,4 @@
+import { isUnpaidAt } from '../domain/doubloons'
 import { entryInstrumentData } from '../domain/instrument-data'
 import type { LogEntry } from '../domain/logbook'
 import type {
@@ -227,6 +228,14 @@ export function tripPlaybackInfoAt(
   timeMs: number,
   playbackPosition: TripPlaybackPosition | null,
 ): TripPlaybackInfoSnapshot {
+  if (
+    isUnpaidAt(
+      tripId,
+      new Date(timeMs),
+      tracks.flatMap((t) => t.unpaidRanges ?? []),
+    )
+  )
+    return { lines: [] }
   const lines: TripPlaybackInfoLine[] = []
   const seen = new Set<string>()
   const positionSamples = tripTrackSamplesForTrip(tripId, tracks)

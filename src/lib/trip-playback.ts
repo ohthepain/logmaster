@@ -1,3 +1,4 @@
+import { isUnpaidAt } from '../domain/doubloons'
 import type { LogEntry, Trip } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { normalizeBearing360, wrapDegrees180 } from './angle'
@@ -111,6 +112,14 @@ export function tripPlaybackPositionAt(
   timeMs: number,
   tracks: TripTrack[] = [],
 ): TripPlaybackPosition | null {
+  if (
+    isUnpaidAt(
+      trip.id,
+      new Date(timeMs),
+      tracks.flatMap((t) => t.unpaidRanges ?? []),
+    )
+  )
+    return null
   const trackSamples = tripTrackSamplesForTrip(trip.id, tracks)
   const path = buildPlaybackPath(trackSamples, entries)
   if (path) {

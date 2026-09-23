@@ -1,3 +1,4 @@
+import { doubloonRoutes } from './routes/doubloons'
 import { wakeChatWorker } from './messaging/delivery'
 import { logbookMediaRoutes } from './routes/logbook-media'
 import { messagingRoutes } from './routes/messaging'
@@ -101,6 +102,7 @@ app.route('/boats', boatAssetsRoutes)
 app.route('/boats', assetIntelligenceRoutes)
 app.route('/boats', boatContactsRoutes)
 app.route('/profile', profileRoutes)
+app.route('/doubloons', doubloonRoutes)
 app.route('/crew', crewRoutes)
 app.route('/location', locationRoutes)
 app.route('/map-tiles', mapTileRoutes)

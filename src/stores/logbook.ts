@@ -1,3 +1,4 @@
+import { isUnpaidAt } from '../domain/doubloons'
 import { durableMediaUrl } from '../lib/log-media-sync'
 import { create } from 'zustand'
 import type {
@@ -80,6 +81,8 @@ import {
   removePendingTripIds,
 } from '../lib/logbook-idb'
 import { useAppOptionsStore } from './app-options'
+
+const lastPositionSyncAt = new Map<string, number>()
 
 const DEV_ENTRY_TIME_ADVANCE_MS = 60 * 60 * 1000
 
@@ -295,7 +298,12 @@ function applySnapshot(
 ) {
   const sortedTrips = sortTrips(snapshot.trips)
   const sortedLegs = sortLegs(snapshot.legs ?? [])
-  const sortedEntries = sortEntries(snapshot.logEntries)
+  const ranges = snapshot.trips.flatMap((t) => t.unpaidRanges ?? [])
+  const sortedEntries = sortEntries(
+    snapshot.logEntries.filter(
+      (e) => !isUnpaidAt(e.tripId, e.timestamp, ranges),
+    ),
+  )
   const activeTripId = resolveActiveTripId(sortedTrips, null)
   const nextSelected =
     selectedTripId && sortedTrips.some((trip) => trip.id === selectedTripId)
@@ -306,7 +314,10 @@ function applySnapshot(
     trips: sortedTrips,
     legs: sortedLegs,
     entries: sortedEntries,
-    tracks: snapshot.tripTracks ?? [],
+    tracks: (snapshot.tripTracks ?? []).map((t) => ({
+      ...t,
+      unpaidRanges: ranges.filter((r) => r.tripId === t.tripId),
+    })),
     media: snapshot.media,
     activeTripId,
     selectedTripId: nextSelected,
@@ -1275,11 +1286,23 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
 
   appendTripTrackPosition: async (tripId, sample, options) => {
     const recorder = getTripTrackRecorder()
+    if (!recorder.hasOpenPositionTrack(tripId)) {
+      const savedOpen = get().tracks.find(
+        (t) => t.id === openPositionTrackId(tripId),
+      )
+      if (savedOpen) recorder.restorePositionTrack(savedOpen)
+    }
     const sealed = recorder.appendPositionSample(tripId, sample, {
       source: options?.source ?? 'background-gps',
       legId: options?.legId ?? null,
     })
     const openTrack = recorder.openPositionTrack(tripId)
+    if (openTrack)
+      openTrack.unpaidRanges =
+        get().trips.find((t) => t.id === tripId)?.unpaidRanges ?? []
+    for (const track of sealed)
+      track.unpaidRanges =
+        get().trips.find((t) => t.id === tripId)?.unpaidRanges ?? []
 
     set((state) => {
       const byId = new Map(
@@ -1304,9 +1327,17 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
     })
 
     if (sealed.length > 0) {
+      if (!openTrack) await deleteTripTrack(openPositionTrackId(tripId))
       await get().upsertTripTracks(sealed)
     } else if (openTrack) {
       await putTripTrack(openTrack)
+      if (
+        get().online &&
+        Date.now() - (lastPositionSyncAt.get(tripId) ?? 0) >= 15000
+      ) {
+        lastPositionSyncAt.set(tripId, Date.now())
+        void get().syncNow({ skipBootstrap: true })
+      }
     }
   },
 
@@ -1329,9 +1360,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
       }
     }
 
-    const missing = tracks.filter(
-      (track) => track.storage === 's3' && track.payload == null,
-    )
+    const missing = tracks.filter((track) => track.payload == null)
     if (missing.length === 0) return
     const hydrated = await Promise.all(
       missing.map((track) => hydrateTripTrackPayload(track)),

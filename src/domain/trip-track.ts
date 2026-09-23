@@ -1,3 +1,5 @@
+import type { UnpaidRange } from './doubloons'
+import { visiblePositionSamples, visibleSamples } from './doubloon-visibility'
 /**
  * Trip tracks store dense time-series that are not log entries.
  *
@@ -55,6 +57,7 @@ export type TripTrackEncoding =
   | 'wind-delta-v1'
 
 export type PositionTrackSample = {
+  breakBefore?: boolean
   time: string
   latitude: number
   longitude: number
@@ -83,6 +86,7 @@ export type WindTrackSample = {
 
 /** Compact delta encoding for position samples (v1). */
 export type TripTrackDeltaV1 = {
+  breaks?: number[]
   v: 1
   latE7: number
   lonE7: number
@@ -129,6 +133,8 @@ export type TripTrackPayload =
 export type TripTrackStorage = 'inline' | 's3'
 
 export type TripTrack = {
+  unpaidRanges?: UnpaidRange[]
+  payloadRedacted?: boolean
   id: string
   tripId: string
   legId?: string | null
@@ -313,6 +319,7 @@ export function encodePositionTrackSamples(
 
   return {
     v: 1,
+    breaks: samples.flatMap((s, i) => (s.breakBefore ? [i] : [])),
     latE7: toLatE7(first.latitude),
     lonE7: toLonE7(first.longitude),
     t0,
@@ -336,6 +343,7 @@ export function decodePositionTrackSamples(
 
   const samples: PositionTrackSample[] = [
     {
+      breakBefore: payload.breaks?.includes(0),
       time: new Date(payload.t0).toISOString(),
       latitude: fromLatE7(payload.latE7),
       longitude: fromLonE7(payload.lonE7),
@@ -361,6 +369,7 @@ export function decodePositionTrackSamples(
     const headingValue = payload.heading?.[index + 1]
     const elevationValue = payload.elevationCm?.[index + 1]
     samples.push({
+      breakBefore: payload.breaks?.includes(index + 1),
       time: new Date(timeMs).toISOString(),
       latitude: fromLatE7(latE7),
       longitude: fromLonE7(lonE7),
@@ -561,7 +570,11 @@ export function decodeTripTrack(track: TripTrack): PositionTrackSample[] {
   if (track.encoding !== 'delta-v1') {
     throw new Error(`Position track has unexpected encoding ${track.encoding}`)
   }
-  return decodePositionTrackSamples(track.payload as TripTrackDeltaV1)
+  return visiblePositionSamples(
+    track.tripId,
+    decodePositionTrackSamples(track.payload as TripTrackDeltaV1),
+    track.unpaidRanges ?? [],
+  )
 }
 
 export function decodeInstrumentTrack(
@@ -576,11 +589,23 @@ export function decodeInstrumentTrack(
 
   switch (track.encoding) {
     case 'scalar-delta-v1':
-      return decodeScalarTrackSamples(track.payload as ScalarTrackDeltaV1)
+      return visibleSamples(
+        track.tripId,
+        decodeScalarTrackSamples(track.payload as ScalarTrackDeltaV1),
+        track.unpaidRanges ?? [],
+      )
     case 'angle-delta-v1':
-      return decodeAngleTrackSamples(track.payload as AngleTrackDeltaV1)
+      return visibleSamples(
+        track.tripId,
+        decodeAngleTrackSamples(track.payload as AngleTrackDeltaV1),
+        track.unpaidRanges ?? [],
+      )
     case 'wind-delta-v1':
-      return decodeWindTrackSamples(track.payload as WindTrackDeltaV1)
+      return visibleSamples(
+        track.tripId,
+        decodeWindTrackSamples(track.payload as WindTrackDeltaV1),
+        track.unpaidRanges ?? [],
+      )
     default:
       throw new Error(`Unsupported instrument track encoding ${track.encoding}`)
   }

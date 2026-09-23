@@ -143,7 +143,15 @@ it('allows logbook editors to reuse log media without exposing private chat atta
       OR: [
         { uploaderId: 'editor' },
         {
-          logMedia: { some: { logEntry: { tripId: 'trip', deleted: false } } },
+          logMedia: {
+            some: {
+              logEntry: {
+                tripId: 'trip',
+                deleted: false,
+                economyHidden: false,
+              },
+            },
+          },
         },
       ],
     },

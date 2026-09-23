@@ -33,6 +33,13 @@ export type TripChatLog = {
   legacyMedia: { id: string; kind: 'photo' | 'video' | 'voice'; url: string }[]
 }
 export type ChatMessage = {
+  economyEvent?: {
+    type: 'referral_reward'
+    version: 1
+    transactionId: string
+    amount: number
+    total: number
+  } | null
   boatActivity?: BoatChatActivity | null
   logEntry?: TripChatLog | null
   id: string

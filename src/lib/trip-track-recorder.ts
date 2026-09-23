@@ -1,11 +1,13 @@
 import {
   encodePositionTrackSamples,
+  decodePositionTrackSamples,
   encodingForTrackKind,
 } from '../domain/trip-track'
 import type {
   PositionTrackSample,
   TripTrack,
   TripTrackSource,
+  TripTrackDeltaV1,
 } from '../domain/trip-track'
 import {
   TRIP_TRACK_CHUNK_MAX_MS,
@@ -86,6 +88,26 @@ function buildPositionTrackFromSamples(
 
 export class TripTrackRecorder {
   private open = new Map<string, OpenPositionChunk>()
+  private breakOnNext = new Set<string>()
+
+  hasOpenPositionTrack(tripId: string) {
+    return this.open.has(chunkKey(tripId, 'position'))
+  }
+
+  restorePositionTrack(track: TripTrack) {
+    if (!track.payload || track.payloadRedacted || !isOpenPositionTrack(track))
+      return
+    const key = chunkKey(track.tripId, 'position')
+    if (this.open.has(key)) return
+    this.open.set(key, {
+      tripId: track.tripId,
+      legId: track.legId ?? null,
+      source: track.source,
+      samples: decodePositionTrackSamples(track.payload as TripTrackDeltaV1),
+    })
+    // Restoring after an app restart must not bill the unrecorded gap.
+    this.breakOnNext.add(key)
+  }
 
   appendPositionSample(
     tripId: string,
@@ -122,7 +144,12 @@ export class TripTrackRecorder {
       return []
     }
 
-    chunk.samples.push(sample)
+    chunk.samples.push(
+      chunk.samples.length && !this.breakOnNext.has(key)
+        ? sample
+        : { ...sample, breakBefore: true },
+    )
+    this.breakOnNext.delete(key)
     return this.sealIfNeeded(key)
   }
 
@@ -143,12 +170,20 @@ export class TripTrackRecorder {
       return []
     }
 
-    return [this.sealChunk(key)!].filter(Boolean)
+    const last = chunk.samples.at(-1)!
+    const sealed = this.sealChunk(key)!
+    // Automatic chunk rollover is continuous; pause/end seals do not retain a point.
+    this.open.set(key, { ...chunk, samples: [{ ...last, breakBefore: false }] })
+    return [sealed].filter(Boolean)
   }
 
   sealChunk(key: string): SealedTripTrack | null {
     const chunk = this.open.get(key)
     if (!chunk || chunk.samples.length === 0) return null
+    if (chunk.samples.length === 1 && chunk.samples[0].breakBefore === false) {
+      this.open.delete(key)
+      return null
+    }
 
     const sealed = buildPositionTrackFromSamples(
       chunk.tripId,

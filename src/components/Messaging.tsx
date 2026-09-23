@@ -854,6 +854,21 @@ export function Messaging({
                   </div>
                 )}
                 {messages.map((message) => {
+                  if (message.economyEvent)
+                    return (
+                      <div
+                        key={message.id}
+                        className="mx-auto my-3 max-w-sm rounded-2xl bg-amber-50 p-4 text-center text-amber-950"
+                      >
+                        <p className="m-0 text-xs font-semibold">
+                          🪙 {message.senderName} · Automatic gift
+                        </p>
+                        <p className="my-2 text-sm">{message.text}</p>
+                        <time className="text-xs" dateTime={message.createdAt}>
+                          {timeLabel(message.createdAt)}
+                        </time>
+                      </div>
+                    )
                   if (message.boatActivity && !message.boatActivity.preview)
                     return (
                       <div

@@ -82,6 +82,8 @@ it('blocks unauthorized uploads and limits content reads to nondeleted log attac
     (await logbookMediaRoutes.request('/trips/trip/media/id/content')).status,
   ).toBe(404)
   expect(mocks.find.mock.calls[0][0].where.logMedia).toEqual({
-    some: { logEntry: { tripId: 'trip', deleted: false } },
+    some: {
+      logEntry: { tripId: 'trip', deleted: false, economyHidden: false },
+    },
   })
 })

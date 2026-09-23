@@ -1,3 +1,5 @@
+import { reconcileTripMileage } from '../economy/mileage'
+import { visibleLogbook } from '../economy/visibility'
 import { tripLogChatWrites } from '../messaging/trip-log'
 import { wakeChatWorker } from '../messaging/delivery'
 import { requireLogbookAttachments } from '../messaging/media'
@@ -288,16 +290,18 @@ logbookRoutes.get('/bootstrap', async (c) => {
         : [],
       getDeletedTripIds(),
     ])
-  return c.json({
-    trips,
-    legs,
-    logEntries,
-    tripTracks: tripTracks.map((track: Record<string, unknown>) =>
-      serializeTripTrackForClient(track),
-    ),
-    media,
-    deletedTripIds,
-  })
+  return c.json(
+    await visibleLogbook({
+      trips,
+      legs,
+      logEntries,
+      tripTracks: tripTracks.map((track: Record<string, unknown>) =>
+        serializeTripTrackForClient(track),
+      ),
+      media,
+      deletedTripIds,
+    }),
+  )
 })
 
 logbookRoutes.post('/sync', async (c) => {
@@ -450,6 +454,12 @@ logbookRoutes.post('/sync', async (c) => {
         await assertCanEditTrip(userId, String(entry.tripId), allowedTripIds)
       }
       for (const track of tracksToUpsert) {
+        const old = await db.tripTrack.findUnique({
+          where: { id: String(track.id) },
+          select: { tripId: true },
+        })
+        if (old && old.tripId !== String(track.tripId))
+          throw new Error('Forbidden: cannot move a track to another trip')
         await assertCanEditTrip(userId, String(track.tripId), allowedTripIds)
       }
       for (const item of mediaToUpsert) {
@@ -538,6 +548,14 @@ logbookRoutes.post('/sync', async (c) => {
         await wakeChatWorker()
     }
 
+    for (const tripId of new Set([
+      ...tripsToUpsert.map((t) => String(t.id)),
+      ...tracksToUpsert.map((t) => String(t.tripId)),
+      ...entriesToUpsert.map((e) => String(e.tripId)),
+    ])) {
+      await reconcileTripMileage(tripId)
+    }
+
     if (newEndTripEntries.length > 0) {
       for (const entry of newEndTripEntries) {
         const trip = await db.trip.findUnique({
@@ -603,16 +621,18 @@ logbookRoutes.post('/sync', async (c) => {
       mediaDeleted: deletedMediaIds.length,
     })
 
-    return c.json({
-      trips: savedTrips,
-      legs: savedLegs,
-      logEntries: savedEntries,
-      tripTracks: savedTracks.map((track: Record<string, unknown>) =>
-        serializeTripTrackForClient(track),
-      ),
-      media: savedMedia,
-      deletedTripIds: savedDeletedTripIds,
-    })
+    return c.json(
+      await visibleLogbook({
+        trips: savedTrips,
+        legs: savedLegs,
+        logEntries: savedEntries,
+        tripTracks: savedTracks.map((track: Record<string, unknown>) =>
+          serializeTripTrackForClient(track),
+        ),
+        media: savedMedia,
+        deletedTripIds: savedDeletedTripIds,
+      }),
+    )
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Failed to sync logbook'

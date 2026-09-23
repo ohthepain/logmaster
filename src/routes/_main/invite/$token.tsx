@@ -196,7 +196,9 @@ function MemberInvitePage() {
               <strong className="text-[var(--sea-ink)]">
                 {preview.targetName}
               </strong>{' '}
-              as {preview.role.toLowerCase()}.
+              as {preview.role.toLowerCase()}. Accepting makes you and{' '}
+              {preview.inviterName} contacts. Your sailing can earn them up to
+              100 doubloons.
             </p>
 
             {!user ? (

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   attachments: vi.fn(),
   wake: vi.fn(),
 }))
+vi.mock('../economy/mileage', () => ({ reconcileTripMileage: vi.fn() }))
 vi.mock('../session', () => ({ getSessionUserId: async () => 'editor' }))
 vi.mock('../permissions', () => ({
   canAccess: mocks.access,

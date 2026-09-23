@@ -1,5 +1,5 @@
 import type { Leg } from '../domain/logbook'
-import type { TripTrack } from '../domain/trip-track'
+import type { PositionTrackSample, TripTrack } from '../domain/trip-track'
 import { decodeTripTrack, isPositionTrack } from '../domain/trip-track'
 import {
   decimatePositionSamples,
@@ -31,30 +31,34 @@ export function buildTripTracksGeoJson(tracks: TripTrack[], legs: Leg[] = []) {
   const features = tracks
     .filter(isPositionTrack)
     .flatMap((track, trackIndex) => {
-      const samples = decimatePositionSamples(
-        decodeTripTrack(track),
-        MAP_TRACK_MAX_POINTS,
-      )
-      if (samples.length < 2) return []
+      const groups: PositionTrackSample[][] = [[]]
+      for (const sample of decodeTripTrack(track)) {
+        if (sample.breakBefore && groups.at(-1)!.length) groups.push([])
+        groups.at(-1)!.push(sample)
+      }
+      return groups.flatMap((group) => {
+        const samples = decimatePositionSamples(group, MAP_TRACK_MAX_POINTS)
+        if (samples.length < 2) return []
 
-      return [
-        {
-          type: 'Feature' as const,
-          geometry: {
-            type: 'LineString' as const,
-            coordinates: samples.map(
-              (sample) =>
-                [sample.longitude, sample.latitude] as [number, number],
-            ),
+        return [
+          {
+            type: 'Feature' as const,
+            geometry: {
+              type: 'LineString' as const,
+              coordinates: samples.map(
+                (sample) =>
+                  [sample.longitude, sample.latitude] as [number, number],
+              ),
+            },
+            properties: {
+              trackId: track.id,
+              legId: track.legId ?? null,
+              source: track.source,
+              color: colorForLegId(track.legId ?? null, legColors, trackIndex),
+            },
           },
-          properties: {
-            trackId: track.id,
-            legId: track.legId ?? null,
-            source: track.source,
-            color: colorForLegId(track.legId ?? null, legColors, trackIndex),
-          },
-        },
-      ]
+        ]
+      })
     })
 
   return { type: 'FeatureCollection' as const, features }

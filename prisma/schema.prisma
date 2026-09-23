@@ -493,6 +493,7 @@ model Leg {
 }
 
 model LogEntry {
+  economyHidden Boolean @default(false)
   id         String         @id @default(cuid())
   tripId     String
   trip       Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
@@ -1499,6 +1500,7 @@ model BoatActivity {
 }
 
 model ChatMessage {
+  economyEvent Json?
   boatActivityId String? @unique
   boatActivity BoatActivity? @relation(fields: [boatActivityId], references: [id], onDelete: Cascade)
   logEntryId   String? @unique
@@ -1628,4 +1630,85 @@ model MessagingCardLink {
   @@id([expressionId, cardId])
   @@index([cardId])
   @@map("messaging_card_link")
+}
+
+// Wallet and usage records deliberately survive trip deletion. Ledger identifiers
+// are audit references, not cascading foreign keys.
+model DoubloonWallet {
+  userId String @id
+  balance Int @default(0)
+  sequence Int @default(0)
+  remainderMetres Float @default(0)
+  createdAt DateTime @default(now())
+  @@map("doubloon_wallet")
+}
+
+model DoubloonTransaction {
+  id String @id @default(uuid())
+  userId String
+  amount Int
+  type String
+  source String
+  tripId String?
+  relatedUserId String?
+  createdAt DateTime @default(now())
+  resultingBalance Int
+  sequence Int
+  operationId String
+  idempotencyKey String @unique
+  reversalOfId String?
+  @@unique([userId, sequence])
+  @@index([userId, createdAt, id])
+  @@index([operationId])
+  @@map("doubloon_transaction")
+}
+
+model DoubloonReferral {
+  inviteeId String @id
+  inviterId String
+  inviteId String
+  rewarded Int @default(0)
+  createdAt DateTime @default(now())
+  @@index([inviterId])
+  @@map("doubloon_referral")
+}
+
+model TripMileage {
+  tripId String @id
+  skipperId String
+  lastSample Json?
+  partialStartedAt DateTime?
+  sampleThrough DateTime?
+  nextMile Int @default(1)
+  @@map("trip_mileage")
+}
+
+model TripMile {
+  id String @id @default(uuid())
+  tripId String
+  number Int
+  startedAt DateTime
+  endedAt DateTime
+  payerId String?
+  paidAt DateTime?
+  operationId String?
+  @@unique([tripId, number])
+  @@index([tripId, paidAt])
+  @@map("trip_mile")
+}
+
+model TripGifting {
+  id String @id @default(uuid())
+  tripId String
+  userId String
+  startedAt DateTime @default(now())
+  endedAt DateTime?
+  @@index([tripId, startedAt])
+  @@map("trip_gifting")
+}
+
+model DoubloonPolicy {
+  id String @id
+  activatedAt DateTime @default(now())
+  @@map("doubloon_policy")
 }

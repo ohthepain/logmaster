@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { decodeTripTrack } from '../domain/trip-track'
 import {
+  TripTrackRecorder,
   getTripTrackRecorder,
   resetTripTrackRecorder,
 } from './trip-track-recorder'
@@ -51,4 +52,28 @@ describe('trip track recorder', () => {
     expect(sealed).toHaveLength(1)
     expect(sealed[0]?.sampleCount).toBe(1)
   })
+})
+
+it('restores an open recording without connecting the unrecorded restart gap', () => {
+  const recorder = new TripTrackRecorder()
+  const time = Date.UTC(2026, 8, 23)
+  const sample = (n: number) => ({
+    time: new Date(time + n * 60000).toISOString(),
+    latitude: n / 10000,
+    longitude: 0,
+  })
+  recorder.appendPositionSample('restore', sample(0), {
+    source: 'background-gps',
+  })
+  recorder.appendPositionSample('restore', sample(1), {
+    source: 'background-gps',
+  })
+  const restored = new TripTrackRecorder()
+  restored.restorePositionTrack(recorder.openPositionTrack('restore')!)
+  restored.appendPositionSample('restore', sample(4), {
+    source: 'background-gps',
+  })
+  const samples = decodeTripTrack(restored.openPositionTrack('restore')!)
+  expect(samples).toHaveLength(3)
+  expect(samples[2].breakBefore).toBe(true)
 })

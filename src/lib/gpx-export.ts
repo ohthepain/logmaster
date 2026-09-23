@@ -54,7 +54,7 @@ export function buildTripGpx(trip: Trip, tracks: TripTrack[]): string {
   <trk>
     <name>${escapeGpxXml(name)}</name>
     <trkseg>
-${samples.map(formatGpxPoint).join('\n')}
+${samples.map((sample, index) => `${index > 0 && sample.breakBefore ? '    </trkseg>\n    <trkseg>\n' : ''}${formatGpxPoint(sample)}`).join('\n')}
     </trkseg>
   </trk>
 </gpx>

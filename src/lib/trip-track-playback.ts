@@ -1,5 +1,6 @@
 import type { PositionTrackSample, TripTrack } from '../domain/trip-track'
 import { decodeTripTrack, positionTracksForTrip } from '../domain/trip-track'
+import { visiblePositionSamples } from '../domain/doubloon-visibility'
 import { normalizeBearing360, wrapDegrees180 } from './angle'
 import type { TripPlaybackPosition } from './trip-playback'
 
@@ -33,10 +34,15 @@ export function tripTrackSamplesForTrip(
   tripId: string,
   tracks: TripTrack[],
 ): PositionTrackSample[] {
-  return positionTracksForTrip(tripId, tracks)
+  const samples = positionTracksForTrip(tripId, tracks)
     .filter((track) => track.payload != null)
     .flatMap((track) => decodeTripTrack(track))
     .sort((a, b) => (validDateMs(a.time) ?? 0) - (validDateMs(b.time) ?? 0))
+  return visiblePositionSamples(
+    tripId,
+    samples,
+    tracks.flatMap((t) => t.unpaidRanges ?? []),
+  )
 }
 
 export function tripPlaybackPositionFromTrackSamples(
@@ -56,6 +62,13 @@ export function tripPlaybackPositionFromTrackSamples(
     }
   }
 
+  if (
+    after.breakBefore &&
+    before !== after &&
+    timeMs > Date.parse(before.time) &&
+    timeMs < Date.parse(after.time)
+  )
+    return null
   const beforeTime = validDateMs(before.time) ?? timeMs
   const afterTime = validDateMs(after.time) ?? beforeTime
   const segmentDuration = Math.max(0, afterTime - beforeTime)

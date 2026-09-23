@@ -1,3 +1,4 @@
+import { acceptEconomyInvite } from '../economy/wallet'
 import { Hono } from 'hono'
 import { normalizeInviteLocale } from '../../lib/invite-locale'
 import { sendCrewInviteEmail } from '../email/ses'
@@ -766,8 +767,8 @@ crewRoutes.post('/invites/accept', async (c) => {
     }
   }
 
-  await db.$transaction([
-    db.crewMember.update({
+  await db.$transaction(async (tx: typeof db) => {
+    await tx.crewMember.update({
       where: { id: member.id },
       data: {
         linkedUserId: user.id,
@@ -775,29 +776,13 @@ crewRoutes.post('/invites/accept', async (c) => {
         photoS3Key: null,
         photoMimeType: null,
       },
-    }),
-    db.crewInvite.update({
+    })
+    await tx.crewInvite.update({
       where: { id: invite.id },
-      data: {
-        status: 'ACCEPTED',
-        acceptedByUserId: user.id,
-      },
-    }),
-    db.friendRequest.upsert({
-      where: {
-        requesterUserId_addresseeUserId: {
-          requesterUserId: user.id,
-          addresseeUserId: invite.inviterUserId,
-        },
-      },
-      create: {
-        requesterUserId: user.id,
-        addresseeUserId: invite.inviterUserId,
-        sourceCrewInviteId: invite.id,
-      },
-      update: {},
-    }),
-  ])
+      data: { status: 'ACCEPTED', acceptedByUserId: user.id },
+    })
+    await acceptEconomyInvite(tx, invite, user.id)
+  })
 
   const inviterBoatConsortia = await db.boat.findMany({
     where: {

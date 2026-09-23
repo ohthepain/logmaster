@@ -28,7 +28,13 @@ const sharedMedia = (threadId: string) => [
     ? [
         {
           logMedia: {
-            some: { logEntry: { tripId: threadId.slice(5), deleted: false } },
+            some: {
+              logEntry: {
+                tripId: threadId.slice(5),
+                deleted: false,
+                economyHidden: false,
+              },
+            },
           },
         },
       ]
@@ -194,7 +200,13 @@ export async function requireLogbookAttachments(
       uploadedAt: { not: null },
       OR: [
         { uploaderId: userId },
-        { logMedia: { some: { logEntry: { tripId, deleted: false } } } },
+        {
+          logMedia: {
+            some: {
+              logEntry: { tripId, deleted: false, economyHidden: false },
+            },
+          },
+        },
       ],
     },
     select: { id: true },

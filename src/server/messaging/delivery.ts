@@ -26,9 +26,13 @@ async function logDeliveryOwner(message: {
   if (!message.logEntryId) return message.senderId
   const entry = await prisma.logEntry.findUnique({
     where: { id: message.logEntryId },
-    select: { deleted: true, trip: { select: { userId: true } } },
+    select: {
+      deleted: true,
+      economyHidden: true,
+      trip: { select: { userId: true } },
+    },
   })
-  return entry && !entry.deleted
+  return entry && !entry.deleted && !entry.economyHidden
     ? (entry.trip.userId ?? message.senderId)
     : null
 }

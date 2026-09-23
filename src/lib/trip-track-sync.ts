@@ -75,6 +75,17 @@ export async function syncPendingTripTracks(
 ): Promise<TripTrack[]> {
   if (tracks.length === 0) return []
   const userId = await fetchSessionUserId()
+  const initial = await fetch(apiUrl('/api/logbook/tracks/sync'), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tripTracks: tracks
+        .filter((t) => t.payload)
+        .map((t) => ({ ...t, storage: 'inline', storageKey: null })),
+    }),
+  })
+  if (!initial.ok) throw new Error(await initial.text())
   const prepared = await Promise.all(
     tracks.map((track) => prepareTrackForUpload(track, userId)),
   )
@@ -130,10 +141,13 @@ export async function fetchTripTrackPayload(
 export async function hydrateTripTrackPayload(
   track: TripTrack,
 ): Promise<TripTrack> {
-  if (track.payload) return track
-  if (track.storage !== 's3') return track
+  if (track.payload && !track.unpaidRanges?.length) return track
   const payload = await fetchTripTrackPayload(track)
-  const hydrated = { ...track, payload }
+  const hydrated = {
+    ...track,
+    payload,
+    payloadRedacted: Boolean(track.unpaidRanges?.length),
+  }
   await putTripTrack(hydrated)
   return hydrated
 }
@@ -145,8 +159,18 @@ export function mergeTrackManifests(
   const localById = new Map(localTracks.map((track) => [track.id, track]))
   const merged = serverTracks.map((serverTrack) => {
     const local = localById.get(serverTrack.id)
-    if (local?.payload) {
-      return { ...serverTrack, payload: local.payload, synced: local.synced }
+    if (
+      local?.payload &&
+      (!local.payloadRedacted ||
+        JSON.stringify(local.unpaidRanges) ===
+          JSON.stringify(serverTrack.unpaidRanges))
+    ) {
+      return {
+        ...serverTrack,
+        payload: local.payload,
+        payloadRedacted: local.payloadRedacted,
+        synced: local.synced,
+      }
     }
     return serverTrack
   })

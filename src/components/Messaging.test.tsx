@@ -10,6 +10,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { ChatMessage, ChatObject, ChatThread } from '../domain/messaging'
 import { Messaging, MessageText } from './Messaging'
 
+vi.mock('./TripChatPositionMap', () => ({ TripChatPositionMap: () => null }))
 vi.mock('../lib/i18n', () => ({ useTranslation: () => ({ language: 'en' }) }))
 const mocks = vi.hoisted(() => ({ api: vi.fn(), upload: vi.fn() }))
 vi.mock('../lib/messaging/media', () => ({

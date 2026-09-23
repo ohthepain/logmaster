@@ -67,5 +67,6 @@ it('hydrates canonical edited content and only verified media', async () => {
   expect(mocks.entries.mock.calls[0][0].where).toEqual({
     id: { in: ['entry'] },
     deleted: false,
+    economyHidden: false,
   })
 })

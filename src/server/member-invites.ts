@@ -1,3 +1,4 @@
+import { acceptEconomyInvite } from './economy/wallet'
 import type { InviteLocale } from '../lib/invite-locale'
 import { normalizeInviteLocale } from '../lib/invite-locale'
 import { sendMemberInviteEmail } from './email/ses'
@@ -450,6 +451,7 @@ export async function acceptMemberInvite(args: {
       })
     }
 
+    await acceptEconomyInvite(tx, invite, args.userId)
     await tx.memberInvite.update({
       where: { id: invite.id },
       data: {

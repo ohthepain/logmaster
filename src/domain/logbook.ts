@@ -1,5 +1,6 @@
 import { needsCastOff, resolveTripOperationalState } from './trip-state'
 import type { TripOperationalState } from './trip-state'
+import type { UnpaidRange } from './doubloons'
 
 export const TRIP_STATUSES = ['PLANNED', 'IN_PROGRESS', 'COMPLETED'] as const
 export type TripStatus = (typeof TRIP_STATUSES)[number]
@@ -39,6 +40,7 @@ export type WeatherSnapshot = {
 }
 
 export type Trip = {
+  unpaidRanges?: UnpaidRange[]
   id: string
   boatName: string
   registration?: string | null

@@ -39,7 +39,10 @@ export function tripLogChatWrites(
     )
 }
 export const visibleChatMessage = {
-  OR: [{ logEntryId: null }, { logEntry: { deleted: false } }],
+  OR: [
+    { logEntryId: null },
+    { logEntry: { deleted: false, economyHidden: false } },
+  ],
 }
 
 export async function tripLogMessageContent(
@@ -52,7 +55,7 @@ export async function tripLogMessageContent(
       { logEntry: TripChatLog; media: NonNullable<ChatMessage['media']> }
     >()
   const entries = await prisma.logEntry.findMany({
-    where: { id: { in: ids }, deleted: false },
+    where: { id: { in: ids }, deleted: false, economyHidden: false },
     include: {
       media: {
         orderBy: [{ order: 'asc' }, { id: 'asc' }],
@@ -117,7 +120,7 @@ export async function legacyTripLogMedia(tripId: string, mediaId: string) {
     where: {
       id: mediaId,
       chatMediaId: null,
-      logEntry: { tripId, deleted: false },
+      logEntry: { tripId, deleted: false, economyHidden: false },
     },
   })
   if (!media) return null

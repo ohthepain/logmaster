@@ -1,6 +1,10 @@
+import { DoubloonAccountModal } from './DoubloonAccount'
+import { fetchDoubloonAccount } from '../lib/doubloons-api'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   Building2,
+  Pencil,
+  Coins,
   ChevronRight,
   CircleUser,
   FileText,
@@ -62,6 +66,8 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [balance, setBalance] = useState<number | null>(null)
   const [photoVersion, setPhotoVersion] = useState(0)
   const [boats, setBoats] = useState<Boat[]>([])
   const [crew, setCrew] = useState<CrewPayload | null>(null)
@@ -151,8 +157,30 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
     }
   }, [open, user?.id])
 
+  useEffect(() => {
+    let cancelled = false
+    setBalance(null)
+    if (!user || (!open && !accountOpen)) return
+    const refresh = () => {
+      void fetchDoubloonAccount()
+        .then((a) => {
+          if (!cancelled) setBalance(a.balance)
+        })
+        .catch(() => {})
+    }
+    refresh()
+    window.addEventListener('doubloons-changed', refresh)
+    return () => {
+      cancelled = true
+      window.removeEventListener('doubloons-changed', refresh)
+    }
+  }, [user?.id, open, accountOpen])
+
   return (
     <>
+      {accountOpen && (
+        <DoubloonAccountModal onClose={() => setAccountOpen(false)} />
+      )}
       <div className="relative">
         <DevComponentLabel name="UserMenu" className="absolute -top-5 left-0" />
         <button
@@ -222,15 +250,27 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                   >
                     {t('profile')}
                   </h2>
-                  <button
-                    type="button"
-                    onClick={closeMenu}
-                    className="inline-flex size-11 items-center justify-center rounded-full bg-[var(--chip-bg)] text-[var(--sea-ink)] outline-none hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20"
-                    aria-label={t('closeProfileMenu')}
-                    autoFocus
-                  >
-                    <X className="size-5" aria-hidden />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {user && (
+                      <button
+                        type="button"
+                        onClick={openProfile}
+                        aria-label={t('editProfile')}
+                        className="inline-flex size-11 items-center justify-center rounded-full bg-[var(--chip-bg)]"
+                      >
+                        <Pencil className="size-5" aria-hidden />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={closeMenu}
+                      className="inline-flex size-11 items-center justify-center rounded-full bg-[var(--chip-bg)] text-[var(--sea-ink)] outline-none hover:bg-[var(--link-bg-hover)] focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20"
+                      aria-label={t('closeProfileMenu')}
+                      autoFocus
+                    >
+                      <X className="size-5" aria-hidden />
+                    </button>
+                  </div>
                 </header>
 
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(var(--lm-safe-bottom)+1.5rem)] pt-2 sm:px-7 sm:pb-7">
@@ -238,8 +278,13 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     <MenuCard
                       className="col-span-2 min-h-40"
                       wide
-                      ariaLabel={user ? t('editProfile') : t('signIn')}
-                      onClick={openProfile}
+                      ariaLabel={user ? 'Account' : t('signIn')}
+                      onClick={() => {
+                        if (user) {
+                          setOpen(false)
+                          setAccountOpen(true)
+                        } else openProfile()
+                      }}
                     >
                       <div className="flex h-full items-center gap-5 p-5 sm:px-7">
                         <Avatar
@@ -247,9 +292,26 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                           className="size-24 shrink-0 rounded-full sm:size-28"
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="m-0 truncate text-2xl font-extrabold tracking-[-0.025em] text-[var(--sea-ink)]">
-                            {user?.name || (user ? user.email : t('signIn'))}
-                          </p>
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="m-0 truncate text-2xl font-extrabold tracking-[-0.025em] text-[var(--sea-ink)]">
+                              {user?.name || (user ? user.email : t('signIn'))}
+                            </p>
+                            {user && (
+                              <span
+                                className="inline-flex shrink-0 items-center gap-1.5 font-bold text-amber-700"
+                                aria-label={
+                                  balance === null
+                                    ? 'Loading doubloons'
+                                    : `${balance} doubloons`
+                                }
+                              >
+                                <Coins className="size-5" aria-hidden />
+                                {balance === null
+                                  ? '…'
+                                  : balance.toLocaleString()}
+                              </span>
+                            )}
+                          </div>
                           <p className="m-0 mt-2 text-sm font-medium text-[var(--sea-ink-soft)]">
                             {t(
                               trips.length === 1
@@ -259,7 +321,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                             )}
                           </p>
                           <p className="m-0 mt-3 inline-flex items-center gap-1 text-xs font-bold text-[var(--sea-ink)]">
-                            {user ? t('editProfile') : t('openYourAccount')}
+                            {user ? 'Account' : t('openYourAccount')}
                             <ChevronRight className="size-3.5" aria-hidden />
                           </p>
                         </div>

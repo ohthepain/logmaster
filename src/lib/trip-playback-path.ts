@@ -49,6 +49,7 @@ export function buildPlaybackPath(
   samples: PositionTrackSample[],
   entries: LogEntry[] = [],
 ): PlaybackPath | null {
+  if (samples.slice(1).some((sample) => sample.breakBefore)) return null
   const points: PlaybackPathPoint[] =
     samples.length >= 2
       ? samples.map((sample) => ({

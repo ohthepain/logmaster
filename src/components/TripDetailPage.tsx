@@ -1,3 +1,4 @@
+import { DoubloonAccountModal } from './DoubloonAccount'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Check, Sailboat, Trash2, User } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState, useCallback } from 'react'
@@ -66,6 +67,7 @@ export function TripDetailPage({
   const { t } = useTranslation()
   const navigate = useNavigate()
   const store = useLogbookStore()
+  const [economyOpen, setEconomyOpen] = useState(false)
   const trip = store.trips.find((item) => item.id === tripId) ?? null
   const fileInputRef = useRef<HTMLInputElement>(null)
   const mediaFileInputRef = useRef<HTMLInputElement>(null)
@@ -826,6 +828,15 @@ export function TripDetailPage({
           name="TripDetailPage"
           className="absolute left-3 top-3 z-50 sm:left-4"
         />
+        {Boolean(trip.unpaidRanges?.length) && (
+          <button
+            type="button"
+            onClick={() => setEconomyOpen(true)}
+            className="absolute bottom-24 left-1/2 z-40 -translate-x-1/2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-950 shadow"
+          >
+            🪙 {trip.unpaidRanges?.length} unpaid miles · Unlock
+          </button>
+        )}
         <TripDetailHero
           ref={heroMapRef}
           trip={trip}
@@ -1017,6 +1028,12 @@ export function TripDetailPage({
         ) : null}
       </div>
 
+      {economyOpen && (
+        <DoubloonAccountModal
+          initialTripId={trip.id}
+          onClose={() => setEconomyOpen(false)}
+        />
+      )}
       <input
         ref={fileInputRef}
         id={fileInputId}

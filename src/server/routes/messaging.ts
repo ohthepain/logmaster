@@ -185,6 +185,7 @@ async function serializeMessages(
       ? (logs.get(row.logEntryId)?.logEntry ?? null)
       : null,
     references: row.references as unknown as ObjectReference[],
+    economyEvent: row.economyEvent as ChatMessage['economyEvent'],
     responseCard: row.responseCard as unknown as ResponseCard | null,
     createdAt: row.createdAt.toISOString(),
     media: [
