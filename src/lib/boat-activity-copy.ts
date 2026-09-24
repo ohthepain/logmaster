@@ -3,6 +3,12 @@ import type { BoatActivityKind } from '../domain/boat-activity'
 
 export type BoatActivityTranslationKey =
   | `boatActivity_${BoatActivityKind}`
+  | 'boatActivity_member'
+  | 'boatActivity_roleChanged'
+  | 'boatActivity_role_OWNER'
+  | 'boatActivity_role_ADMIN'
+  | 'boatActivity_role_MEMBER'
+  | 'boatActivity_role_VIEWER'
   | 'boatActivity_open'
   | 'boatActivity_unavailable'
 const labels: Record<string, string> = {
@@ -24,6 +30,25 @@ const labels: Record<string, string> = {
   da: 'Medie tilføjet|Medie opdateret|Medie fjernet|Dokument tilføjet|Dokument opdateret|Dokument fjernet|Udstyr tilføjet|Udstyr opdateret|Udstyr fjernet|Udstyr forbundet|Udstyr frakoblet|Netværksforbindelse tilføjet|Netværksforbindelse fjernet|Køb tilføjet|Køb fjernet|Kontakt tilføjet|Kontakt opdateret|Kontakt fjernet|Medlem tilføjet|Medlem opdateret|Medlem fjernet|Andel tilføjet|Andel opdateret|Andel fjernet|Åbn dokument|Filen er ikke længere tilgængelig',
   ar: 'تمت إضافة وسائط|تم تحديث الوسائط|تمت إزالة الوسائط|تمت إضافة مستند|تم تحديث المستند|تمت إزالة المستند|تمت إضافة معدات|تم تحديث المعدات|تمت إزالة المعدات|تم توصيل المعدات|تم فصل المعدات|تمت إضافة اتصال شبكة|تمت إزالة اتصال شبكة|تمت إضافة عملية شراء|تمت إزالة عملية شراء|تمت إضافة جهة اتصال|تم تحديث جهة الاتصال|تمت إزالة جهة اتصال|تمت إضافة عضو|تم تحديث العضو|تمت إزالة عضو|تمت إضافة حصة|تم تحديث الحصة|تمت إزالة حصة|فتح المستند|الملف لم يعد متاحًا',
 }
+const memberLabels: Record<string, string> = {
+  en: 'Member|Member role changed|Owner|Admin|Member|Viewer',
+  sv: 'Medlem|Medlemsroll ändrad|Ägare|Administratör|Medlem|Läsare',
+  vi: 'Thành viên|Đã thay đổi vai trò thành viên|Chủ sở hữu|Quản trị viên|Thành viên|Người xem',
+  es: 'Miembro|Rol del miembro cambiado|Propietario|Administrador|Miembro|Lector',
+  fr: 'Membre|Rôle du membre modifié|Propriétaire|Administrateur|Membre|Lecteur',
+  nl: 'Lid|Rol van lid gewijzigd|Eigenaar|Beheerder|Lid|Lezer',
+  de: 'Mitglied|Mitgliedsrolle geändert|Eigentümer|Administrator|Mitglied|Betrachter',
+  pt: 'Membro|Função do membro alterada|Proprietário|Administrador|Membro|Leitor',
+  el: 'Μέλος|Ο ρόλος μέλους άλλαξε|Ιδιοκτήτης|Διαχειριστής|Μέλος|Θεατής',
+  tr: 'Üye|Üye rolü değiştirildi|Sahip|Yönetici|Üye|Görüntüleyici',
+  zh: '成员|成员角色已更改|所有者|管理员|成员|查看者',
+  yue: '成員|成員角色已更改|擁有者|管理員|成員|檢視者',
+  ja: 'メンバー|メンバーの役割を変更|所有者|管理者|メンバー|閲覧者',
+  ko: '멤버|멤버 역할 변경됨|소유자|관리자|멤버|뷰어',
+  fi: 'Jäsen|Jäsenen rooli muutettu|Omistaja|Ylläpitäjä|Jäsen|Katselija',
+  da: 'Medlem|Medlemsrolle ændret|Ejer|Administrator|Medlem|Læser',
+  ar: 'عضو|تم تغيير دور العضو|مالك|مسؤول|عضو|مشاهد',
+}
 export function boatActivityCopy(
   language: string,
 ): Record<BoatActivityTranslationKey, string> {
@@ -31,8 +56,19 @@ export function boatActivityCopy(
     ...boatActivityKinds.map((kind) => `boatActivity_${kind}`),
     'boatActivity_open',
     'boatActivity_unavailable',
+    'boatActivity_member',
+    'boatActivity_roleChanged',
+    'boatActivity_role_OWNER',
+    'boatActivity_role_ADMIN',
+    'boatActivity_role_MEMBER',
+    'boatActivity_role_VIEWER',
   ]
-  return Object.fromEntries(
-    keys.map((key, i) => [key, (labels[language] ?? labels.en).split('|')[i]]),
-  ) as Record<BoatActivityTranslationKey, string>
+  const values =
+    `${labels[language] ?? labels.en}|${memberLabels[language] ?? memberLabels.en}`.split(
+      '|',
+    )
+  return Object.fromEntries(keys.map((key, i) => [key, values[i]])) as Record<
+    BoatActivityTranslationKey,
+    string
+  >
 }

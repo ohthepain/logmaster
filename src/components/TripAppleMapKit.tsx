@@ -1,3 +1,7 @@
+import type { MapLocationState } from '../lib/use-map-location'
+import type { GIBRALTAR } from '../lib/use-mediterranean-journey'
+import { useMediterraneanJourney } from '../lib/use-mediterranean-journey'
+import { getCachedDevicePosition } from '../lib/device-position'
 import {
   forwardRef,
   useCallback,
@@ -73,6 +77,7 @@ type TripAppleMapKitProps = {
   controlStackClassName?: string
   playbackPosition?: TripPlaybackPosition | null
   boatIconId?: string | null
+  locationState?: MapLocationState
   onInitialViewportSettled?: () => void
 }
 
@@ -162,6 +167,7 @@ export const TripAppleMapKit = forwardRef<
     playbackPosition = null,
     boatIconId = null,
     onInitialViewportSettled,
+    locationState = 'idle',
   }: TripAppleMapKitProps,
   ref,
 ) {
@@ -175,6 +181,23 @@ export const TripAppleMapKit = forwardRef<
   const previousLivePositionRef = useRef<MapCoordinate | null>(null)
   const [boatIconDataUrl, setBoatIconDataUrl] = useState<string | null>(null)
   const [mapReady, setMapReady] = useState(false)
+  const moveJourney = useCallback(
+    async (point: typeof GIBRALTAR) => {
+      await LogmasterAppleMap.setCamera({
+        mapId,
+        center: point,
+        spanLatitude: 8,
+        spanLongitude: 8,
+      })
+    },
+    [mapId],
+  )
+  useMediterraneanJourney(
+    mapReady,
+    !['idle', 'ready', 'browsing'].includes(locationState),
+    locationState === 'permission',
+    moveJourney,
+  )
   const [entryPreview, setEntryPreview] = useState<MapEntryPreviewState | null>(
     null,
   )
@@ -302,7 +325,12 @@ export const TripAppleMapKit = forwardRef<
   const syncViewport = useCallback(async () => {
     if (!mapReady || initialFitDoneRef.current) return
 
+    if (!['idle', 'ready'].includes(locationState)) {
+      notifyInitialViewportSettled()
+      return
+    }
     if (viewportTarget.kind === 'current-location') {
+      if (showCurrentPosition && !currentPositionRef.current) return
       const position = currentPositionRef.current ?? fallbackMapCoordinate(trip)
       await LogmasterAppleMap.setCamera({
         mapId,
@@ -348,7 +376,15 @@ export const TripAppleMapKit = forwardRef<
     })
     initialFitDoneRef.current = true
     window.setTimeout(() => notifyInitialViewportSettled(), SAILING_MAP_EASE_MS)
-  }, [mapId, mapReady, notifyInitialViewportSettled, trip, viewportTarget])
+  }, [
+    mapId,
+    mapReady,
+    notifyInitialViewportSettled,
+    trip,
+    viewportTarget,
+    locationState,
+    showCurrentPosition,
+  ])
 
   const captureMapSnapshot = useCallback(async () => {
     if (!mapReady) return null
@@ -366,22 +402,15 @@ export const TripAppleMapKit = forwardRef<
 
   const bootstrapPosition = useCallback(async () => {
     if (!showCurrentPosition) {
-      currentPositionRef.current = fallbackMapCoordinate(trip)
+      currentPositionRef.current = null
       previousLivePositionRef.current = null
       if (!initialFitDoneRef.current) {
         await syncViewport()
       }
       return
     }
-    const gps = await getCurrentPosition({ force: true })
-    if (gps.latitude == null || gps.longitude == null) {
-      currentPositionRef.current = fallbackMapCoordinate(trip)
-      previousLivePositionRef.current = null
-      if (!initialFitDoneRef.current) {
-        await syncViewport()
-      }
-      return
-    }
+    const gps = getCachedDevicePosition()
+    if (!gps || gps.latitude == null || gps.longitude == null) return
     const nextPosition = {
       latitude: gps.latitude,
       longitude: gps.longitude,
@@ -518,42 +547,45 @@ export const TripAppleMapKit = forwardRef<
   useEffect(() => {
     if (!mapReady || !showCurrentPosition) return
 
-    return subscribeToDevicePosition((position) => {
-      if (position.latitude == null || position.longitude == null) return
-      const nextPosition = {
-        latitude: position.latitude,
-        longitude: position.longitude,
-        heading: resolveBoatMapHeading(
-          position.heading,
-          previousLivePositionRef.current,
-          { latitude: position.latitude, longitude: position.longitude },
-        ),
-      }
-      previousLivePositionRef.current = nextPosition
-      currentPositionRef.current = nextPosition
-      void syncBoatMarker()
-      if (
-        shouldFollowUser &&
-        !userControlledViewportRef.current &&
-        viewportTarget.kind === 'current-location'
-      ) {
-        void LogmasterAppleMap.setCamera({
-          mapId,
-          center: {
-            latitude: position.latitude,
-            longitude: position.longitude,
-          },
-          spanLatitude: 0.06,
-          spanLongitude: 0.06,
-        })
-      }
-      if (
-        viewportTarget.kind === 'current-location' &&
-        !initialFitDoneRef.current
-      ) {
-        void syncViewport()
-      }
-    })
+    return subscribeToDevicePosition(
+      (position) => {
+        if (position.latitude == null || position.longitude == null) return
+        const nextPosition = {
+          latitude: position.latitude,
+          longitude: position.longitude,
+          heading: resolveBoatMapHeading(
+            position.heading,
+            previousLivePositionRef.current,
+            { latitude: position.latitude, longitude: position.longitude },
+          ),
+        }
+        previousLivePositionRef.current = nextPosition
+        currentPositionRef.current = nextPosition
+        void syncBoatMarker()
+        if (
+          shouldFollowUser &&
+          !userControlledViewportRef.current &&
+          viewportTarget.kind === 'current-location'
+        ) {
+          void LogmasterAppleMap.setCamera({
+            mapId,
+            center: {
+              latitude: position.latitude,
+              longitude: position.longitude,
+            },
+            spanLatitude: 0.06,
+            spanLongitude: 0.06,
+          })
+        }
+        if (
+          viewportTarget.kind === 'current-location' &&
+          !initialFitDoneRef.current
+        ) {
+          void syncViewport()
+        }
+      },
+      { passive: true },
+    )
   }, [
     mapId,
     mapReady,

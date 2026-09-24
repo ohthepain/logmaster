@@ -134,6 +134,9 @@ export async function boatActivityMessageContent(
             : 'ASSET_UPDATED') as BoatActivityKind,
           label: activity.label,
           targetLabel: activity.targetLabel,
+          memberEmail: activity.memberEmail,
+          memberRole: activity.memberRole,
+          previousMemberRole: activity.previousMemberRole,
           preview,
         },
       ]
