@@ -12,6 +12,9 @@ import { Messaging, MessageText } from './Messaging'
 
 vi.mock('./TripChatPositionMap', () => ({ TripChatPositionMap: () => null }))
 vi.mock('../lib/i18n', () => ({ useTranslation: () => ({ language: 'en' }) }))
+vi.mock('./TripChatPositionMap', () => ({
+  TripChatPositionMap: () => <div data-testid="trip-chat-hourly-map" />,
+}))
 const mocks = vi.hoisted(() => ({ api: vi.fn(), upload: vi.fn() }))
 vi.mock('../lib/messaging/media', () => ({
   uploadMessageFiles: mocks.upload,

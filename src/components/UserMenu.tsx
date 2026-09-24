@@ -314,6 +314,11 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                               </span>
                             )}
                           </div>
+                          {user?.name && user.email ? (
+                            <p className="m-0 mt-1 truncate text-sm font-medium text-[var(--sea-ink-soft)]">
+                              {user.email}
+                            </p>
+                          ) : null}
                           <p className="m-0 mt-2 text-sm font-medium text-[var(--sea-ink-soft)]">
                             {t(
                               trips.length === 1
