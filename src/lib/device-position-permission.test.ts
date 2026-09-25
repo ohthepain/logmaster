@@ -34,13 +34,11 @@ function browser(errorCode?: number) {
   vi.stubGlobal('navigator', {
     geolocation: { getCurrentPosition },
     permissions: {
-      query: vi
-        .fn()
-        .mockResolvedValue({
-          state: 'prompt',
-          addEventListener: vi.fn(),
-          removeEventListener: vi.fn(),
-        }),
+      query: vi.fn().mockResolvedValue({
+        state: 'prompt',
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
     },
   })
   return getCurrentPosition

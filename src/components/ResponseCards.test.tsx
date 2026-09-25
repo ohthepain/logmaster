@@ -25,7 +25,7 @@ beforeEach(() => {
   mocks.api.mockResolvedValue({ cards: [card], translationUnavailable: false })
 })
 afterEach(cleanup)
-it('debounces localized matching and selects a suggestion without sending it', async () => {
+it('debounces localized matching and invokes the send callback on a tap', async () => {
   const select = vi.fn()
   const { rerender } = render(
     <ResponseCardSuggestions text="j" onSelect={select} disabled={false} />,
@@ -42,16 +42,6 @@ it('debounces localized matching and selects a suggestion without sending it', a
     language: 'sv',
     text: 'ja',
   })
-  rerender(
-    <ResponseCardSuggestions
-      text="ja"
-      selected={card}
-      onSelect={select}
-      disabled={false}
-    />,
-  )
-  fireEvent.click(screen.getByRole('button', { name: 'Remove card' }))
-  expect(select).toHaveBeenLastCalledWith()
 })
 it('ignores a stale response after the draft changes', async () => {
   let resolve!: (value: unknown) => void
@@ -80,4 +70,27 @@ it('renders sent cards through the authenticated image endpoint', () => {
   expect(screen.getByAltText('Absolutely').getAttribute('src')).toContain(
     '/api/messaging/cards/card/image',
   )
+})
+
+it('hides suggestions immediately on added characters, backspace and clearing', async () => {
+  const onSelect = vi.fn()
+  const { rerender } = render(
+    <ResponseCardSuggestions text="ok" onSelect={onSelect} disabled={false} />,
+  )
+  const option = await screen.findByRole('button', {
+    name: 'Choose Absolutely',
+  })
+  expect(option.className).not.toContain('border-slate')
+  for (const text of ['okx', 'o', '']) {
+    rerender(
+      <ResponseCardSuggestions
+        text={text}
+        onSelect={onSelect}
+        disabled={false}
+      />,
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Choose Absolutely' }),
+    ).toBeNull()
+  }
 })

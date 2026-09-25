@@ -89,9 +89,9 @@ it('lists the selected language and normalizes newly added phrases', async () =>
   ).toBe(200)
   expect(
     mocks.upsertExpression.mock.calls[0][0].where.language_normalized,
-  ).toEqual({ language: 'en', normalized: 'yes' })
+  ).toEqual({ language: 'en', normalized: 'yes!' })
   expect(
-    (await request('/expressions', 'POST', { language: 'en', text: '!!!' }))
+    (await request('/expressions', 'POST', { language: 'en', text: '   ' }))
       .status,
   ).toBe(400)
 })

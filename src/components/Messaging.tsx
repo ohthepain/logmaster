@@ -1,3 +1,7 @@
+import {
+  groupResponseCardMessages,
+  isResponseCardMessage,
+} from '../domain/response-card-groups'
 import { boatActivitySummary } from '../lib/boat-activity-text'
 import { connectionAction } from '../lib/connections-api'
 import { BoatActivityContent } from './BoatChatActivity'
@@ -215,6 +219,46 @@ function MessageLikeCountPill({ count }: { count: number }) {
   )
 }
 
+function MessageLikeButton({
+  like,
+  active,
+  likePending,
+  onToggleLike,
+}: {
+  like: { likeCount: number; myLikeCount: number } | undefined
+  active: boolean
+  likePending: boolean
+  onToggleLike: (origin: { x: number; y: number }) => void | Promise<void>
+}) {
+  return (
+    <button
+      type="button"
+      aria-label="Like message"
+      aria-pressed={(like?.myLikeCount ?? 0) > 0}
+      disabled={!active || !like || likePending}
+      onClick={(event) => {
+        const rect = event.currentTarget.getBoundingClientRect()
+        void onToggleLike({
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+        })
+      }}
+      className={cn(
+        'flex size-9 items-center justify-center rounded-full border border-black/[0.08] bg-white shadow-md transition disabled:opacity-50',
+        (like?.myLikeCount ?? 0) > 0
+          ? messageLikeHeartColorClass
+          : 'text-[var(--sea-ink-soft)]',
+      )}
+    >
+      <Heart
+        size={18}
+        fill={(like?.myLikeCount ?? 0) > 0 ? 'currentColor' : 'none'}
+        aria-hidden
+      />
+    </button>
+  )
+}
+
 function ReceivedMessageRow({
   userId,
   message,
@@ -280,31 +324,12 @@ function ReceivedMessageRow({
           {like && like.likeCount > 0 ? (
             <MessageLikeCountPill count={like.likeCount} />
           ) : null}
-          <button
-            type="button"
-            aria-label="Like message"
-            aria-pressed={(like?.myLikeCount ?? 0) > 0}
-            disabled={!active || !like || likePending}
-            onClick={(event) => {
-              const rect = event.currentTarget.getBoundingClientRect()
-              void onToggleLike({
-                x: rect.left + rect.width / 2,
-                y: rect.top + rect.height / 2,
-              })
-            }}
-            className={cn(
-              'flex size-9 items-center justify-center rounded-full border border-black/[0.08] bg-white shadow-md transition disabled:opacity-50',
-              (like?.myLikeCount ?? 0) > 0
-                ? messageLikeHeartColorClass
-                : 'text-[var(--sea-ink-soft)]',
-            )}
-          >
-            <Heart
-              size={18}
-              fill={(like?.myLikeCount ?? 0) > 0 ? 'currentColor' : 'none'}
-              aria-hidden
-            />
-          </button>
+          <MessageLikeButton
+            like={like}
+            active={active}
+            likePending={likePending}
+            onToggleLike={onToggleLike}
+          />
         </div>
       </div>
     </div>
@@ -372,10 +397,6 @@ export function Messaging({
   const [query, setQuery] = useState('')
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [mediaDrafts, setMediaDrafts] = useState<Record<string, File[]>>({})
-  const [cardDrafts, setCardDrafts] = useState<
-    Record<string, CardSummary | undefined>
-  >({})
-  const selectedCard = selectedId ? cardDrafts[selectedId] : undefined
   const [mediaOpen, setMediaOpen] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<string | null>(null)
   const selectedFiles = selectedId ? (mediaDrafts[selectedId] ?? []) : []
@@ -630,22 +651,23 @@ export function Messaging({
       setOlderLoading(false)
     }
   }
-  async function send() {
+  async function send(card?: CardSummary) {
     if (
       !selectedId ||
       selected?.canSend === false ||
-      (!draft.trim() && !selectedFiles.length && !selectedCard) ||
+      (!draft.trim() && !selectedFiles.length && !card) ||
       sendingRef.current ||
       !active
     )
       return
     const threadId = selectedId
-    const text = draft.trim()
-    const files = selectedFiles
+    const originalDraft = draft
+    const text = card ? '' : draft.trim()
+    const files = card ? [] : selectedFiles
     const pending =
       retryMessage.current?.threadId === threadId &&
       retryMessage.current.text === text &&
-      retryMessage.current.cardId === selectedCard?.id &&
+      retryMessage.current.cardId === card?.id &&
       retryMessage.current.files.length === files.length &&
       retryMessage.current.files.every((file, i) => file === files[i])
         ? retryMessage.current
@@ -653,13 +675,14 @@ export function Messaging({
             threadId,
             text,
             files,
-            cardId: selectedCard?.id,
+            cardId: card?.id,
             id: crypto.randomUUID(),
           }
     retryMessage.current = pending
     sendingRef.current = true
     setSending(true)
     setError(null)
+    if (card) setDrafts((all) => ({ ...all, [threadId]: '' }))
     try {
       const attachments = await uploadMessageFiles(
         threadId,
@@ -686,15 +709,11 @@ export function Messaging({
           ...items.filter((m) => m.id !== data.message.id),
           data.message,
         ])
-      setDrafts((all) => ({
-        ...all,
-        [threadId]: all[threadId]?.trim() === text ? '' : all[threadId],
-      }))
-      setCardDrafts((all) => ({
-        ...all,
-        [threadId]:
-          all[threadId]?.id === pending.cardId ? undefined : all[threadId],
-      }))
+      if (!card)
+        setDrafts((all) => ({
+          ...all,
+          [threadId]: all[threadId] === originalDraft ? '' : all[threadId],
+        }))
       retryMessage.current = null
       setMediaDrafts((all) => ({
         ...all,
@@ -710,6 +729,11 @@ export function Messaging({
           ? e.message
           : 'Message not sent. Your draft is saved here; try again.',
       )
+      if (card)
+        setDrafts((all) => ({
+          ...all,
+          [threadId]: all[threadId] || originalDraft,
+        }))
     } finally {
       sendingRef.current = false
       setSending(false)
@@ -809,7 +833,7 @@ export function Messaging({
                       )}
                       <span className="mt-1 block truncate text-sm text-[var(--sea-ink-soft)]">
                         {thread.lastMessage
-                          ? `${thread.lastMessage.senderId === userId ? 'You: ' : ''}${(thread.lastMessage.boatActivity ? boatActivitySummary(thread.lastMessage.boatActivity, translate) : '') || (thread.lastMessage.logEntry ? translate(`tripLog_${thread.lastMessage.logEntry.type}`) : '') || thread.lastMessage.text || (thread.lastMessage.responseCard ? 'Response card' : '') || (thread.lastMessage.media?.some((item) => item.contentType.startsWith('video/')) ? 'Video' : 'Photo')}`
+                          ? `${thread.lastMessage.senderId === userId ? 'You: ' : ''}${(thread.lastMessage.boatActivity ? boatActivitySummary(thread.lastMessage.boatActivity, translate) : '') || (thread.lastMessage.logEntry ? translate(`tripLog_${thread.lastMessage.logEntry.type}`) : '') || (thread.lastMessage.responseCard ? 'Response card' : thread.lastMessage.text) || (thread.lastMessage.media?.some((item) => item.contentType.startsWith('video/')) ? 'Video' : 'Photo')}`
                           : 'Start the conversation'}
                       </span>
                     </span>
@@ -921,7 +945,83 @@ export function Messaging({
                     This is the start of your conversation.
                   </div>
                 )}
-                {messages.map((message) => {
+                {groupResponseCardMessages(messages).map((group) => {
+                  const message = group[0]
+                  if (isResponseCardMessage(message)) {
+                    const own = message.senderId === userId
+                    return (
+                      <div
+                        key={message.id}
+                        className={cn(
+                          'flex pb-5',
+                          own ? 'justify-end' : 'justify-start',
+                        )}
+                      >
+                        <div className="max-w-[90%]">
+                          {!own && (
+                            <p className="mb-1 mt-0 text-xs font-semibold text-[var(--sea-ink-soft)]">
+                              {message.senderName}
+                            </p>
+                          )}
+                          <div
+                            data-testid="response-card-row"
+                            dir="ltr"
+                            className="flex flex-wrap gap-x-3 gap-y-5"
+                          >
+                            {group.map((cardMessage) => {
+                              const like = messageLikes.likes[cardMessage.id]
+                              return (
+                                <div
+                                  key={cardMessage.id}
+                                  data-message-id={cardMessage.id}
+                                  className="relative w-36 max-w-full bg-transparent pb-3 sm:w-44"
+                                >
+                                  <MessageResponseCard
+                                    responseCard={cardMessage.responseCard}
+                                  />
+                                  <MessageMedia
+                                    userId={userId}
+                                    threadId={cardMessage.threadId}
+                                    media={cardMessage.media}
+                                  />
+                                  <time
+                                    dateTime={cardMessage.createdAt}
+                                    className={messageTimeClassName}
+                                  >
+                                    {timeLabel(cardMessage.createdAt)}
+                                  </time>
+                                  <div className="absolute bottom-0 right-0 flex translate-y-1/2 items-center gap-1">
+                                    {!!like?.likeCount && (
+                                      <MessageLikeCountPill
+                                        count={like.likeCount}
+                                      />
+                                    )}
+                                    {!own && (
+                                      <MessageLikeButton
+                                        like={like}
+                                        active={
+                                          active && selected.canSend !== false
+                                        }
+                                        likePending={messageLikes.isPending(
+                                          cardMessage.id,
+                                        )}
+                                        onToggleLike={(origin) =>
+                                          messageLikes.like(
+                                            cardMessage.id,
+                                            () => floatHeart(origin),
+                                          )
+                                        }
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }
                   if (message.economyEvent)
                     return (
                       <div
@@ -1036,10 +1136,9 @@ export function Messaging({
                   <ResponseCardSuggestions
                     key={`cards:${selected.id}`}
                     text={draft}
-                    selected={selectedCard}
                     disabled={sending || !active}
                     onSelect={(card) => {
-                      setCardDrafts((all) => ({ ...all, [selected.id]: card }))
+                      void send(card)
                       setMediaOpen(false)
                     }}
                   />
@@ -1129,7 +1228,7 @@ export function Messaging({
                         <ImageIcon size={24} />
                       </button>
                     )}
-                    {draft.trim() || selectedFiles.length || selectedCard ? (
+                    {draft.trim() || selectedFiles.length ? (
                       <button
                         type="submit"
                         aria-label="Send message"
