@@ -4,7 +4,6 @@ import { useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   Building2,
   Pencil,
-  Coins,
   ChevronRight,
   CircleUser,
   FileText,
@@ -250,7 +249,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     id={`${menuId}-title`}
                     className="m-0 text-[2rem] font-extrabold tracking-[-0.035em] text-[var(--sea-ink)]"
                   >
-                    {t('profile')}
+                    Menu
                   </h2>
                   <div className="flex items-center gap-2">
                     {user && (
@@ -278,42 +277,20 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[calc(var(--lm-safe-bottom)+1.5rem)] pt-2 sm:px-7 sm:pb-7">
                   <div className="grid grid-cols-2 gap-4">
                     <MenuCard
-                      className="col-span-2 min-h-40"
+                      className="col-span-2 min-h-36 sm:min-h-40"
                       wide
-                      ariaLabel={user ? 'Account' : t('signIn')}
-                      onClick={() => {
-                        if (user) {
-                          setOpen(false)
-                          setAccountOpen(true)
-                        } else openProfile()
-                      }}
+                      ariaLabel={user ? t('editProfile') : t('signIn')}
+                      onClick={openProfile}
                     >
-                      <div className="flex h-full items-center gap-5 p-5 sm:px-7">
+                      <div className="flex h-full items-center gap-4 p-4 sm:gap-5 sm:px-7">
                         <Avatar
                           src={photoSrc}
-                          className="size-24 shrink-0 rounded-full sm:size-28"
+                          className="size-20 shrink-0 rounded-full sm:size-24"
                         />
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="m-0 truncate text-2xl font-extrabold tracking-[-0.025em] text-[var(--sea-ink)]">
-                              {user?.name || (user ? user.email : t('signIn'))}
-                            </p>
-                            {user && (
-                              <span
-                                className="inline-flex shrink-0 items-center gap-1.5 font-bold text-amber-700"
-                                aria-label={
-                                  balance === null
-                                    ? 'Loading doubloons'
-                                    : `${balance} doubloons`
-                                }
-                              >
-                                <Coins className="size-5" aria-hidden />
-                                {balance === null
-                                  ? '…'
-                                  : balance.toLocaleString()}
-                              </span>
-                            )}
-                          </div>
+                          <p className="m-0 truncate text-2xl font-extrabold tracking-[-0.025em] text-[var(--sea-ink)]">
+                            {user?.name || (user ? user.email : t('signIn'))}
+                          </p>
                           {user?.name && user.email ? (
                             <p className="m-0 mt-1 truncate text-sm font-medium text-[var(--sea-ink-soft)]">
                               {user.email}
@@ -327,11 +304,53 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                               { count: trips.length },
                             )}
                           </p>
-                          <p className="m-0 mt-3 inline-flex items-center gap-1 text-xs font-bold text-[var(--sea-ink)]">
-                            {user ? 'Account' : t('openYourAccount')}
-                            <ChevronRight className="size-3.5" aria-hidden />
-                          </p>
                         </div>
+                        <ChevronRight
+                          className="size-6 shrink-0 text-[var(--sea-ink-soft)]"
+                          aria-hidden
+                        />
+                      </div>
+                    </MenuCard>
+
+                    <MenuCard
+                      className="col-span-2 min-h-20"
+                      wide
+                      ariaLabel={user ? 'Account' : t('signIn')}
+                      onClick={() => {
+                        if (user) {
+                          setOpen(false)
+                          setAccountOpen(true)
+                        } else openProfile()
+                      }}
+                    >
+                      <div className="flex h-full items-center gap-4 px-4 py-3 sm:px-6">
+                        <p className="m-0 flex-1 text-lg font-extrabold tracking-[-0.02em] text-[var(--sea-ink)]">
+                          Account
+                        </p>
+                        {user ? (
+                          <span
+                            className="inline-flex items-center gap-2 text-xl font-extrabold text-amber-700"
+                            aria-label={
+                              balance === null
+                                ? 'Loading doubloons'
+                                : `${balance} doubloons`
+                            }
+                          >
+                            <img
+                              src="/doubloon-pile.png"
+                              alt=""
+                              className="size-11 object-contain"
+                              width={44}
+                              height={44}
+                              decoding="async"
+                            />
+                            {balance === null ? '…' : balance.toLocaleString()}
+                          </span>
+                        ) : null}
+                        <ChevronRight
+                          className="size-6 shrink-0 text-[var(--sea-ink-soft)]"
+                          aria-hidden
+                        />
                       </div>
                     </MenuCard>
 
@@ -343,7 +362,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     ) : null}
 
                     <MenuCard
-                      className="max-sm:!aspect-auto max-sm:h-[8.75rem]"
+                      className="max-sm:!aspect-auto max-sm:h-[14rem]"
                       ariaLabel={
                         trips.length ? t('manageTrips') : t('openMapToAddTrip')
                       }
@@ -394,7 +413,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     </MenuCard>
 
                     <MenuCard
-                      className="max-sm:!aspect-auto max-sm:h-[8.75rem]"
+                      className="max-sm:!aspect-auto max-sm:h-[14rem]"
                       ariaLabel={
                         boats.length === 1
                           ? boats[0].name
@@ -447,6 +466,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     </MenuCard>
 
                     <MenuCard
+                      className="max-sm:!aspect-auto max-sm:h-[14rem]"
                       ariaLabel="Connections"
                       onClick={() =>
                         navigateFromMenu(() => {
@@ -620,7 +640,7 @@ function CollectionCardContent({
 }) {
   const { t } = useTranslation()
   return (
-    <div className="flex size-full flex-col p-3 sm:p-5">
+    <div className="flex size-full flex-col p-4 sm:p-5">
       <div className="flex min-h-0 flex-1 items-center justify-center py-0.5 sm:py-0">
         {loading ? (
           <div className="flex size-16 items-center justify-center rounded-full bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]">
@@ -691,7 +711,7 @@ function profileBoatMontageItems(boats: Boat[]): MontageItem[] {
 function PhotoMontage({ items }: { items: MontageItem[] }) {
   return (
     <div
-      className="relative mx-auto h-14 w-[5.5rem] shrink-0 sm:h-24 sm:w-full sm:max-w-36"
+      className="relative mx-auto h-24 w-full max-w-[15rem] shrink-0 sm:h-24 sm:max-w-56"
       aria-hidden
     >
       {items.map((item, index) => {
@@ -701,19 +721,19 @@ function PhotoMontage({ items }: { items: MontageItem[] }) {
             ? ['left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2']
             : count === 2
               ? [
-                  'left-[6%] top-[14%] -rotate-6 sm:left-[12%] sm:top-[18%]',
-                  'right-[4%] bottom-[6%] rotate-6 sm:right-[10%] sm:bottom-[8%]',
+                  'left-[0%] top-[16%] -rotate-[8deg] sm:left-[2%] sm:top-[18%]',
+                  'right-[0%] top-[10%] rotate-[8deg] sm:right-[2%] sm:top-[18%]',
                 ]
               : [
-                  'left-[0%] top-[22%] -rotate-6 sm:left-[4%] sm:top-[25%]',
-                  'left-1/2 top-[2%] -translate-x-1/2 rotate-2 sm:top-[6%]',
-                  'right-[-2%] bottom-[0%] rotate-6 sm:right-[2%] sm:bottom-[2%]',
+                  'left-[0%] top-[18%] -rotate-[10deg] sm:left-[2%] sm:top-[18%]',
+                  'left-1/2 top-[0%] -translate-x-1/2 rotate-1',
+                  'right-[0%] top-[18%] rotate-[10deg] sm:right-[2%] sm:top-[18%]',
                 ]
         return (
           <div
             key={item.id}
             className={cn(
-              'absolute flex size-12 items-center justify-center overflow-hidden rounded-xl border-2 border-[var(--surface-strong)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)] shadow-md sm:size-[7rem] sm:rounded-2xl sm:border-[3px]',
+              'absolute flex size-20 items-center justify-center overflow-hidden rounded-2xl border-2 border-[var(--surface-strong)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)] shadow-md sm:size-[7rem] sm:rounded-2xl sm:border-[3px]',
               transforms[index],
             )}
             title={item.label}
@@ -755,11 +775,11 @@ function ConnectionsMontage({
         <Avatar
           key={member.id}
           src={member.image}
-          className="size-18 rounded-full border-[3px] border-[var(--surface-strong)] shadow-sm sm:size-21"
+          className="size-20 rounded-full border-[3px] border-[var(--surface-strong)] shadow-sm sm:size-21"
         />
       ))}
       {extraCount > 0 ? (
-        <div className="z-10 flex size-18 items-center justify-center rounded-full border-[3px] border-[var(--surface-strong)] bg-[var(--chip-bg)] text-xs font-bold text-[var(--sea-ink)] shadow-sm sm:size-21">
+        <div className="z-10 flex size-20 items-center justify-center rounded-full border-[3px] border-[var(--surface-strong)] bg-[var(--chip-bg)] text-xs font-bold text-[var(--sea-ink)] shadow-sm sm:size-21">
           +{extraCount}
         </div>
       ) : null}
