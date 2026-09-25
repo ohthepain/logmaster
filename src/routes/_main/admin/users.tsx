@@ -82,7 +82,9 @@ function AdminUsersPage() {
         current.map((item) => (item.id === updated.id ? updated : item)),
       )
       toast.success(
-        grant ? 'Platform admin access granted' : 'Platform admin access revoked',
+        grant
+          ? 'Platform admin access granted'
+          : 'Platform admin access revoked',
       )
     } catch (e) {
       toast.error(
@@ -139,9 +141,8 @@ function AdminUsersPage() {
         </p>
         <p className="m-0 mb-4 text-sm text-[var(--sea-ink-soft)]">
           Grant global platform admin access (Admin menu, jobs, and related
-          tools). Users on the{' '}
-          <code className="text-xs">ADMIN_EMAILS</code> env allowlist cannot be
-          revoked from here.
+          tools). Users on the <code className="text-xs">ADMIN_EMAILS</code> env
+          allowlist cannot be revoked from here.
         </p>
 
         <div className="mb-4">
@@ -166,8 +167,7 @@ function AdminUsersPage() {
               const isSelf = user.id === currentUserId
               const busyDelete = deletingId === user.id
               const busyAdmin = adminToggleId === user.id
-              const canRevokeDbAdmin =
-                user.platformAdminAt != null && !isSelf
+              const canRevokeDbAdmin = user.platformAdminAt != null && !isSelf
               const canGrantAdmin = !user.isPlatformAdmin
               const envOnlyAdmin =
                 user.isPlatformAdmin &&

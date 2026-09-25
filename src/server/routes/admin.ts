@@ -192,8 +192,7 @@ adminRoutes.get('/users', async (c) => {
       createdAt: user.createdAt.toISOString(),
       platformAdminAt: user.platformAdminAt?.toISOString() ?? null,
       envAdminAllowlist: isAdminEmail(user.email),
-      isPlatformAdmin:
-        user.platformAdminAt != null || isAdminEmail(user.email),
+      isPlatformAdmin: user.platformAdminAt != null || isAdminEmail(user.email),
     })),
   })
 })
@@ -263,7 +262,10 @@ adminRoutes.patch('/users/:userId/platform-admin', async (c) => {
   }
 
   if (currentUser.id === userId) {
-    return c.json({ error: 'You cannot revoke your own platform admin access' }, 400)
+    return c.json(
+      { error: 'You cannot revoke your own platform admin access' },
+      400,
+    )
   }
   if (isAdminEmail(target.email) && !target.platformAdminAt) {
     return c.json(
