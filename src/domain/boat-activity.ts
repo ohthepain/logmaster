@@ -30,6 +30,9 @@ export type BoatChatActivity = {
   kind: BoatActivityKind
   label: string
   targetLabel: string | null
+  memberEmail?: string | null
+  memberRole?: string | null
+  previousMemberRole?: string | null
   preview: null | {
     kind: 'image' | 'video' | 'audio' | 'pdf' | 'file' | 'link'
     url: string

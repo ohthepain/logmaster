@@ -277,6 +277,33 @@ describe.skipIf(!url)('boat activity PostgreSQL capture', () => {
       'MEMBER_UPDATED',
       'MEMBER_REMOVED',
     ])
+    expect(
+      (await activity(member.id)).map((a) => ({
+        name: a.label,
+        email: a.memberEmail,
+        role: a.memberRole,
+        previous: a.previousMemberRole,
+      })),
+    ).toEqual([
+      {
+        name: 'Activity test',
+        email: `${memberId}@example.test`,
+        role: 'MEMBER',
+        previous: null,
+      },
+      {
+        name: 'Activity test',
+        email: `${memberId}@example.test`,
+        role: 'ADMIN',
+        previous: 'MEMBER',
+      },
+      {
+        name: 'Activity test',
+        email: `${memberId}@example.test`,
+        role: 'ADMIN',
+        previous: null,
+      },
+    ])
     const share = await change((tx) =>
       tx.boatShare.create({ data: { boatId, sequence: 1 } }),
     )
@@ -311,6 +338,55 @@ describe.skipIf(!url)('boat activity PostgreSQL capture', () => {
       'SHARE_UPDATED',
       'SHARE_REMOVED',
     ])
+  })
+  it('coalesces member role changes and ignores no-op writes', async () => {
+    const member = await change(async (tx) => {
+      const row = await tx.boatMember.create({
+        data: { boatId, userId: memberId, role: 'MEMBER' },
+      })
+      await tx.boatMember.update({
+        where: { id: row.id },
+        data: { role: 'VIEWER' },
+      })
+      return row
+    })
+    expect(await activity(member.id)).toHaveLength(1)
+    expect((await activity(member.id))[0]).toMatchObject({
+      kind: 'MEMBER_ADDED',
+      memberRole: 'VIEWER',
+      previousMemberRole: null,
+    })
+    await change(async (tx) => {
+      await tx.boatMember.update({
+        where: { id: member.id },
+        data: { role: 'MEMBER' },
+      })
+      await tx.boatMember.update({
+        where: { id: member.id },
+        data: { role: 'ADMIN' },
+      })
+    })
+    expect((await activity(member.id)).at(-1)).toMatchObject({
+      kind: 'MEMBER_UPDATED',
+      memberRole: 'ADMIN',
+      previousMemberRole: 'VIEWER',
+    })
+    await change((tx) =>
+      tx.boatMember.update({
+        where: { id: member.id },
+        data: { role: 'ADMIN' },
+      }),
+    )
+    expect(await activity(member.id)).toHaveLength(2)
+    await db.user.update({
+      where: { id: memberId },
+      data: { name: 'New name', email: `${memberId}-new@example.test` },
+    })
+    expect((await activity(member.id))[0]).toMatchObject({
+      label: 'Activity test',
+      memberEmail: `${memberId}@example.test`,
+    })
+    await change((tx) => tx.boatMember.delete({ where: { id: member.id } }))
   })
   it('rolls back events with source changes and deletes history with the boat', async () => {
     const id = randomUUID()

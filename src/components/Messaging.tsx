@@ -1,3 +1,4 @@
+import { boatActivitySummary } from '../lib/boat-activity-text'
 import { connectionAction } from '../lib/connections-api'
 import { BoatActivityContent } from './BoatChatActivity'
 import {
@@ -808,7 +809,7 @@ export function Messaging({
                       )}
                       <span className="mt-1 block truncate text-sm text-[var(--sea-ink-soft)]">
                         {thread.lastMessage
-                          ? `${thread.lastMessage.senderId === userId ? 'You: ' : ''}${(thread.lastMessage.boatActivity ? `${translate(`boatActivity_${thread.lastMessage.boatActivity.kind}`)}${thread.lastMessage.boatActivity.label ? ` · ${thread.lastMessage.boatActivity.label}` : ''}` : '') || (thread.lastMessage.logEntry ? translate(`tripLog_${thread.lastMessage.logEntry.type}`) : '') || thread.lastMessage.text || (thread.lastMessage.responseCard ? 'Response card' : '') || (thread.lastMessage.media?.some((item) => item.contentType.startsWith('video/')) ? 'Video' : 'Photo')}`
+                          ? `${thread.lastMessage.senderId === userId ? 'You: ' : ''}${(thread.lastMessage.boatActivity ? boatActivitySummary(thread.lastMessage.boatActivity, translate) : '') || (thread.lastMessage.logEntry ? translate(`tripLog_${thread.lastMessage.logEntry.type}`) : '') || thread.lastMessage.text || (thread.lastMessage.responseCard ? 'Response card' : '') || (thread.lastMessage.media?.some((item) => item.contentType.startsWith('video/')) ? 'Video' : 'Photo')}`
                           : 'Start the conversation'}
                       </span>
                     </span>

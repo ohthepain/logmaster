@@ -124,3 +124,28 @@ it('supports bounded range requests for video playback', async () => {
     (await boatActivityContent('boat', 'event', 'bytes=1-2,4-5'))?.status,
   ).toBe(416)
 })
+
+it('returns stored member identity and roles even after membership removal', async () => {
+  mocks.activities.mockResolvedValue([
+    {
+      ...activity,
+      resourceType: 'boat_member',
+      kind: 'MEMBER_UPDATED',
+      label: 'Alex',
+      versionId: null,
+      memberEmail: 'alex@example.test',
+      previousMemberRole: 'MEMBER',
+      memberRole: 'ADMIN',
+    },
+  ])
+  const result = (
+    await boatActivityMessageContent([{ boatActivityId: 'event' }])
+  ).get('event')
+  expect(result).toMatchObject({
+    label: 'Alex',
+    memberEmail: 'alex@example.test',
+    previousMemberRole: 'MEMBER',
+    memberRole: 'ADMIN',
+    preview: null,
+  })
+})

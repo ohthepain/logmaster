@@ -1492,6 +1492,9 @@ model BoatActivity {
   resourceId String
   label String
   targetLabel String?
+  memberEmail String?
+  memberRole String?
+  previousMemberRole String?
   versionId String?
   transactionId String
   createdAt DateTime @default(now())

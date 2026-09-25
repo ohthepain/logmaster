@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { Geolocation } from '@capacitor/geolocation'
 
-type PositionSnapshot = {
+export type PositionSnapshot = {
   latitude: number | null
   longitude: number | null
   accuracy: number | null
@@ -22,7 +22,6 @@ let nativeWatchId: string | null = null
 let watchSubscribers = 0
 let locationAccessEnabled = false
 let devFallbackLogged = false
-let insecureContextLogged = false
 
 function freshTimestamp() {
   return new Date().toISOString()
@@ -102,15 +101,15 @@ function logDevFallbackOnce(detail?: string) {
   )
 }
 
-function logInsecureContextOnce() {
-  if (insecureContextLogged) return
-  insecureContextLogged = true
-  console.warn(
-    '[logmaster] Geolocation requires a secure context. Use http://localhost:3020 during development.',
-  )
-}
-
-function toPositionSnapshot(position: GeolocationPosition): PositionSnapshot {
+function toPositionSnapshot(position: {
+  coords: {
+    latitude: number
+    longitude: number
+    accuracy: number
+    heading: number | null
+  }
+  timestamp: number
+}): PositionSnapshot {
   const heading = position.coords.heading
   return {
     latitude: position.coords.latitude,
@@ -121,23 +120,141 @@ function toPositionSnapshot(position: GeolocationPosition): PositionSnapshot {
   }
 }
 
+export type LocationFailure = 'denied' | 'timeout' | 'unavailable'
+export type LocationPermission = 'granted' | 'prompt' | 'denied' | 'unavailable'
+export type DevicePositionResult =
+  | { status: 'success'; position: PositionSnapshot }
+  | { status: LocationFailure }
+
+export function locationFailure(error: unknown): LocationFailure {
+  const code = (error as { code?: string | number } | null)?.code
+  if (code === 1 || code === 'OS-PLUG-GLOC-0003') return 'denied'
+  if (code === 3 || code === 'OS-PLUG-GLOC-0010') return 'timeout'
+  return 'unavailable'
+}
+
+/** Checks permission without triggering a system prompt. */
+export async function checkLocationPermission(): Promise<LocationPermission> {
+  if (devPositionOverride) return 'granted'
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const permissions = await Geolocation.checkPermissions()
+      if (
+        permissions.location === 'granted' ||
+        permissions.coarseLocation === 'granted'
+      )
+        return 'granted'
+      return permissions.location === 'denied' ? 'denied' : 'prompt'
+    }
+    if (typeof navigator === 'undefined' || !navigator.geolocation)
+      return 'unavailable'
+    if (typeof window !== 'undefined' && !window.isSecureContext)
+      return 'unavailable'
+    if (!navigator.permissions?.query) return 'prompt'
+    const permission = await navigator.permissions.query({
+      name: 'geolocation',
+    })
+    return permission.state
+  } catch {
+    // Browsers without a geolocation permission query still support a user-initiated read.
+    return Capacitor.isNativePlatform() ? 'unavailable' : 'prompt'
+  }
+}
+
 function requestPosition(
   options: PositionOptions,
-): Promise<PositionSnapshot | null> {
-  return new Promise((resolve) => {
+): Promise<DevicePositionResult> {
+  return new Promise<DevicePositionResult>((resolve) => {
     navigator.geolocation.getCurrentPosition(
-      (position) => resolve(toPositionSnapshot(position)),
-      (error) => {
-        if (import.meta.env.DEV) {
-          console.info(
-            `[logmaster] Geolocation error ${error.code}: ${error.message}`,
-          )
-        }
-        resolve(null)
-      },
+      (position) =>
+        resolve({ status: 'success', position: toPositionSnapshot(position) }),
+      (error) => resolve({ status: locationFailure(error) }),
       options,
     )
-  })
+  }).catch((error: unknown) => ({ status: locationFailure(error) }))
+}
+
+/** A real location result: never substitutes a development fallback for failure. */
+export async function requestDevicePosition(
+  onLocating?: () => void,
+): Promise<DevicePositionResult> {
+  const override = devOverrideSnapshot()
+  if (override) return { status: 'success', position: override }
+  try {
+    let result: DevicePositionResult
+    if (Capacitor.isNativePlatform()) {
+      let permission = await checkLocationPermission()
+      if (permission === 'prompt') {
+        const requested = await Geolocation.requestPermissions()
+        permission =
+          requested.location === 'granted' ||
+          requested.coarseLocation === 'granted'
+            ? 'granted'
+            : 'denied'
+      }
+      if (permission !== 'granted')
+        return { status: permission === 'denied' ? 'denied' : 'unavailable' }
+      onLocating?.()
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: GEO_TIMEOUT_MS,
+      })
+      result = {
+        status: 'success',
+        position: toPositionSnapshot(position),
+      }
+    } else {
+      if (
+        typeof navigator === 'undefined' ||
+        !navigator.geolocation ||
+        (typeof window !== 'undefined' && !window.isSecureContext)
+      )
+        return { status: 'unavailable' }
+      // PermissionStatus changes when the browser prompt is accepted, before the first fix.
+      let permission: PermissionStatus | undefined
+      const changed = () => {
+        if (permission?.state === 'granted') onLocating?.()
+      }
+      try {
+        permission = await navigator.permissions?.query({ name: 'geolocation' })
+      } catch {
+        /* Unsupported browser. */
+      }
+      permission?.addEventListener('change', changed)
+      changed()
+      try {
+        // Reveal the first usable fix even if the other accuracy request is still pending.
+        result = await new Promise<DevicePositionResult>((resolve) => {
+          const failures: DevicePositionResult[] = []
+          for (const enableHighAccuracy of [true, false]) {
+            void requestPosition({
+              enableHighAccuracy,
+              maximumAge: CACHE_TTL_MS,
+              timeout: GEO_TIMEOUT_MS,
+            }).then((response) => {
+              if (response.status === 'success') resolve(response)
+              else {
+                failures.push(response)
+                if (failures.length === 2)
+                  resolve(
+                    failures.find((item) => item.status === 'denied') ??
+                      failures.find((item) => item.status === 'timeout') ?? {
+                        status: 'unavailable',
+                      },
+                  )
+              }
+            })
+          }
+        })
+      } finally {
+        permission?.removeEventListener('change', changed)
+      }
+    }
+    if (result.status === 'success') publish(result.position)
+    return result
+  } catch (error) {
+    return { status: locationFailure(error) }
+  }
 }
 
 function unavailablePosition(): PositionSnapshot {
@@ -185,83 +302,11 @@ export function setLocationAccessEnabled(enabled: boolean) {
   stopWatches()
 }
 
-async function resolveNativeDevicePosition(): Promise<PositionSnapshot | null> {
-  if (typeof window === 'undefined' || !Capacitor.isNativePlatform()) {
-    return null
-  }
-
-  try {
-    let permissions = await Geolocation.checkPermissions()
-    if (
-      permissions.location === 'prompt' ||
-      permissions.location === 'prompt-with-rationale'
-    ) {
-      permissions = await Geolocation.requestPermissions()
-    }
-    if (
-      permissions.location !== 'granted' &&
-      permissions.coarseLocation !== 'granted'
-    ) {
-      return null
-    }
-
-    const position = await Geolocation.getCurrentPosition({
-      enableHighAccuracy: true,
-      timeout: GEO_TIMEOUT_MS,
-    })
-
-    const heading = position.coords.heading
-    return {
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-      accuracy: position.coords.accuracy,
-      heading: heading != null && Number.isFinite(heading) ? heading : null,
-      timestamp: new Date(position.timestamp).toISOString(),
-    }
-  } catch (error) {
-    if (import.meta.env.DEV) {
-      console.info('[logmaster] Native geolocation failed', error)
-    }
-    return null
-  }
-}
-
 async function resolveDevicePosition(): Promise<PositionSnapshot> {
-  const override = devOverrideSnapshot()
-  if (override) return override
-
-  const nativePosition = await resolveNativeDevicePosition()
-  if (nativePosition) return nativePosition
-
-  if (typeof navigator === 'undefined' || !navigator.geolocation) {
-    return fallbackOrUnavailable('not supported')
-  }
-
-  if (typeof window !== 'undefined' && !window.isSecureContext) {
-    logInsecureContextOnce()
-    return fallbackOrUnavailable('insecure context')
-  }
-
-  const [highAccuracy, lowAccuracy] = await Promise.all([
-    requestPosition({
-      enableHighAccuracy: true,
-      maximumAge: CACHE_TTL_MS,
-      timeout: GEO_TIMEOUT_MS,
-    }),
-    requestPosition({
-      enableHighAccuracy: false,
-      maximumAge: 60_000,
-      timeout: GEO_TIMEOUT_MS,
-    }),
-  ])
-  if (highAccuracy && isResolvedPosition(highAccuracy)) {
-    return highAccuracy
-  }
-  if (lowAccuracy && isResolvedPosition(lowAccuracy)) {
-    return lowAccuracy
-  }
-
-  return fallbackOrUnavailable('permission denied or timed out')
+  const result = await requestDevicePosition()
+  return result.status === 'success'
+    ? result.position
+    : fallbackOrUnavailable(result.status)
 }
 
 async function ensureNativeWatch() {
@@ -350,7 +395,7 @@ export async function readDevicePosition(options?: {
 
   inflight = resolveDevicePosition()
     .then((position) => {
-      if (isResolvedPosition(position)) {
+      if (isResolvedPosition(position) && cached !== position) {
         publish(position)
       }
       return position
@@ -362,14 +407,17 @@ export async function readDevicePosition(options?: {
   return inflight
 }
 
-export function subscribeToDevicePosition(listener: PositionListener) {
+export function subscribeToDevicePosition(
+  listener: PositionListener,
+  options?: { passive?: boolean },
+) {
   listeners.add(listener)
   watchSubscribers += 1
   ensureWatch()
 
   if (cached) {
     listener(cached)
-  } else {
+  } else if (!options?.passive) {
     void readDevicePosition()
   }
 

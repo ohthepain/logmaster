@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { BoatChatActivity } from '../domain/boat-activity'
 import { useTranslation } from '../lib/i18n'
 import { apiUrl } from '../lib/app-origin'
+import { boatActivityTextParts } from '../lib/boat-activity-text'
 import { PdfDocumentPages } from './PdfDocumentPages'
 
 export function BoatActivityContent({
@@ -11,6 +12,7 @@ export function BoatActivityContent({
   activity: BoatChatActivity
 }) {
   const { t } = useTranslation()
+  const { heading, label, detail } = boatActivityTextParts(activity, t)
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -37,8 +39,14 @@ export function BoatActivityContent({
   return (
     <div ref={ref} className="space-y-2" data-boat-activity={activity.kind}>
       <p className="m-0 break-words text-xs text-slate-600">
-        {t(`boatActivity_${activity.kind}`)}
-        {activity.label && <> · {activity.label}</>}
+        {heading}
+        {label && (
+          <>
+            {' '}
+            · <span title={activity.memberEmail || undefined}>{label}</span>
+          </>
+        )}
+        {detail && <> · {detail}</>}
         {activity.targetLabel && <> ↔ {activity.targetLabel}</>}
       </p>
       {preview && url && (

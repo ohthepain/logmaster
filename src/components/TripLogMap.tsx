@@ -1,3 +1,10 @@
+import { MapLocationOverlay } from './MapLocationOverlay'
+import { useMapLocation } from '../lib/use-map-location'
+import type { MapLocationState } from '../lib/use-map-location'
+import {
+  GIBRALTAR,
+  useMediterraneanJourney,
+} from '../lib/use-mediterranean-journey'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {
@@ -147,6 +154,8 @@ type TripLogMapProps = {
   boatIconId?: string | null
   plannedRouteWaypoints?: RouteWaypoint[]
   waypointPick?: MapWaypointPickConfig
+  locationState?: MapLocationState
+  onLocationIntent?: () => void
   onInitialViewportSettled?: () => void
 }
 
@@ -158,32 +167,75 @@ const CURRENT_SOURCE = 'trip-current-position'
 
 export const TripLogMap = forwardRef<TripMapHandle, TripLogMapProps>(
   function TripLogMapView(props, ref) {
-    if (getNativePlatform() === 'ios' && props.embedded) {
-      return (
-        <TripAppleMapKit
-          ref={ref}
-          trip={props.trip}
-          entries={props.entries}
-          legs={props.legs}
-          tracks={props.tracks}
-          focusEntryId={props.focusEntryId}
-          selectedEntryId={props.selectedEntryId}
-          onEntrySelect={props.onEntrySelect}
-          mediaByEntry={props.mediaByEntry}
-          mapClassName={props.mapClassName}
-          showControls={props.showControls}
-          showCurrentPosition={props.showCurrentPosition}
-          interactive={props.interactive}
-          embedded={props.embedded}
-          controlStackClassName={props.controlStackClassName}
-          playbackPosition={props.playbackPosition}
-          boatIconId={props.boatIconId}
-          onInitialViewportSettled={props.onInitialViewportSettled}
-        />
+    const rendererRef = useRef<TripMapHandle>(null)
+    const pendingLocate = useRef(false)
+    const target = resolveTripLogMapViewport(props.trip, props.entries, {
+      focusEntryId: props.focusEntryId,
+      tracks: props.tracks,
+    })
+    const location = useMapLocation(
+      props.showCurrentPosition !== false &&
+        props.interactive !== false &&
+        !props.playbackMode &&
+        !props.playbackPosition &&
+        target.kind === 'current-location',
+    )
+    const blocked = !['idle', 'ready', 'browsing'].includes(location.state)
+    const locate = () => {
+      if (
+        props.playbackMode ||
+        props.playbackPosition ||
+        location.state === 'ready'
       )
+        rendererRef.current?.locate()
+      else {
+        pendingLocate.current = true
+        void location.check()
+      }
     }
-
-    return <TripLogMapMapLibre ref={ref} {...props} />
+    useEffect(() => {
+      if (location.state === 'ready' && pendingLocate.current) {
+        pendingLocate.current = false
+        rendererRef.current?.locate()
+      }
+    }, [location.state])
+    useImperativeHandle(ref, () => ({
+      zoomIn: () => rendererRef.current?.zoomIn(),
+      zoomOut: () => rendererRef.current?.zoomOut(),
+      locate,
+      captureMapSnapshot: () =>
+        rendererRef.current?.captureMapSnapshot() ?? Promise.resolve(null),
+    }))
+    const mapProps = {
+      ...props,
+      entries: blocked ? [] : props.entries,
+      tracks: blocked ? [] : props.tracks,
+      legs: blocked ? [] : props.legs,
+      plannedRouteWaypoints: blocked ? [] : props.plannedRouteWaypoints,
+      focusEntryId: blocked ? null : props.focusEntryId,
+      selectedEntryId: blocked ? null : props.selectedEntryId,
+      showCurrentPosition:
+        props.showCurrentPosition !== false &&
+        ['idle', 'ready'].includes(location.state),
+      locationState: location.state,
+      onLocationIntent: locate,
+    }
+    return (
+      <div className="relative h-full min-h-0 w-full">
+        <div className="h-full min-h-0 w-full" inert={blocked || undefined}>
+          {getNativePlatform() === 'ios' && props.embedded ? (
+            <TripAppleMapKit ref={rendererRef} {...mapProps} />
+          ) : (
+            <TripLogMapMapLibre ref={rendererRef} {...mapProps} />
+          )}
+        </div>
+        <MapLocationOverlay
+          state={location.state}
+          onContinue={() => void location.request()}
+          onBrowse={location.browse}
+        />
+      </div>
+    )
   },
 )
 
@@ -213,6 +265,8 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
       plannedRouteWaypoints = [],
       waypointPick,
       onInitialViewportSettled,
+      locationState = 'idle',
+      onLocationIntent,
     }: TripLogMapProps,
     ref,
   ) {
@@ -246,6 +300,18 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
     const devDraggablePosition =
       devMode && isDevModeAvailable() && showCurrentPosition && interactive
     const [mapReady, setMapReady] = useState(false)
+    const moveJourney = useCallback((point: typeof GIBRALTAR) => {
+      mapRef.current?.jumpTo({
+        center: [point.longitude, point.latitude],
+        zoom: 5.5,
+      })
+    }, [])
+    useMediterraneanJourney(
+      mapReady,
+      !['idle', 'ready', 'browsing'].includes(locationState),
+      locationState === 'permission',
+      moveJourney,
+    )
     const [mapError, setMapError] = useState<string | null>(null)
     const [currentPosition, setCurrentPosition] = useState<LngLat | null>(null)
     const [fullscreenOpen, setFullscreenOpen] = useState(false)
@@ -419,22 +485,25 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
 
     useEffect(() => {
       if (!showCurrentPosition) return
-      return subscribeToDevicePosition((position) => {
-        if (position.latitude == null || position.longitude == null) {
-          return
-        }
-        const nextPosition = {
-          longitude: position.longitude,
-          latitude: position.latitude,
-          heading: resolveBoatMapHeading(
-            position.heading,
-            previousLivePositionRef.current,
-            { latitude: position.latitude, longitude: position.longitude },
-          ),
-        }
-        previousLivePositionRef.current = nextPosition
-        setCurrentPosition(nextPosition)
-      })
+      return subscribeToDevicePosition(
+        (position) => {
+          if (position.latitude == null || position.longitude == null) {
+            return
+          }
+          const nextPosition = {
+            longitude: position.longitude,
+            latitude: position.latitude,
+            heading: resolveBoatMapHeading(
+              position.heading,
+              previousLivePositionRef.current,
+              { latitude: position.latitude, longitude: position.longitude },
+            ),
+          }
+          previousLivePositionRef.current = nextPosition
+          setCurrentPosition(nextPosition)
+        },
+        { passive: true },
+      )
     }, [showCurrentPosition])
 
     useEffect(() => {
@@ -453,11 +522,8 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
           map = new maplibregl.Map({
             container,
             style,
-            center: [
-              DEV_FALLBACK_POSITION.longitude,
-              DEV_FALLBACK_POSITION.latitude,
-            ],
-            zoom: SAILING_MAP_INITIAL_ZOOM,
+            center: [GIBRALTAR.longitude, GIBRALTAR.latitude],
+            zoom: 5.5,
             pitch: 0,
             maxPitch: 0,
             attributionControl: false,
@@ -855,10 +921,17 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
       const map = mapRef.current
       if (!map || !mapReady || initialFitDoneRef.current) return
 
+      if (!['idle', 'ready'].includes(locationState)) {
+        notifyInitialViewportSettled()
+        return
+      }
       if (viewportTarget.kind === 'current-location') {
         if (showCurrentPosition) {
           if (!currentPosition) return
-          juiceMapFocus(map, currentPosition)
+          map.jumpTo({
+            center: [currentPosition.longitude, currentPosition.latitude],
+            zoom: SAILING_MAP_INITIAL_ZOOM + 0.5,
+          })
           initialFitDoneRef.current = true
           settleInitialViewport(map)
           return
@@ -897,6 +970,8 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
       showCurrentPosition,
       trip,
       settleInitialViewport,
+      locationState,
+      notifyInitialViewportSettled,
     ])
 
     const editCenterTargetRef = useRef<string | null>(null)
@@ -993,7 +1068,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
               )}
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
-              onLocate={handleLocate}
+              onLocate={onLocationIntent ?? handleLocate}
               locateMode={playbackMode ? 'boat' : 'you'}
               layers={
                 <SailingMapLayerPanel

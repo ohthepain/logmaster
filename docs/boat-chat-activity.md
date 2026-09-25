@@ -21,8 +21,12 @@ connections before cascading their deletion. Deleting a boat cascades its activi
 and associated chat history without producing removal posts.
 
 Events store translation keys and safe display-name snapshots, not rendered prose
-or contact/accounting details. Labels are translated at display time. Media and
-PDF previews reference existing storage; files are not uploaded again. The API
+or contact/accounting details. Member events also snapshot the account email for
+a tooltip on the display name and the role at the time of the event. Role changes
+show the previous and new roles, including in conversation previews. Coalesced
+changes retain the original role and final role. Older events gain email tooltips
+where the original membership still exists; historical roles are not inferred.
+Labels are translated at display time. Media and PDF previews reference existing storage; files are not uploaded again. The API
 checks current chat membership and that the referenced resource still belongs to
 the boat. Deleted resources no longer have a preview. Non-previewable files get a
 download card, HTTP(S) document links get a link card, and PDFs show their first
