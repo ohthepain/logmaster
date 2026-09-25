@@ -1,4 +1,4 @@
-import type { Prisma } from '../../../generated/prisma/client'
+import { Prisma } from '../../../generated/prisma/client'
 import { prisma } from '../db'
 import type { ChatMessage, TripChatLog } from '../../domain/messaging'
 import { mediaDescriptor } from './media'
@@ -46,6 +46,13 @@ export const visibleChatMessage = {
     { logEntry: { deleted: false, economyHidden: false } },
   ],
 }
+
+/** Unread badges count messages a person composed. Activity, logs, and economy notices stay in the thread. */
+export const typedChatMessage = {
+  boatActivityId: null,
+  logEntryId: null,
+  economyEvent: { equals: Prisma.DbNull },
+} satisfies Prisma.ChatMessageWhereInput
 
 export async function tripLogMessageContent(
   rows: { id: string; logEntryId?: string | null }[],

@@ -1,7 +1,11 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { deleteAdminUser, fetchAdminUsers } from '../../../lib/admin-api'
+import {
+  deleteAdminUser,
+  fetchAdminUsers,
+  setAdminUserPlatformAdmin,
+} from '../../../lib/admin-api'
 import type { AdminUser } from '../../../lib/admin-api'
 import { useSession } from '../../../lib/auth-client'
 import { useIsAdmin } from '../../../lib/use-admin'
@@ -29,6 +33,7 @@ function AdminUsersPage() {
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [adminToggleId, setAdminToggleId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setErr(null)
@@ -59,6 +64,34 @@ function AdminUsersPage() {
     session.data?.user,
     session.isPending,
   ])
+
+  const handlePlatformAdmin = async (user: AdminUser, grant: boolean) => {
+    if (
+      !grant &&
+      !window.confirm(
+        `Revoke platform admin access for "${user.name || user.email}"?`,
+      )
+    ) {
+      return
+    }
+
+    setAdminToggleId(user.id)
+    try {
+      const updated = await setAdminUserPlatformAdmin(user.id, grant)
+      setUsers((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      )
+      toast.success(
+        grant ? 'Platform admin access granted' : 'Platform admin access revoked',
+      )
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : 'Failed to update platform admin',
+      )
+    } finally {
+      setAdminToggleId(null)
+    }
+  }
 
   const handleDelete = async (user: AdminUser) => {
     if (
@@ -96,13 +129,19 @@ function AdminUsersPage() {
         <h1 className="display-title mb-2 text-3xl font-bold text-[var(--sea-ink)] sm:text-4xl">
           Users
         </h1>
-        <p className="m-0 mb-4 text-sm text-[var(--sea-ink-soft)]">
+        <p className="m-0 mb-2 text-sm text-[var(--sea-ink-soft)]">
           <Link
             to="/admin"
             className="text-[var(--sea-accent)] font-medium underline decoration-[var(--sea-accent)]/50 underline-offset-2 hover:decoration-[var(--sea-accent)]"
           >
             ← Admin
           </Link>
+        </p>
+        <p className="m-0 mb-4 text-sm text-[var(--sea-ink-soft)]">
+          Grant global platform admin access (Admin menu, jobs, and related
+          tools). Users on the{' '}
+          <code className="text-xs">ADMIN_EMAILS</code> env allowlist cannot be
+          revoked from here.
         </p>
 
         <div className="mb-4">
@@ -125,7 +164,15 @@ function AdminUsersPage() {
             )}
             {users.map((user) => {
               const isSelf = user.id === currentUserId
-              const busy = deletingId === user.id
+              const busyDelete = deletingId === user.id
+              const busyAdmin = adminToggleId === user.id
+              const canRevokeDbAdmin =
+                user.platformAdminAt != null && !isSelf
+              const canGrantAdmin = !user.isPlatformAdmin
+              const envOnlyAdmin =
+                user.isPlatformAdmin &&
+                user.envAdminAllowlist &&
+                !user.platformAdminAt
               return (
                 <li
                   key={user.id}
@@ -139,26 +186,54 @@ function AdminUsersPage() {
                           (you)
                         </span>
                       ) : null}
+                      {user.isPlatformAdmin ? (
+                        <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-900 dark:bg-violet-950/60 dark:text-violet-200">
+                          Platform admin
+                        </span>
+                      ) : null}
                     </p>
                     <p className="m-0 mt-0.5 text-sm text-[var(--sea-ink-soft)]">
                       {user.email}
                       {user.emailVerified ? ' · verified' : ' · unverified'} ·
                       joined {formatDate(user.createdAt)}
+                      {envOnlyAdmin ? ' · env allowlist' : null}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    disabled={busy || isSelf}
-                    title={
-                      isSelf
-                        ? 'You cannot delete your own account here'
-                        : undefined
-                    }
-                    onClick={() => void handleDelete(user)}
-                    className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-800 disabled:opacity-60 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200"
-                  >
-                    {busy ? 'Deleting…' : 'Delete'}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {canGrantAdmin ? (
+                      <button
+                        type="button"
+                        disabled={busyAdmin || busyDelete}
+                        onClick={() => void handlePlatformAdmin(user, true)}
+                        className="rounded-lg border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-sm font-medium text-[var(--sea-ink)] disabled:opacity-60"
+                      >
+                        {busyAdmin ? 'Saving…' : 'Make platform admin'}
+                      </button>
+                    ) : null}
+                    {canRevokeDbAdmin ? (
+                      <button
+                        type="button"
+                        disabled={busyAdmin || busyDelete}
+                        onClick={() => void handlePlatformAdmin(user, false)}
+                        className="rounded-lg border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-sm font-medium text-[var(--sea-ink)] disabled:opacity-60"
+                      >
+                        {busyAdmin ? 'Saving…' : 'Revoke platform admin'}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={busyDelete || busyAdmin || isSelf}
+                      title={
+                        isSelf
+                          ? 'You cannot delete your own account here'
+                          : undefined
+                      }
+                      onClick={() => void handleDelete(user)}
+                      className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-800 disabled:opacity-60 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200"
+                    >
+                      {busyDelete ? 'Deleting…' : 'Delete'}
+                    </button>
+                  </div>
                 </li>
               )
             })}

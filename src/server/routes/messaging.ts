@@ -11,6 +11,7 @@ import {
 } from '../messaging/boat-activity'
 import {
   tripLogMessageContent,
+  typedChatMessage,
   visibleChatMessage,
   legacyTripLogMedia,
 } from '../messaging/trip-log'
@@ -255,7 +256,7 @@ messagingRoutes.get('/threads', async (c) => {
           where: {
             threadId: thread.id,
             senderId: { not: userId },
-            AND: [visibleChatMessage],
+            ...typedChatMessage,
             OR: [
               { createdAt: { gt: readAt } },
               { createdAt: readAt, id: { gt: read?.readMessageId ?? '' } },

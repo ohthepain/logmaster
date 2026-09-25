@@ -12,6 +12,9 @@ export type AdminUser = {
   email: string
   emailVerified: boolean
   createdAt: string
+  platformAdminAt: string | null
+  envAdminAllowlist: boolean
+  isPlatformAdmin: boolean
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -29,6 +32,17 @@ export async function fetchAdminUsers(): Promise<AdminUser[]> {
 
 export async function deleteAdminUser(userId: string): Promise<void> {
   await api(`/api/admin/users/${userId}`, { method: 'DELETE' })
+}
+
+export async function setAdminUserPlatformAdmin(
+  userId: string,
+  admin: boolean,
+): Promise<AdminUser> {
+  const data = await api<{ user: AdminUser }>(
+    `/api/admin/users/${userId}/platform-admin`,
+    { method: 'PATCH', body: JSON.stringify({ admin }) },
+  )
+  return data.user
 }
 
 export async function fetchAdminTrips(): Promise<Trip[]> {

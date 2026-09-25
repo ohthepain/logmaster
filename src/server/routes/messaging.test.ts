@@ -1,6 +1,7 @@
 import { prisma } from '../db'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createHmac } from 'node:crypto'
+import { Prisma } from '../../../generated/prisma/client'
 import { messagingRoutes } from './messaging'
 
 const mocks = vi.hoisted(() => ({
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   messages: vi.fn(),
   create: vi.fn(),
   count: vi.fn(),
+  reads: vi.fn(),
   users: vi.fn(),
   provider: vi.fn(),
   notify: vi.fn(),
@@ -48,6 +50,7 @@ vi.mock('../db', () => ({
       count: mocks.count,
     },
     user: { findMany: mocks.users },
+    chatRead: { findMany: mocks.reads },
     chatMessageLike: { upsert: mocks.upsertLike },
     chatMessageMedia: { findMany: mocks.attachments },
     chatMedia: { count: mocks.mediaCount },
@@ -110,6 +113,7 @@ beforeEach(() => {
   mocks.requireThread.mockResolvedValue(thread)
   mocks.findMessage.mockResolvedValue(null)
   mocks.count.mockResolvedValue(0)
+  mocks.reads.mockResolvedValue([])
   mocks.create.mockResolvedValue(row)
   mocks.users.mockResolvedValue([{ id: 'user', name: 'Alice' }])
   mocks.messages.mockResolvedValue([])
@@ -117,6 +121,25 @@ beforeEach(() => {
   mocks.attachments.mockResolvedValue([])
   mocks.mediaCount.mockResolvedValue(0)
   mocks.requireAttachments.mockResolvedValue(undefined)
+})
+it('counts only typed messages toward the unread badge', async () => {
+  mocks.count.mockResolvedValue(2)
+  const response = await messagingRoutes.request('/threads')
+  expect(response.status).toBe(200)
+  expect((await response.json()).threads[0].unreadCount).toBe(2)
+  expect(mocks.count).toHaveBeenCalledWith({
+    where: {
+      threadId: 'boat:boat',
+      senderId: { not: 'user' },
+      boatActivityId: null,
+      logEntryId: null,
+      economyEvent: { equals: Prisma.DbNull },
+      OR: [
+        { createdAt: { gt: new Date(0) } },
+        { createdAt: new Date(0), id: { gt: '' } },
+      ],
+    },
+  })
 })
 it('rejects signed-out reads before touching message data', async () => {
   mocks.session.mockResolvedValue(null)

@@ -6,6 +6,7 @@ import { isMapRegionId } from '../../lib/map-regions'
 import {
   forbidden,
   getSessionUser,
+  isAdminEmail,
   isAdminRequest,
   isPlatformAdmin,
   unauthorized,
@@ -179,6 +180,7 @@ adminRoutes.get('/users', async (c) => {
       email: true,
       emailVerified: true,
       createdAt: true,
+      platformAdminAt: true,
     },
   })
   return c.json({
@@ -188,7 +190,114 @@ adminRoutes.get('/users', async (c) => {
       email: user.email,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt.toISOString(),
+      platformAdminAt: user.platformAdminAt?.toISOString() ?? null,
+      envAdminAllowlist: isAdminEmail(user.email),
+      isPlatformAdmin:
+        user.platformAdminAt != null || isAdminEmail(user.email),
     })),
+  })
+})
+
+adminRoutes.patch('/users/:userId/platform-admin', async (c) => {
+  const userId = c.req.param('userId')
+  const currentUser = await getSessionUser(c.req.raw.headers)
+  if (!currentUser) return unauthorized()
+
+  const body = (await c.req.json().catch(() => ({}))) as { admin?: unknown }
+  if (typeof body.admin !== 'boolean') {
+    return c.json({ error: 'admin (boolean) is required' }, 400)
+  }
+
+  const target = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      emailVerified: true,
+      createdAt: true,
+      platformAdminAt: true,
+    },
+  })
+  if (!target) return c.json({ error: 'User not found' }, 404)
+
+  if (body.admin) {
+    if (target.platformAdminAt) {
+      return c.json({
+        user: {
+          id: target.id,
+          name: target.name,
+          email: target.email,
+          emailVerified: target.emailVerified,
+          createdAt: target.createdAt.toISOString(),
+          platformAdminAt: target.platformAdminAt.toISOString(),
+          envAdminAllowlist: isAdminEmail(target.email),
+          isPlatformAdmin: true,
+        },
+      })
+    }
+    const updated = await db.user.update({
+      where: { id: userId },
+      data: { platformAdminAt: new Date() },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        emailVerified: true,
+        createdAt: true,
+        platformAdminAt: true,
+      },
+    })
+    return c.json({
+      user: {
+        id: updated.id,
+        name: updated.name,
+        email: updated.email,
+        emailVerified: updated.emailVerified,
+        createdAt: updated.createdAt.toISOString(),
+        platformAdminAt: updated.platformAdminAt?.toISOString() ?? null,
+        envAdminAllowlist: isAdminEmail(updated.email),
+        isPlatformAdmin: true,
+      },
+    })
+  }
+
+  if (currentUser.id === userId) {
+    return c.json({ error: 'You cannot revoke your own platform admin access' }, 400)
+  }
+  if (isAdminEmail(target.email) && !target.platformAdminAt) {
+    return c.json(
+      {
+        error:
+          'This user is a platform admin via ADMIN_EMAILS env allowlist and cannot be revoked here',
+      },
+      400,
+    )
+  }
+
+  const updated = await db.user.update({
+    where: { id: userId },
+    data: { platformAdminAt: null },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      emailVerified: true,
+      createdAt: true,
+      platformAdminAt: true,
+    },
+  })
+  return c.json({
+    user: {
+      id: updated.id,
+      name: updated.name,
+      email: updated.email,
+      emailVerified: updated.emailVerified,
+      createdAt: updated.createdAt.toISOString(),
+      platformAdminAt: null,
+      envAdminAllowlist: isAdminEmail(updated.email),
+      isPlatformAdmin: isAdminEmail(updated.email),
+    },
   })
 })
 

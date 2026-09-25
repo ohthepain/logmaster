@@ -14,14 +14,11 @@ import { createPortal } from 'react-dom'
 import type { CSSProperties, ReactNode } from 'react'
 import {
   ArrowUp,
-  BatteryFull,
   ChevronLeft,
   Heart,
   Image as ImageIcon,
   MessageCircle,
   Search,
-  Signal,
-  Wifi,
 } from 'lucide-react'
 import type { ChatMessage, ChatObject, ChatThread } from '../domain/messaging'
 import { referenceObjects, threadTimeGroup } from '../domain/messaging'
@@ -35,52 +32,19 @@ import { uploadMessageFiles } from '../lib/messaging/media'
 const mobileChatHeaderClassName =
   'bg-gradient-to-r from-[#0385ff] to-[#02adf5] text-white'
 
-function statusBarTimeLabel() {
-  return new Date().toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-function MobileSystemTopBar() {
-  const [time, setTime] = useState(statusBarTimeLabel)
-  useEffect(() => {
-    const id = window.setInterval(() => setTime(statusBarTimeLabel()), 30_000)
-    return () => window.clearInterval(id)
-  }, [])
-  return (
-    <div
-      aria-hidden
-      className="flex items-center justify-between px-4 pb-1 pt-1 text-[13px] font-semibold leading-none"
-    >
-      <span>{time}</span>
-      <span className="flex items-center gap-1.5 opacity-95">
-        <Signal className="size-3.5" strokeWidth={2.5} />
-        <Wifi className="size-3.5" strokeWidth={2.5} />
-        <BatteryFull className="size-4" strokeWidth={2.5} />
-      </span>
-    </div>
-  )
-}
-
 function ChatGradientHeader({
   children,
   className,
-  showStatusBar = false,
+  safeTop = false,
 }: {
   children: ReactNode
   className?: string
-  /** Decorative status row; mobile full-screen only. */
-  showStatusBar?: boolean
+  /** Clear the device status bar on full-screen mobile chat. */
+  safeTop?: boolean
 }) {
   return (
     <div className={cn(mobileChatHeaderClassName, className)}>
-      <div className={cn(showStatusBar && 'pt-[var(--lm-safe-top)] md:pt-0')}>
-        {showStatusBar ? (
-          <div className="md:hidden">
-            <MobileSystemTopBar />
-          </div>
-        ) : null}
+      <div className={cn(safeTop && 'pt-[var(--lm-safe-top)] md:pt-0')}>
         {children}
       </div>
     </div>
@@ -114,7 +78,7 @@ function ThreadChatHeader({
   onBack?: () => void
 }) {
   return (
-    <ChatGradientHeader showStatusBar={Boolean(onBack)} className="shrink-0">
+    <ChatGradientHeader safeTop={Boolean(onBack)} className="shrink-0">
       <div className="flex items-center gap-2 px-2 pb-3 pt-1 md:px-4 md:pb-4 md:pt-4">
         {onBack ? (
           <button
@@ -768,7 +732,7 @@ export function Messaging({
           aria-label="Conversations"
           className={`${selectedId ? 'hidden md:flex' : 'flex'} w-full min-h-0 shrink-0 flex-col border-r border-[var(--panel-border)] bg-[var(--surface-strong)] md:w-80 lg:w-96`}
         >
-          <ChatGradientHeader showStatusBar className="shrink-0">
+          <ChatGradientHeader safeTop className="shrink-0">
             <div className="flex items-center gap-2 px-2 pb-3 pt-1 md:px-4 md:pb-4 md:pt-4">
               {onBackFromInbox ? (
                 <button
