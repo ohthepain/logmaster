@@ -18,7 +18,6 @@ import {
 import { CARD_LANGUAGES } from '../../domain/response-cards'
 import {
   matchResponseCards,
-  translateCardText,
   responseCardSnapshot,
   readResponseCard,
 } from '../messaging/cards'
@@ -139,11 +138,7 @@ messagingRoutes.post('/cards/match', async (c) => {
     })
     .strict()
     .parse(await c.req.json())
-  return c.json(
-    await matchResponseCards(text, language, () =>
-      translateCardText(text, language, c.get('userId')),
-    ),
-  )
+  return c.json(await matchResponseCards(text, language))
 })
 messagingRoutes.get('/cards/:id/image', async (c) => {
   const { card, object } = await readResponseCard(
@@ -363,6 +358,9 @@ messagingRoutes.post('/threads/:threadId/messages', async (c) => {
     .refine((value) =>
       Boolean(value.text || value.mediaIds.length || value.cardId),
     )
+    .refine((value) => !value.cardId || !value.mediaIds.length, {
+      message: 'Send response cards separately from attachments',
+    })
     .refine((value) => new Set(value.mediaIds).size === value.mediaIds.length)
     .parse(await c.req.json())
   const existing = await prisma.chatMessage.findUnique({
@@ -387,7 +385,7 @@ messagingRoutes.post('/threads/:threadId/messages', async (c) => {
       429,
     )
   const prepared = referenceObjects(
-    input.text,
+    input.cardId ? '' : input.text,
     threads.map((t) => t.object),
   )
   await requireMessageAttachments(userId, threadId, input.mediaIds)

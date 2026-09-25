@@ -41,35 +41,29 @@ export function MessageResponseCard({
 }
 export function ResponseCardSuggestions({
   text,
-  selected,
   onSelect,
   disabled,
 }: {
   text: string
-  selected?: CardSummary
-  onSelect: (card?: CardSummary) => void
+  onSelect: (card: CardSummary) => void
   disabled: boolean
 }) {
   const { language } = useTranslation()
   const [result, setResult] = useState<{
     key: string
     cards: CardSummary[]
-    translationUnavailable: boolean
   } | null>(null)
   const [failedKey, setFailedKey] = useState<string | null>(null)
   const key = `${language}:${text}`
   useEffect(() => {
-    if (!text.trim() || text.trim().length > 200 || disabled || selected) return
+    if (!text.trim() || text.trim().length > 200 || disabled) return
     const controller = new AbortController()
     const timer = setTimeout(() => {
-      void apiJson<{ cards: CardSummary[]; translationUnavailable: boolean }>(
-        '/api/messaging/cards/match',
-        {
-          method: 'POST',
-          body: JSON.stringify({ text: text.trim(), language }),
-          signal: controller.signal,
-        },
-      )
+      void apiJson<{ cards: CardSummary[] }>('/api/messaging/cards/match', {
+        method: 'POST',
+        body: JSON.stringify({ text: text.trim(), language }),
+        signal: controller.signal,
+      })
         .then((data) => {
           if (!controller.signal.aborted) setResult({ ...data, key })
         })
@@ -81,32 +75,9 @@ export function ResponseCardSuggestions({
       clearTimeout(timer)
       controller.abort()
     }
-  }, [text, language, key, disabled, selected])
-  if (selected)
-    return (
-      <div
-        className="flex items-center gap-3 border-b border-slate-100 px-3 py-2"
-        aria-label="Selected response card"
-      >
-        <CardImage card={selected} className="size-20" />
-        <span className="flex-1 text-sm text-slate-700">{selected.title}</span>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => onSelect()}
-          className="p-2 text-sm text-blue-600"
-        >
-          Remove card
-        </button>
-      </div>
-    )
+  }, [text, language, key, disabled])
   const current = result?.key === key ? result : null
-  if (
-    !current?.cards.length &&
-    failedKey !== key &&
-    !current?.translationUnavailable
-  )
-    return null
+  if (!current?.cards.length && failedKey !== key) return null
   return (
     <div className="border-b border-slate-100 px-3 py-2">
       {!!current?.cards.length && (
@@ -118,18 +89,16 @@ export function ResponseCardSuggestions({
               aria-label={`Choose ${card.title}`}
               disabled={disabled}
               onClick={() => onSelect(card)}
-              className="shrink-0 rounded-xl border border-slate-200 p-1 hover:bg-blue-50 focus-visible:outline-blue-500"
+              className="shrink-0 rounded-xl border-0 bg-transparent p-1 transition hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
             >
               <CardImage card={card} className="size-20" />
             </button>
           ))}
         </div>
       )}
-      {(failedKey === key || current?.translationUnavailable) && (
+      {failedKey === key && (
         <p role="status" className="m-0 text-xs text-slate-500">
-          {failedKey === key
-            ? 'Card suggestions are temporarily unavailable.'
-            : 'Translation is temporarily unavailable; showing direct phrase matches.'}
+          Card suggestions are temporarily unavailable.
         </p>
       )}
     </div>

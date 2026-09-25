@@ -35,12 +35,7 @@ export type CardExpression = {
   text: string
   cards: CardSummary[]
 }
-/** Whole phrases, ignoring case, surrounding punctuation and repeated whitespace. */
+/** Exact whole phrases, ignoring case and surrounding/repeated whitespace only. */
 export function normalizeCardExpression(text: string) {
-  return text
-    .normalize('NFKC')
-    .toLowerCase()
-    .trim()
-    .replace(/^[\p{P}\s]+|[\p{P}\s]+$/gu, '')
-    .replace(/\s+/gu, ' ')
+  return text.toLowerCase().trim().replace(/\s+/gu, ' ')
 }

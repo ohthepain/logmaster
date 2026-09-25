@@ -3,7 +3,6 @@ import sharp from 'sharp'
 import {
   matchResponseCards,
   responseCardSnapshot,
-  translateCardText,
   uploadResponseCard,
 } from './cards'
 import { normalizeCardExpression } from '../../domain/response-cards'
@@ -14,7 +13,6 @@ const mocks = vi.hoisted(() => ({
   unique: vi.fn(),
   upsert: vi.fn(),
   send: vi.fn(),
-  chat: vi.fn(),
 }))
 vi.mock('../db', () => ({
   prisma: {
@@ -29,8 +27,6 @@ vi.mock('../db', () => ({
 vi.mock('../s3-photos', () => ({
   getPhotosS3Client: () => ({ send: mocks.send }),
 }))
-vi.mock('@tanstack/ai', () => ({ chat: mocks.chat }))
-vi.mock('@tanstack/ai-openai', () => ({ openaiText: () => 'adapter' }))
 const card = (id: string) => ({
   id,
   title: id,
@@ -41,60 +37,43 @@ beforeEach(() => {
   vi.resetAllMocks()
   mocks.expression.mockResolvedValue(null)
 })
-it('matches whole Unicode phrases, preserving meaningful accents', () => {
-  expect(normalizeCardExpression('  ＹＥＳ!!! ')).toBe('yes')
-  expect(normalizeCardExpression('Sí   por favor.')).toBe('sí por favor')
-  expect(normalizeCardExpression('是！')).toBe('是')
-  expect(normalizeCardExpression('I said yes')).not.toBe('yes')
+it('matches exact phrases except case and whitespace', () => {
+  expect(normalizeCardExpression('  OK  ')).toBe('ok')
+  expect(normalizeCardExpression('Sí   por favor.')).toBe('sí por favor.')
+  expect(normalizeCardExpression('YES!!!')).toBe('yes!!!')
+  expect(normalizeCardExpression('ＹＥＳ')).not.toBe('yes')
+  expect(normalizeCardExpression('是！')).not.toBe('是')
 })
-it('orders local, translated English, then verbatim English matches and deduplicates', async () => {
-  mocks.expression.mockImplementation(async ({ where }) => {
-    const { language, normalized } = where.language_normalized
-    const ids =
-      language === 'sv'
-        ? ['local', 'shared']
-        : normalized === 'yes'
-          ? ['shared', 'translated']
-          : ['verbatim']
-    return { cards: ids.map((id) => ({ card: card(id) })) }
-  })
-  const translate = vi.fn(async () => 'Yes!')
-  const result = await matchResponseCards('Ja', 'sv', translate)
-  expect(result.cards.map((c) => c.id)).toEqual([
-    'local',
-    'shared',
-    'translated',
-    'verbatim',
-  ])
-  expect(translate).toHaveBeenCalledOnce()
+it('orders exact local and English matches, deduplicating cards', async () => {
+  mocks.expression.mockImplementation(async ({ where }) => ({
+    cards: (where.language_normalized.language === 'sv'
+      ? ['local', 'shared']
+      : ['shared', 'english']
+    ).map((id) => ({ card: card(id) })),
+  }))
+  const result = await matchResponseCards(' JA ', 'sv')
+  expect(result.cards.map((c) => c.id)).toEqual(['local', 'shared', 'english'])
   expect(
     mocks.expression.mock.calls.map(
       ([input]) => input.where.language_normalized,
     ),
   ).toEqual([
     { language: 'sv', normalized: 'ja' },
-    { language: 'en', normalized: 'yes' },
     { language: 'en', normalized: 'ja' },
   ])
   expect(mocks.expression.mock.calls[0][0].include.cards.where).toEqual({
     card: { enabled: true, deletedAt: null },
   })
 })
-it('always tries English verbatim when translation fails, and never translates English', async () => {
-  mocks.expression.mockResolvedValue({ cards: [{ card: card('english') }] })
-  const failed = await matchResponseCards('yes', 'fr', async () => {
-    throw new Error('offline')
-  })
-  expect(failed.cards).toHaveLength(1)
-  expect(failed.translationUnavailable).toBe(true)
-  expect(mocks.expression).toHaveBeenLastCalledWith(
-    expect.objectContaining({
-      where: { language_normalized: { language: 'en', normalized: 'yes' } },
-    }),
+it('does not autocomplete, strip punctuation or translate a near match', async () => {
+  mocks.expression.mockImplementation(async ({ where }) =>
+    where.language_normalized.normalized === 'ok'
+      ? { cards: [{ card: card('ok') }] }
+      : null,
   )
-  const translate = vi.fn()
-  await matchResponseCards('YES', 'en', translate)
-  expect(translate).not.toHaveBeenCalled()
+  expect((await matchResponseCards(' OK ', 'sv')).cards).toHaveLength(1)
+  for (const text of ['okx', 'o', 'ok!', 'okay'])
+    expect((await matchResponseCards(text, 'sv')).cards).toHaveLength(0)
 })
 it('signs no arbitrary card data into a message and rejects retired cards', async () => {
   mocks.first.mockResolvedValue(null)
@@ -142,15 +121,4 @@ it('validates file contents and stores a checksum-addressed image in the request
       }),
     ),
   ).rejects.toThrow('Use a PNG')
-})
-it('coalesces repeated translation requests and keeps draft text out of logs', async () => {
-  vi.stubEnv('OPENAI_API_KEY', 'test')
-  mocks.chat.mockResolvedValue({ english: 'yes' })
-  const result = await Promise.all([
-    translateCardText('ja', 'sv', 'test-user'),
-    translateCardText('ja', 'sv', 'test-user'),
-  ])
-  expect(result).toEqual(['yes', 'yes'])
-  expect(mocks.chat).toHaveBeenCalledOnce()
-  vi.unstubAllEnvs()
 })

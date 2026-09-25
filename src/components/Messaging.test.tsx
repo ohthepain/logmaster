@@ -368,3 +368,131 @@ it('offers an invitation rather than a composer when the other participant has l
     ),
   )
 })
+
+const responseCard = {
+  version: 1 as const,
+  type: 'image-response' as const,
+  card: {
+    id: 'card',
+    title: 'OK card',
+    checksum: 'a'.repeat(64),
+    enabled: true,
+  },
+}
+function cardChat(
+  post: (body: Record<string, unknown>) => Promise<ChatMessage>,
+  history: ChatMessage[] = [],
+) {
+  mocks.api.mockImplementation(async (url: string, options?: RequestInit) => {
+    if (url === '/api/messaging/threads')
+      return { threads: [thread], objects: [object] }
+    if (url === '/api/messaging/cards/match')
+      return { cards: [responseCard.card], translationUnavailable: false }
+    if (url.endsWith('/messages') && options?.method === 'POST')
+      return { message: await post(JSON.parse(options.body as string)) }
+    if (url.endsWith('/messages'))
+      return { messages: history, nextCursor: null }
+    if (url.endsWith('/likes/query'))
+      return {
+        likes: history.map((m) => ({
+          messageId: m.id,
+          likeCount: 0,
+          myLikeCount: 0,
+        })),
+      }
+    return { ok: true }
+  })
+}
+it('sends a tapped card immediately without text, clears the input and preserves new typing', async () => {
+  let resolve!: (value: ChatMessage) => void
+  const post = vi.fn<(body: Record<string, unknown>) => Promise<ChatMessage>>(
+    () =>
+      new Promise<ChatMessage>((r) => {
+        resolve = r
+      }),
+  )
+  cardChat(post)
+  render(<Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />)
+  const composer = await screen.findByRole<HTMLTextAreaElement>('textbox', {
+    name: 'Message',
+  })
+  fireEvent.change(composer, { target: { value: 'ok' } })
+  const option = await screen.findByRole('button', { name: 'Choose OK card' })
+  fireEvent.click(option)
+  fireEvent.click(option)
+  expect(composer.value).toBe('')
+  await waitFor(() => expect(post).toHaveBeenCalledTimes(1))
+  expect(post.mock.calls[0]?.[0]).toMatchObject({ text: '', cardId: 'card' })
+  expect(post.mock.calls[0]?.[0]).not.toHaveProperty('mediaIds')
+  fireEvent.change(composer, { target: { value: 'My next message' } })
+  resolve({
+    ...message,
+    id: 'sent-card',
+    senderId: 'user',
+    text: '',
+    responseCard,
+  })
+  await waitFor(() =>
+    expect(
+      screen
+        .queryByRole('button', { name: 'Send message' })
+        ?.hasAttribute('disabled'),
+    ).toBe(false),
+  )
+  expect(composer.value).toBe('My next message')
+})
+it('restores a failed card draft and retries the same message ID', async () => {
+  const ids: unknown[] = []
+  cardChat(async (body) => {
+    ids.push(body.id)
+    if (ids.length === 1) throw new Error('Card connection lost')
+    return {
+      ...message,
+      id: String(body.id),
+      senderId: 'user',
+      text: '',
+      responseCard,
+    }
+  })
+  render(<Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />)
+  const composer = await screen.findByRole<HTMLTextAreaElement>('textbox', {
+    name: 'Message',
+  })
+  fireEvent.change(composer, { target: { value: 'ok' } })
+  fireEvent.click(await screen.findByRole('button', { name: 'Choose OK card' }))
+  await screen.findByText('Card connection lost')
+  expect(composer.value).toBe('ok')
+  fireEvent.click(await screen.findByRole('button', { name: 'Choose OK card' }))
+  await waitFor(() => expect(ids).toHaveLength(2))
+  expect(ids[1]).toBe(ids[0])
+  expect(composer.value).toBe('')
+})
+it('renders adjacent cards left to right without bubbles or old trigger text', async () => {
+  const cards = [0, 30, 90].map((seconds, i) => ({
+    ...message,
+    id: `card-${i}`,
+    senderId: 'user',
+    text: 'Old trigger text',
+    references: [],
+    responseCard,
+    createdAt: new Date(1_000_000 + seconds * 1000).toISOString(),
+  }))
+  cardChat(async () => message, cards)
+  const { container } = render(
+    <Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />,
+  )
+  await waitFor(() =>
+    expect(screen.getAllByTestId('response-card-row')).toHaveLength(2),
+  )
+  expect(
+    [
+      ...screen
+        .getAllByTestId('response-card-row')[0]
+        .querySelectorAll('[data-message-id]'),
+    ].map((node) => node.getAttribute('data-message-id')),
+  ).toEqual(['card-0', 'card-1'])
+  expect(screen.queryByText('Old trigger text')).toBeNull()
+  expect(
+    container.querySelector('[data-message-id="card-0"]')?.className,
+  ).toContain('bg-transparent')
+})

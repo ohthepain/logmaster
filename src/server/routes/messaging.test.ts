@@ -532,3 +532,33 @@ it('rejects new messages, likes and uploads in a private chat after someone leav
     (await messagingRoutes.request('/threads/boat:boat/messages')).status,
   ).toBe(200)
 })
+
+it('stores response cards without typed text or object references', async () => {
+  mocks.card.mockResolvedValue({
+    version: 1,
+    type: 'image-response',
+    card: { id },
+  })
+  const response = await post('/threads/boat:boat/messages', {
+    id,
+    cardId: id,
+    text: 'Hi Cajola',
+  })
+  expect(response.status).toBe(201)
+  expect(mocks.create.mock.calls[0][0].data).toMatchObject({
+    text: '',
+    references: [],
+  })
+})
+it('requires response cards and media to be sent separately', async () => {
+  expect(
+    (
+      await post('/threads/boat:boat/messages', {
+        id,
+        cardId: id,
+        mediaIds: [id],
+      })
+    ).status,
+  ).toBe(400)
+  expect(mocks.create).not.toHaveBeenCalled()
+})
