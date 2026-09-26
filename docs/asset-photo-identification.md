@@ -5,8 +5,8 @@ research, review documents, choose connection research, then review/add connecti
 Each step occupies the full screen below 640px and a centered popup on desktop.
 The action bar stays visible; the content scrolls independently.
 
-The camera button opens Capacitor's native camera/library chooser (`CameraSource.Prompt`)
-or an image file picker on the web. Selecting a photo immediately starts identification.
+The camera button opens the system photo picker (`Camera.chooseFromGallery`), which
+includes a take-photo entry on supported platforms, or an image file picker on the web. Selecting a photo immediately starts identification.
 An optimized, metadata-stripped image is used for AI; the original photo and a
 display preview are attached privately when the asset is saved.
 The photo, asset record and confirmed connections are committed together; a

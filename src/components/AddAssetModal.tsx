@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core'
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import { Camera, CameraErrorCode } from '@capacitor/camera'
 import {
   ArrowLeft,
   ArrowRight,
@@ -561,29 +561,36 @@ export function AddAssetModal({
     }
     setBusy('camera')
     try {
-      const result = await Camera.getPhoto({
-        source: CameraSource.Prompt,
-        resultType: CameraResultType.Uri,
+      const { results } = await Camera.chooseFromGallery({
         quality: 100,
         correctOrientation: true,
-        saveToGallery: false,
+        includeMetadata: true,
       })
       if (!mounted.current) return
-      if (result.webPath) {
-        const blob = await (await fetch(result.webPath)).blob()
-        if (!mounted.current) return
-        selectPhoto(
-          new File([blob], `equipment-photo.${result.format || 'jpg'}`, {
-            type: blob.type || 'image/jpeg',
-          }),
-        )
+      const result = results[0]
+      if (!result?.webPath) {
         setBusy(null)
-      } else setBusy(null)
+        return
+      }
+      const blob = await (await fetch(result.webPath)).blob()
+      if (!mounted.current) return
+      const format = result.metadata?.format ?? 'jpeg'
+      selectPhoto(
+        new File([blob], `equipment-photo.${format}`, {
+          type: blob.type || 'image/jpeg',
+        }),
+      )
+      setBusy(null)
     } catch (error) {
       if (mounted.current) {
         setBusy(null)
-        if (!/cancel/i.test(String(error)))
-          setNotice(t('addAssetCameraUnavailable'))
+        const code = (error as { code?: string }).code
+        if (
+          code === CameraErrorCode.ChooseMediaCancelled ||
+          /cancel/i.test(String(error))
+        )
+          return
+        setNotice(t('addAssetCameraUnavailable'))
       }
     }
   }

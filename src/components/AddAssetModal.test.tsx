@@ -59,9 +59,8 @@ vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: mocks.native },
 }))
 vi.mock('@capacitor/camera', () => ({
-  Camera: { getPhoto: mocks.camera },
-  CameraSource: { Prompt: 'PROMPT' },
-  CameraResultType: { Uri: 'uri' },
+  Camera: { chooseFromGallery: mocks.camera },
+  CameraErrorCode: { ChooseMediaCancelled: 'OS-PLUG-CAMR-0020' },
 }))
 
 const photo = new File(['photo'], 'pump.jpg', { type: 'image/jpeg' })
@@ -319,7 +318,14 @@ it('keeps the photo attached and identifies when the user searches', async () =>
 })
 it('opens the OS chooser for a camera or existing photo on native devices', async () => {
   mocks.native.mockReturnValue(true)
-  mocks.camera.mockResolvedValue({ webPath: 'native-photo', format: 'jpeg' })
+  mocks.camera.mockResolvedValue({
+    results: [
+      {
+        webPath: 'native-photo',
+        metadata: { format: 'jpeg' },
+      },
+    ],
+  })
   vi.stubGlobal(
     'fetch',
     vi.fn().mockResolvedValue({
@@ -333,7 +339,11 @@ it('opens the OS chooser for a camera or existing photo on native devices', asyn
   click('Search')
   await waitFor(() => expect(mocks.identify).toHaveBeenCalled())
   expect(mocks.camera).toHaveBeenCalledWith(
-    expect.objectContaining({ source: 'PROMPT', saveToGallery: false }),
+    expect.objectContaining({
+      quality: 100,
+      correctOrientation: true,
+      includeMetadata: true,
+    }),
   )
 })
 it('continues without a model after identification fails and retains the photo', async () => {
