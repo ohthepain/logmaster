@@ -65,7 +65,7 @@ export function LanguageSelector({ className }: { className?: string }) {
           role="listbox"
           aria-label={t('language')}
           className={cn(
-            'absolute inset-x-0 top-[calc(100%+0.35rem)] mt-0 max-h-80 list-none overflow-y-auto rounded-xl border border-[var(--chip-line)] bg-[var(--surface-strong)] p-1 shadow-lg',
+            'absolute inset-x-0 bottom-[calc(100%+0.35rem)] max-h-[min(32rem,calc(100dvh-16rem))] list-none overflow-y-auto overscroll-contain rounded-xl border border-[var(--chip-line)] bg-[var(--surface-strong)] p-1 shadow-lg',
             POPUP_MENU_Z_CLASS,
           )}
         >
