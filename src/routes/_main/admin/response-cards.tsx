@@ -112,10 +112,13 @@ function ExpressionEditor({
               if (!additions.length) return
               run(async () => {
                 for (const phrase of additions)
-                  await apiJson(`${base}/expressions/${expression.id}/aliases`, {
-                    method: 'POST',
-                    body: JSON.stringify({ text: phrase }),
-                  })
+                  await apiJson(
+                    `${base}/expressions/${expression.id}/aliases`,
+                    {
+                      method: 'POST',
+                      body: JSON.stringify({ text: phrase }),
+                    },
+                  )
                 setAlias('')
               })
             }}

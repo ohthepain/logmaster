@@ -148,7 +148,9 @@ export function locationFailure(error: unknown): LocationFailure {
 function isHighQuality(position: PositionSnapshot) {
   const accuracy = position.accuracy
   return (
-    accuracy != null && Number.isFinite(accuracy) && accuracy <= HIGH_QUALITY_ACCURACY_M
+    accuracy != null &&
+    Number.isFinite(accuracy) &&
+    accuracy <= HIGH_QUALITY_ACCURACY_M
   )
 }
 
@@ -172,12 +174,18 @@ function removeWaiter(waiter: AcquisitionWaiter) {
   maybeStopNativeWatch()
 }
 
-function finishWaiterSuccess(waiter: AcquisitionWaiter, position: PositionSnapshot) {
+function finishWaiterSuccess(
+  waiter: AcquisitionWaiter,
+  position: PositionSnapshot,
+) {
   removeWaiter(waiter)
   waiter.resolve({ status: 'success', position })
 }
 
-function finishWaiterFailure(waiter: AcquisitionWaiter, status: LocationFailure) {
+function finishWaiterFailure(
+  waiter: AcquisitionWaiter,
+  status: LocationFailure,
+) {
   removeWaiter(waiter)
   waiter.resolve({ status })
 }
@@ -242,8 +250,7 @@ async function ensureNativeLocationPermission(): Promise<LocationPermission> {
   if (permission === 'prompt') {
     const requested = await Geolocation.requestPermissions()
     permission =
-      requested.location === 'granted' ||
-      requested.coarseLocation === 'granted'
+      requested.location === 'granted' || requested.coarseLocation === 'granted'
         ? 'granted'
         : 'denied'
   }

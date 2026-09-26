@@ -112,7 +112,8 @@ adminResponseCardsRoutes.post('/expressions/:id/aliases', async (c) => {
       language_normalized: { language: anchor.language, normalized },
     },
   })
-  if (existing?.groupId === anchor.groupId) return c.json({ expression: existing })
+  if (existing?.groupId === anchor.groupId)
+    return c.json({ expression: existing })
   const expression = existing
     ? await prisma.messagingExpression.update({
         where: { id: existing.id },
