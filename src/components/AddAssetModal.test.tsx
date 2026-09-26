@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   upload: vi.fn(),
   camera: vi.fn(),
   native: vi.fn(),
+  platform: vi.fn(() => 'web'),
   resolve: vi.fn(),
   brands: vi.fn(),
   catalogModels: vi.fn(),
@@ -56,7 +57,16 @@ vi.mock('../lib/boat-document-open', () => ({
   openBoatDocument: mocks.openDocument,
 }))
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { isNativePlatform: mocks.native },
+  Capacitor: {
+    isNativePlatform: mocks.native,
+    getPlatform: mocks.platform,
+  },
+  registerPlugin: () => ({}),
+}))
+vi.mock('../lib/native/logmaster-recent-photos', () => ({
+  supportsRecentPhotoPickerSheet: () => false,
+  listRecentPhotoThumbnails: vi.fn(),
+  loadRecentPhotoFile: vi.fn(),
 }))
 vi.mock('@capacitor/camera', () => ({
   Camera: { chooseFromGallery: mocks.camera },
@@ -318,6 +328,7 @@ it('keeps the photo attached and identifies when the user searches', async () =>
 })
 it('opens the OS chooser for a camera or existing photo on native devices', async () => {
   mocks.native.mockReturnValue(true)
+  mocks.platform.mockReturnValue('android')
   mocks.camera.mockResolvedValue({
     results: [
       {

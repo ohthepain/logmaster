@@ -23,6 +23,8 @@ export const productUiCopy = {
   equipmentSearch: 'Search',
   equipmentCamera: 'Take or choose a photo',
   equipmentCameraHint: 'A clear model label works best',
+  equipmentTakePhoto: 'Take photo',
+  equipmentRecentPhotos: 'Recent photos',
   equipmentBrand: 'Brand',
   equipmentModel: 'Model',
   equipmentNoModel: 'No model number',

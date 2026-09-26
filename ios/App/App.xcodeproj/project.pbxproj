@@ -14,6 +14,7 @@
 		AA0000050000000000000005 /* LogmasterLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000040000000000000004 /* LogmasterLiveActivityWidget.swift */; };
 		AA0000060000000000000006 /* LogmasterWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000050000000000000005 /* LogmasterWidgetsBundle.swift */; };
 		AA0000070000000000000007 /* LogmasterWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = AB0000070000000000000007 /* LogmasterWidgets.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		AA0000080000000000000008 /* LogmasterRecentPhotosPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000060000000000000006 /* LogmasterRecentPhotosPlugin.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
@@ -54,6 +55,7 @@
 		AB0000030000000000000003 /* LogmasterLiveActivityPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogmasterLiveActivityPlugin.swift; sourceTree = "<group>"; };
 		AB0000040000000000000004 /* LogmasterLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogmasterLiveActivityWidget.swift; sourceTree = "<group>"; };
 		AB0000050000000000000005 /* LogmasterWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogmasterWidgetsBundle.swift; sourceTree = "<group>"; };
+		AB0000060000000000000006 /* LogmasterRecentPhotosPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogmasterRecentPhotosPlugin.swift; sourceTree = "<group>"; };
 		AB0000060000000000000006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AB0000070000000000000007 /* LogmasterWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LogmasterWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
@@ -116,6 +118,7 @@
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				AB0000020000000000000002 /* LogmasterBridgeViewController.swift */,
 				AB0000030000000000000003 /* LogmasterLiveActivityPlugin.swift */,
+				AB0000060000000000000006 /* LogmasterRecentPhotosPlugin.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -272,6 +275,7 @@
 				AA0000010000000000000001 /* LogmasterActivityAttributes.swift in Sources */,
 				AA0000030000000000000003 /* LogmasterBridgeViewController.swift in Sources */,
 				AA0000040000000000000004 /* LogmasterLiveActivityPlugin.swift in Sources */,
+				AA0000080000000000000008 /* LogmasterRecentPhotosPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

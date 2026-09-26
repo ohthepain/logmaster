@@ -1,5 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { Camera, CameraErrorCode } from '@capacitor/camera'
+import { fileFromCameraMediaResult } from '../lib/camera-media-file'
+import { supportsRecentPhotoPickerSheet } from '../lib/native/logmaster-recent-photos'
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,6 +15,7 @@ import {
   Plus,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { EquipmentPhotoPickerSheet } from './EquipmentPhotoPickerSheet'
 import { EquipmentFlowDialog } from './EquipmentFlowDialog'
 import { EquipmentIdentityFields } from './EquipmentIdentityFields'
 import { AssetBrandLogo } from './AssetBrandLogo'
@@ -237,6 +240,7 @@ export function AddAssetModal({
     [installedAt, setInstalledAt] = useState('')
   const [photo, setPhoto] = useState<File>(),
     [preview, setPreview] = useState('')
+  const [photoPickerOpen, setPhotoPickerOpen] = useState(false)
   const [product, setProduct] = useState<CatalogProduct | null>(null)
   const [busy, setBusy] = useState<
     'camera' | 'identify' | 'lookup' | 'connections' | 'save' | null
@@ -554,11 +558,7 @@ export function AddAssetModal({
       if (!controller.signal.aborted && mounted.current) setBusy(null)
     }
   }
-  async function openCamera() {
-    if (!Capacitor.isNativePlatform()) {
-      input.current?.click()
-      return
-    }
+  async function openNativePhotoGallery() {
     setBusy('camera')
     try {
       const { results } = await Camera.chooseFromGallery({
@@ -572,14 +572,9 @@ export function AddAssetModal({
         setBusy(null)
         return
       }
-      const blob = await (await fetch(result.webPath)).blob()
+      const file = await fileFromCameraMediaResult(result)
       if (!mounted.current) return
-      const format = result.metadata?.format ?? 'jpeg'
-      selectPhoto(
-        new File([blob], `equipment-photo.${format}`, {
-          type: blob.type || 'image/jpeg',
-        }),
-      )
+      if (file) selectPhoto(file)
       setBusy(null)
     } catch (error) {
       if (mounted.current) {
@@ -593,6 +588,17 @@ export function AddAssetModal({
         setNotice(t('addAssetCameraUnavailable'))
       }
     }
+  }
+  function openCamera() {
+    if (!Capacitor.isNativePlatform()) {
+      input.current?.click()
+      return
+    }
+    if (supportsRecentPhotoPickerSheet()) {
+      setPhotoPickerOpen(true)
+      return
+    }
+    void openNativePhotoGallery()
   }
   function goToResults() {
     setStep('results')
@@ -1902,6 +1908,12 @@ export function AddAssetModal({
       {viewer && (
         <BoatDocumentViewerModal {...viewer} onClose={() => setViewer(null)} />
       )}
+      <EquipmentPhotoPickerSheet
+        open={photoPickerOpen}
+        onClose={() => setPhotoPickerOpen(false)}
+        onPick={(file) => selectPhoto(file)}
+        onError={(message) => setNotice(message)}
+      />
     </EquipmentFlowDialog>
   )
 }

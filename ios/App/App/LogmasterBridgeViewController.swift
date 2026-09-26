@@ -5,5 +5,6 @@ final class LogmasterBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
         bridge?.registerPluginInstance(LogmasterLiveActivityPlugin())
+        bridge?.registerPluginInstance(LogmasterRecentPhotosPlugin())
     }
 }
