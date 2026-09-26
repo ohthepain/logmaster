@@ -1619,11 +1619,14 @@ model MessagingCard {
 
 model MessagingExpression {
   id         String @id @default(uuid())
+  // Synonyms share a group and the same cards. Matching still uses each phrase.
+  groupId    String
   language   String
   text       String
   normalized String
   cards      MessagingCardLink[]
   @@unique([language, normalized])
+  @@index([groupId])
   @@map("messaging_expression")
 }
 

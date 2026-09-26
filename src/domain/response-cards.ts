@@ -31,6 +31,7 @@ export type ImageResponseCard = {
 }
 export type CardExpression = {
   id: string
+  groupId: string
   language: string
   text: string
   cards: CardSummary[]

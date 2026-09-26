@@ -12,16 +12,15 @@ import { cardSummary, uploadResponseCard } from '../messaging/cards'
 
 // Mounted after the platform-admin middleware in admin.ts.
 export const adminResponseCardsRoutes = new Hono()
-adminResponseCardsRoutes.use(
-  '*',
-  bodyLimit({ maxSize: MAX_CARD_BYTES + 64 * 1024 }),
-)
 adminResponseCardsRoutes.onError((error, c) => {
   if (error instanceof HTTPException)
     return c.json({ error: error.message }, error.status)
   if (error instanceof z.ZodError || error instanceof SyntaxError)
     return c.json({ error: 'Invalid response card request' }, 400)
-  console.error('[response-cards] admin request failed', { name: error.name })
+  console.error('[response-cards] admin request failed', {
+    name: error.name,
+    message: error.message,
+  })
   return c.json(
     { error: 'Could not save response cards. Please try again.' },
     503,
@@ -39,6 +38,20 @@ const expressionInput = z
   })
   .strict()
 const uuid = z.string().uuid()
+
+async function idsInGroup(expressionId: string) {
+  const expression = await prisma.messagingExpression.findUnique({
+    where: { id: expressionId },
+  })
+  if (!expression) return null
+  const groupId = expression.groupId || expressionId
+  const members = await prisma.messagingExpression.findMany({
+    where: { groupId },
+    select: { id: true },
+  })
+  return [...new Set(members.map((member) => member.id).concat(expressionId))]
+}
+
 adminResponseCardsRoutes.get('/', async (c) => {
   const language = z.enum(CARD_LANGUAGES).parse(c.req.query('language') ?? 'en')
   const [expressions, cards] = await Promise.all([
@@ -60,6 +73,7 @@ adminResponseCardsRoutes.get('/', async (c) => {
   return c.json({
     expressions: expressions.map((e) => ({
       id: e.id,
+      groupId: e.groupId,
       language: e.language,
       text: e.text,
       cards: e.cards.map((link) => cardSummary(link.card)),
@@ -70,12 +84,58 @@ adminResponseCardsRoutes.get('/', async (c) => {
 adminResponseCardsRoutes.post('/expressions', async (c) => {
   const { language, text } = expressionInput.parse(await c.req.json())
   const normalized = normalizeCardExpression(text)
+  const id = crypto.randomUUID()
   const expression = await prisma.messagingExpression.upsert({
     where: { language_normalized: { language, normalized } },
-    create: { language, text, normalized },
+    create: { id, groupId: id, language, text, normalized },
     update: { text },
   })
   return c.json({ expression })
+})
+adminResponseCardsRoutes.post('/expressions/:id/aliases', async (c) => {
+  const anchorId = uuid.parse(c.req.param('id'))
+  const { text } = z
+    .object({
+      text: expressionInput.shape.text,
+    })
+    .strict()
+    .parse(await c.req.json())
+  const anchor = await prisma.messagingExpression.findUnique({
+    where: { id: anchorId },
+    include: { cards: { select: { cardId: true } } },
+  })
+  if (!anchor) throw new HTTPException(404, { message: 'Expression not found' })
+  const normalized = normalizeCardExpression(text)
+  const cardIds = anchor.cards.map((link) => link.cardId)
+  const existing = await prisma.messagingExpression.findUnique({
+    where: {
+      language_normalized: { language: anchor.language, normalized },
+    },
+  })
+  if (existing?.groupId === anchor.groupId) return c.json({ expression: existing })
+  const expression = existing
+    ? await prisma.messagingExpression.update({
+        where: { id: existing.id },
+        data: { groupId: anchor.groupId, text },
+      })
+    : await prisma.messagingExpression.create({
+        data: {
+          groupId: anchor.groupId,
+          language: anchor.language,
+          text,
+          normalized,
+        },
+      })
+  if (existing)
+    await prisma.messagingCardLink.deleteMany({
+      where: { expressionId: expression.id },
+    })
+  if (cardIds.length)
+    await prisma.messagingCardLink.createMany({
+      data: cardIds.map((cardId) => ({ expressionId: expression.id, cardId })),
+      skipDuplicates: true,
+    })
+  return c.json({ expression }, existing ? 200 : 201)
 })
 adminResponseCardsRoutes.delete('/expressions/:id', async (c) => {
   await prisma.messagingExpression.deleteMany({
@@ -83,25 +143,31 @@ adminResponseCardsRoutes.delete('/expressions/:id', async (c) => {
   })
   return c.json({ ok: true })
 })
-adminResponseCardsRoutes.post('/expressions/:id/upload', async (c) => {
-  const expressionId = uuid.parse(c.req.param('id'))
-  if (
-    !(await prisma.messagingExpression.findUnique({
-      where: { id: expressionId },
-    }))
-  )
-    throw new HTTPException(404, { message: 'Expression not found' })
-  const body = await c.req.parseBody()
-  if (!(body.file instanceof File))
-    throw new HTTPException(400, { message: 'Choose an image file.' })
-  const card = await uploadResponseCard(body.file)
-  await prisma.messagingCardLink.upsert({
-    where: { expressionId_cardId: { expressionId, cardId: card.id } },
-    create: { expressionId, cardId: card.id },
-    update: {},
-  })
-  return c.json({ card: cardSummary(card) }, 201)
-})
+adminResponseCardsRoutes.post(
+  '/expressions/:id/upload',
+  // Only image uploads need this. Wrapping every request body fails for
+  // empty deletes: Node cannot rebuild that Request.
+  bodyLimit({ maxSize: MAX_CARD_BYTES + 64 * 1024 }),
+  async (c) => {
+    const expressionId = uuid.parse(c.req.param('id'))
+    if (
+      !(await prisma.messagingExpression.findUnique({
+        where: { id: expressionId },
+      }))
+    )
+      throw new HTTPException(404, { message: 'Expression not found' })
+    const body = await c.req.parseBody()
+    if (!(body.file instanceof File))
+      throw new HTTPException(400, { message: 'Choose an image file.' })
+    const card = await uploadResponseCard(body.file)
+    const ids = (await idsInGroup(expressionId)) ?? [expressionId]
+    await prisma.messagingCardLink.createMany({
+      data: ids.map((id) => ({ expressionId: id, cardId: card.id })),
+      skipDuplicates: true,
+    })
+    return c.json({ card: cardSummary(card) }, 201)
+  },
+)
 adminResponseCardsRoutes.put('/expressions/:id/cards/:cardId', async (c) => {
   const expressionId = uuid.parse(c.req.param('id')),
     cardId = uuid.parse(c.req.param('cardId'))
@@ -111,17 +177,19 @@ adminResponseCardsRoutes.put('/expressions/:id/cards/:cardId', async (c) => {
   ])
   if (!expression || !card)
     throw new HTTPException(404, { message: 'Card or expression not found' })
-  await prisma.messagingCardLink.upsert({
-    where: { expressionId_cardId: { expressionId, cardId } },
-    create: { expressionId, cardId },
-    update: {},
+  const ids = (await idsInGroup(expressionId)) ?? [expressionId]
+  await prisma.messagingCardLink.createMany({
+    data: ids.map((id) => ({ expressionId: id, cardId })),
+    skipDuplicates: true,
   })
   return c.json({ ok: true })
 })
 adminResponseCardsRoutes.delete('/expressions/:id/cards/:cardId', async (c) => {
+  const expressionId = uuid.parse(c.req.param('id'))
+  const ids = (await idsInGroup(expressionId)) ?? [expressionId]
   await prisma.messagingCardLink.deleteMany({
     where: {
-      expressionId: uuid.parse(c.req.param('id')),
+      expressionId: { in: ids },
       cardId: uuid.parse(c.req.param('cardId')),
     },
   })

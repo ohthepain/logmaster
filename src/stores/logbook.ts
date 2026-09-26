@@ -24,7 +24,7 @@ import {
 import {
   captureLogbookContext,
   fetchLogbookLocationContext,
-  readDevicePosition,
+  awaitFreshDevicePosition,
 } from '../lib/logbook-context'
 import { attachPlaceToEntryData } from '../lib/logbook-place'
 import { defaultTripTitle } from '../lib/trip-display'
@@ -356,7 +356,7 @@ async function captureEntryContext(input: NewEntryInput) {
     return { context, entryData }
   }
 
-  const gps = await readDevicePosition({ force: true })
+  const gps = await awaitFreshDevicePosition()
   if (gps.latitude == null || gps.longitude == null) {
     const entryData = await attachPlaceToEntryData(input.data, null, null)
     return {

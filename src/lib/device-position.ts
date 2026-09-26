@@ -13,6 +13,9 @@ type PositionListener = (position: PositionSnapshot) => void
 
 const CACHE_TTL_MS = 30_000
 const GEO_TIMEOUT_MS = 10_000
+/** Resolve native watch acquisition once horizontal accuracy is at or below this (meters). */
+const HIGH_QUALITY_ACCURACY_M = 65
+
 const listeners = new Set<PositionListener>()
 let cached: PositionSnapshot | null = null
 let cachedAt = 0
@@ -22,6 +25,15 @@ let nativeWatchId: string | null = null
 let watchSubscribers = 0
 let locationAccessEnabled = false
 let devFallbackLogged = false
+
+type AcquisitionWaiter = {
+  resolve: (result: DevicePositionResult) => void
+  best: PositionSnapshot | null
+  timeoutId: ReturnType<typeof setTimeout>
+}
+
+const acquisitionWaiters = new Set<AcquisitionWaiter>()
+let backgroundRefinement: Promise<void> | null = null
 
 function freshTimestamp() {
   return new Date().toISOString()
@@ -133,6 +145,156 @@ export function locationFailure(error: unknown): LocationFailure {
   return 'unavailable'
 }
 
+function isHighQuality(position: PositionSnapshot) {
+  const accuracy = position.accuracy
+  return (
+    accuracy != null && Number.isFinite(accuracy) && accuracy <= HIGH_QUALITY_ACCURACY_M
+  )
+}
+
+function shouldKeepNativeWatch() {
+  if (acquisitionWaiters.size > 0) return true
+  if (locationAccessEnabled && watchSubscribers > 0) return true
+  if (backgroundRefinement != null) return true
+  return false
+}
+
+function maybeStopNativeWatch() {
+  if (shouldKeepNativeWatch() || nativeWatchId == null) return
+  const id = nativeWatchId
+  nativeWatchId = null
+  void Geolocation.clearWatch({ id })
+}
+
+function removeWaiter(waiter: AcquisitionWaiter) {
+  clearTimeout(waiter.timeoutId)
+  acquisitionWaiters.delete(waiter)
+  maybeStopNativeWatch()
+}
+
+function finishWaiterSuccess(waiter: AcquisitionWaiter, position: PositionSnapshot) {
+  removeWaiter(waiter)
+  waiter.resolve({ status: 'success', position })
+}
+
+function finishWaiterFailure(waiter: AcquisitionWaiter, status: LocationFailure) {
+  removeWaiter(waiter)
+  waiter.resolve({ status })
+}
+
+function handleNativeWatchUpdate(position: {
+  coords: {
+    latitude: number
+    longitude: number
+    accuracy: number
+    heading: number | null
+  }
+  timestamp: number
+}) {
+  if (devPositionOverride) return
+  const snapshot = toPositionSnapshot(position)
+  publish(snapshot)
+
+  for (const waiter of [...acquisitionWaiters]) {
+    if (
+      !waiter.best ||
+      (snapshot.accuracy ?? Number.POSITIVE_INFINITY) <
+        (waiter.best.accuracy ?? Number.POSITIVE_INFINITY)
+    ) {
+      waiter.best = snapshot
+    }
+    if (isHighQuality(snapshot)) {
+      finishWaiterSuccess(waiter, snapshot)
+    }
+  }
+}
+
+function handleNativeWatchError(error: unknown) {
+  const failure = locationFailure(error)
+  if (failure !== 'denied') return
+  for (const waiter of [...acquisitionWaiters]) {
+    finishWaiterFailure(waiter, failure)
+  }
+}
+
+async function ensureNativeWatchStarted() {
+  if (nativeWatchId != null || !Capacitor.isNativePlatform()) {
+    return
+  }
+
+  const id = await Geolocation.watchPosition(
+    { enableHighAccuracy: true },
+    (position, error) => {
+      if (error) {
+        handleNativeWatchError(error)
+        return
+      }
+      if (!position) return
+      handleNativeWatchUpdate(position)
+    },
+  )
+  nativeWatchId = id
+  maybeStopNativeWatch()
+}
+
+async function ensureNativeLocationPermission(): Promise<LocationPermission> {
+  let permission = await checkLocationPermission()
+  if (permission === 'prompt') {
+    const requested = await Geolocation.requestPermissions()
+    permission =
+      requested.location === 'granted' ||
+      requested.coarseLocation === 'granted'
+        ? 'granted'
+        : 'denied'
+  }
+  return permission
+}
+
+async function registerAcquisitionWaiter(): Promise<DevicePositionResult> {
+  const result = new Promise<DevicePositionResult>((resolve) => {
+    const waiter: AcquisitionWaiter = {
+      resolve,
+      best: null,
+      timeoutId: setTimeout(() => {
+        if (!acquisitionWaiters.has(waiter)) return
+        if (waiter.best) {
+          finishWaiterSuccess(waiter, waiter.best)
+        } else {
+          finishWaiterFailure(waiter, 'timeout')
+        }
+      }, GEO_TIMEOUT_MS),
+    }
+    acquisitionWaiters.add(waiter)
+  })
+  await ensureNativeWatchStarted()
+  return result
+}
+
+async function acquireNativePositionViaWatch(options?: {
+  onLocating?: () => void
+}): Promise<DevicePositionResult> {
+  const permission = await ensureNativeLocationPermission()
+  if (permission !== 'granted') {
+    return { status: permission === 'denied' ? 'denied' : 'unavailable' }
+  }
+  options?.onLocating?.()
+  return registerAcquisitionWaiter()
+}
+
+function startBackgroundRefinement() {
+  if (backgroundRefinement) return
+  backgroundRefinement = (async () => {
+    try {
+      const permission = await ensureNativeLocationPermission()
+      if (permission !== 'granted') return
+      await registerAcquisitionWaiter()
+    } finally {
+      backgroundRefinement = null
+      maybeStopNativeWatch()
+    }
+  })()
+}
+
 /** Checks permission without triggering a system prompt. */
 export async function checkLocationPermission(): Promise<LocationPermission> {
   if (devPositionOverride) return 'granted'
@@ -174,6 +336,13 @@ function requestPosition(
   }).catch((error: unknown) => ({ status: locationFailure(error) }))
 }
 
+function staleNativeCacheSnapshot(): PositionSnapshot | null {
+  if (!Capacitor.isNativePlatform() || !cached || !isResolvedPosition(cached)) {
+    return null
+  }
+  return cloneCached(cached)
+}
+
 /** A real location result: never substitutes a development fallback for failure. */
 export async function requestDevicePosition(
   onLocating?: () => void,
@@ -183,26 +352,12 @@ export async function requestDevicePosition(
   try {
     let result: DevicePositionResult
     if (Capacitor.isNativePlatform()) {
-      let permission = await checkLocationPermission()
-      if (permission === 'prompt') {
-        const requested = await Geolocation.requestPermissions()
-        permission =
-          requested.location === 'granted' ||
-          requested.coarseLocation === 'granted'
-            ? 'granted'
-            : 'denied'
+      const stale = staleNativeCacheSnapshot()
+      if (stale) {
+        startBackgroundRefinement()
+        return { status: 'success', position: stale }
       }
-      if (permission !== 'granted')
-        return { status: permission === 'denied' ? 'denied' : 'unavailable' }
-      onLocating?.()
-      const position = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: GEO_TIMEOUT_MS,
-      })
-      result = {
-        status: 'success',
-        position: toPositionSnapshot(position),
-      }
+      result = await acquireNativePositionViaWatch({ onLocating })
     } else {
       if (
         typeof navigator === 'undefined' ||
@@ -285,6 +440,30 @@ function fallbackOrUnavailable(detail?: string): PositionSnapshot {
   return unavailablePosition()
 }
 
+/** Blocks until a new native watch fix (or web one-shot); never returns stale cache on native. */
+export async function awaitFreshDevicePosition(): Promise<PositionSnapshot> {
+  const override = devOverrideSnapshot()
+  if (override) return override
+
+  const result = await requestDevicePositionForFresh()
+  return result.status === 'success'
+    ? result.position
+    : fallbackOrUnavailable(result.status)
+}
+
+async function requestDevicePositionForFresh(): Promise<DevicePositionResult> {
+  const override = devOverrideSnapshot()
+  if (override) return { status: 'success', position: override }
+  try {
+    if (Capacitor.isNativePlatform()) {
+      return acquireNativePositionViaWatch({})
+    }
+    return requestDevicePosition()
+  } catch (error) {
+    return { status: locationFailure(error) }
+  }
+}
+
 export function isLocationAccessEnabled() {
   return locationAccessEnabled
 }
@@ -299,7 +478,7 @@ export function setLocationAccessEnabled(enabled: boolean) {
     }
     return
   }
-  stopWatches()
+  stopWatchIfIdle()
 }
 
 async function resolveDevicePosition(): Promise<PositionSnapshot> {
@@ -309,39 +488,13 @@ async function resolveDevicePosition(): Promise<PositionSnapshot> {
     : fallbackOrUnavailable(result.status)
 }
 
-async function ensureNativeWatch() {
-  if (
-    !locationAccessEnabled ||
-    nativeWatchId != null ||
-    typeof window === 'undefined' ||
-    !Capacitor.isNativePlatform()
-  ) {
-    return
-  }
-
-  nativeWatchId = await Geolocation.watchPosition(
-    { enableHighAccuracy: true },
-    (position, error) => {
-      if (error || devPositionOverride || !position) return
-      const heading = position.coords.heading
-      publish({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy: position.coords.accuracy,
-        heading: heading != null && Number.isFinite(heading) ? heading : null,
-        timestamp: new Date(position.timestamp).toISOString(),
-      })
-    },
-  )
-}
-
 function ensureWatch() {
   if (!locationAccessEnabled) {
     return
   }
 
   if (Capacitor.isNativePlatform()) {
-    void ensureNativeWatch()
+    void ensureNativeWatchStarted()
     return
   }
 
@@ -359,12 +512,7 @@ function ensureWatch() {
   )
 }
 
-function stopWatches() {
-  if (nativeWatchId != null) {
-    void Geolocation.clearWatch({ id: nativeWatchId })
-    nativeWatchId = null
-  }
-
+function stopWebWatch() {
   if (watchId == null || typeof navigator === 'undefined') {
     return
   }
@@ -373,20 +521,34 @@ function stopWatches() {
 }
 
 function stopWatchIfIdle() {
-  if (watchSubscribers > 0 && locationAccessEnabled) {
-    return
+  if (Capacitor.isNativePlatform()) {
+    maybeStopNativeWatch()
+  } else if (!(watchSubscribers > 0 && locationAccessEnabled)) {
+    stopWebWatch()
   }
-  stopWatches()
 }
 
 export async function readDevicePosition(options?: {
   force?: boolean
+  awaitFresh?: boolean
 }): Promise<PositionSnapshot> {
   const override = devOverrideSnapshot()
   if (override) return override
 
+  if (options?.awaitFresh) {
+    return awaitFreshDevicePosition()
+  }
+
   if (!options?.force && isFresh() && cached) {
     return cloneCached(cached)
+  }
+
+  if (options?.force) {
+    const stale = staleNativeCacheSnapshot()
+    if (stale) {
+      startBackgroundRefinement()
+      return stale
+    }
   }
 
   if (!options?.force && inflight) {
@@ -430,4 +592,23 @@ export function subscribeToDevicePosition(
 
 export function getCachedDevicePosition() {
   return cached
+}
+
+/** Clears in-memory GPS state between unit tests. */
+export function resetDevicePositionForTests() {
+  listeners.clear()
+  cached = null
+  cachedAt = 0
+  inflight = null
+  watchId = null
+  nativeWatchId = null
+  watchSubscribers = 0
+  locationAccessEnabled = false
+  devFallbackLogged = false
+  devPositionOverride = null
+  for (const waiter of acquisitionWaiters) {
+    clearTimeout(waiter.timeoutId)
+  }
+  acquisitionWaiters.clear()
+  backgroundRefinement = null
 }

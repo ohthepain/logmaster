@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   clearDevPositionOverride,
   readDevicePosition,
+  resetDevicePositionForTests,
   setDevPositionOverride,
   setLocationAccessEnabled,
   subscribeToDevicePosition,
@@ -24,8 +25,7 @@ function stubGeolocation(
 
 describe('dev position override', () => {
   afterEach(() => {
-    clearDevPositionOverride()
-    setLocationAccessEnabled(false)
+    resetDevicePositionForTests()
     vi.restoreAllMocks()
   })
 
@@ -62,8 +62,7 @@ describe('dev position override', () => {
 
 describe('location access gate', () => {
   afterEach(() => {
-    clearDevPositionOverride()
-    setLocationAccessEnabled(false)
+    resetDevicePositionForTests()
     vi.restoreAllMocks()
   })
 
@@ -110,14 +109,19 @@ describe('location access gate', () => {
   })
 
   it('requests geolocation after recording starts', async () => {
-    const geolocation = stubGeolocation((_success, error) => {
-      error?.({
-        code: 1,
-        message: 'denied',
-        PERMISSION_DENIED: 1,
-        POSITION_UNAVAILABLE: 2,
-        TIMEOUT: 3,
-      })
+    const geolocation = stubGeolocation((success) => {
+      success({
+        coords: {
+          latitude: 51.5,
+          longitude: -0.12,
+          accuracy: 12,
+          heading: null,
+          altitude: null,
+          altitudeAccuracy: null,
+          speed: null,
+        },
+        timestamp: Date.now(),
+      } as GeolocationPosition)
     })
     setLocationAccessEnabled(true)
 

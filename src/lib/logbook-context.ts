@@ -1,6 +1,6 @@
 import type { WeatherSnapshot } from '../domain/logbook'
 import { getAppOrigin } from './app-origin'
-import { readDevicePosition } from './device-position'
+import { awaitFreshDevicePosition, readDevicePosition } from './device-position'
 
 type PositionSnapshot = {
   latitude: number | null
@@ -25,6 +25,7 @@ export async function getCurrentPosition(options?: {
 }
 
 export {
+  awaitFreshDevicePosition,
   clearDevPositionOverride,
   getDevPositionOverride,
   isLocationAccessEnabled,
@@ -104,7 +105,7 @@ export async function captureLogbookContext(positionOverride?: {
     }
   }
 
-  const gps = await getCurrentPosition({ force: true })
+  const gps = await awaitFreshDevicePosition()
 
   if (gps.latitude == null || gps.longitude == null) {
     return {

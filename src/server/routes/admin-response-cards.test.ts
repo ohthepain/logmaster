@@ -7,10 +7,13 @@ const mocks = vi.hoisted(() => ({
   expressions: vi.fn(),
   cards: vi.fn(),
   upsertExpression: vi.fn(),
+  createExpression: vi.fn(),
+  updateExpression: vi.fn(),
   deleteExpression: vi.fn(),
   findExpression: vi.fn(),
   findCard: vi.fn(),
   link: vi.fn(),
+  linkMany: vi.fn(),
   unlink: vi.fn(),
   retire: vi.fn(),
   transaction: vi.fn(),
@@ -28,6 +31,8 @@ vi.mock('../db', () => ({
     messagingExpression: {
       findMany: mocks.expressions,
       upsert: mocks.upsertExpression,
+      create: mocks.createExpression,
+      update: mocks.updateExpression,
       deleteMany: mocks.deleteExpression,
       findUnique: mocks.findExpression,
     },
@@ -36,7 +41,11 @@ vi.mock('../db', () => ({
       findFirst: mocks.findCard,
       updateMany: mocks.retire,
     },
-    messagingCardLink: { upsert: mocks.link, deleteMany: mocks.unlink },
+    messagingCardLink: {
+      upsert: mocks.link,
+      createMany: mocks.linkMany,
+      deleteMany: mocks.unlink,
+    },
     $transaction: mocks.transaction,
   },
 }))
@@ -95,20 +104,58 @@ it('lists the selected language and normalizes newly added phrases', async () =>
       .status,
   ).toBe(400)
 })
+it('adds synonyms to the same phrase group and copies its cards', async () => {
+  const aliasId = '21a0c37e-921c-4bd0-a35f-b72197befe2f'
+  mocks.findExpression
+    .mockResolvedValueOnce({
+      id,
+      groupId: id,
+      language: 'en',
+      cards: [{ cardId }],
+    })
+    .mockResolvedValueOnce(null)
+  mocks.createExpression.mockResolvedValue({
+    id: aliasId,
+    groupId: id,
+    text: 'okay',
+  })
+  expect(
+    (await request(`/expressions/${id}/aliases`, 'POST', { text: ' okay ' }))
+      .status,
+  ).toBe(201)
+  expect(mocks.createExpression).toHaveBeenCalledWith({
+    data: {
+      groupId: id,
+      language: 'en',
+      text: 'okay',
+      normalized: 'okay',
+    },
+  })
+  expect(mocks.linkMany).toHaveBeenCalledWith({
+    data: [{ expressionId: aliasId, cardId }],
+    skipDuplicates: true,
+  })
+  expect(mocks.updateExpression).not.toHaveBeenCalled()
+})
+it('deletes an expression and leaves its cards in the library', async () => {
+  expect((await request(`/expressions/${id}`, 'DELETE')).status).toBe(200)
+  expect(mocks.deleteExpression).toHaveBeenCalledWith({ where: { id } })
+  expect(mocks.retire).not.toHaveBeenCalled()
+})
 it('links existing cards without duplicating assets and supports unlinking', async () => {
   expect(
     (await request(`/expressions/${id}/cards/${cardId}`, 'PUT')).status,
   ).toBe(200)
-  expect(mocks.link.mock.calls[0][0].create).toEqual({
-    expressionId: id,
-    cardId,
+  expect(mocks.linkMany).toHaveBeenCalledWith({
+    data: [{ expressionId: id, cardId }],
+    skipDuplicates: true,
   })
   expect(mocks.upload).not.toHaveBeenCalled()
   expect(
     (await request(`/expressions/${id}/cards/${cardId}`, 'DELETE')).status,
   ).toBe(200)
   expect(mocks.unlink).toHaveBeenCalledWith({
-    where: { expressionId: id, cardId },
+    where: { expressionId: { in: [id] }, cardId },
   })
 })
 it('retires a card and removes all associations atomically, without deleting assets', async () => {
