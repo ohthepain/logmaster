@@ -19,6 +19,10 @@ import {
   ResourceRefreshButton,
 } from './NotificationBellToggle'
 import type { NotificationTopic } from '../domain/notifications'
+import {
+  ResourcePeopleHeader,
+  resourcePeopleRowClassName,
+} from './ResourcePeopleHeader'
 
 type InviteMemberModalProps = {
   open: boolean
@@ -141,6 +145,7 @@ export function InviteMemberModal({
 }
 
 type ResourceMembersTabProps = {
+  compact?: boolean
   members: ResourceMember[]
   pendingInvites: MemberInvite[]
   canManageMembers?: boolean
@@ -149,7 +154,7 @@ type ResourceMembersTabProps = {
   notificationBoatId?: string
   notificationOrgId?: string
   onInvite: () => void
-  onCreateLink: () => void
+  onCreateLink?: () => void
   onRoleChange: (member: ResourceMember, role: OrgMemberRole) => void
   onRemove: (member: ResourceMember) => void
   onCancelInvite: (invite: MemberInvite) => void
@@ -168,6 +173,7 @@ async function copyInviteUrl(url: string) {
 }
 
 export function ResourceMembersTab({
+  compact = false,
   members,
   pendingInvites,
   canManageMembers = true,
@@ -186,86 +192,129 @@ export function ResourceMembersTab({
 }: ResourceMembersTabProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const [editing, setEditing] = useState(false)
+  const showManagement = canManageMembers && (!compact || editing)
   const [resendingInviteId, setResendingInviteId] = useState<string | null>(
     null,
   )
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-            {t(members.length === 1 ? 'memberCountOne' : 'memberCountOther', {
-              count: members.length,
-            })}
-            {pendingInvites.length > 0
-              ? ` ${t('pendingCount', { count: pendingInvites.length })}`
-              : ''}
-          </p>
-          {notificationTopic ? (
-            <NotificationBellToggle
-              topic={notificationTopic}
-              boatId={notificationBoatId}
-              orgId={notificationOrgId}
-            />
-          ) : null}
-        </div>
-        {canManageMembers || onRefresh ? (
-          <div className="flex flex-wrap items-center gap-3">
-            {canManageMembers ? (
-              <>
-                <button
-                  type="button"
-                  onClick={onCreateLink}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
-                >
-                  <Link2 className="size-4" />
-                  {t('inviteLink')}
-                </button>
-                <button
-                  type="button"
-                  onClick={onInvite}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
-                >
-                  <UserPlus className="size-4" />
-                  {t('invite')}
-                </button>
-              </>
-            ) : null}
-            {onRefresh ? (
-              <ResourceRefreshButton
-                onRefresh={onRefresh}
-                refreshing={refreshing}
+    <div className={compact ? '-mx-3 sm:-mx-4' : undefined}>
+      {compact ? (
+        <ResourcePeopleHeader
+          title={t('members')}
+          description={
+            <>
+              {t(members.length === 1 ? 'memberCountOne' : 'memberCountOther', {
+                count: members.length,
+              })}
+              {pendingInvites.length > 0
+                ? ` ${t('pendingCount', { count: pendingInvites.length })}`
+                : ''}
+            </>
+          }
+          boatId={notificationBoatId}
+          topic={notificationTopic}
+          editing={editing}
+          onEdit={canManageMembers ? () => setEditing(!editing) : undefined}
+          onAdd={canManageMembers ? onInvite : undefined}
+          addLabel={t('invite')}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
+        />
+      ) : (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
+              {t(members.length === 1 ? 'memberCountOne' : 'memberCountOther', {
+                count: members.length,
+              })}
+              {pendingInvites.length > 0
+                ? ` ${t('pendingCount', { count: pendingInvites.length })}`
+                : ''}
+            </p>
+            {notificationTopic ? (
+              <NotificationBellToggle
+                topic={notificationTopic}
+                boatId={notificationBoatId}
+                orgId={notificationOrgId}
               />
             ) : null}
           </div>
-        ) : null}
-      </div>
+          {canManageMembers || onRefresh ? (
+            <div className="flex flex-wrap items-center gap-3">
+              {canManageMembers ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={onCreateLink}
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
+                  >
+                    <Link2 className="size-4" />
+                    {t('inviteLink')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onInvite}
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
+                  >
+                    <UserPlus className="size-4" />
+                    {t('invite')}
+                  </button>
+                </>
+              ) : null}
+              {onRefresh ? (
+                <ResourceRefreshButton
+                  onRefresh={onRefresh}
+                  refreshing={refreshing}
+                />
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {!canManageMembers ? (
-        <p className="mb-4 text-sm text-[var(--sea-ink-soft)]">
+        <p
+          className={cn(
+            'mb-4 text-sm text-[var(--sea-ink-soft)]',
+            compact && 'px-3 sm:px-4',
+          )}
+        >
           {t('onlyAdminsManageMembers')}
         </p>
       ) : null}
 
       {members.length === 0 && pendingInvites.length === 0 ? (
-        <p className="text-sm text-[var(--sea-ink-soft)]">
+        <p
+          className={cn(
+            'text-sm text-[var(--sea-ink-soft)]',
+            compact && 'px-3 sm:px-4',
+          )}
+        >
           {t('noMembersYet')}
         </p>
       ) : (
-        <ul className="m-0 list-none space-y-2 p-0">
+        <ul className={cn('m-0 list-none p-0', !compact && 'space-y-2')}>
           {members.map((member) => {
             const profile = (
               <>
                 <CrewAvatar
                   name={member.user.name}
                   imageUrl={profilePhotoUrl(member.user.image)}
-                  className="size-11"
+                  className={
+                    compact ? 'size-10 !rounded-full !border-0' : 'size-11'
+                  }
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="m-0 truncate text-sm font-semibold text-[var(--sea-ink)]">
+                  <p
+                    className={cn(
+                      'm-0 font-semibold text-[var(--sea-ink)]',
+                      compact ? 'text-base' : 'truncate text-sm',
+                    )}
+                  >
                     {member.user.name}
-                    {member.isOwner ? (
+                    {member.isOwner && !compact ? (
                       <span className="ml-2 text-xs font-medium text-[var(--sea-ink-soft)]">
                         {t('roleOwner')}
                       </span>
@@ -313,28 +362,48 @@ export function ResourceMembersTab({
                     : undefined
                 }
                 className={cn(
-                  'flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3',
+                  compact
+                    ? `${resourcePeopleRowClassName} flex-wrap`
+                    : 'flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3',
                   memberDetailOrgId &&
                     member.contactId &&
                     'cursor-pointer transition hover:bg-[var(--link-bg-hover)]',
                 )}
               >
-                <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div
+                  className={cn(
+                    'flex min-w-0 flex-1 items-center gap-3',
+                    compact &&
+                      showManagement &&
+                      !member.isOwner &&
+                      'basis-full',
+                  )}
+                >
                   {profile}
                 </div>
-                {member.isOwner || !canManageMembers ? (
-                  <span className="rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink-soft)]">
+                {member.isOwner || !showManagement ? (
+                  <span
+                    className={
+                      compact
+                        ? 'shrink-0 text-sm text-[var(--sea-ink-soft)]'
+                        : 'rounded-full border border-[var(--chip-line)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink-soft)]'
+                    }
+                  >
                     {translateMemberRole(member.role, t)}
                   </span>
                 ) : (
                   <>
                     <select
+                      aria-label={`${t('edit')} ${member.user.name}`}
                       value={member.role}
                       onClick={(event) => event.stopPropagation()}
                       onChange={(e) =>
                         onRoleChange(member, e.target.value as OrgMemberRole)
                       }
-                      className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--sea-ink)]"
+                      className={cn(
+                        'rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--sea-ink)]',
+                        compact && 'ml-13',
+                      )}
                     >
                       {Object.entries(MEMBER_ROLE_LABELS).map(([value]) => (
                         <option key={value} value={value}>
@@ -361,7 +430,11 @@ export function ResourceMembersTab({
           {pendingInvites.map((invite) => (
             <li
               key={invite.id}
-              className="flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-3"
+              className={
+                compact
+                  ? `${resourcePeopleRowClassName} flex-wrap bg-[var(--chip-bg)]/40`
+                  : 'flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-3'
+              }
             >
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <div className="flex size-11 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]">
@@ -382,7 +455,7 @@ export function ResourceMembersTab({
                   </p>
                 </div>
               </div>
-              {canManageMembers ? (
+              {showManagement ? (
                 <>
                   {invite.inviteeEmail && onResendInvite ? (
                     <button

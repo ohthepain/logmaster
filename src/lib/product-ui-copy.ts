@@ -1,6 +1,8 @@
 // Included as English fallbacks in every locale; the translation admin can
 // override these strings immediately without a native release.
 export const productUiCopy = {
+  messages: 'Messages',
+  done: 'Done',
   equipmentTitle: 'Add Equipment',
   equipmentStage: 'Equipment',
   equipmentDocuments: 'Documents',

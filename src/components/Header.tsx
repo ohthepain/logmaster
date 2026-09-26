@@ -1,4 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router'
+import { ChevronLeft } from 'lucide-react'
 import { cn } from '../lib/cn'
 import DevModeToggle from './DevModeToggle'
 import { DevComponentLabel } from './DevComponentLabel'
@@ -47,7 +48,9 @@ export function AppHeaderBrand({
 }
 
 export default function Header({ mapOverlay = false }: HeaderProps) {
+  const { t } = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const isBoatDetail = /^\/boats\/[^/]+\/?$/.test(pathname)
   const hideBrand = mapOverlay || pathname === '/' || pathname === '/map'
 
   return (
@@ -57,7 +60,9 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
         'top-0 z-50 shrink-0 pt-[var(--lm-safe-top)]',
         mapOverlay
           ? 'pointer-events-none fixed inset-x-0 bg-transparent'
-          : 'sticky bg-transparent',
+          : isBoatDetail
+            ? 'relative bg-transparent'
+            : 'sticky bg-transparent',
       )}
     >
       <DevComponentLabel
@@ -72,7 +77,17 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
       >
         {hideBrand ? null : (
           <div className="pointer-events-auto">
-            <AppHeaderBrand mapOverlay={mapOverlay} />
+            {isBoatDetail ? (
+              <Link
+                to="/boats"
+                className="inline-flex min-h-11 items-center gap-1 text-sm text-[var(--sea-ink-soft)] no-underline hover:text-[var(--sea-ink)]"
+              >
+                <ChevronLeft className="size-5" aria-hidden />
+                {t('boats')}
+              </Link>
+            ) : (
+              <AppHeaderBrand mapOverlay={mapOverlay} />
+            )}
           </div>
         )}
         <div
@@ -80,9 +95,13 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
           data-map-touch-zone
         >
           <DevModeToggle mapOverlay={mapOverlay} />
-          {!mapOverlay ? <ThemeToggle /> : null}
-          <NotificationInbox mapOverlay={mapOverlay} />
-          <MessagesButton mapOverlay={mapOverlay} />
+          {!isBoatDetail ? (
+            <>
+              {!mapOverlay ? <ThemeToggle /> : null}
+              <NotificationInbox mapOverlay={mapOverlay} />
+              <MessagesButton mapOverlay={mapOverlay} />
+            </>
+          ) : null}
           <UserMenu mapOverlay={mapOverlay} />
         </div>
       </div>

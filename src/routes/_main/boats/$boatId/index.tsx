@@ -29,7 +29,6 @@ import type {
 import type { OrgMemberRole } from '../../../../domain/org'
 import {
   cancelBoatInvite,
-  createBoatInviteLink,
   fetchBoat,
   fetchBoatMembers,
   inviteBoatMember,
@@ -45,7 +44,7 @@ import {
 } from '../../../../lib/boat-contacts-api'
 import type { BoatIconId } from '../../../../lib/boat-icons'
 import { isBoatIconId } from '../../../../lib/boat-icons'
-import { cn } from '../../../../lib/cn'
+import { ScrollingTabs } from '../../../../components/ScrollingTabs'
 import { useTranslation } from '../../../../lib/i18n'
 import type { TranslationKey } from '../../../../lib/i18n'
 import { MessagesButton } from '../../../../components/MessagesButton'
@@ -247,6 +246,7 @@ function BoatDetailPage() {
         return area ? contactGrants.includes(area) : false
       })
     : [
+        'members',
         'photos',
         'documents',
         'assets',
@@ -254,7 +254,6 @@ function BoatDetailPage() {
         'accounting',
         ...(boat.orgId ? (['shares'] as const) : []),
         'contacts',
-        'members',
       ]
   const tab: BoatDetailTab = tabCandidates.includes(tabRaw)
     ? tabRaw
@@ -272,14 +271,6 @@ function BoatDetailPage() {
 
   return (
     <main className="page-wrap px-3 pb-24 pt-4 sm:px-4">
-      <p className="mb-2 text-sm">
-        <Link
-          to="/boats"
-          className="text-[var(--sea-ink-soft)] no-underline hover:text-[var(--sea-ink)]"
-        >
-          ← {t('boats')}
-        </Link>
-      </p>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <BoatIconSelector
@@ -302,48 +293,41 @@ function BoatDetailPage() {
             {t('orgNamed', { name: boat.orgName })}
           </Link>
         ) : null}
-        <div className="mt-1 flex shrink-0 items-start gap-2 sm:mt-2">
-          <MessagesButton
-            threadId={`boat:${boat.id}`}
-            className="size-9"
-            ariaLabel={`Chat for ${boat.name}`}
-          />
-          <NotificationBellToggle
-            topic="BOAT_TRIPS_COMPLETED"
-            boatId={boat.id}
-            label={t('completedTrips')}
-          />
-        </div>
+        {tab !== 'members' && tab !== 'contacts' ? (
+          <div className="mt-1 flex shrink-0 items-start gap-2 sm:mt-2">
+            <MessagesButton
+              threadId={`boat:${boat.id}`}
+              className="size-9"
+              ariaLabel={`Chat for ${boat.name}`}
+            />
+            <NotificationBellToggle
+              topic="BOAT_TRIPS_COMPLETED"
+              boatId={boat.id}
+              label={t('completedTrips')}
+            />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="-mx-3 mt-6 sm:-mx-4">
+        <ScrollingTabs
+          label={t('boatSections')}
+          tabs={tabCandidates.map((value) => ({
+            value,
+            label: t(tabLabels[value]),
+          }))}
+          value={tab}
+          onChange={setTab}
+          panelId="boat-section-panel"
+        />
       </div>
 
       <div
-        role="tablist"
-        aria-label={t('boatSections')}
-        className="mt-8 flex flex-wrap gap-2 border-b border-[var(--line)] pb-3"
+        id="boat-section-panel"
+        role="tabpanel"
+        aria-label={t(tabLabels[tab])}
+        className="mt-6 min-w-0"
       >
-        {tabCandidates.map((value) => {
-          const selected = tab === value
-          return (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              onClick={() => setTab(value)}
-              className={cn(
-                'rounded-full px-4 py-2 text-sm font-semibold transition',
-                selected
-                  ? 'bg-[var(--btn-bg)] text-[var(--btn-text)]'
-                  : 'border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] hover:bg-[var(--link-bg-hover)]',
-              )}
-            >
-              {t(tabLabels[value])}
-            </button>
-          )
-        })}
-      </div>
-
-      <div role="tabpanel" className="mt-6 min-w-0 overflow-x-hidden">
         {tab === 'photos' ? (
           <BoatPhotosTab
             boat={boat}
@@ -375,6 +359,7 @@ function BoatDetailPage() {
         ) : null}
         {tab === 'contacts' ? (
           <ResourceContactsTab
+            compact
             contacts={contacts}
             canManage={canManageMembers}
             notificationTopic="BOAT_CONTACTS"
@@ -406,6 +391,7 @@ function BoatDetailPage() {
         ) : null}
         {tab === 'members' ? (
           <ResourceMembersTab
+            compact
             members={members}
             pendingInvites={pendingInvites}
             canManageMembers={canManageMembers}
@@ -414,20 +400,6 @@ function BoatDetailPage() {
             onRefresh={refreshMembers}
             refreshing={membersRefreshing}
             onInvite={() => setInviteOpen(true)}
-            onCreateLink={async () => {
-              try {
-                const invite = await createBoatInviteLink(boatId)
-                setPendingInvites((current) => [invite, ...current])
-                await navigator.clipboard.writeText(invite.inviteUrl)
-                toast.success('Invite link created and copied')
-              } catch (e) {
-                toast.error(
-                  e instanceof Error
-                    ? e.message
-                    : 'Failed to create invite link',
-                )
-              }
-            }}
             onRoleChange={async (member, role: OrgMemberRole) => {
               try {
                 const updated = await updateBoatMemberRole(

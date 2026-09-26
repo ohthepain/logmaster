@@ -25,6 +25,7 @@ type NotificationBellToggleProps = {
   orgId?: string
   className?: string
   label?: string
+  buttonClassName?: string
 }
 
 export function NotificationBellToggle({
@@ -33,6 +34,7 @@ export function NotificationBellToggle({
   orgId,
   className,
   label,
+  buttonClassName,
 }: NotificationBellToggleProps) {
   const { t } = useTranslation()
   const [enabled, setEnabled] = useState(true)
@@ -152,6 +154,7 @@ export function NotificationBellToggle({
             ? 'border-emerald-600/40 text-emerald-600 dark:border-emerald-400/40 dark:text-emerald-400'
             : 'border-[var(--brand)]/40 text-[var(--brand)]',
           enabled && blockedByLabel && 'opacity-70',
+          buttonClassName,
         )}
       >
         <Icon className="size-4" aria-hidden />

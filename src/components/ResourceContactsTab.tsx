@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Mail, Plus, Sailboat, Trash2 } from 'lucide-react'
+import { ChevronRight, Mail, Plus, Sailboat, Trash2 } from 'lucide-react'
 import type { FormEvent, ReactNode } from 'react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -13,6 +13,11 @@ import { useTranslation } from '../lib/i18n'
 import { translateContactArea } from '../lib/resource-section-i18n'
 import { Modal } from './Modal'
 import { ResourceSectionHeader } from './NotificationBellToggle'
+import {
+  ResourcePeopleHeader,
+  resourcePeopleRowClassName,
+} from './ResourcePeopleHeader'
+import { cn } from '../lib/cn'
 
 type ContactRow = ResourceContact & { id: string }
 
@@ -31,40 +36,83 @@ function ContactListItem({
   linkParams,
   onDelete,
   canDelete,
+  compact = false,
 }: {
   contact: ContactRow
   linkTo: string
   linkParams: Record<string, string>
   onDelete?: (contact: ContactRow) => void
   canDelete?: boolean
+  compact?: boolean
 }) {
   const { t } = useTranslation()
   return (
-    <li className="flex flex-wrap items-start gap-3 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3">
+    <li
+      className={
+        compact
+          ? resourcePeopleRowClassName
+          : 'flex flex-wrap items-start gap-3 rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3'
+      }
+    >
       <Link
         to={linkTo}
         params={linkParams}
-        className="min-w-0 flex-1 no-underline transition hover:opacity-80"
+        className={cn(
+          'min-w-0 flex-1 no-underline transition hover:opacity-80',
+          compact && 'flex items-center gap-3',
+        )}
       >
-        <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
-          {contact.displayName}
-        </p>
-        {contact.email ? (
-          <p className="m-0 mt-1 flex items-center gap-1 text-xs text-[var(--sea-ink-soft)]">
-            <Mail className="size-3.5" />
-            {contact.email}
-          </p>
+        {compact ? (
+          <span
+            aria-hidden
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--chip-bg)] text-sm font-medium text-[var(--sea-ink-soft)]"
+          >
+            {contact.displayName
+              .trim()
+              .split(/\s+/)
+              .slice(0, 2)
+              .map((part) => Array.from(part)[0])
+              .join('')
+              .toLocaleUpperCase()}
+          </span>
         ) : null}
-        {contact.phone ? (
-          <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">
-            {contact.phone}
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              'm-0 font-semibold text-[var(--sea-ink)]',
+              compact ? 'text-base' : 'text-sm',
+            )}
+          >
+            {contact.displayName}
           </p>
-        ) : null}
-        <ContactGrantBadges grants={contact.grants} />
-        {contact.notes ? (
-          <p className="m-0 mt-2 text-xs leading-5 text-[var(--sea-ink-soft)]">
-            {contact.notes}
-          </p>
+          {contact.email ? (
+            <p
+              className={cn(
+                'm-0 mt-1 text-xs text-[var(--sea-ink-soft)]',
+                compact ? 'truncate' : 'flex items-center gap-1',
+              )}
+            >
+              {!compact ? <Mail className="size-3.5" /> : null}
+              {contact.email}
+            </p>
+          ) : null}
+          {contact.phone ? (
+            <p className="m-0 mt-1 text-xs text-[var(--sea-ink-soft)]">
+              {contact.phone}
+            </p>
+          ) : null}
+          <ContactGrantBadges grants={contact.grants} />
+          {contact.notes && !compact ? (
+            <p className="m-0 mt-2 text-xs leading-5 text-[var(--sea-ink-soft)]">
+              {contact.notes}
+            </p>
+          ) : null}
+        </div>
+        {compact ? (
+          <ChevronRight
+            className="size-4 shrink-0 text-[var(--sea-ink-soft)]"
+            aria-hidden
+          />
         ) : null}
       </Link>
       {canDelete && onDelete ? (
@@ -296,6 +344,7 @@ export function AddContactModal({
 }
 
 export function ResourceContactsTab({
+  compact = false,
   title,
   description,
   contacts,
@@ -311,6 +360,7 @@ export function ResourceContactsTab({
   notificationBoatId,
   headerActions,
 }: {
+  compact?: boolean
   title?: string
   description?: string
   contacts: ContactRow[]
@@ -330,6 +380,7 @@ export function ResourceContactsTab({
   headerActions?: ReactNode
 }) {
   const { t } = useTranslation()
+  const [editing, setEditing] = useState(false)
   const resolvedTitle = title ?? t('contacts')
   const totalBoatContacts = boatContactGroups.reduce(
     (count, group) => count + group.contacts.length,
@@ -338,37 +389,65 @@ export function ResourceContactsTab({
   const totalCount = contacts.length + totalBoatContacts
 
   return (
-    <div>
-      <ResourceSectionHeader
-        title={resolvedTitle}
-        topic={notificationTopic}
-        orgId={notificationOrgId}
-        boatId={notificationBoatId}
-        onRefresh={onRefresh}
-        refreshing={refreshing}
-        actions={
-          headerActions ??
-          (canManage && onAdd ? (
-            <button
-              type="button"
-              onClick={onAdd}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
-            >
-              <Plus className="size-4" />
-              {t('addContact')}
-            </button>
-          ) : null)
-        }
-      />
-      <p className="mb-4 text-sm text-[var(--sea-ink-soft)]">
-        {description ??
-          t(totalCount === 1 ? 'contactCountOne' : 'contactCountOther', {
-            count: totalCount,
-          })}
-      </p>
+    <div className={compact ? '-mx-3 sm:-mx-4' : undefined}>
+      {compact ? (
+        <ResourcePeopleHeader
+          title={resolvedTitle}
+          description={
+            description ??
+            t(totalCount === 1 ? 'contactCountOne' : 'contactCountOther', {
+              count: totalCount,
+            })
+          }
+          boatId={notificationBoatId}
+          topic={notificationTopic}
+          editing={editing}
+          onEdit={canManage ? () => setEditing(!editing) : undefined}
+          onAdd={canManage ? onAdd : undefined}
+          addLabel={t('addContact')}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
+          actions={headerActions}
+        />
+      ) : (
+        <>
+          <ResourceSectionHeader
+            title={resolvedTitle}
+            topic={notificationTopic}
+            orgId={notificationOrgId}
+            boatId={notificationBoatId}
+            onRefresh={onRefresh}
+            refreshing={refreshing}
+            actions={
+              headerActions ??
+              (canManage && onAdd ? (
+                <button
+                  type="button"
+                  onClick={onAdd}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand)] hover:text-[var(--brand-hover)]"
+                >
+                  <Plus className="size-4" />
+                  {t('addContact')}
+                </button>
+              ) : null)
+            }
+          />
+          <p className="mb-4 text-sm text-[var(--sea-ink-soft)]">
+            {description ??
+              t(totalCount === 1 ? 'contactCountOne' : 'contactCountOther', {
+                count: totalCount,
+              })}
+          </p>
+        </>
+      )}
 
       {contacts.length === 0 && boatContactGroups.length === 0 ? (
-        <p className="text-sm text-[var(--sea-ink-soft)]">
+        <p
+          className={cn(
+            'text-sm text-[var(--sea-ink-soft)]',
+            compact && 'px-3 sm:px-4',
+          )}
+        >
           {t('noContactsYet')}
         </p>
       ) : null}
@@ -380,7 +459,7 @@ export function ResourceContactsTab({
               {t('orgContacts')}
             </h3>
           ) : null}
-          <ul className="m-0 list-none space-y-2 p-0">
+          <ul className={cn('m-0 list-none p-0', !compact && 'space-y-2')}>
             {contacts.map((contact) => {
               const link = getContactLink(contact)
               return (
@@ -389,7 +468,8 @@ export function ResourceContactsTab({
                   contact={contact}
                   linkTo={link.to}
                   linkParams={link.params}
-                  canDelete={canManage}
+                  compact={compact}
+                  canDelete={canManage && (!compact || editing)}
                   onDelete={onDelete}
                 />
               )
