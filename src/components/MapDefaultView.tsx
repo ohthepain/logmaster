@@ -19,7 +19,7 @@ const EMPTY_MAP_TRIP: Trip = {
   updatedAt: '1970-01-01T00:00:00.000Z',
 }
 
-export function MapDefaultView() {
+export function MapDefaultView({ active = true }: { active?: boolean }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const session = useSession()
@@ -32,14 +32,14 @@ export function MapDefaultView() {
   }, [])
 
   useEffect(() => {
-    if (!store.booted || !trip) return
+    if (!active || !store.booted || !trip) return
     useLogbookStore.getState().selectTrip(trip.id)
     void navigate({
       to: '/trips/$tripId',
       params: { tripId: trip.id },
       replace: true,
     })
-  }, [store.booted, trip, navigate])
+  }, [active, store.booted, trip, navigate])
 
   const openCreateTrip = () => {
     if (!session.data?.user) {
@@ -61,7 +61,7 @@ export function MapDefaultView() {
     )
   }
 
-  if (!trip) {
+  if (!trip || !active) {
     return (
       <main className="relative h-dvh w-full overflow-hidden bg-transparent">
         <DevComponentLabel name="MapDefaultView" />
@@ -76,20 +76,22 @@ export function MapDefaultView() {
           showCurrentPosition
           interactive
         />
-        <button
-          type="button"
-          onClick={openCreateTrip}
-          aria-label={t('newTrip')}
-          title={t('newTrip')}
-          data-map-touch-zone
-          className="ios-map-touch-target pointer-events-auto absolute z-30 inline-flex size-14 items-center justify-center rounded-full bg-btn-bg text-btn-text shadow-lg transition hover:-translate-y-px"
-          style={{
-            right: 16,
-            bottom: 'max(var(--lm-safe-bottom), 16px)',
-          }}
-        >
-          <Plus className="size-7" strokeWidth={2.5} aria-hidden />
-        </button>
+        {active ? (
+          <button
+            type="button"
+            onClick={openCreateTrip}
+            aria-label={t('newTrip')}
+            title={t('newTrip')}
+            data-map-touch-zone
+            className="ios-map-touch-target pointer-events-auto absolute z-30 inline-flex size-14 items-center justify-center rounded-full bg-btn-bg text-btn-text shadow-lg transition hover:-translate-y-px"
+            style={{
+              right: 16,
+              bottom: 'max(var(--lm-safe-bottom), 16px)',
+            }}
+          >
+            <Plus className="size-7" strokeWidth={2.5} aria-hidden />
+          </button>
+        ) : null}
         <StartTripLauncher
           open={createTripOpen}
           onClose={() => setCreateTripOpen(false)}

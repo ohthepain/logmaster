@@ -1,5 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, X } from 'lucide-react'
 import { cn } from '../lib/cn'
 import DevModeToggle from './DevModeToggle'
 import { DevComponentLabel } from './DevComponentLabel'
@@ -8,9 +8,11 @@ import { NotificationInbox } from './NotificationInbox'
 import { MessagesButton } from './MessagesButton'
 import { UserMenu } from './UserMenu'
 import { useTranslation } from '../lib/i18n'
+import { isBoatMenuRoute } from '../lib/trip-map-overlay'
 
 type HeaderProps = {
   mapOverlay?: boolean
+  onClose?: () => void
 }
 
 export function AppHeaderBrand({
@@ -47,10 +49,11 @@ export function AppHeaderBrand({
   )
 }
 
-export default function Header({ mapOverlay = false }: HeaderProps) {
+export default function Header({ mapOverlay = false, onClose }: HeaderProps) {
   const { t } = useTranslation()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const isBoatDetail = /^\/boats\/[^/]+\/?$/.test(pathname)
+  const isBoatMenu = isBoatMenuRoute(pathname)
   const hideBrand = mapOverlay || pathname === '/' || pathname === '/map'
 
   return (
@@ -60,7 +63,7 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
         'top-0 z-50 shrink-0 pt-[var(--lm-safe-top)]',
         mapOverlay
           ? 'pointer-events-none fixed inset-x-0 bg-transparent'
-          : isBoatDetail
+          : isBoatMenu
             ? 'relative bg-transparent'
             : 'sticky bg-transparent',
       )}
@@ -71,19 +74,33 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
       />
       <div
         className={cn(
-          'page-wrap flex min-h-16 items-center gap-3 px-3 py-2 sm:px-4',
+          'flex min-h-16 items-center gap-3 px-3 py-2 sm:px-4',
+          isBoatMenu ? 'w-full' : 'page-wrap',
           hideBrand ? 'justify-end' : 'justify-between',
         )}
       >
         {hideBrand ? null : (
           <div className="pointer-events-auto">
-            {isBoatDetail ? (
+            {isBoatMenu ? (
               <Link
-                to="/boats"
+                to={isBoatDetail ? '/boats' : '/map'}
+                onClick={(event) => {
+                  if (
+                    !isBoatDetail &&
+                    onClose &&
+                    !event.metaKey &&
+                    !event.ctrlKey &&
+                    !event.shiftKey &&
+                    !event.altKey
+                  ) {
+                    event.preventDefault()
+                    onClose()
+                  }
+                }}
                 className="inline-flex min-h-11 items-center gap-1 text-sm text-[var(--sea-ink-soft)] no-underline hover:text-[var(--sea-ink)]"
               >
                 <ChevronLeft className="size-5" aria-hidden />
-                {t('boats')}
+                {t(isBoatDetail ? 'boats' : 'map')}
               </Link>
             ) : (
               <AppHeaderBrand mapOverlay={mapOverlay} />
@@ -95,7 +112,7 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
           data-map-touch-zone
         >
           <DevModeToggle mapOverlay={mapOverlay} />
-          {!isBoatDetail ? (
+          {!isBoatMenu ? (
             <>
               {!mapOverlay ? <ThemeToggle /> : null}
               <NotificationInbox mapOverlay={mapOverlay} />
@@ -103,6 +120,17 @@ export default function Header({ mapOverlay = false }: HeaderProps) {
             </>
           ) : null}
           <UserMenu mapOverlay={mapOverlay} />
+          {onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t('close')}
+              title={t('close')}
+              className="inline-flex size-10 items-center justify-center rounded-full bg-[var(--chip-bg)] text-[var(--sea-ink)]"
+            >
+              <X className="size-5" aria-hidden />
+            </button>
+          ) : null}
         </div>
       </div>
     </header>

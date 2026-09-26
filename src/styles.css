@@ -234,6 +234,11 @@ pre code {
   margin-inline: auto;
 }
 
+/* Routed boat pages share the Menu frame instead of the desktop page width. */
+.boat-menu-frame .page-wrap {
+  width: 100%;
+}
+
 .display-title {
   font-family: "Fraunces", Georgia, serif;
 }

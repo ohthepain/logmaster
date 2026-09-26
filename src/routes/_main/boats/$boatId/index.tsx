@@ -214,7 +214,7 @@ function BoatDetailPage() {
 
   if (loading) {
     return (
-      <main className="page-wrap px-3 py-8 sm:px-4">
+      <main className="w-full px-3 py-8 sm:px-4">
         <p className="text-sm text-[var(--sea-ink-soft)]">{t('loadingBoat')}</p>
       </main>
     )
@@ -222,7 +222,7 @@ function BoatDetailPage() {
 
   if (error || !boat) {
     return (
-      <main className="page-wrap px-3 py-8 sm:px-4">
+      <main className="w-full px-3 py-8 sm:px-4">
         <p className="text-sm text-red-700 dark:text-red-300">
           {error ?? 'Boat not found'}
         </p>
@@ -270,7 +270,7 @@ function BoatDetailPage() {
   }
 
   return (
-    <main className="page-wrap px-3 pb-24 pt-4 sm:px-4">
+    <main className="w-full px-3 pb-24 pt-4 sm:px-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <BoatIconSelector

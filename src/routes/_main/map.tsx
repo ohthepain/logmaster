@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { MapDefaultView } from '../../components/MapDefaultView'
 
 export const Route = createFileRoute('/_main/map')({
-  component: MapDefaultView,
+  // AppShell keeps the map mounted while a boat menu covers it.
+  component: () => null,
 })

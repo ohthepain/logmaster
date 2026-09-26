@@ -242,7 +242,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={`${menuId}-title`}
-                className="ios-map-touch-target pointer-events-auto flex h-[100dvh] w-full touch-manipulation flex-col overflow-hidden bg-[var(--surface-strong)] sm:h-auto sm:max-h-[calc(100dvh-2.5rem)] sm:max-w-2xl sm:rounded-[2rem] sm:border sm:border-[var(--panel-border)] sm:shadow-2xl"
+                className="ios-map-touch-target pointer-events-auto flex h-[100dvh] w-full touch-manipulation flex-col overflow-hidden bg-[var(--surface-strong)] sm:h-[calc(100dvh-2.5rem)] sm:max-w-2xl sm:rounded-[2rem] sm:border sm:border-[var(--panel-border)] sm:shadow-2xl"
               >
                 <header className="flex shrink-0 items-center justify-between gap-4 px-5 pb-3 pt-[calc(var(--lm-safe-top)+1rem)] sm:px-7 sm:pt-6">
                   <h2
