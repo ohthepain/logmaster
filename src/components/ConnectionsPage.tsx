@@ -10,17 +10,22 @@ import {
   openPrivateChat,
 } from '../lib/connections-api'
 import type { ConnectionPerson } from '../domain/connections'
+import { useTranslation } from '../lib/i18n'
+import type { InviteLocale } from '../lib/invite-locale'
 import { CrewAvatar } from './CrewAvatar'
+import { InviteLanguageSelect } from './InviteLanguageSelect'
 import { Modal } from './Modal'
 
 export function ConnectionsPage({ add = false }: { add?: boolean }) {
   const user = useSession().data?.user
+  const { language } = useTranslation()
   const navigate = useNavigate()
   const [people, setPeople] = useState<ConnectionPerson[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [inviteOpen, setInviteOpen] = useState(add)
   const [email, setEmail] = useState('')
+  const [inviteLocale, setInviteLocale] = useState<InviteLocale>(language)
   const [notifyInviteeOnTripStart, setNotifyInviteeOnTripStart] = useState(true)
   const [accepting, setAccepting] = useState<ConnectionPerson | null>(null)
   const [notifyOnInviterTripStart, setNotifyOnInviterTripStart] = useState(true)
@@ -168,6 +173,7 @@ export function ConnectionsPage({ add = false }: { add?: boolean }) {
             className={button}
             onClick={() => {
               setNotifyInviteeOnTripStart(true)
+              setInviteLocale(language)
               setInviteOpen(true)
             }}
           >
@@ -255,11 +261,13 @@ export function ConnectionsPage({ add = false }: { add?: boolean }) {
                   method: 'POST',
                   body: JSON.stringify({
                     email,
+                    inviteLocale,
                     notifyInviteeOnTripStart,
                   }),
                 })
                 setInviteOpen(false)
                 setEmail('')
+                setInviteLocale(language)
                 setNotifyInviteeOnTripStart(true)
                 toast.success('Connection invitation sent')
               })
@@ -279,6 +287,13 @@ export function ConnectionsPage({ add = false }: { add?: boolean }) {
                 className="mt-2 block w-full rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3"
               />
             </label>
+            <div className="mt-4">
+              <InviteLanguageSelect
+                value={inviteLocale}
+                onChange={setInviteLocale}
+                disabled={busy}
+              />
+            </div>
             <div className="mt-4 flex items-center justify-between gap-3 text-sm">
               <span id="notify-invitee-on-trip-start">
                 Notify them when I start a trip
@@ -288,9 +303,7 @@ export function ConnectionsPage({ add = false }: { add?: boolean }) {
                 role="switch"
                 aria-checked={notifyInviteeOnTripStart}
                 aria-labelledby="notify-invitee-on-trip-start"
-                onClick={() =>
-                  setNotifyInviteeOnTripStart((value) => !value)
-                }
+                onClick={() => setNotifyInviteeOnTripStart((value) => !value)}
                 className={`relative h-7 w-12 shrink-0 rounded-full transition-colors motion-reduce:transition-none ${notifyInviteeOnTripStart ? 'bg-emerald-600' : 'bg-stone-300'}`}
               >
                 <span

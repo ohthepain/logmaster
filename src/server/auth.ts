@@ -14,6 +14,7 @@ import {
   passwordResetEmailUrl,
 } from '../lib/password-reset-url'
 import { hasPendingInviteForEmail } from './invite-signup'
+import { signupSkipsEmailVerification } from '../lib/invite-auth-search'
 
 const baseURL = process.env.BETTER_AUTH_URL ?? 'http://localhost:3020'
 const secret =
@@ -93,6 +94,14 @@ export const auth = betterAuth({
   emailVerification: {
     sendOnSignUp: true,
     sendVerificationEmail: async ({ user, url }) => {
+      if (
+        signupSkipsEmailVerification({
+          emailVerified: user.emailVerified,
+          pendingInvite: await hasPendingInviteForEmail(user.email),
+        })
+      ) {
+        return
+      }
       const verifyUrl = new URL(url, baseURL)
       verifyUrl.searchParams.set(
         'callbackURL',

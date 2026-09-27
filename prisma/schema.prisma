@@ -76,6 +76,8 @@ model User {
   notificationDefaults Json?
   /** App UI language code (same set as invite locales). */
   preferredLanguage    String?
+  /** One-shot path the native app opens after an invite is accepted on the web. */
+  inviteLandingPath    String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   tripParticipations TripParticipant[]
@@ -1741,6 +1743,7 @@ model ConnectionInvite {
   id String @id @default(cuid())
   inviterUserId String
   inviteeEmail String
+  inviteLocale String @default("en")
   token String @unique
   status String @default("PENDING")
   notifyInviteeOnTripStart Boolean @default(true)

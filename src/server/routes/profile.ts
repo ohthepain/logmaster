@@ -84,6 +84,26 @@ async function readStoredProfilePhoto(userId: string) {
 
 export const profileRoutes = new Hono()
 
+profileRoutes.get('/invite-landing', async (c) => {
+  const userId = await requireUserId(c)
+  if (!userId) return unauthorized()
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { inviteLandingPath: true },
+  })
+  return c.json({ path: user?.inviteLandingPath ?? null })
+})
+
+profileRoutes.post('/invite-landing/clear', async (c) => {
+  const userId = await requireUserId(c)
+  if (!userId) return unauthorized()
+  await db.user.update({
+    where: { id: userId },
+    data: { inviteLandingPath: null },
+  })
+  return c.json({ ok: true })
+})
+
 profileRoutes.get('/', async (c) => {
   const userId = await requireUserId(c)
   if (!userId) return unauthorized()

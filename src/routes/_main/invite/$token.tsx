@@ -2,6 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CrewAvatar } from '../../../components/CrewAvatar'
+import { ExpiredInviteContinue } from '../../../components/ExpiredInviteContinue'
 import type { MemberInvitePreview } from '../../../domain/member-invite'
 import { signOutToSignIn, useSession } from '../../../lib/auth-client'
 import {
@@ -24,7 +25,6 @@ function MemberInvitePage() {
   const [preview, setPreview] = useState<MemberInvitePreview | null>(null)
   const [loading, setLoading] = useState(true)
   const [accepting, setAccepting] = useState(false)
-  const [accepted, setAccepted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const autoAcceptStarted = useRef(false)
 
@@ -46,8 +46,8 @@ function MemberInvitePage() {
   const handleAccept = useCallback(async () => {
     setAccepting(true)
     try {
-      await acceptMemberInvite(token)
-      setAccepted(true)
+      const result = await acceptMemberInvite(token)
+      window.location.assign(result.landingPath)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to accept invite')
     } finally {
@@ -66,7 +66,6 @@ function MemberInvitePage() {
       autoAcceptStarted.current ||
       !user ||
       !preview ||
-      accepted ||
       accepting ||
       preview.expired ||
       preview.status !== 'PENDING' ||
@@ -76,7 +75,7 @@ function MemberInvitePage() {
     }
     autoAcceptStarted.current = true
     void handleAccept()
-  }, [user, preview, accepted, accepting, emailMatches, handleAccept])
+  }, [user, preview, accepting, emailMatches, handleAccept])
 
   const targetLabel = preview?.kind === 'ORG' ? 'organization' : 'boat'
   const destination =
@@ -90,8 +89,13 @@ function MemberInvitePage() {
         : null
 
   const showSuccess =
-    accepted ||
-    (preview?.status === 'ACCEPTED' && Boolean(user) && emailMatches)
+    preview?.status === 'ACCEPTED' && Boolean(user) && emailMatches
+
+  useEffect(() => {
+    if (showSuccess && preview?.landingPath) {
+      window.location.assign(preview.landingPath)
+    }
+  }, [showSuccess, preview?.landingPath])
 
   const signUpSearch = buildInviteSignInSearch({
     redirect: inviteRedirect,
@@ -163,10 +167,18 @@ function MemberInvitePage() {
               </Link>
             ) : null}
           </>
-        ) : preview.expired || preview.status !== 'PENDING' ? (
+        ) : preview.status === 'EXPIRED' ||
+          (preview.status === 'PENDING' && preview.expired) ? (
           <>
             <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
               Invite expired
+            </h1>
+            <ExpiredInviteContinue email={preview.inviteeEmail} />
+          </>
+        ) : preview.expired || preview.status !== 'PENDING' ? (
+          <>
+            <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
+              Invite unavailable
             </h1>
             <p className="text-sm text-[var(--sea-ink-soft)]">
               Ask {preview.inviterName} to send a new invite.
@@ -196,9 +208,7 @@ function MemberInvitePage() {
               <strong className="text-[var(--sea-ink)]">
                 {preview.targetName}
               </strong>{' '}
-              as {preview.role.toLowerCase()}. Accepting makes you and{' '}
-              {preview.inviterName} contacts. Your sailing can earn them up to
-              100 doubloons.
+              as {preview.role.toLowerCase()}.
             </p>
 
             {!user ? (
@@ -236,8 +246,8 @@ function MemberInvitePage() {
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-red-700 dark:text-red-300">
-                    This invite was sent to {preview.inviteeEmail}. You&apos;re
-                    signed in as {user.email}.
+                    You&apos;re signed in as {user.email}. This invite stays
+                    pending for {preview.inviteeEmail}.
                   </p>
                   <button
                     type="button"

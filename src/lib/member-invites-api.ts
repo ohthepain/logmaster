@@ -39,6 +39,7 @@ export async function acceptMemberInvite(token: string): Promise<{
   orgId: string | null
   boatId: string | null
   targetName: string
+  landingPath: string
 }> {
   return api('/api/member-invites/accept', {
     method: 'POST',

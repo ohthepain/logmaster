@@ -1,12 +1,11 @@
-/** Map control chrome — matches SailingMapControlStack surfaces. */
-export const MAP_CHROME_SURFACE_CLASS =
-  'rounded-md border border-[rgba(126,200,232,0.2)] bg-[rgba(26,51,72,0.94)] shadow-[0_4px_16px_rgba(0,0,0,0.25)]' as const
+/** Map control chrome — white in light mode, dark in dark mode. */
+export const MAP_CHROME_SURFACE_CLASS = 'map-chrome-surface rounded-md' as const
 
 export const MAP_CHROME_BUTTON_HOVER_CLASS =
-  'hover:bg-[rgba(126,200,232,0.16)]' as const
+  'hover:bg-[var(--map-chrome-hover)]' as const
 
 export const MAP_CHROME_DIVIDER_CLASS =
-  'border-t border-[rgba(126,200,232,0.2)]' as const
+  'border-t border-[var(--map-chrome-border)]' as const
 
 export const MAP_CHROME_CELL_CLASS =
   'flex size-[35px] items-center justify-center transition' as const
@@ -15,5 +14,5 @@ export const MAP_CHROME_CELL_CLASS =
 export const MAP_CHROME_OPERATIONAL_CELL_CLASS =
   'flex size-[43.5px] items-center justify-center transition' as const
 
-/** Operational map toggles — force icons to full white on dark chrome. */
-export const MAP_CHROME_OPERATIONAL_ICON_CLASS = 'brightness-0 invert' as const
+/** Operational map artwork: dark lines in light mode, light lines in dark mode. */
+export const MAP_CHROME_OPERATIONAL_ICON_CLASS = 'map-chrome-icon-img' as const

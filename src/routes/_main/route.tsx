@@ -7,6 +7,7 @@ import {
 import { AppShell } from '../../components/AppShell'
 import { AppToaster } from '../../components/AppToaster'
 import { DevTanStackDevtools } from '../../components/DevTanStackDevtools'
+import { InviteLandingRedirect } from '../../components/InviteLandingRedirect'
 import { NativeAppLinks } from '../../components/NativeAppLinks'
 import { NativeSystemBars } from '../../components/NativeSystemBars'
 import { PwaRegister } from '../../components/PwaRegister'
@@ -31,6 +32,7 @@ function MainLayout() {
           <PwaRegister />
           <PushNotificationsRegister />
           <NativeAppLinks />
+          <InviteLandingRedirect />
           <NativeSystemBars />
           <AppShell>
             <Outlet />

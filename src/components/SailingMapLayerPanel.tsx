@@ -127,7 +127,7 @@ export function SailingMapLayerPanel({
     <div
       ref={panelRef}
       data-map-touch-zone
-      className="fixed z-[120] flex flex-col overflow-hidden rounded-lg border border-[rgba(126,200,232,0.2)] bg-[rgba(26,51,72,0.97)] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+      className="map-chrome-surface fixed z-[120] flex flex-col overflow-hidden rounded-lg p-3"
       style={{
         top: panelPosition.top,
         left: panelPosition.left,
@@ -135,14 +135,14 @@ export function SailingMapLayerPanel({
         height: panelPosition.maxHeight,
       }}
     >
-      <p className="m-0 mb-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-white/70">
+      <p className="m-0 mb-2 shrink-0 text-xs font-semibold uppercase tracking-wide map-chrome-muted">
         Map layers
       </p>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="flex flex-col gap-3 pb-0.5">
           {dataGroups.map(([group, layers]) => (
             <div key={group}>
-              <p className="m-0 mb-1.5 text-[10px] font-medium uppercase tracking-wider text-white/50">
+              <p className="m-0 mb-1.5 text-[10px] font-medium uppercase tracking-wider map-chrome-muted">
                 {DATA_GROUP_LABELS[group]}
               </p>
               <ul className="m-0 flex list-none flex-col gap-1 p-0">
@@ -153,7 +153,7 @@ export function SailingMapLayerPanel({
                     (aisLayer && aisPlaybackBlocked)
                   return (
                     <li key={layer.id}>
-                      <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 hover:bg-white/5">
+                      <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 hover:bg-[var(--map-chrome-hover)]">
                         <input
                           type="checkbox"
                           className="mt-0.5"
@@ -166,10 +166,10 @@ export function SailingMapLayerPanel({
                           }
                         />
                         <span className="min-w-0">
-                          <span className="block text-sm text-white/95">
+                          <span className="block text-sm text-inherit">
                             {layer.title}
                             {layer.onlineOnly ? (
-                              <span className="ml-1 text-[10px] font-normal uppercase tracking-wide text-white/45">
+                              <span className="ml-1 text-[10px] font-normal uppercase tracking-wide map-chrome-muted">
                                 {aisPlaybackBlocked
                                   ? 'Replay'
                                   : online
@@ -178,20 +178,20 @@ export function SailingMapLayerPanel({
                               </span>
                             ) : null}
                           </span>
-                          <span className="block text-[11px] leading-snug text-white/55">
+                          <span className="block text-[11px] leading-snug map-chrome-muted">
                             {layer.description}
                             {aisLayer && aisSavedTripHint ? (
-                              <span className="mt-0.5 block text-white/45">
+                              <span className="mt-0.5 block map-chrome-muted">
                                 Shows traffic now along your saved route.
                               </span>
                             ) : null}
                             {aisLayer && aisPlannedRouteHint ? (
-                              <span className="mt-0.5 block text-white/45">
+                              <span className="mt-0.5 block map-chrome-muted">
                                 Shows live traffic near your planned route.
                               </span>
                             ) : null}
                             {aisLayer && aisPlaybackBlocked ? (
-                              <span className="mt-0.5 block text-white/45">
+                              <span className="mt-0.5 block map-chrome-muted">
                                 Unavailable during trip replay.
                               </span>
                             ) : null}
@@ -207,13 +207,13 @@ export function SailingMapLayerPanel({
 
           {showLogEntryLayers ? (
             <div>
-              <p className="m-0 mb-1.5 text-[10px] font-medium uppercase tracking-wider text-white/50">
+              <p className="m-0 mb-1.5 text-[10px] font-medium uppercase tracking-wider map-chrome-muted">
                 Log entries
               </p>
               <ul className="m-0 flex list-none flex-col gap-1 p-0">
                 {MAP_LOG_ENTRY_LAYER_TOGGLES.map((layer) => (
                   <li key={layer.id}>
-                    <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 hover:bg-white/5">
+                    <label className="flex cursor-pointer items-start gap-2 rounded-md px-1 py-1 hover:bg-[var(--map-chrome-hover)]">
                       <input
                         type="checkbox"
                         className="mt-0.5"
@@ -225,10 +225,10 @@ export function SailingMapLayerPanel({
                         }
                       />
                       <span className="min-w-0">
-                        <span className="block text-sm text-white/95">
+                        <span className="block text-sm text-inherit">
                           {layer.title}
                         </span>
-                        <span className="block text-[11px] leading-snug text-white/55">
+                        <span className="block text-[11px] leading-snug map-chrome-muted">
                           {layer.description}
                         </span>
                       </span>

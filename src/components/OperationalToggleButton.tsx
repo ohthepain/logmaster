@@ -63,7 +63,7 @@ export function OperationalToggleButton({
           'overflow-hidden',
           MAP_CHROME_BUTTON_HOVER_CLASS,
           bordered && MAP_CHROME_DIVIDER_CLASS,
-          !disabled && 'hover:border-[rgba(126,200,232,0.35)]',
+          !disabled && 'hover:border-[var(--map-chrome-border)]',
           disabled && 'cursor-default',
         )}
       >

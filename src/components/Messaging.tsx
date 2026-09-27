@@ -1,4 +1,8 @@
 import {
+  connectionFormedLabel,
+  referralIntroLabel,
+} from '../domain/invite-face'
+import {
   groupResponseCardMessages,
   isResponseCardMessage,
 } from '../domain/response-card-groups'
@@ -1022,6 +1026,27 @@ export function Messaging({
                       </div>
                     )
                   }
+                  if (message.economyEvent?.type === 'connection_formed')
+                    return (
+                      <p
+                        key={message.id}
+                        className="my-3 text-center text-sm text-[var(--sea-ink-soft)]"
+                      >
+                        {connectionFormedLabel(message.economyEvent, userId)}
+                      </p>
+                    )
+                  if (message.economyEvent?.type === 'referral_intro')
+                    return (
+                      <div
+                        key={message.id}
+                        className="mx-auto my-3 max-w-sm rounded-2xl bg-amber-50 p-4 text-center text-amber-950"
+                      >
+                        <p className="m-0 text-xs font-semibold">Invitation</p>
+                        <p className="my-2 text-sm">
+                          {referralIntroLabel(message.economyEvent, userId)}
+                        </p>
+                      </div>
+                    )
                   if (message.economyEvent)
                     return (
                       <div

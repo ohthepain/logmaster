@@ -17,12 +17,22 @@ export function buildInviteSignInSearch(args: {
 
 export function parseInviteFromRedirect(
   path: string,
-): { kind: 'member' | 'crew'; token: string } | null {
+): { kind: 'member' | 'crew' | 'connection'; token: string } | null {
+  const connectionMatch = path.match(/^\/connections\/invite\/([^/?#]+)/)
+  if (connectionMatch) return { kind: 'connection', token: connectionMatch[1] }
   const memberMatch = path.match(/^\/invite\/([^/?#]+)/)
   if (memberMatch) return { kind: 'member', token: memberMatch[1] }
   const crewMatch = path.match(/^\/crew\/invite\/([^/?#]+)/)
   if (crewMatch) return { kind: 'crew', token: crewMatch[1] }
   return null
+}
+
+/** Account setup from an email invite counts as verification. */
+export function signupSkipsEmailVerification(args: {
+  emailVerified?: boolean
+  pendingInvite: boolean
+}): boolean {
+  return args.emailVerified === true || args.pendingInvite
 }
 
 export function normalizeEmailForCompare(email: string): string {

@@ -83,7 +83,7 @@ export function MapDefaultView({ active = true }: { active?: boolean }) {
             aria-label={t('newTrip')}
             title={t('newTrip')}
             data-map-touch-zone
-            className="ios-map-touch-target pointer-events-auto absolute z-30 inline-flex size-14 items-center justify-center rounded-full bg-btn-bg text-btn-text shadow-lg transition hover:-translate-y-px"
+            className="map-chrome-surface ios-map-touch-target pointer-events-auto absolute z-30 inline-flex size-14 items-center justify-center rounded-full transition hover:bg-[var(--map-chrome-hover)]"
             style={{
               right: 16,
               bottom: 'max(var(--lm-safe-bottom), 16px)',

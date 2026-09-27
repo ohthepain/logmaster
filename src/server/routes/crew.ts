@@ -1,4 +1,11 @@
 import { acceptEconomyInvite } from '../economy/wallet'
+import { loadInviteArtwork } from '../invite-face'
+import {
+  crewLandingPath,
+  postInviteChat,
+  rememberInviteLanding,
+} from '../invite-outcome'
+import { logServerEvent } from '../lib/server-log'
 import { Hono } from 'hono'
 import { normalizeInviteLocale } from '../../lib/invite-locale'
 import { sendCrewInviteEmail } from '../email/ses'
@@ -727,6 +734,7 @@ crewRoutes.get('/invites/preview/:token', async (c) => {
     ? await inviteeHasAccount(invite.inviteeEmail)
     : false
 
+  const artwork = await loadInviteArtwork(c.req.param('token'))
   return c.json({
     inviterName: invite.inviter.name,
     inviteeEmail: invite.inviteeEmail,
@@ -734,6 +742,8 @@ crewRoutes.get('/invites/preview/:token', async (c) => {
     crewMemberName: invite.crewMember.displayName ?? 'Crew member',
     status: invite.status,
     expired,
+    face: artwork?.face ?? null,
+    landingPath: artwork?.landingPath ?? null,
   })
 })
 
@@ -750,6 +760,11 @@ crewRoutes.post('/invites/accept', async (c) => {
     include: { crewMember: true, inviter: true },
   })
   if (!invite) return c.json({ error: 'Invite not found' }, 404)
+  if (invite.status === 'ACCEPTED' && invite.acceptedByUserId === user.id) {
+    const landingPath = await crewLandingPath(invite.inviterUserId, user.id)
+    await rememberInviteLanding(user.id, landingPath)
+    return c.json({ ok: true, landingPath })
+  }
   if (invite.status !== 'PENDING') {
     return c.json({ error: 'Invite is no longer active' }, 400)
   }
@@ -779,7 +794,32 @@ crewRoutes.post('/invites/accept', async (c) => {
     },
   })
   if (existing) {
-    return c.json({ error: 'You are already linked on this crew' }, 409)
+    await db.$transaction(async (tx: typeof db) => {
+      const referralCreated = await acceptEconomyInvite(tx, invite, user.id)
+      await postInviteChat(tx, {
+        inviterId: invite.inviterUserId,
+        inviteeId: user.id,
+        inviterName: invite.inviter.name,
+        inviteeName: user.name,
+        connected: false,
+        referralCreated,
+      })
+      await acceptConnection(tx, invite.inviterUserId, user.id)
+      await tx.crewInvite.update({
+        where: { id: invite.id },
+        data: { status: 'ACCEPTED', acceptedByUserId: user.id },
+      })
+    })
+    const landingPath = await crewLandingPath(invite.inviterUserId, user.id)
+    await rememberInviteLanding(user.id, landingPath)
+    logServerEvent({
+      action: 'invite.accept',
+      resourceType: 'crew_invite',
+      resourceId: invite.id,
+      userId: user.id,
+      outcome: 'success',
+    })
+    return c.json({ ok: true, landingPath })
   }
 
   const member = invite.crewMember
@@ -810,10 +850,27 @@ crewRoutes.post('/invites/accept', async (c) => {
       data: { status: 'ACCEPTED', acceptedByUserId: user.id },
     })
     await acceptConnection(tx, invite.inviterUserId, user.id)
-    await acceptEconomyInvite(tx, invite, user.id)
+    const referralCreated = await acceptEconomyInvite(tx, invite, user.id)
+    await postInviteChat(tx, {
+      inviterId: invite.inviterUserId,
+      inviteeId: user.id,
+      inviterName: invite.inviter.name,
+      inviteeName: user.name,
+      connected: false,
+      referralCreated,
+    })
   })
 
-  return c.json({ ok: true })
+  const landingPath = await crewLandingPath(invite.inviterUserId, user.id)
+  await rememberInviteLanding(user.id, landingPath)
+  logServerEvent({
+    action: 'invite.accept',
+    resourceType: 'crew_invite',
+    resourceId: invite.id,
+    userId: user.id,
+    outcome: 'success',
+  })
+  return c.json({ ok: true, landingPath })
 })
 
 crewRoutes.post('/invites/:inviteId/resend', async (c) => {

@@ -2,6 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CrewAvatar } from '../../../../components/CrewAvatar'
+import { ExpiredInviteContinue } from '../../../../components/ExpiredInviteContinue'
 import type { CrewInvitePreview } from '../../../../domain/crew'
 import { signOutToSignIn, useSession } from '../../../../lib/auth-client'
 import {
@@ -24,7 +25,6 @@ function CrewInvitePage() {
   const [preview, setPreview] = useState<CrewInvitePreview | null>(null)
   const [loading, setLoading] = useState(true)
   const [accepting, setAccepting] = useState(false)
-  const [accepted, setAccepted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const autoAcceptStarted = useRef(false)
 
@@ -46,8 +46,8 @@ function CrewInvitePage() {
   const handleAccept = useCallback(async () => {
     setAccepting(true)
     try {
-      await acceptCrewInvite(token)
-      setAccepted(true)
+      const result = await acceptCrewInvite(token)
+      window.location.assign(result.landingPath)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to accept invite')
     } finally {
@@ -65,7 +65,6 @@ function CrewInvitePage() {
       autoAcceptStarted.current ||
       !user ||
       !preview ||
-      accepted ||
       accepting ||
       preview.expired ||
       preview.status !== 'PENDING' ||
@@ -75,11 +74,16 @@ function CrewInvitePage() {
     }
     autoAcceptStarted.current = true
     void handleAccept()
-  }, [user, preview, accepted, accepting, emailMatches, handleAccept])
+  }, [user, preview, accepting, emailMatches, handleAccept])
 
   const showSuccess =
-    accepted ||
-    (preview?.status === 'ACCEPTED' && Boolean(user) && emailMatches)
+    preview?.status === 'ACCEPTED' && Boolean(user) && emailMatches
+
+  useEffect(() => {
+    if (showSuccess && preview?.landingPath) {
+      window.location.assign(preview.landingPath)
+    }
+  }, [showSuccess, preview?.landingPath])
 
   const signUpSearch = buildInviteSignInSearch({
     redirect: inviteRedirect,
@@ -163,10 +167,18 @@ function CrewInvitePage() {
               View connections
             </Link>
           </>
-        ) : preview.expired || preview.status !== 'PENDING' ? (
+        ) : preview.status === 'EXPIRED' ||
+          (preview.status === 'PENDING' && preview.expired) ? (
           <>
             <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
               Invite expired
+            </h1>
+            <ExpiredInviteContinue email={preview.inviteeEmail} />
+          </>
+        ) : preview.expired || preview.status !== 'PENDING' ? (
+          <>
+            <h1 className="text-2xl font-bold text-[var(--sea-ink)]">
+              Invite unavailable
             </h1>
             <p className="text-sm text-[var(--sea-ink-soft)]">
               Ask {preview.inviterName} to resend the invite from their Crew
@@ -203,9 +215,8 @@ function CrewInvitePage() {
               <strong className="text-[var(--sea-ink)]">
                 {preview.crewMemberName}
               </strong>{' '}
-              to connect. Accepting links your account profile and makes you and{' '}
-              {preview.inviterName} connections. Your sailing can earn them up
-              to 100 doubloons.
+              to connect. Accepting links your account and adds you to{' '}
+              {preview.inviterName}&apos;s crew.
             </p>
 
             {!user ? (
@@ -244,8 +255,8 @@ function CrewInvitePage() {
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-red-700 dark:text-red-300">
-                    This invite was sent to {preview.inviteeEmail}. You&apos;re
-                    signed in as {user.email}.
+                    You&apos;re signed in as {user.email}. This invite stays
+                    pending for {preview.inviteeEmail}.
                   </p>
                   <button
                     type="button"

@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
+import { ExpiredInviteContinue } from '../../../../components/ExpiredInviteContinue'
 import { useSession } from '../../../../lib/auth-client'
 import { apiJson } from '../../../../lib/api-client'
+import {
+  buildInviteSignInSearch,
+  normalizeEmailForCompare,
+} from '../../../../lib/invite-auth-search'
 
 export const Route = createFileRoute('/_main/connections/invite/$token')({
   component: Page,
@@ -11,11 +16,13 @@ function Page() {
   const user = useSession().data?.user
   const [preview, setPreview] = useState<{
     inviterName: string
+    inviteeEmail: string
+    inviteeHasAccount: boolean
     status: string
     expired: boolean
+    landingPath?: string | null
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [accepted, setAccepted] = useState(false)
   const [notifyOnInviterTripStart, setNotifyOnInviterTripStart] = useState(true)
   const [busy, setBusy] = useState(false)
   useEffect(() => {
@@ -25,17 +32,26 @@ function Page() {
       .then(setPreview)
       .catch((e) => setError(e.message))
   }, [token])
+  const emailMatches =
+    Boolean(user && preview) &&
+    normalizeEmailForCompare(user!.email) ===
+      normalizeEmailForCompare(preview!.inviteeEmail)
+  useEffect(() => {
+    if (emailMatches && preview?.status === 'ACCEPTED' && preview.landingPath) {
+      window.location.assign(preview.landingPath)
+    }
+  }, [emailMatches, preview])
   async function accept() {
     setBusy(true)
     try {
-      await apiJson(
+      const result = await apiJson<{ landingPath: string }>(
         `/api/connections/invites/${encodeURIComponent(token)}/accept`,
         {
           method: 'POST',
           body: JSON.stringify({ notifyOnInviterTripStart }),
         },
       )
-      setAccepted(true)
+      window.location.assign(result.landingPath)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not accept invitation')
     } finally {
@@ -46,22 +62,29 @@ function Page() {
     <main className="page-wrap mx-auto flex min-h-[70vh] max-w-xl flex-col justify-center px-4 py-8">
       <h1 className="brand-title text-3xl">Connect on Logmaster</h1>
       {error && <p role="alert">{error}</p>}
-      {accepted ? (
-        <>
-          <p>
-            You are now connected. Your connection lasts beyond any boat,
-            consortium, or trip.
-          </p>
-          <Link to="/connections">View connections</Link>
-        </>
-      ) : preview ? (
-        preview.expired || preview.status !== 'PENDING' ? (
+      {preview ? (
+        preview.status === 'PENDING' && preview.expired ? (
+          <>
+            <h2 className="mt-6 text-xl font-semibold">Invite expired</h2>
+            <div className="mt-4">
+              <ExpiredInviteContinue email={preview.inviteeEmail} />
+            </div>
+          </>
+        ) : preview.expired || preview.status !== 'PENDING' ? (
           <p>This invitation is no longer available.</p>
         ) : (
           <>
             <p>{preview.inviterName} invited you to connect.</p>
             <p>Accept to save a lasting connection and message each other.</p>
-            {user ? (
+            {user && !emailMatches ? (
+              <div className="mt-4 space-y-3">
+                <p>
+                  You&apos;re signed in as {user.email}. This invite stays
+                  pending for {preview.inviteeEmail}.
+                </p>
+                <Link to="/">Continue</Link>
+              </div>
+            ) : user ? (
               <form
                 className="mt-4"
                 onSubmit={(event) => {
@@ -90,12 +113,27 @@ function Page() {
                   Accept invitation
                 </button>
               </form>
+            ) : preview.inviteeHasAccount ? (
+              <Link
+                to="/sign-in"
+                search={buildInviteSignInSearch({
+                  redirect: `/connections/invite/${token}`,
+                  email: preview.inviteeEmail,
+                  mode: 'sign-in',
+                })}
+              >
+                Sign in to accept
+              </Link>
             ) : (
               <Link
                 to="/sign-in"
-                search={{ redirect: `/connections/invite/${token}` }}
+                search={buildInviteSignInSearch({
+                  redirect: `/connections/invite/${token}`,
+                  email: preview.inviteeEmail,
+                  mode: 'sign-up',
+                })}
               >
-                Sign in or create an account to accept
+                Accept
               </Link>
             )}
           </>

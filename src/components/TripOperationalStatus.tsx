@@ -190,7 +190,6 @@ export function TripOperationalStatus({
                 onClick={onLogEntryClick}
                 className={cn(
                   MAP_CHROME_OPERATIONAL_CELL_CLASS,
-                  'text-white',
                   MAP_CHROME_BUTTON_HOVER_CLASS,
                   MAP_CHROME_DIVIDER_CLASS,
                   'disabled:cursor-default',
@@ -198,7 +197,7 @@ export function TripOperationalStatus({
                 aria-label={t('logEntry')}
                 title={t('logEntry')}
               >
-                <FileText className="size-5 text-white" strokeWidth={2.25} />
+                <FileText className="size-5" strokeWidth={2.25} />
               </button>
             </MapButtonTooltip>
           ) : null}

@@ -1,3 +1,4 @@
+import type { InviteFace } from './invite-face'
 import type { OrgMemberRole } from './org'
 
 export type MemberInviteKind = 'ORG' | 'BOAT'
@@ -28,6 +29,8 @@ export type MemberInvitePreview = {
   expired: boolean
   targetName: string
   targetId: string | null
+  face?: InviteFace | null
+  landingPath?: string | null
 }
 
 export type ResourceMember = {

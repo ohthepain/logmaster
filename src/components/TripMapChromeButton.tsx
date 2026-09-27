@@ -32,8 +32,8 @@ export function TripMapChromeButton({
         aria-label={label}
         title={label}
         className={cn(
-          'ios-map-touch-target pointer-events-auto inline-flex size-10 touch-manipulation items-center justify-center rounded-full border border-white/25 text-white backdrop-blur-sm transition hover:bg-black/45 disabled:opacity-60',
-          active ? 'bg-black/55' : 'bg-black/30',
+          'map-chrome-surface ios-map-touch-target pointer-events-auto inline-flex size-10 touch-manipulation items-center justify-center rounded-full transition hover:bg-[var(--map-chrome-hover)] disabled:opacity-60',
+          active && 'map-chrome-active',
         )}
       >
         {children}

@@ -44,6 +44,15 @@ export async function connectionAction(
     },
   )
 }
+export async function acceptConnectionInvite(token: string) {
+  return apiJson<{ ok: true; landingPath: string }>(
+    `/api/connections/invites/${encodeURIComponent(token)}/accept`,
+    {
+      method: 'POST',
+      body: JSON.stringify({}),
+    },
+  )
+}
 export async function openPrivateChat(peerId: string) {
   return apiJson<{ threadId: string }>('/api/messaging/direct', {
     method: 'POST',

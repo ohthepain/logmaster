@@ -62,8 +62,11 @@ export async function resendCrewInvite(inviteId: string): Promise<void> {
   await api<{ ok: true }>(`/invites/${inviteId}/resend`, { method: 'POST' })
 }
 
-export async function acceptCrewInvite(token: string): Promise<void> {
-  await api<{ ok: true }>('/invites/accept', {
+export async function acceptCrewInvite(token: string): Promise<{
+  ok: true
+  landingPath: string
+}> {
+  return api<{ ok: true; landingPath: string }>('/invites/accept', {
     method: 'POST',
     body: JSON.stringify({ token }),
   })

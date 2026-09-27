@@ -39,6 +39,7 @@ import { routesApi } from './routes/routes'
 import { consortiaRoutes } from './routes/consortia'
 import { consortiaMediaRoutes } from './routes/consortia-media'
 import { memberInvitesRoutes } from './routes/member-invites'
+import { inviteMediaRoutes } from './routes/invite-media'
 import { boatMembersRoutes } from './routes/boat-members'
 import { boatAssetsRoutes } from './routes/boat-assets'
 import { assetIntelligenceRoutes } from './routes/asset-intelligence'
@@ -122,6 +123,7 @@ app.route('/orgs', consortiaRoutes)
 app.route('/orgs', consortiaMediaRoutes)
 app.route('/orgs', orgAccountingRoutes)
 app.route('/member-invites', memberInvitesRoutes)
+app.route('/invite-media', inviteMediaRoutes)
 app.route('/notifications', notificationsRoutes)
 app.route('/translations', translationsRoutes)
 app.route('/products', productsRoutes)

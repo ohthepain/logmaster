@@ -1,3 +1,5 @@
+import type { InviteFace } from './invite-face'
+
 export type CrewInviteStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED'
 
 export type FriendRequestStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED'
@@ -68,4 +70,6 @@ export type CrewInvitePreview = {
   crewMemberName: string
   status: CrewInviteStatus
   expired: boolean
+  face?: InviteFace | null
+  landingPath?: string | null
 }

@@ -130,7 +130,6 @@ export function MapControlButton({
         className={cn(
           'ios-map-touch-target touch-manipulation',
           MAP_CHROME_CELL_CLASS,
-          'text-white/95',
           !disabled && MAP_CHROME_BUTTON_HOVER_CLASS,
           disabled && 'opacity-80',
           bordered && MAP_CHROME_DIVIDER_CLASS,

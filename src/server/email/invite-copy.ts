@@ -16,6 +16,14 @@ type InviteCopy = {
   memberPreheader: string
   memberIntroSuffix: string
   memberFootnote: string
+  connectionSubject: string
+  connectionTitle: string
+  connectionPreheader: string
+  connectionIntroSuffix: string
+  connectionAction: string
+  connectionActionText: string
+  connectionCta: string
+  connectionExpires: string
 }
 
 const copy: Record<InviteLocale, InviteCopy> = {
@@ -37,6 +45,17 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'invited you to join {target} on {appName}. Sign in with this email address, then accept the invite.',
     memberFootnote:
       'The link opens {appName}. If you do not have an account yet, sign in with this email to create one.',
+    connectionSubject: '{inviter} invited you to connect on {appName}',
+    connectionTitle: 'Connect with {inviter}',
+    connectionPreheader: 'Accept to stay in touch and message each other.',
+    connectionIntroSuffix:
+      'invited you to connect on {appName} so you can stay in touch and message each other.',
+    connectionAction:
+      'What to do: tap the button below. If you do not have an account yet, create one with this email address.',
+    connectionActionText:
+      'What to do: open the link below. If you do not have an account yet, create one with this email address.',
+    connectionCta: 'Accept invitation',
+    connectionExpires: 'This invitation expires in seven days.',
   },
   sv: {
     someone: 'Någon',
@@ -56,6 +75,18 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'bjöd in dig till {target} på {appName}. Logga in med den här e-postadressen och acceptera inbjudan.',
     memberFootnote:
       'Länken öppnar {appName}. Om du inte har ett konto än loggar du in med den här e-postadressen för att skapa ett.',
+    connectionSubject: '{inviter} bjöd in dig att ansluta på {appName}',
+    connectionTitle: 'Anslut till {inviter}',
+    connectionPreheader:
+      'Acceptera för att hålla kontakten och skicka meddelanden.',
+    connectionIntroSuffix:
+      'bjöd in dig att ansluta på {appName} så att ni kan hålla kontakten och skicka meddelanden till varandra.',
+    connectionAction:
+      'Så här gör du: tryck på knappen nedan. Om du inte har ett konto än skapar du ett med den här e-postadressen.',
+    connectionActionText:
+      'Så här gör du: öppna länken nedan. Om du inte har ett konto än skapar du ett med den här e-postadressen.',
+    connectionCta: 'Acceptera inbjudan',
+    connectionExpires: 'Inbjudan går ut om sju dagar.',
   },
   da: {
     someone: 'Nogen',
@@ -75,6 +106,17 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'inviterede dig til {target} på {appName}. Log ind med denne e-mail og acceptér invitationen.',
     memberFootnote:
       'Linket åbner {appName}. Hvis du ikke har en konto endnu, kan du logge ind med denne e-mail for at oprette en.',
+    connectionSubject: '{inviter} inviterede dig til at forbindes på {appName}',
+    connectionTitle: 'Forbind med {inviter}',
+    connectionPreheader: 'Acceptér for at holde kontakten og sende beskeder.',
+    connectionIntroSuffix:
+      'inviterede dig til at forbindes på {appName}, så I kan holde kontakten og sende beskeder til hinanden.',
+    connectionAction:
+      'Sådan gør du: tryk på knappen nedenfor. Hvis du ikke har en konto endnu, kan du oprette en med denne e-mail.',
+    connectionActionText:
+      'Sådan gør du: åbn linket nedenfor. Hvis du ikke har en konto endnu, kan du oprette en med denne e-mail.',
+    connectionCta: 'Acceptér invitation',
+    connectionExpires: 'Invitationen udløber om syv dage.',
   },
   de: {
     someone: 'Jemand',
@@ -95,6 +137,19 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'hat dich eingeladen, {target} auf {appName} beizutreten. Melde dich mit dieser E-Mail-Adresse an und nimm die Einladung an.',
     memberFootnote:
       'Der Link öffnet {appName}. Wenn du noch kein Konto hast, melde dich mit dieser E-Mail an, um eines zu erstellen.',
+    connectionSubject:
+      '{inviter} hat dich eingeladen, dich auf {appName} zu verbinden',
+    connectionTitle: 'Mit {inviter} verbinden',
+    connectionPreheader:
+      'Nimm an, um in Kontakt zu bleiben und Nachrichten zu schreiben.',
+    connectionIntroSuffix:
+      'hat dich eingeladen, dich auf {appName} zu verbinden, damit ihr in Kontakt bleiben und euch Nachrichten schreiben könnt.',
+    connectionAction:
+      'So geht’s: Tippe auf die Schaltfläche unten. Wenn du noch kein Konto hast, erstelle eines mit dieser E-Mail-Adresse.',
+    connectionActionText:
+      'So geht’s: Öffne den Link unten. Wenn du noch kein Konto hast, erstelle eines mit dieser E-Mail-Adresse.',
+    connectionCta: 'Einladung annehmen',
+    connectionExpires: 'Diese Einladung läuft in sieben Tagen ab.',
   },
   es: {
     someone: 'Alguien',
@@ -114,6 +169,17 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'te invitó a unirte a {target} en {appName}. Inicia sesión con este correo y acepta la invitación.',
     memberFootnote:
       'El enlace abre {appName}. Si aún no tienes cuenta, inicia sesión con este correo para crear una.',
+    connectionSubject: '{inviter} te invitó a conectar en {appName}',
+    connectionTitle: 'Conecta con {inviter}',
+    connectionPreheader: 'Acepta para seguir en contacto y enviaros mensajes.',
+    connectionIntroSuffix:
+      'te invitó a conectar en {appName} para que podáis seguir en contacto y enviaros mensajes.',
+    connectionAction:
+      'Qué hacer: pulsa el botón de abajo. Si aún no tienes cuenta, crea una con este correo.',
+    connectionActionText:
+      'Qué hacer: abre el enlace de abajo. Si aún no tienes cuenta, crea una con este correo.',
+    connectionCta: 'Aceptar invitación',
+    connectionExpires: 'Esta invitación caduca en siete días.',
   },
   fr: {
     someone: 'Quelqu’un',
@@ -133,6 +199,18 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'vous a invité à rejoindre {target} sur {appName}. Connectez-vous avec cette adresse e-mail, puis acceptez l’invitation.',
     memberFootnote:
       'Le lien ouvre {appName}. Si vous n’avez pas encore de compte, connectez-vous avec cet e-mail pour en créer un.',
+    connectionSubject: '{inviter} vous a invité à vous connecter sur {appName}',
+    connectionTitle: 'Connectez-vous avec {inviter}',
+    connectionPreheader:
+      'Acceptez pour rester en contact et vous envoyer des messages.',
+    connectionIntroSuffix:
+      'vous a invité à vous connecter sur {appName} pour rester en contact et vous envoyer des messages.',
+    connectionAction:
+      'Que faire : appuyez sur le bouton ci-dessous. Si vous n’avez pas encore de compte, créez-en un avec cette adresse e-mail.',
+    connectionActionText:
+      'Que faire : ouvrez le lien ci-dessous. Si vous n’avez pas encore de compte, créez-en un avec cette adresse e-mail.',
+    connectionCta: 'Accepter l’invitation',
+    connectionExpires: 'Cette invitation expire dans sept jours.',
   },
   nl: {
     someone: 'Iemand',
@@ -152,6 +230,18 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'nodigde je uit voor {target} op {appName}. Log in met dit e-mailadres en accepteer de uitnodiging.',
     memberFootnote:
       'De link opent {appName}. Als je nog geen account hebt, log je in met dit e-mailadres om er een te maken.',
+    connectionSubject: '{inviter} nodigde je uit om te verbinden op {appName}',
+    connectionTitle: 'Verbind met {inviter}',
+    connectionPreheader:
+      'Accepteer om contact te houden en berichten te sturen.',
+    connectionIntroSuffix:
+      'nodigde je uit om te verbinden op {appName}, zodat jullie contact kunnen houden en berichten kunnen sturen.',
+    connectionAction:
+      'Wat je doet: tik op de knop hieronder. Als je nog geen account hebt, maak je er een met dit e-mailadres.',
+    connectionActionText:
+      'Wat je doet: open de link hieronder. Als je nog geen account hebt, maak je er een met dit e-mailadres.',
+    connectionCta: 'Uitnodiging accepteren',
+    connectionExpires: 'Deze uitnodiging verloopt over zeven dagen.',
   },
   pt: {
     someone: 'Alguém',
@@ -171,6 +261,17 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'convidou-o para {target} em {appName}. Inicie sessão com este e-mail e aceite o convite.',
     memberFootnote:
       'A ligação abre {appName}. Se ainda não tem conta, inicie sessão com este e-mail para criar uma.',
+    connectionSubject: '{inviter} convidou-o a ligar-se no {appName}',
+    connectionTitle: 'Ligue-se a {inviter}',
+    connectionPreheader: 'Aceite para manter o contacto e trocar mensagens.',
+    connectionIntroSuffix:
+      'convidou-o a ligar-se no {appName} para manterem o contacto e trocarem mensagens.',
+    connectionAction:
+      'O que fazer: toque no botão abaixo. Se ainda não tem conta, crie uma com este e-mail.',
+    connectionActionText:
+      'O que fazer: abra a ligação abaixo. Se ainda não tem conta, crie uma com este e-mail.',
+    connectionCta: 'Aceitar convite',
+    connectionExpires: 'Este convite expira dentro de sete dias.',
   },
   fi: {
     someone: 'Joku',
@@ -191,6 +292,19 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'kutsui sinut kohteeseen {target} palvelussa {appName}. Kirjaudu sisään tällä sähköpostilla ja hyväksy kutsu.',
     memberFootnote:
       'Linkki avaa palvelun {appName}. Jos sinulla ei vielä ole tiliä, kirjaudu sisään tällä sähköpostilla luodaksesi sellaisen.',
+    connectionSubject:
+      '{inviter} kutsui sinut yhdistämään palvelussa {appName}',
+    connectionTitle: 'Yhdistä käyttäjään {inviter}',
+    connectionPreheader:
+      'Hyväksy, jotta voitte pitää yhteyttä ja lähettää viestejä.',
+    connectionIntroSuffix:
+      'kutsui sinut yhdistämään palvelussa {appName}, jotta voitte pitää yhteyttä ja lähettää viestejä toisillenne.',
+    connectionAction:
+      'Näin teet: napauta alla olevaa painiketta. Jos sinulla ei vielä ole tiliä, luo sellainen tällä sähköpostilla.',
+    connectionActionText:
+      'Näin teet: avaa alla oleva linkki. Jos sinulla ei vielä ole tiliä, luo sellainen tällä sähköpostilla.',
+    connectionCta: 'Hyväksy kutsu',
+    connectionExpires: 'Kutsu vanhenee seitsemän päivän kuluttua.',
   },
   el: {
     someone: 'Κάποιος',
@@ -211,6 +325,19 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'σας προσκάλεσε να ενταχθείτε στο {target} στο {appName}. Συνδεθείτε με αυτό το email και αποδεχτείτε την πρόσκληση.',
     memberFootnote:
       'Ο σύνδεσμος ανοίγει το {appName}. Αν δεν έχετε ακόμη λογαριασμό, συνδεθείτε με αυτό το email για να δημιουργήσετε έναν.',
+    connectionSubject:
+      'Ο/Η {inviter} σάς προσκάλεσε να συνδεθείτε στο {appName}',
+    connectionTitle: 'Συνδεθείτε με τον/την {inviter}',
+    connectionPreheader:
+      'Αποδεχτείτε για να μείνετε σε επαφή και να στέλνετε μηνύματα.',
+    connectionIntroSuffix:
+      'σάς προσκάλεσε να συνδεθείτε στο {appName} για να μείνετε σε επαφή και να στέλνετε μηνύματα.',
+    connectionAction:
+      'Τι να κάνετε: πατήστε το κουμπί παρακάτω. Αν δεν έχετε ακόμη λογαριασμό, δημιουργήστε έναν με αυτό το email.',
+    connectionActionText:
+      'Τι να κάνετε: ανοίξτε τον σύνδεσμο παρακάτω. Αν δεν έχετε ακόμη λογαριασμό, δημιουργήστε έναν με αυτό το email.',
+    connectionCta: 'Αποδοχή πρόσκλησης',
+    connectionExpires: 'Η πρόσκληση λήγει σε επτά ημέρες.',
   },
   tr: {
     someone: 'Birisi',
@@ -231,6 +358,18 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'sizi {appName} üzerinde {target} hedefine davet etti. Bu e-posta ile giriş yapın ve daveti kabul edin.',
     memberFootnote:
       'Bağlantı {appName} uygulamasını açar. Henüz hesabınız yoksa, bu e-posta ile giriş yaparak oluşturabilirsiniz.',
+    connectionSubject:
+      '{inviter} sizi {appName} üzerinde bağlanmaya davet etti',
+    connectionTitle: '{inviter} ile bağlan',
+    connectionPreheader: 'İletişimde kalmak ve mesajlaşmak için kabul edin.',
+    connectionIntroSuffix:
+      'sizi {appName} üzerinde bağlanmaya davet etti, böylece iletişimde kalıp mesajlaşabilirsiniz.',
+    connectionAction:
+      'Ne yapmalısınız: aşağıdaki düğmeye dokunun. Henüz hesabınız yoksa bu e-posta ile bir hesap oluşturun.',
+    connectionActionText:
+      'Ne yapmalısınız: aşağıdaki bağlantıyı açın. Henüz hesabınız yoksa bu e-posta ile bir hesap oluşturun.',
+    connectionCta: 'Daveti kabul et',
+    connectionExpires: 'Bu davet yedi gün içinde sona erer.',
   },
   vi: {
     someone: 'Ai đó',
@@ -250,6 +389,17 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'mời bạn tham gia {target} trên {appName}. Đăng nhập bằng email này rồi chấp nhận lời mời.',
     memberFootnote:
       'Liên kết mở {appName}. Nếu bạn chưa có tài khoản, hãy đăng nhập bằng email này để tạo một tài khoản.',
+    connectionSubject: '{inviter} mời bạn kết nối trên {appName}',
+    connectionTitle: 'Kết nối với {inviter}',
+    connectionPreheader: 'Chấp nhận để giữ liên lạc và nhắn tin cho nhau.',
+    connectionIntroSuffix:
+      'mời bạn kết nối trên {appName} để các bạn giữ liên lạc và nhắn tin cho nhau.',
+    connectionAction:
+      'Cách làm: nhấn nút bên dưới. Nếu bạn chưa có tài khoản, hãy tạo một tài khoản bằng email này.',
+    connectionActionText:
+      'Cách làm: mở liên kết bên dưới. Nếu bạn chưa có tài khoản, hãy tạo một tài khoản bằng email này.',
+    connectionCta: 'Chấp nhận lời mời',
+    connectionExpires: 'Lời mời này hết hạn sau bảy ngày.',
   },
   ja: {
     someone: '誰か',
@@ -269,6 +419,17 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'さんが{appName}の{target}への参加を招待しました。このメールアドレスでサインインし、招待を承認してください。',
     memberFootnote:
       'リンクは{appName}を開きます。アカウントがない場合は、このメールアドレスでサインインして作成できます。',
+    connectionSubject: '{inviter}さんが{appName}でのつながりに招待しました',
+    connectionTitle: '{inviter}さんとつながる',
+    connectionPreheader: '承認して連絡を取り合い、メッセージを送りましょう。',
+    connectionIntroSuffix:
+      'さんが{appName}でつながるよう招待しました。連絡を取り合い、メッセージを送れます。',
+    connectionAction:
+      '手順: 下のボタンをタップしてください。アカウントがない場合は、このメールアドレスで作成できます。',
+    connectionActionText:
+      '手順: 下のリンクを開いてください。アカウントがない場合は、このメールアドレスで作成できます。',
+    connectionCta: '招待を承認',
+    connectionExpires: 'この招待は7日後に期限切れになります。',
   },
   ko: {
     someone: '누군가',
@@ -288,6 +449,17 @@ const copy: Record<InviteLocale, InviteCopy> = {
       '님이 {appName}의 {target} 참여를 초대했습니다. 이 이메일로 로그인한 뒤 초대를 수락하세요.',
     memberFootnote:
       '링크는 {appName}을 엽니다. 계정이 없다면 이 이메일로 로그인해 만들 수 있습니다.',
+    connectionSubject: '{inviter}님이 {appName}에서 연결하도록 초대했습니다',
+    connectionTitle: '{inviter}님과 연결',
+    connectionPreheader: '수락하고 연락을 유지하며 메시지를 주고받으세요.',
+    connectionIntroSuffix:
+      '님이 {appName}에서 연결하도록 초대했습니다. 연락을 유지하고 메시지를 주고받을 수 있습니다.',
+    connectionAction:
+      '방법: 아래 버튼을 누르세요. 계정이 없다면 이 이메일로 만들 수 있습니다.',
+    connectionActionText:
+      '방법: 아래 링크를 여세요. 계정이 없다면 이 이메일로 만들 수 있습니다.',
+    connectionCta: '초대 수락',
+    connectionExpires: '이 초대는 7일 후에 만료됩니다.',
   },
   zh: {
     someone: '某人',
@@ -307,6 +479,17 @@ const copy: Record<InviteLocale, InviteCopy> = {
       '邀请您加入 {appName} 的 {target}。请使用此邮箱登录并接受邀请。',
     memberFootnote:
       '链接将打开 {appName}。如果还没有账户，请使用此邮箱登录创建。',
+    connectionSubject: '{inviter} 邀请您在 {appName} 上建立联系',
+    connectionTitle: '与 {inviter} 建立联系',
+    connectionPreheader: '接受邀请，保持联络并互相发消息。',
+    connectionIntroSuffix:
+      '邀请您在 {appName} 上建立联系，以便保持联络并互相发消息。',
+    connectionAction:
+      '请这样做：点按下方按钮。如果还没有账户，请使用此邮箱创建。',
+    connectionActionText:
+      '请这样做：打开下方链接。如果还没有账户，请使用此邮箱创建。',
+    connectionCta: '接受邀请',
+    connectionExpires: '此邀请将在七天后过期。',
   },
   yue: {
     someone: '某人',
@@ -326,6 +509,16 @@ const copy: Record<InviteLocale, InviteCopy> = {
       '邀請你加入 {appName} 嘅 {target}。請用呢個電郵登入並接受邀請。',
     memberFootnote:
       '連結會開啟 {appName}。如果未有帳戶，可以用呢個電郵登入建立。',
+    connectionSubject: '{inviter} 邀請你喺 {appName} 建立聯繫',
+    connectionTitle: '同 {inviter} 建立聯繫',
+    connectionPreheader: '接受邀請，保持聯絡同互相發訊息。',
+    connectionIntroSuffix:
+      '邀請你喺 {appName} 建立聯繫，方便保持聯絡同互相發訊息。',
+    connectionAction: '請咁做：撳下面個掣。如果未有帳戶，可以用呢個電郵建立。',
+    connectionActionText:
+      '請咁做：打開下面條連結。如果未有帳戶，可以用呢個電郵建立。',
+    connectionCta: '接受邀請',
+    connectionExpires: '呢個邀請會喺七日後過期。',
   },
   ar: {
     someone: 'شخص ما',
@@ -345,6 +538,17 @@ const copy: Record<InviteLocale, InviteCopy> = {
       'دعاك للانضمام إلى {target} على {appName}. سجّل الدخول باستخدام هذا البريد ثم اقبل الدعوة.',
     memberFootnote:
       'يفتح الرابط {appName}. إذا لم يكن لديك حساب بعد، سجّل الدخول بهذا البريد لإنشاء حساب.',
+    connectionSubject: '{inviter} دعاك للتواصل على {appName}',
+    connectionTitle: 'تواصل مع {inviter}',
+    connectionPreheader: 'اقبل الدعوة للبقاء على تواصل وتبادل الرسائل.',
+    connectionIntroSuffix:
+      'دعاك للتواصل على {appName} للبقاء على تواصل وتبادل الرسائل.',
+    connectionAction:
+      'ما الذي عليك فعله: اضغط الزر أدناه. إذا لم يكن لديك حساب بعد، أنشئ واحدًا باستخدام هذا البريد.',
+    connectionActionText:
+      'ما الذي عليك فعله: افتح الرابط أدناه. إذا لم يكن لديك حساب بعد، أنشئ واحدًا باستخدام هذا البريد.',
+    connectionCta: 'قبول الدعوة',
+    connectionExpires: 'تنتهي صلاحية هذه الدعوة خلال سبعة أيام.',
   },
 }
 
@@ -465,6 +669,37 @@ export function buildMemberInviteEmail(args: {
     ctaLabel: strings.ctaAccept,
     ctaUrl: args.url,
     footnoteHtml: `${fill(strings.memberFootnote, { appName: escapeHtml(appName), inviter: '', target })} ${strings.ignoreEmail}`,
+  })
+  return { subject, text, html, locale }
+}
+
+export function buildConnectionInviteEmail(args: {
+  locale?: unknown
+  appName: string
+  inviterName: string
+  url: string
+}) {
+  const locale = normalizeInviteLocale(args.locale)
+  const strings = stringsFor(locale)
+  const appName = args.appName.trim() || 'logmaster'
+  const inviterPlain = args.inviterName.trim() || strings.someone
+  const inviter = escapeHtml(inviterPlain)
+  const app = escapeHtml(appName)
+  const vars = { inviter: inviterPlain, appName, target: '' }
+  const htmlVars = { inviter: '', appName: app, target: '' }
+  const subject = fill(strings.connectionSubject, vars)
+  const introHtml = `<p style="margin:0 0 16px;"><strong>${inviter}</strong> ${fill(strings.connectionIntroSuffix, htmlVars)}</p><p style="margin:0;color:#0a0a0a;">${fill(strings.connectionAction, htmlVars)}</p>`
+  const expires = fill(strings.connectionExpires, vars)
+  const text = `${inviterPlain} ${fill(strings.connectionIntroSuffix, vars)}\n\n${fill(strings.connectionActionText, vars)}\n\n${args.url}\n\n${expires} ${strings.ignoreEmail}`
+  const html = renderTransactionalEmail({
+    locale,
+    appName,
+    preheader: fill(strings.connectionPreheader, vars),
+    title: fill(strings.connectionTitle, vars),
+    introHtml,
+    ctaLabel: strings.connectionCta,
+    ctaUrl: args.url,
+    footnoteHtml: `${fill(strings.connectionExpires, htmlVars)} ${strings.ignoreEmail}`,
   })
   return { subject, text, html, locale }
 }

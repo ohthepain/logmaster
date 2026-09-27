@@ -38,10 +38,11 @@ export function renderTransactionalEmail(
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="x-apple-disable-message-reformatting" />
   <meta name="color-scheme" content="light" />
   <title>${escapeHtml(layout.title)}</title>
 </head>
-<body style="margin:0;padding:0;background:#f5f5f5;font-family:Manrope, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;color:#0a0a0a;">
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Manrope, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;color:#0a0a0a;-webkit-text-size-adjust:100%;">
   ${preheader}
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f5f5;">
     <tr>
@@ -53,15 +54,15 @@ export function renderTransactionalEmail(
             </td>
           </tr>
           <tr>
-            <td style="padding:28px;">
-              <h1 style="margin:0 0 16px;font-size:22px;line-height:1.35;font-weight:700;color:#0a0a0a;">${escapeHtml(layout.title)}</h1>
-              <div style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#525252;">${layout.introHtml}</div>
+            <td style="padding:32px 28px;word-break:break-word;overflow-wrap:anywhere;">
+              <h1 style="margin:0 0 16px;font-size:26px;line-height:1.3;font-weight:700;color:#0a0a0a;">${escapeHtml(layout.title)}</h1>
+              <div style="margin:0 0 28px;font-size:18px;line-height:1.55;color:#525252;">${layout.introHtml}</div>
               ${
                 layout.ctaUrl && layout.ctaLabel
-                  ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 24px;">
+                  ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 28px;">
                 <tr>
                   <td style="border-radius:999px;background:#0a0a0a;">
-                    <a href="${escapeHtml(layout.ctaUrl)}" style="display:inline-block;padding:14px 22px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:999px;">${escapeHtml(layout.ctaLabel)}</a>
+                    <a href="${escapeHtml(layout.ctaUrl)}" style="display:inline-block;padding:16px 28px;font-size:17px;line-height:1.2;font-weight:700;color:#ffffff;text-decoration:none;border-radius:999px;">${escapeHtml(layout.ctaLabel)}</a>
                   </td>
                 </tr>
               </table>`

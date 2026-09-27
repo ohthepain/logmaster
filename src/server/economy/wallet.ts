@@ -198,17 +198,20 @@ export async function acceptEconomyInvite(
   invite: { id: string; inviterUserId: string; createdAt: Date },
   inviteeId: string,
 ) {
-  if (invite.inviterUserId === inviteeId) return
+  if (invite.inviterUserId === inviteeId) return false
   await tx.$executeRaw`SELECT pg_advisory_xact_lock(731924061)`
   const user = await tx.user.findUniqueOrThrow({
     where: { id: inviteeId },
     select: { createdAt: true },
   })
   // Existing accounts do not qualify for a fresh referral allowance.
-  if (user.createdAt < invite.createdAt) return
-  await tx.doubloonReferral.upsert({
+  if (user.createdAt < invite.createdAt) return false
+  const existing = await tx.doubloonReferral.findUnique({
     where: { inviteeId },
-    create: { inviteeId, inviterId: invite.inviterUserId, inviteId: invite.id },
-    update: {},
   })
+  if (existing) return false
+  await tx.doubloonReferral.create({
+    data: { inviteeId, inviterId: invite.inviterUserId, inviteId: invite.id },
+  })
+  return true
 }

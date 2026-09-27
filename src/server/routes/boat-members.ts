@@ -193,10 +193,6 @@ boatMembersRoutes.post('/:boatId/members', async (c) => {
           inviteLocale: body.inviteLocale,
           sendEmail: body.sendEmail !== false,
         })
-        const boatSummary = await getBoatSummary(boatId)
-        if (boatSummary) {
-          notifyBoatMembers(user.id, boatSummary, { key: 'sentMemberInvite' })
-        }
         return c.json({ invite: serializeMemberInvite(invite) }, 201)
       } catch (error) {
         const message =
@@ -261,12 +257,6 @@ boatMembersRoutes.post('/:boatId/invite-link', async (c) => {
       inviteeEmail: null,
       sendEmail: false,
     })
-    const boatSummary = await getBoatSummary(boatId)
-    if (boatSummary) {
-      notifyBoatMembers(user.id, boatSummary, {
-        key: 'createdMemberInviteLink',
-      })
-    }
     return c.json({ invite: serializeMemberInvite(invite) }, 201)
   } catch (error) {
     const message =

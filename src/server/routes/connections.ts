@@ -10,7 +10,16 @@ import {
   connectionPair,
 } from '../connections'
 import { acceptEconomyInvite } from '../economy/wallet'
+import { loadInviteArtwork } from '../invite-face'
+import {
+  connectionLandingPath,
+  postInviteChat,
+  rememberInviteLanding,
+} from '../invite-outcome'
+import { logServerEvent } from '../lib/server-log'
 import { sendConnectionInviteEmail } from '../email/ses'
+import { normalizeInviteLocale } from '../../lib/invite-locale'
+import { inviteeHasAccount } from '../invite-signup'
 import { canAccess } from '../permissions'
 
 export const connectionsRoutes = new Hono<{ Variables: { userId: string } }>()
@@ -31,10 +40,15 @@ connectionsRoutes.get('/invites/:token', async (c) => {
     where: { id: invite.inviterUserId },
     select: { name: true },
   })
+  const artwork = await loadInviteArtwork(c.req.param('token'))
   return c.json({
     inviterName: inviter?.name ?? 'A Logmaster user',
+    inviteeEmail: invite.inviteeEmail,
+    inviteeHasAccount: await inviteeHasAccount(invite.inviteeEmail),
     status: invite.status,
-    expired: invite.expiresAt < new Date(),
+    expired: invite.expiresAt < new Date() || invite.status !== 'PENDING',
+    face: artwork?.face ?? null,
+    landingPath: artwork?.landingPath ?? null,
   })
 })
 connectionsRoutes.use('*', async (c, next) => {
@@ -161,12 +175,18 @@ connectionsRoutes.post('/:peerId/:action', async (c) => {
   return c.json({ ok: true })
 })
 connectionsRoutes.post('/invite', async (c) => {
-  const { email, notifyInviteeOnTripStart } = z
+  const {
+    email,
+    notifyInviteeOnTripStart,
+    inviteLocale: inviteLocaleRaw,
+  } = z
     .object({
       email: z.string().email(),
       notifyInviteeOnTripStart: z.boolean().optional(),
+      inviteLocale: z.string().optional(),
     })
     .parse(await c.req.json())
+  const inviteLocale = normalizeInviteLocale(inviteLocaleRaw)
   const userId = c.get('userId')
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
   if (user.email.toLowerCase() === email.toLowerCase())
@@ -184,6 +204,7 @@ connectionsRoutes.post('/invite', async (c) => {
     data: {
       inviterUserId: userId,
       inviteeEmail: email.trim().toLowerCase(),
+      inviteLocale,
       token: randomBytes(32).toString('hex'),
       notifyInviteeOnTripStart: notifyInviteeOnTripStart ?? true,
       expiresAt: new Date(Date.now() + 7 * 86400000),
@@ -196,6 +217,7 @@ connectionsRoutes.post('/invite', async (c) => {
     to: invite.inviteeEmail,
     inviterName: user.name,
     url: `${origin}/connections/invite/${invite.token}`,
+    locale: invite.inviteLocale,
   })
   return c.json({ ok: true }, 201)
 })
@@ -205,11 +227,13 @@ connectionsRoutes.post('/invites/:token/accept', async (c) => {
   const { notifyOnInviterTripStart } = z
     .object({ notifyOnInviterTripStart: z.boolean().optional() })
     .parse(await c.req.json().catch(() => ({})))
+  let resolvedLanding = ''
+  let acceptedInviteId = ''
   await prisma.$transaction(async (tx) => {
     const invite = await tx.connectionInvite.findUnique({
       where: { token: c.req.param('token') },
     })
-    if (!invite || invite.status !== 'PENDING' || invite.expiresAt < new Date())
+    if (!invite)
       throw new HTTPException(409, {
         message: 'Invitation is no longer available',
       })
@@ -220,17 +244,49 @@ connectionsRoutes.post('/invites/:token/accept', async (c) => {
       throw new HTTPException(403, {
         message: 'Sign in with the invited email address',
       })
+    resolvedLanding = connectionLandingPath(invite.inviterUserId, userId)
+    if (invite.status === 'ACCEPTED') return
+    if (invite.status !== 'PENDING' || invite.expiresAt < new Date())
+      throw new HTTPException(409, {
+        message: 'Invitation is no longer available',
+      })
     const claimed = await tx.connectionInvite.updateMany({
       where: { id: invite.id, status: 'PENDING' },
       data: { status: 'ACCEPTED' },
     })
-    if (!claimed.count)
-      throw new HTTPException(409, { message: 'Invitation already accepted' })
+    if (!claimed.count) return
+    acceptedInviteId = invite.id
     await acceptConnection(tx, invite.inviterUserId, userId, {
       notifyInviteeOnTripStart: invite.notifyInviteeOnTripStart,
       notifyOnInviterTripStart: notifyOnInviterTripStart ?? true,
     })
-    await acceptEconomyInvite(tx, invite, userId)
+    const referralCreated = await acceptEconomyInvite(tx, invite, userId)
+    const inviter = await tx.user.findUniqueOrThrow({
+      where: { id: invite.inviterUserId },
+      select: { name: true },
+    })
+    await postInviteChat(tx, {
+      inviterId: invite.inviterUserId,
+      inviteeId: userId,
+      inviterName: inviter.name,
+      inviteeName: user.name,
+      connected: true,
+      referralCreated,
+    })
   })
-  return c.json({ ok: true })
+  if (!resolvedLanding)
+    throw new HTTPException(409, {
+      message: 'Invitation is no longer available',
+    })
+  await rememberInviteLanding(userId, resolvedLanding)
+  if (acceptedInviteId) {
+    logServerEvent({
+      action: 'invite.accept',
+      resourceType: 'connection_invite',
+      resourceId: acceptedInviteId,
+      userId,
+      outcome: 'success',
+    })
+  }
+  return c.json({ ok: true, landingPath: resolvedLanding })
 })

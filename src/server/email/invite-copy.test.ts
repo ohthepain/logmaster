@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildConnectionInviteEmail,
   buildCrewInviteEmail,
   buildMemberInviteEmail,
   resolveMemberTargetName,
@@ -40,6 +41,51 @@ describe('invite email copy', () => {
         targetKind: 'org',
       }),
     ).toBe('eine Organisation')
+  })
+
+  it('builds a connection invite with a button and no visible raw link', () => {
+    const url =
+      'https://logmaster.live/connections/invite/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+    const email = buildConnectionInviteEmail({
+      appName: 'logmaster',
+      inviterName: 'Paul <script>',
+      url,
+    })
+    expect(email.subject).toBe(
+      'Paul <script> invited you to connect on logmaster',
+    )
+    expect(email.html).toContain('Connect with Paul &lt;script&gt;')
+    expect(email.html).toContain('What to do:')
+    expect(email.html).toContain('Accept invitation')
+    expect(email.html).toContain('viewport')
+    expect(email.html).toContain(`href="${url}"`)
+    const withoutLinks = email.html.replace(/href="[^"]*"/g, '')
+    expect(withoutLinks).not.toContain(url)
+    expect(email.text).toContain(url)
+    expect(email.text).toContain('create one with this email address')
+    expect(email.locale).toBe('en')
+  })
+
+  it('localizes a connection invite', () => {
+    const sv = buildConnectionInviteEmail({
+      locale: 'sv',
+      appName: 'logmaster',
+      inviterName: 'Paul',
+      url: 'https://example.com/invite/abc',
+    })
+    expect(sv.locale).toBe('sv')
+    expect(sv.subject).toContain('Paul')
+    expect(sv.html).toContain('lang="sv"')
+    expect(sv.html).toContain('Acceptera inbjudan')
+    expect(sv.html).not.toContain('Accept invitation')
+    const ar = buildConnectionInviteEmail({
+      locale: 'ar',
+      appName: 'logmaster',
+      inviterName: 'Sam',
+      url: 'https://example.com/invite/abc',
+    })
+    expect(ar.html).toContain('dir="rtl"')
+    expect(ar.html).toContain('قبول الدعوة')
   })
 
   it('builds crew invite with rtl layout for Arabic', () => {

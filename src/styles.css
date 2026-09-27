@@ -42,6 +42,11 @@
   --active-border: rgba(0, 0, 0, 0.22);
   --hero-a: rgba(0, 0, 0, 0.03);
   --hero-b: rgba(0, 0, 0, 0.02);
+  --map-chrome-bg: #ffffff;
+  --map-chrome-border: rgba(0, 0, 0, 0.12);
+  --map-chrome-fg: #0a0a0a;
+  --map-chrome-hover: rgba(0, 0, 0, 0.06);
+  --map-chrome-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   /* Capacitor SystemBars injects --safe-area-inset-*; env() is the Web fallback. */
   --lm-safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
   --lm-safe-bottom: var(
@@ -95,6 +100,11 @@
   --active-border: rgba(255, 255, 255, 0.28);
   --hero-a: rgba(255, 255, 255, 0.04);
   --hero-b: rgba(255, 255, 255, 0.02);
+  --map-chrome-bg: #171717;
+  --map-chrome-border: rgba(255, 255, 255, 0.14);
+  --map-chrome-fg: #fafafa;
+  --map-chrome-hover: rgba(255, 255, 255, 0.08);
+  --map-chrome-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -130,7 +140,37 @@
     --active-border: rgba(255, 255, 255, 0.28);
     --hero-a: rgba(255, 255, 255, 0.04);
     --hero-b: rgba(255, 255, 255, 0.02);
+    --map-chrome-bg: #171717;
+    --map-chrome-border: rgba(255, 255, 255, 0.14);
+    --map-chrome-fg: #fafafa;
+    --map-chrome-hover: rgba(255, 255, 255, 0.08);
+    --map-chrome-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
   }
+}
+
+/* Map button artwork is drawn in light lines. Recolor it for the theme. */
+.map-chrome-surface {
+  color: var(--map-chrome-fg);
+  background-color: var(--map-chrome-bg);
+  border: 1px solid var(--map-chrome-border);
+  box-shadow: var(--map-chrome-shadow);
+}
+
+.map-chrome-muted {
+  color: var(--sea-ink-soft);
+}
+
+.map-chrome-active {
+  background-color: var(--map-chrome-fg);
+  color: var(--map-chrome-bg);
+}
+
+.map-chrome-icon-img {
+  filter: brightness(0);
+}
+
+:root.dark .map-chrome-icon-img {
+  filter: none;
 }
 
 * {

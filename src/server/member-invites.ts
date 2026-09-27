@@ -1,4 +1,12 @@
 import { acceptEconomyInvite } from './economy/wallet'
+import { loadInviteArtwork } from './invite-face'
+import {
+  boatLandingPath,
+  orgLandingPath,
+  postInviteChat,
+  rememberInviteLanding,
+} from './invite-outcome'
+import { logServerEvent } from './lib/server-log'
 import type { InviteLocale } from '../lib/invite-locale'
 import { normalizeInviteLocale } from '../lib/invite-locale'
 import { sendMemberInviteEmail } from './email/ses'
@@ -351,6 +359,7 @@ export async function getMemberInvitePreview(token: string) {
     ? await inviteeHasAccount(invite.inviteeEmail)
     : false
 
+  const artwork = await loadInviteArtwork(token)
   return {
     kind: invite.kind as 'ORG' | 'BOAT',
     inviterName: invite.inviter.name,
@@ -364,6 +373,8 @@ export async function getMemberInvitePreview(token: string) {
         ? (invite.org?.name ?? 'Organization')
         : (invite.boat?.name ?? 'Boat'),
     targetId: invite.kind === 'ORG' ? invite.orgId : invite.boatId,
+    face: artwork?.face ?? null,
+    landingPath: artwork?.landingPath ?? null,
   }
 }
 
@@ -377,10 +388,30 @@ export async function acceptMemberInvite(args: {
     include: {
       org: { select: { id: true, name: true } },
       boat: { select: { id: true, name: true, userId: true } },
+      inviter: { select: { id: true, name: true } },
     },
   })
   if (!invite) {
     throw new Error('Invite not found')
+  }
+  const landingPath =
+    invite.kind === 'ORG' && invite.orgId
+      ? orgLandingPath(invite.orgId)
+      : invite.boatId
+        ? boatLandingPath(invite.boatId)
+        : '/'
+  if (invite.status === 'ACCEPTED' && invite.acceptedByUserId === args.userId) {
+    await rememberInviteLanding(args.userId, landingPath)
+    return {
+      kind: invite.kind as 'ORG' | 'BOAT',
+      orgId: invite.orgId,
+      boatId: invite.boatId,
+      targetName:
+        invite.kind === 'ORG'
+          ? (invite.org?.name ?? 'Organization')
+          : (invite.boat?.name ?? 'Boat'),
+      landingPath,
+    }
   }
   if (invite.status !== 'PENDING') {
     throw new Error('Invite is no longer valid')
@@ -448,7 +479,19 @@ export async function acceptMemberInvite(args: {
       })
     }
 
-    await acceptEconomyInvite(tx, invite, args.userId)
+    const referralCreated = await acceptEconomyInvite(tx, invite, args.userId)
+    const invitee = await tx.user.findUniqueOrThrow({
+      where: { id: args.userId },
+      select: { name: true },
+    })
+    await postInviteChat(tx, {
+      inviterId: invite.inviterUserId,
+      inviteeId: args.userId,
+      inviterName: invite.inviter.name,
+      inviteeName: invitee.name,
+      connected: false,
+      referralCreated,
+    })
     await tx.memberInvite.update({
       where: { id: invite.id },
       data: {
@@ -463,6 +506,15 @@ export async function acceptMemberInvite(args: {
     fireOrgMembersNotification(args.userId, invite.org, { key: 'joinedOrg' })
   }
 
+  await rememberInviteLanding(args.userId, landingPath)
+  logServerEvent({
+    action: 'invite.accept',
+    resourceType: 'member_invite',
+    resourceId: invite.id,
+    userId: args.userId,
+    outcome: 'success',
+  })
+
   return {
     kind: invite.kind as 'ORG' | 'BOAT',
     orgId: invite.orgId,
@@ -471,6 +523,7 @@ export async function acceptMemberInvite(args: {
       invite.kind === 'ORG'
         ? (invite.org?.name ?? 'Organization')
         : (invite.boat?.name ?? 'Boat'),
+    landingPath,
   }
 }
 

@@ -1,9 +1,10 @@
 import { Link } from '@tanstack/react-router'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { ArrowRight, Eye, EyeOff, Lock, Mail, MailCheck } from 'lucide-react'
 import { authClient, signIn, signOut, signUp } from '../lib/auth-client'
 import { getAppOrigin } from '../lib/app-origin'
+import { acceptConnectionInvite } from '../lib/connections-api'
 import { acceptCrewInvite } from '../lib/crew-api'
 import {
   normalizeEmailForCompare,
@@ -18,7 +19,11 @@ import {
   signInWithGoogleNative,
   supportsNativeGoogleSignIn,
 } from '../lib/native/google-sign-in'
+import { inviteSignupFocused } from '../domain/invite-face'
+import type { InviteFace } from '../domain/invite-face'
+import { fetchInviteFace } from '../lib/invite-face-client'
 import { DevComponentLabel } from './DevComponentLabel'
+import { InviteSignupFace } from './InviteSignupFace'
 import { useTranslation } from '../lib/i18n'
 
 type Tab = 'password' | 'magic'
@@ -50,6 +55,7 @@ export function SignInPanel({
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [tab, setTab] = useState<Tab>('password')
+  const [inviteFace, setInviteFace] = useState<InviteFace | null>(null)
   const [forgotOpen, setForgotOpen] = useState(initialForgotOpen)
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('')
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false)
@@ -57,6 +63,23 @@ export function SignInPanel({
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<
     string | null
   >(null)
+
+  const inviteFocused = inviteSignupFocused(inviteFace, email)
+
+  useEffect(() => {
+    if (!inviteRedirectPath) return
+    let cancelled = false
+    void fetchInviteFace(inviteRedirectPath).then((face) => {
+      if (!cancelled) setInviteFace(face)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [inviteRedirectPath])
+
+  useEffect(() => {
+    if (inviteFocused && tab === 'magic') setTab('password')
+  }, [inviteFocused, tab])
 
   const finishAuth = useCallback(() => {
     if (onAuthSuccess) {
@@ -183,21 +206,37 @@ export function SignInPanel({
         const signedUpEmail = normalizeEmailForCompare(email)
         const inviteSignupMatch =
           invite != null && inviteEmail != null && signedUpEmail === inviteEmail
+        const verifiedByInvite = result.data?.user?.emailVerified === true
 
-        if (inviteSignupMatch) {
-          try {
-            if (invite.kind === 'member') {
-              await acceptMemberInvite(invite.token)
-            } else {
-              await acceptCrewInvite(invite.token)
+        if (inviteSignupMatch || verifiedByInvite) {
+          if (!result.data?.token) {
+            const signedIn = await signIn.email({
+              email,
+              password,
+              callbackURL: afterAuthPath,
+            })
+            if (signedIn.error) {
+              toast.error(signedIn.error.message ?? 'Sign in failed')
+              return
             }
-            toast.success('Invite accepted')
-          } catch (inviteErr) {
-            toast.error(
-              inviteErr instanceof Error
-                ? inviteErr.message
-                : 'Failed to accept invite',
-            )
+          }
+          if (inviteSignupMatch && invite) {
+            try {
+              if (invite.kind === 'member') {
+                await acceptMemberInvite(invite.token)
+              } else if (invite.kind === 'connection') {
+                await acceptConnectionInvite(invite.token)
+              } else {
+                await acceptCrewInvite(invite.token)
+              }
+              toast.success('Invite accepted')
+            } catch (inviteErr) {
+              toast.error(
+                inviteErr instanceof Error
+                  ? inviteErr.message
+                  : 'Failed to accept invite',
+              )
+            }
           }
           finishAuth()
           return
@@ -365,7 +404,9 @@ export function SignInPanel({
         </p>
       </div>
 
-      {mode === 'sign-in' && (
+      {inviteFace?.valid ? <InviteSignupFace face={inviteFace} /> : null}
+
+      {(mode === 'sign-in' || inviteFocused) && (
         <>
           <button
             type="button"
@@ -380,35 +421,37 @@ export function SignInPanel({
           <div className="flex items-center gap-4 mb-6">
             <div className="flex-1 h-px bg-[var(--line)]" />
             <span className="text-[var(--sea-ink-soft)] text-sm">
-              or continue with email
+              {inviteFocused ? 'or use a password' : 'or continue with email'}
             </span>
             <div className="flex-1 h-px bg-[var(--line)]" />
           </div>
 
-          <div className="flex rounded-xl bg-[var(--chip-bg)] border border-[var(--line)] p-1 gap-1 mb-6">
-            <button
-              type="button"
-              onClick={() => setTab('password')}
-              className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-                tab === 'password'
-                  ? 'bg-[var(--btn-bg)] text-[var(--btn-text)]'
-                  : 'text-[var(--sea-ink-soft)]'
-              }`}
-            >
-              Password
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('magic')}
-              className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-                tab === 'magic'
-                  ? 'bg-[var(--btn-bg)] text-[var(--btn-text)]'
-                  : 'text-[var(--sea-ink-soft)]'
-              }`}
-            >
-              Magic link
-            </button>
-          </div>
+          {inviteFocused ? null : (
+            <div className="flex rounded-xl bg-[var(--chip-bg)] border border-[var(--line)] p-1 gap-1 mb-6">
+              <button
+                type="button"
+                onClick={() => setTab('password')}
+                className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                  tab === 'password'
+                    ? 'bg-[var(--btn-bg)] text-[var(--btn-text)]'
+                    : 'text-[var(--sea-ink-soft)]'
+                }`}
+              >
+                Password
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab('magic')}
+                className={`flex-1 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                  tab === 'magic'
+                    ? 'bg-[var(--btn-bg)] text-[var(--btn-text)]'
+                    : 'text-[var(--sea-ink-soft)]'
+                }`}
+              >
+                Magic link
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -452,11 +495,15 @@ export function SignInPanel({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
+              readOnly={inviteFocused}
               autoComplete="email"
               className="w-full pl-10 pr-4 py-3 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] text-sm outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
             />
           </div>
-          {mode === 'sign-up' && initialEmail && inviteRedirectPath ? (
+          {mode === 'sign-up' &&
+          initialEmail &&
+          inviteRedirectPath &&
+          !inviteFocused ? (
             <p className="mt-1.5 text-xs text-[var(--sea-ink-soft)]">
               Use the email this invite was sent to.
             </p>
@@ -532,7 +579,7 @@ export function SignInPanel({
         </button>
       </form>
 
-      {mode === 'sign-in' && tab === 'password' && (
+      {mode === 'sign-in' && tab === 'password' && !inviteFocused && (
         <p className="text-center text-sm text-[var(--sea-ink-soft)] mt-3">
           <button
             type="button"
