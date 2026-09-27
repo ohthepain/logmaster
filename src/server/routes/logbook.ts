@@ -14,6 +14,7 @@ import { prisma } from '../db'
 import { deleteTripsFromLogbook, getDeletedTripIds } from '../deleted-trips'
 import { canAccess, tripAccessFilter } from '../permissions'
 import { getSessionUserId } from '../session'
+import { notifyConnectionTripStarted } from '../notifications/connection-trip-start'
 import {
   fireNotification,
   notifyBoatTripCompleted,
@@ -503,15 +504,29 @@ logbookRoutes.post('/sync', async (c) => {
           ])
         }
       }
+      const startedTrips: Array<{
+        id: string
+        userId: string
+        title: string | null
+        boatName: string
+      }> = []
       await prisma.$transaction(
         async (tx) => {
           for (const trip of preparedTrips) {
-            await syncTripParticipants(
+            const { started } = await syncTripParticipants(
               tx,
               trip as any,
               tripsToUpsert.find((t) => String(t.id) === trip.id)!,
               userId,
             )
+            if (started && trip.userId) {
+              startedTrips.push({
+                id: trip.id,
+                userId: trip.userId,
+                title: trip.title ?? null,
+                boatName: trip.boatName,
+              })
+            }
           }
           await Promise.all([
             ...legsToUpsert.map((leg) =>
@@ -555,6 +570,16 @@ logbookRoutes.post('/sync', async (c) => {
         },
         { timeout: 30000 },
       )
+      for (const trip of startedTrips) {
+        fireNotification(
+          notifyConnectionTripStarted({
+            tripId: trip.id,
+            starterUserId: trip.userId,
+            boatName: trip.boatName,
+            tripTitle: trip.title,
+          }),
+        )
+      }
       if (entriesToUpsert.some((entry) => !entry.deleted))
         await wakeChatWorker()
     }

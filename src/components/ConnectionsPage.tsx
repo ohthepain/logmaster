@@ -21,6 +21,9 @@ export function ConnectionsPage({ add = false }: { add?: boolean }) {
   const [error, setError] = useState<string | null>(null)
   const [inviteOpen, setInviteOpen] = useState(add)
   const [email, setEmail] = useState('')
+  const [notifyInviteeOnTripStart, setNotifyInviteeOnTripStart] = useState(true)
+  const [accepting, setAccepting] = useState<ConnectionPerson | null>(null)
+  const [notifyOnInviterTripStart, setNotifyOnInviterTripStart] = useState(true)
   const [busy, setBusy] = useState(false)
   const load = useCallback(async () => {
     if (!user) {
@@ -97,9 +100,10 @@ export function ConnectionsPage({ add = false }: { add?: boolean }) {
               <button
                 className={button}
                 disabled={busy}
-                onClick={() =>
-                  void run(() => connectionAction(person.id, 'accept'))
-                }
+                onClick={() => {
+                  setNotifyOnInviterTripStart(true)
+                  setAccepting(person)
+                }}
               >
                 Accept connection
               </button>
@@ -160,7 +164,13 @@ export function ConnectionsPage({ add = false }: { add?: boolean }) {
           Connections
         </h1>
         {user && (
-          <button className={button} onClick={() => setInviteOpen(true)}>
+          <button
+            className={button}
+            onClick={() => {
+              setNotifyInviteeOnTripStart(true)
+              setInviteOpen(true)
+            }}
+          >
             <Plus className="mr-1 inline size-4" />
             Invite to connect
           </button>
@@ -232,17 +242,25 @@ export function ConnectionsPage({ add = false }: { add?: boolean }) {
         </>
       )}
       {inviteOpen && (
-        <Modal title="Invite to connect" onClose={() => setInviteOpen(false)}>
+        <Modal
+          title="Invite to connect"
+          centered
+          onClose={() => setInviteOpen(false)}
+        >
           <form
             onSubmit={(e) => {
               e.preventDefault()
               void run(async () => {
                 await apiJson('/api/connections/invite', {
                   method: 'POST',
-                  body: JSON.stringify({ email }),
+                  body: JSON.stringify({
+                    email,
+                    notifyInviteeOnTripStart,
+                  }),
                 })
                 setInviteOpen(false)
                 setEmail('')
+                setNotifyInviteeOnTripStart(true)
                 toast.success('Connection invitation sent')
               })
             }}
@@ -261,8 +279,63 @@ export function ConnectionsPage({ add = false }: { add?: boolean }) {
                 className="mt-2 block w-full rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3"
               />
             </label>
+            <div className="mt-4 flex items-center justify-between gap-3 text-sm">
+              <span id="notify-invitee-on-trip-start">
+                Notify them when I start a trip
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={notifyInviteeOnTripStart}
+                aria-labelledby="notify-invitee-on-trip-start"
+                onClick={() =>
+                  setNotifyInviteeOnTripStart((value) => !value)
+                }
+                className={`relative h-7 w-12 shrink-0 rounded-full transition-colors motion-reduce:transition-none ${notifyInviteeOnTripStart ? 'bg-emerald-600' : 'bg-stone-300'}`}
+              >
+                <span
+                  aria-hidden
+                  className={`absolute top-1 size-5 rounded-full bg-white shadow transition-transform motion-reduce:transition-none ${notifyInviteeOnTripStart ? 'left-1 translate-x-5' : 'left-1'}`}
+                />
+              </button>
+            </div>
             <button type="submit" disabled={busy} className={`${button} mt-4`}>
               {busy ? 'Sending…' : 'Send invitation'}
+            </button>
+          </form>
+        </Modal>
+      )}
+      {accepting && (
+        <Modal
+          title="Accept connection"
+          centered
+          onClose={() => setAccepting(null)}
+        >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const person = accepting
+              void run(async () => {
+                await connectionAction(person.id, 'accept', {
+                  notifyOnInviterTripStart,
+                })
+                setAccepting(null)
+                setNotifyOnInviterTripStart(true)
+              })
+            }}
+          >
+            <p>{accepting.name} wants to connect.</p>
+            <label className="mt-4 flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={notifyOnInviterTripStart}
+                onChange={(e) => setNotifyOnInviterTripStart(e.target.checked)}
+              />
+              <span>Notify me when {accepting.name} starts a trip</span>
+            </label>
+            <button type="submit" disabled={busy} className={`${button} mt-4`}>
+              {busy ? 'Accepting…' : 'Accept connection'}
             </button>
           </form>
         </Modal>

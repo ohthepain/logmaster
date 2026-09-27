@@ -1,4 +1,5 @@
 import type { Prisma } from '../../generated/prisma/client'
+import { tripStartRecipientId } from '../domain/connection-trip-follow'
 import { prisma } from './db'
 
 export function connectionPair(a: string, b: string) {
@@ -98,13 +99,82 @@ export async function canStartDirectChat(userId: string, peerId: string) {
 
 export async function acceptConnection(
   tx: Prisma.TransactionClient,
-  a: string,
-  b: string,
+  inviterId: string,
+  inviteeId: string,
+  options?: {
+    notifyInviteeOnTripStart?: boolean
+    notifyOnInviterTripStart?: boolean
+  },
 ) {
-  const pair = connectionPair(a, b)
+  const pair = connectionPair(inviterId, inviteeId)
+  const existing = await tx.userConnection.findUnique({
+    where: { userLowId_userHighId: pair },
+  })
+  if (existing?.status === 'ACCEPTED') return existing
+  const notifyInviteeOnTripStart =
+    options?.notifyInviteeOnTripStart ??
+    existing?.notifyInviteeOnTripStart ??
+    true
+  const notifyOnInviterTripStart = options?.notifyOnInviterTripStart ?? true
   return tx.userConnection.upsert({
     where: { userLowId_userHighId: pair },
-    create: { ...pair, requestedByUserId: a, status: 'ACCEPTED' },
-    update: { status: 'ACCEPTED' },
+    create: {
+      ...pair,
+      requestedByUserId: inviterId,
+      status: 'ACCEPTED',
+      notifyInviteeOnTripStart,
+      notifyOnInviterTripStart,
+    },
+    update: {
+      status: 'ACCEPTED',
+      requestedByUserId: inviterId,
+      notifyInviteeOnTripStart,
+      notifyOnInviterTripStart,
+    },
   })
+}
+
+export async function tripStartRecipientIds(starterUserId: string) {
+  const rows = await prisma.userConnection.findMany({
+    where: {
+      status: 'ACCEPTED',
+      requestedByUserId: starterUserId,
+      notifyInviteeOnTripStart: true,
+      notifyOnInviterTripStart: true,
+      OR: [{ userLowId: starterUserId }, { userHighId: starterUserId }],
+    },
+  })
+  return rows.flatMap((row) => {
+    const recipientId = tripStartRecipientId(row, starterUserId)
+    return recipientId ? [recipientId] : []
+  })
+}
+
+export async function followsInviterTrips(
+  followerId: string,
+  inviterId: string,
+) {
+  if (followerId === inviterId) return false
+  const pair = connectionPair(followerId, inviterId)
+  const row = await prisma.userConnection.findUnique({
+    where: { userLowId_userHighId: pair },
+  })
+  if (!row) return false
+  return tripStartRecipientId(row, inviterId) === followerId
+}
+
+export async function followedInviterIds(followerId: string) {
+  const rows = await prisma.userConnection.findMany({
+    where: {
+      status: 'ACCEPTED',
+      notifyInviteeOnTripStart: true,
+      notifyOnInviterTripStart: true,
+      OR: [{ userLowId: followerId }, { userHighId: followerId }],
+    },
+  })
+  return rows.flatMap((row) =>
+    tripStartRecipientId(row, row.requestedByUserId) === followerId
+      ? [row.requestedByUserId]
+      : [],
+  )
 }

@@ -1,3 +1,4 @@
+import { followedInviterIds, followsInviterTrips } from '../connections'
 import { prisma } from '../db'
 import { getMemberRole, getUserConsortiumIds } from './consortium'
 import { getBoatMemberRole, getUserBoatMemberIds } from './boat-members'
@@ -109,6 +110,7 @@ async function canAccessTrip(
     select: {
       userId: true,
       boatId: true,
+      status: true,
       storyShareToken: true,
       participants: { select: { userId: true } },
     },
@@ -127,6 +129,15 @@ async function canAccessTrip(
     userId &&
     privilege === 'view' &&
     trip.participants.some((p: { userId: string }) => p.userId === userId)
+  )
+    return true
+
+  if (
+    userId &&
+    privilege === 'view' &&
+    trip.status === 'IN_PROGRESS' &&
+    trip.userId &&
+    (await followsInviterTrips(userId, trip.userId))
   )
     return true
 
@@ -297,13 +308,19 @@ async function accessibleBoatIds(userId: string): Promise<string[]> {
 }
 
 export async function tripAccessFilter(userId: string) {
-  const boatIds = await accessibleBoatIds(userId)
+  const [boatIds, inviterIds] = await Promise.all([
+    accessibleBoatIds(userId),
+    followedInviterIds(userId),
+  ])
 
   return {
     OR: [
       { userId },
       { participants: { some: { userId } } },
       ...(boatIds.length > 0 ? [{ boatId: { in: boatIds } }] : []),
+      ...(inviterIds.length > 0
+        ? [{ userId: { in: inviterIds }, status: 'IN_PROGRESS' as const }]
+        : []),
     ],
   }
 }

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   clearDevPositionOverride,
+  getLastKnownDevicePosition,
   readDevicePosition,
   resetDevicePositionForTests,
   setDevPositionOverride,
@@ -145,5 +146,53 @@ describe('location access gate', () => {
     const unsubscribe = subscribeToDevicePosition(() => {})
     expect(geolocation.watchPosition).toHaveBeenCalled()
     unsubscribe()
+  })
+})
+
+describe('last known position', () => {
+  const store = new Map<string, string>()
+
+  afterEach(() => {
+    store.clear()
+    resetDevicePositionForTests()
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('keeps a real fix for the next time the map opens', async () => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value)
+      },
+      removeItem: (key: string) => {
+        store.delete(key)
+      },
+    })
+    stubGeolocation((success) => {
+      success({
+        coords: {
+          latitude: 36.14,
+          longitude: 15.02,
+          accuracy: 8,
+          heading: 90,
+          altitude: null,
+          altitudeAccuracy: null,
+          speed: null,
+        },
+        timestamp: Date.now(),
+      } as GeolocationPosition)
+    })
+
+    await readDevicePosition({ force: true })
+    const saved = localStorage.getItem('logmaster.lastKnownPosition')
+    resetDevicePositionForTests()
+    localStorage.setItem('logmaster.lastKnownPosition', saved ?? '')
+
+    expect(getLastKnownDevicePosition()).toMatchObject({
+      latitude: 36.14,
+      longitude: 15.02,
+      heading: 90,
+    })
   })
 })

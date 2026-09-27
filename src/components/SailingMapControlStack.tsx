@@ -1,4 +1,4 @@
-import { LocateFixed, Maximize2, Minus, Plus } from 'lucide-react'
+import { LoaderCircle, LocateFixed, Maximize2, Minus, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { cn } from '../lib/cn'
 import {
@@ -14,6 +14,7 @@ type SailingMapControlStackProps = {
   onZoomIn: () => void
   onZoomOut: () => void
   onLocate?: () => void
+  locatePending?: boolean
   locateLabel?: string
   locateMode?: 'you' | 'boat' | 'route'
   layers?: ReactNode
@@ -25,6 +26,7 @@ export function SailingMapControlStack({
   onZoomIn,
   onZoomOut,
   onLocate,
+  locatePending = false,
   locateLabel,
   locateMode = 'you',
   layers,
@@ -66,8 +68,16 @@ export function SailingMapControlStack({
             label={resolvedLocateLabel}
             onClick={onLocate}
             bordered
+            disabled={locatePending}
           >
-            <LocateFixed className="size-5" strokeWidth={2.25} />
+            {locatePending ? (
+              <LoaderCircle
+                className="size-5 animate-spin motion-reduce:animate-none"
+                aria-hidden
+              />
+            ) : (
+              <LocateFixed className="size-5" strokeWidth={2.25} />
+            )}
           </MapControlButton>
         ) : null}
         {layers ? (
@@ -93,12 +103,14 @@ export function MapControlButton({
   label,
   onClick,
   bordered,
+  disabled = false,
   children,
   'aria-expanded': ariaExpanded,
 }: {
   label: string
   onClick: () => void
   bordered?: boolean
+  disabled?: boolean
   children: ReactNode
   'aria-expanded'?: boolean
 }) {
@@ -108,7 +120,9 @@ export function MapControlButton({
         type="button"
         aria-label={label}
         aria-expanded={ariaExpanded}
+        aria-busy={disabled || undefined}
         title={label}
+        disabled={disabled}
         onClick={onClick}
         onPointerUp={(event) => {
           event.stopPropagation()
@@ -117,7 +131,8 @@ export function MapControlButton({
           'ios-map-touch-target touch-manipulation',
           MAP_CHROME_CELL_CLASS,
           'text-white/95',
-          MAP_CHROME_BUTTON_HOVER_CLASS,
+          !disabled && MAP_CHROME_BUTTON_HOVER_CLASS,
+          disabled && 'opacity-80',
           bordered && MAP_CHROME_DIVIDER_CLASS,
         )}
       >

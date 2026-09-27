@@ -1,5 +1,10 @@
 import { MapLocationOverlay } from './MapLocationOverlay'
-import { useMapLocation } from '../lib/use-map-location'
+import {
+  isAwaitingDeviceFix,
+  mediterraneanJourneyMoving,
+  useMapLocation,
+} from '../lib/use-map-location'
+import { getLastKnownDevicePosition } from '../lib/device-position'
 import type { MapLocationState } from '../lib/use-map-location'
 import {
   GIBRALTAR,
@@ -157,6 +162,8 @@ type TripLogMapProps = {
   locationState?: MapLocationState
   onLocationIntent?: () => void
   onInitialViewportSettled?: () => void
+  locatePending?: boolean
+  onLocatePendingChange?: (pending: boolean) => void
 }
 
 type LngLat = { longitude: number; latitude: number; heading?: number | null }
@@ -180,7 +187,16 @@ export const TripLogMap = forwardRef<TripMapHandle, TripLogMapProps>(
         !props.playbackPosition &&
         target.kind === 'current-location',
     )
-    const blocked = !['idle', 'ready', 'browsing'].includes(location.state)
+    const previewKnownLocation =
+      isAwaitingDeviceFix(location.state) &&
+      getLastKnownDevicePosition() != null
+    const blocked =
+      !['idle', 'ready', 'browsing'].includes(location.state) &&
+      !previewKnownLocation
+    useEffect(() => {
+      props.onLocatePendingChange?.(previewKnownLocation)
+      return () => props.onLocatePendingChange?.(false)
+    }, [previewKnownLocation, props.onLocatePendingChange])
     const locate = () => {
       if (
         props.playbackMode ||
@@ -216,8 +232,9 @@ export const TripLogMap = forwardRef<TripMapHandle, TripLogMapProps>(
       selectedEntryId: blocked ? null : props.selectedEntryId,
       showCurrentPosition:
         props.showCurrentPosition !== false &&
-        ['idle', 'ready'].includes(location.state),
+        (['idle', 'ready'].includes(location.state) || previewKnownLocation),
       locationState: location.state,
+      locatePending: previewKnownLocation,
       onLocationIntent: locate,
     }
     return (
@@ -229,11 +246,13 @@ export const TripLogMap = forwardRef<TripMapHandle, TripLogMapProps>(
             <TripLogMapMapLibre ref={rendererRef} {...mapProps} />
           )}
         </div>
-        <MapLocationOverlay
-          state={location.state}
-          onContinue={() => void location.request()}
-          onBrowse={location.browse}
-        />
+        {previewKnownLocation ? null : (
+          <MapLocationOverlay
+            state={location.state}
+            onContinue={() => void location.request()}
+            onBrowse={location.browse}
+          />
+        )}
       </div>
     )
   },
@@ -266,6 +285,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
       waypointPick,
       onInitialViewportSettled,
       locationState = 'idle',
+      locatePending = false,
       onLocationIntent,
     }: TripLogMapProps,
     ref,
@@ -306,10 +326,13 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
         zoom: 5.5,
       })
     }, [])
+    const previewingKnownFix =
+      showCurrentPosition && isAwaitingDeviceFix(locationState)
     useMediterraneanJourney(
       mapReady,
-      !['idle', 'ready', 'browsing'].includes(locationState),
-      locationState === 'permission',
+      !['idle', 'ready', 'browsing'].includes(locationState) &&
+        !previewingKnownFix,
+      mediterraneanJourneyMoving(locationState) && !previewingKnownFix,
       moveJourney,
     )
     const [mapError, setMapError] = useState<string | null>(null)
@@ -917,19 +940,46 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
       initialViewportNotifiedRef.current = false
     }, [trip.id, focusEntryId, viewportTarget.kind, viewportPointCount])
 
+    const wasPreviewingFix = useRef(false)
+    useEffect(() => {
+      const previewing =
+        showCurrentPosition && isAwaitingDeviceFix(locationState)
+      if (previewing && !wasPreviewingFix.current) {
+        wasPreviewingFix.current = true
+        initialFitDoneRef.current = false
+        return
+      }
+      if (!previewing) wasPreviewingFix.current = false
+      if (locationState === 'ready') initialFitDoneRef.current = false
+    }, [locationState, showCurrentPosition])
+
     useEffect(() => {
       const map = mapRef.current
       if (!map || !mapReady || initialFitDoneRef.current) return
 
-      if (!['idle', 'ready'].includes(locationState)) {
+      if (
+        !['idle', 'ready'].includes(locationState) &&
+        !(showCurrentPosition && isAwaitingDeviceFix(locationState))
+      ) {
         notifyInitialViewportSettled()
         return
       }
       if (viewportTarget.kind === 'current-location') {
         if (showCurrentPosition) {
-          if (!currentPosition) return
+          const previewing = isAwaitingDeviceFix(locationState)
+          const known =
+            currentPosition ??
+            (previewing ? getLastKnownDevicePosition() : null)
+          if (!known) return
+          if (!currentPosition) {
+            setCurrentPosition({
+              longitude: known.longitude,
+              latitude: known.latitude,
+              heading: known.heading,
+            })
+          }
           map.jumpTo({
-            center: [currentPosition.longitude, currentPosition.latitude],
+            center: [known.longitude, known.latitude],
             zoom: SAILING_MAP_INITIAL_ZOOM + 0.5,
           })
           initialFitDoneRef.current = true
@@ -1069,6 +1119,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
               onLocate={onLocationIntent ?? handleLocate}
+              locatePending={locatePending}
               locateMode={playbackMode ? 'boat' : 'you'}
               layers={
                 <SailingMapLayerPanel

@@ -29,6 +29,7 @@ type ServerLogBase = {
   mediaUpserted?: number
   tripsDeleted?: number
   mediaDeleted?: number
+  notifiedCount?: number
 }
 
 export type HttpRequestLog = ServerLogBase & {

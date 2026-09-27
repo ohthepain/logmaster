@@ -310,7 +310,7 @@ export function DoubloonAccountModal({
                     }),
                   )
                 }
-                className={`relative h-7 w-12 rounded-full transition-colors disabled:opacity-40 ${giftTrip.giver?.id === account.userId ? 'bg-amber-600' : 'bg-stone-300'}`}
+                className={`relative h-7 w-12 rounded-full transition-colors disabled:opacity-40 ${giftTrip.giver?.id === account.userId ? 'bg-emerald-600' : 'bg-stone-300'}`}
               >
                 <span
                   aria-hidden

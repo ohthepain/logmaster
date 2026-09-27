@@ -1,7 +1,14 @@
-import type { MapLocationState } from '../lib/use-map-location'
+import {
+  isAwaitingDeviceFix,
+  mediterraneanJourneyMoving,
+  type MapLocationState,
+} from '../lib/use-map-location'
 import type { GIBRALTAR } from '../lib/use-mediterranean-journey'
 import { useMediterraneanJourney } from '../lib/use-mediterranean-journey'
-import { getCachedDevicePosition } from '../lib/device-position'
+import {
+  getCachedDevicePosition,
+  getLastKnownDevicePosition,
+} from '../lib/device-position'
 import {
   forwardRef,
   useCallback,
@@ -192,10 +199,13 @@ export const TripAppleMapKit = forwardRef<
     },
     [mapId],
   )
+  const previewingKnownFix =
+    showCurrentPosition && isAwaitingDeviceFix(locationState)
   useMediterraneanJourney(
     mapReady,
-    !['idle', 'ready', 'browsing'].includes(locationState),
-    locationState === 'permission',
+    !['idle', 'ready', 'browsing'].includes(locationState) &&
+      !previewingKnownFix,
+    mediterraneanJourneyMoving(locationState) && !previewingKnownFix,
     moveJourney,
   )
   const [entryPreview, setEntryPreview] = useState<MapEntryPreviewState | null>(
@@ -244,6 +254,19 @@ export const TripAppleMapKit = forwardRef<
     initialViewportNotifiedRef.current = false
     userControlledViewportRef.current = false
   }, [trip.id, focusEntryId, viewportTarget.kind, viewportPointCount])
+
+  const wasPreviewingFix = useRef(false)
+  useEffect(() => {
+    const previewing =
+      showCurrentPosition && isAwaitingDeviceFix(locationState)
+    if (previewing && !wasPreviewingFix.current) {
+      wasPreviewingFix.current = true
+      initialFitDoneRef.current = false
+      return
+    }
+    if (!previewing) wasPreviewingFix.current = false
+    if (locationState === 'ready') initialFitDoneRef.current = false
+  }, [locationState, showCurrentPosition])
 
   const shouldFollowUser =
     interactive &&
@@ -325,12 +348,25 @@ export const TripAppleMapKit = forwardRef<
   const syncViewport = useCallback(async () => {
     if (!mapReady || initialFitDoneRef.current) return
 
-    if (!['idle', 'ready'].includes(locationState)) {
+    if (
+      !['idle', 'ready'].includes(locationState) &&
+      !(showCurrentPosition && isAwaitingDeviceFix(locationState))
+    ) {
       notifyInitialViewportSettled()
       return
     }
     if (viewportTarget.kind === 'current-location') {
-      if (showCurrentPosition && !currentPositionRef.current) return
+      if (showCurrentPosition && !currentPositionRef.current) {
+        const known = isAwaitingDeviceFix(locationState)
+          ? getLastKnownDevicePosition()
+          : null
+        if (!known) return
+        currentPositionRef.current = {
+          latitude: known.latitude,
+          longitude: known.longitude,
+          heading: known.heading,
+        }
+      }
       const position = currentPositionRef.current ?? fallbackMapCoordinate(trip)
       await LogmasterAppleMap.setCamera({
         mapId,

@@ -92,6 +92,8 @@ export async function syncTripParticipants(
         'Forbidden: connect with this person or share a membership before adding them to a trip',
       )
   }
+  const starting =
+    trip.status === 'IN_PROGRESS' && existing?.status !== 'IN_PROGRESS'
   // Complete only after saving the final roster; no rewriting participants on later syncs.
   const completing =
     trip.status === 'COMPLETED' && existing?.status !== 'COMPLETED'
@@ -117,4 +119,5 @@ export async function syncTripParticipants(
       where: { id: trip.id! },
       data: { status: 'COMPLETED' },
     })
+  return { started: starting }
 }

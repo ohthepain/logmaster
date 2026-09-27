@@ -93,7 +93,7 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
     event.preventDefault()
     const trimmed = name.trim()
     if (!trimmed) {
-      toast.error('Name is required')
+      toast.error(t('profileNameRequired'))
       return
     }
     if (trimmed === user.name) {
@@ -105,10 +105,10 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
       await updateProfileName(trimmed)
       await refreshSession()
       onUpdated?.()
-      toast.success('Profile updated')
+      toast.success(t('profileUpdated'))
       onClose()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to update profile')
+      toast.error(e instanceof Error ? e.message : t('profileUpdateFailed'))
     } finally {
       setSavingName(false)
     }
@@ -144,10 +144,12 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
       setPhotoVersion((value) => value + 1)
       await refreshSession()
       onUpdated?.()
-      toast.success('Profile photo updated')
+      toast.success(t('profilePhotoUpdated'))
       clearPendingPhoto()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to upload photo')
+      toast.error(
+        e instanceof Error ? e.message : t('profilePhotoUploadFailed'),
+      )
     } finally {
       setUploadingPhoto(false)
     }
@@ -161,9 +163,11 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
       setPhotoVersion((value) => value + 1)
       await refreshSession()
       onUpdated?.()
-      toast.success('Profile photo removed')
+      toast.success(t('profilePhotoRemoved'))
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to remove photo')
+      toast.error(
+        e instanceof Error ? e.message : t('profilePhotoRemoveFailed'),
+      )
     } finally {
       setRemovingPhoto(false)
     }
@@ -205,7 +209,7 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
                   'absolute -bottom-1 -right-1 inline-flex size-8 items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--surface-strong)] text-[var(--sea-ink)] shadow-sm transition hover:bg-[var(--link-bg-hover)]',
                   busy && 'opacity-60',
                 )}
-                aria-label="Upload profile photo"
+                aria-label={t('uploadProfilePhoto')}
               >
                 <Camera className="size-4" />
               </button>
@@ -221,11 +225,10 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
 
             <div className="min-w-0">
               <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
-                Profile photo
+                {t('profilePhoto')}
               </p>
               <p className="m-0 mt-1 text-xs leading-5 text-[var(--sea-ink-soft)]">
-                Upload a photo for your account. Stored in the same bucket as
-                boat photos.
+                {t('profilePhotoHelp')}
               </p>
               {hasCustomPhoto && (
                 <button
@@ -235,7 +238,7 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
                   className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 transition hover:text-red-800 disabled:opacity-60 dark:text-red-300 dark:hover:text-red-200"
                 >
                   <Trash2 className="size-3.5" />
-                  {removingPhoto ? 'Removing…' : 'Remove photo'}
+                  {removingPhoto ? t('removing') : t('removePhoto')}
                 </button>
               )}
             </div>
@@ -243,36 +246,35 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
 
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-[var(--sea-ink)]">
-              Display name
+              {t('displayName')}
             </span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
+              placeholder={t('yourName')}
               className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] placeholder:text-[var(--sea-ink-soft)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20"
             />
           </label>
 
           <p className="m-0 text-xs leading-6 text-[var(--sea-ink-soft)]">
-            Signed in as {user.email}
+            {t('signedInAs', { email: user.email })}
           </p>
 
           <div className="rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <p className="m-0 text-sm font-semibold text-[var(--sea-ink)]">
-                Notification defaults
+                {t('notificationDefaults')}
               </p>
               <Link
                 to="/settings/notifications"
                 onClick={handleClose}
                 className="text-xs font-semibold text-[var(--brand)] underline-offset-2 hover:underline"
               >
-                Notifications
+                {t('notifications')}
               </Link>
             </div>
             <p className="mt-1 mb-3 text-xs leading-5 text-[var(--sea-ink-soft)]">
-              Used for email and push when a topic has no per-boat or per-org
-              override. Topics are on by default.
+              {t('notificationDefaultsHelp')}
             </p>
             <label className="mb-2 flex items-center gap-2 text-sm text-[var(--sea-ink)]">
               <input
@@ -281,7 +283,7 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
                 onChange={(e) => setEmailNotifications(e.target.checked)}
                 disabled={busy}
               />
-              Email notifications
+              {t('emailNotifications')}
             </label>
             <label className="flex items-center gap-2 text-sm text-[var(--sea-ink)]">
               <input
@@ -290,7 +292,7 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
                 onChange={(e) => setPushNotifications(e.target.checked)}
                 disabled={busy}
               />
-              Push notifications
+              {t('pushNotifications')}
             </label>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
@@ -302,19 +304,19 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
                     email: emailNotifications,
                     push: pushNotifications,
                   })
-                    .then(() => toast.success('Notification defaults saved'))
+                    .then(() => toast.success(t('notificationDefaultsSaved')))
                     .catch((e) =>
                       toast.error(
                         e instanceof Error
                           ? e.message
-                          : 'Failed to save defaults',
+                          : t('notificationDefaultsSaveFailed'),
                       ),
                     )
                     .finally(() => setSavingNotificationDefaults(false))
                 }}
                 className="rounded-full border border-[var(--chip-line)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)] disabled:opacity-60"
               >
-                {savingNotificationDefaults ? 'Saving…' : 'Save defaults'}
+                {savingNotificationDefaults ? t('saving') : t('saveDefaults')}
               </button>
               <button
                 type="button"
@@ -326,14 +328,14 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
                       toast.error(
                         e instanceof Error
                           ? e.message
-                          : 'Failed to enable push',
+                          : t('enablePushFailed'),
                       ),
                     )
                     .finally(() => setEnablingPush(false))
                 }}
                 className="rounded-full border border-[var(--chip-line)] bg-[var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[var(--sea-ink)] disabled:opacity-60"
               >
-                {enablingPush ? 'Enabling…' : 'Enable push on this device'}
+                {enablingPush ? t('enabling') : t('enablePushOnDevice')}
               </button>
             </div>
           </div>
@@ -344,7 +346,7 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
               disabled={busy}
               className="inline-flex rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
             >
-              {savingName ? 'Saving…' : 'Save profile'}
+              {savingName ? t('saving') : t('saveProfile')}
             </button>
             <button
               type="button"
@@ -352,7 +354,7 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
               disabled={busy}
               className="inline-flex rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] disabled:opacity-60"
             >
-              Cancel
+              {t('cancel')}
             </button>
           </div>
         </form>

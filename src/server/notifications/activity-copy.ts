@@ -37,6 +37,8 @@ export type ActivityNotificationStrings = {
   resourceSectionTitle: string
   resourceSectionBody: string
   sectionByTopic: Partial<Record<NotificationTopic, string>>
+  tripStartedTitle: string
+  tripStartedBody: string
   tripCompletedTitle: string
   tripCompletedBody: string
   adminJobCompletedTitle: string
@@ -64,6 +66,8 @@ const EN: ActivityNotificationStrings = {
     ORG_CONTACTS: 'contacts updated',
     ORG_BOATS: 'boats updated',
   },
+  tripStartedTitle: '{actor} started a trip',
+  tripStartedBody: '{tripTitle} on {boatName}.',
   tripCompletedTitle: '{boatName}: trip completed',
   tripCompletedBody: '{tripTitle} was marked complete.',
   adminJobCompletedTitle: 'Background job completed',
@@ -133,6 +137,8 @@ const SV = mergeStrings(EN, {
     ORG_CONTACTS: 'kontakter uppdaterade',
     ORG_BOATS: 'båtar uppdaterade',
   },
+  tripStartedTitle: '{actor} startade en tur',
+  tripStartedBody: '{tripTitle} på {boatName}.',
   tripCompletedTitle: '{boatName}: tur avslutad',
   tripCompletedBody: '{tripTitle} markerades som avslutad.',
   adminJobCompletedTitle: 'Bakgrundsjobb slutfört',
@@ -172,6 +178,8 @@ const SV = mergeStrings(EN, {
 const DE = mergeStrings(EN, {
   someone: 'Jemand',
   sectionFallback: 'Aktualisierungen',
+  tripStartedTitle: '{actor} hat einen Törn gestartet',
+  tripStartedBody: '{tripTitle} auf {boatName}.',
   tripCompletedTitle: '{boatName}: Törn abgeschlossen',
   tripCompletedBody: '{tripTitle} wurde als abgeschlossen markiert.',
   adminJobCompletedTitle: 'Hintergrundjob abgeschlossen',
@@ -223,6 +231,8 @@ const DE = mergeStrings(EN, {
 const FR = mergeStrings(EN, {
   someone: 'Quelqu’un',
   sectionFallback: 'mises à jour',
+  tripStartedTitle: '{actor} a commencé une sortie',
+  tripStartedBody: '{tripTitle} sur {boatName}.',
   tripCompletedTitle: '{boatName} : sortie terminée',
   tripCompletedBody: '{tripTitle} a été marquée comme terminée.',
   adminJobCompletedTitle: 'Tâche de fond terminée',
@@ -274,6 +284,8 @@ const FR = mergeStrings(EN, {
 const ES = mergeStrings(EN, {
   someone: 'Alguien',
   sectionFallback: 'actualizaciones',
+  tripStartedTitle: '{actor} empezó una travesía',
+  tripStartedBody: '{tripTitle} en {boatName}.',
   tripCompletedTitle: '{boatName}: travesía completada',
   tripCompletedBody: '{tripTitle} se marcó como completada.',
   adminJobCompletedTitle: 'Tarea en segundo plano completada',
@@ -325,6 +337,8 @@ const ES = mergeStrings(EN, {
 const DA = mergeStrings(EN, {
   someone: 'Nogen',
   sectionFallback: 'opdateringer',
+  tripStartedTitle: '{actor} startede en tur',
+  tripStartedBody: '{tripTitle} på {boatName}.',
   tripCompletedTitle: '{boatName}: tur afsluttet',
   tripCompletedBody: '{tripTitle} blev markeret som afsluttet.',
   adminJobCompletedTitle: 'Baggrundsjob fuldført',
@@ -376,6 +390,8 @@ const DA = mergeStrings(EN, {
 const NL = mergeStrings(EN, {
   someone: 'Iemand',
   sectionFallback: 'updates',
+  tripStartedTitle: '{actor} is een tocht gestart',
+  tripStartedBody: '{tripTitle} op {boatName}.',
   tripCompletedTitle: '{boatName}: tocht voltooid',
   tripCompletedBody: '{tripTitle} is als voltooid gemarkeerd.',
   adminJobCompletedTitle: 'Achtergrondtaak voltooid',
@@ -427,6 +443,8 @@ const NL = mergeStrings(EN, {
 const PT = mergeStrings(EN, {
   someone: 'Alguém',
   sectionFallback: 'atualizações',
+  tripStartedTitle: '{actor} começou uma viagem',
+  tripStartedBody: '{tripTitle} em {boatName}.',
   tripCompletedTitle: '{boatName}: viagem concluída',
   tripCompletedBody: '{tripTitle} foi marcada como concluída.',
   adminJobCompletedTitle: 'Tarefa em segundo plano concluída',
@@ -478,6 +496,8 @@ const PT = mergeStrings(EN, {
 const FI = mergeStrings(EN, {
   someone: 'Joku',
   sectionFallback: 'päivitykset',
+  tripStartedTitle: '{actor} aloitti matkan',
+  tripStartedBody: '{tripTitle}, {boatName}.',
   tripCompletedTitle: '{boatName}: matka valmis',
   tripCompletedBody: '{tripTitle} merkittiin valmiiksi.',
   adminJobCompletedTitle: 'Taustatyö valmis',
@@ -529,6 +549,8 @@ const FI = mergeStrings(EN, {
 const EL = mergeStrings(EN, {
   someone: 'Κάποιος',
   sectionFallback: 'ενημερώσεις',
+  tripStartedTitle: '{actor} ξεκίνησε ένα ταξίδι',
+  tripStartedBody: '{tripTitle} στο {boatName}.',
   tripCompletedTitle: '{boatName}: ολοκληρωμένο ταξίδι',
   tripCompletedBody: 'Το {tripTitle} σημειώθηκε ως ολοκληρωμένο.',
   adminJobCompletedTitle: 'Ολοκληρώθηκε εργασία παρασκηνίου',
@@ -580,6 +602,8 @@ const EL = mergeStrings(EN, {
 const TR = mergeStrings(EN, {
   someone: 'Birisi',
   sectionFallback: 'güncellemeler',
+  tripStartedTitle: '{actor} bir sefer başlattı',
+  tripStartedBody: '{tripTitle}, {boatName}.',
   tripCompletedTitle: '{boatName}: sefer tamamlandı',
   tripCompletedBody: '{tripTitle} tamamlandı olarak işaretlendi.',
   adminJobCompletedTitle: 'Arka plan görevi tamamlandı',
@@ -631,6 +655,8 @@ const TR = mergeStrings(EN, {
 const VI = mergeStrings(EN, {
   someone: 'Ai đó',
   sectionFallback: 'cập nhật',
+  tripStartedTitle: '{actor} đã bắt đầu một chuyến đi',
+  tripStartedBody: '{tripTitle} trên {boatName}.',
   tripCompletedTitle: '{boatName}: chuyến đi hoàn thành',
   tripCompletedBody: '{tripTitle} đã được đánh dấu hoàn thành.',
   adminJobCompletedTitle: 'Tác vụ nền đã hoàn thành',
@@ -683,6 +709,8 @@ const JA = mergeStrings(EN, {
   someone: '誰か',
   sectionFallback: '更新',
   resourceSectionBody: '{actor}{action}',
+  tripStartedTitle: '{actor} がトリップを開始しました',
+  tripStartedBody: '{boatName} の {tripTitle}',
   tripCompletedTitle: '{boatName}：トリップ完了',
   tripCompletedBody: '{tripTitle} が完了としてマークされました。',
   adminJobCompletedTitle: 'バックグラウンドジョブ完了',
@@ -735,6 +763,8 @@ const KO = mergeStrings(EN, {
   someone: '누군가',
   sectionFallback: '업데이트',
   resourceSectionBody: '{actor}{action}',
+  tripStartedTitle: '{actor} 님이 항해를 시작했습니다',
+  tripStartedBody: '{boatName}의 {tripTitle}',
   tripCompletedTitle: '{boatName}: 항해 완료',
   tripCompletedBody: '{tripTitle}이(가) 완료로 표시되었습니다.',
   adminJobCompletedTitle: '백그라운드 작업 완료',
@@ -787,6 +817,8 @@ const ZH = mergeStrings(EN, {
   someone: '某人',
   sectionFallback: '更新',
   resourceSectionBody: '{actor} {action}',
+  tripStartedTitle: '{actor} 开始了行程',
+  tripStartedBody: '{boatName} 的 {tripTitle}',
   tripCompletedTitle: '{boatName}：行程已完成',
   tripCompletedBody: '{tripTitle} 已标记为完成。',
   adminJobCompletedTitle: '后台任务已完成',
@@ -839,6 +871,8 @@ const YUE = mergeStrings(EN, {
   someone: '某人',
   sectionFallback: '更新',
   resourceSectionBody: '{actor} {action}',
+  tripStartedTitle: '{actor} 開始咗航程',
+  tripStartedBody: '{boatName} 嘅 {tripTitle}',
   tripCompletedTitle: '{boatName}：航程完成',
   tripCompletedBody: '{tripTitle} 已標記為完成。',
   adminJobCompletedTitle: '背景工作完成',
@@ -890,6 +924,8 @@ const YUE = mergeStrings(EN, {
 const AR = mergeStrings(EN, {
   someone: 'شخص ما',
   sectionFallback: 'تحديثات',
+  tripStartedTitle: 'بدأ {actor} رحلة',
+  tripStartedBody: '{tripTitle} على {boatName}.',
   tripCompletedTitle: '{boatName}: اكتملت الرحلة',
   tripCompletedBody: 'تم وضع علامة اكتمال على {tripTitle}.',
   adminJobCompletedTitle: 'اكتملت مهمة الخلفية',

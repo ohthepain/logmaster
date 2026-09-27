@@ -127,6 +127,7 @@ enum NotificationTopic {
   BOAT_CONTACTS
   ORG_BOATS
   ADMIN_JOBS
+  CONNECTION_TRIP_STARTED
 }
 
 enum PushDevicePlatform {
@@ -1727,6 +1728,8 @@ model UserConnection {
   userHighId String
   requestedByUserId String
   status String @default("PENDING")
+  notifyInviteeOnTripStart Boolean @default(true)
+  notifyOnInviterTripStart Boolean @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@id([userLowId, userHighId])
@@ -1740,6 +1743,7 @@ model ConnectionInvite {
   inviteeEmail String
   token String @unique
   status String @default("PENDING")
+  notifyInviteeOnTripStart Boolean @default(true)
   expiresAt DateTime
   createdAt DateTime @default(now())
   @@index([inviteeEmail, status])

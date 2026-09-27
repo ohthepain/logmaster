@@ -82,6 +82,7 @@ const NOTIFICATION_TOPIC_KEYS: Record<NotificationTopic, TranslationKey> = {
   ORG_CONTACTS: 'contacts',
   ORG_BOATS: 'boats',
   ADMIN_JOBS: 'adminJobs',
+  CONNECTION_TRIP_STARTED: 'connections',
 }
 
 export function translateNotificationTopic(

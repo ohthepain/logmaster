@@ -104,8 +104,18 @@ connectionsRoutes.post('/request', async (c) => {
     if (old?.status === 'ACCEPTED' || old?.status === 'PENDING') return
     await tx.userConnection.upsert({
       where: { userLowId_userHighId: pair },
-      create: { ...pair, requestedByUserId: userId },
-      update: { status: 'PENDING', requestedByUserId: userId },
+      create: {
+        ...pair,
+        requestedByUserId: userId,
+        notifyInviteeOnTripStart: true,
+        notifyOnInviterTripStart: true,
+      },
+      update: {
+        status: 'PENDING',
+        requestedByUserId: userId,
+        notifyInviteeOnTripStart: true,
+        notifyOnInviterTripStart: true,
+      },
     })
   })
   return c.json({ ok: true })
@@ -117,6 +127,13 @@ connectionsRoutes.post('/:peerId/:action', async (c) => {
     .enum(['accept', 'decline', 'remove', 'cancel'])
     .parse(c.req.param('action'))
   if (peerId === userId) return c.notFound()
+  let notifyOnInviterTripStart = true
+  if (action === 'accept') {
+    const body = z
+      .object({ notifyOnInviterTripStart: z.boolean().optional() })
+      .parse(await c.req.json().catch(() => ({})))
+    notifyOnInviterTripStart = body.notifyOnInviterTripStart ?? true
+  }
   const pair = connectionPair(userId, peerId)
   const where = {
     ...pair,
@@ -136,6 +153,7 @@ connectionsRoutes.post('/:peerId/:action', async (c) => {
           : action === 'decline'
             ? 'DECLINED'
             : 'REMOVED',
+      ...(action === 'accept' ? { notifyOnInviterTripStart } : {}),
     },
   })
   if (!result.count)
@@ -143,8 +161,11 @@ connectionsRoutes.post('/:peerId/:action', async (c) => {
   return c.json({ ok: true })
 })
 connectionsRoutes.post('/invite', async (c) => {
-  const { email } = z
-    .object({ email: z.string().email() })
+  const { email, notifyInviteeOnTripStart } = z
+    .object({
+      email: z.string().email(),
+      notifyInviteeOnTripStart: z.boolean().optional(),
+    })
     .parse(await c.req.json())
   const userId = c.get('userId')
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
@@ -164,6 +185,7 @@ connectionsRoutes.post('/invite', async (c) => {
       inviterUserId: userId,
       inviteeEmail: email.trim().toLowerCase(),
       token: randomBytes(32).toString('hex'),
+      notifyInviteeOnTripStart: notifyInviteeOnTripStart ?? true,
       expiresAt: new Date(Date.now() + 7 * 86400000),
     },
   })
@@ -180,6 +202,9 @@ connectionsRoutes.post('/invite', async (c) => {
 connectionsRoutes.post('/invites/:token/accept', async (c) => {
   const userId = c.get('userId')
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
+  const { notifyOnInviterTripStart } = z
+    .object({ notifyOnInviterTripStart: z.boolean().optional() })
+    .parse(await c.req.json().catch(() => ({})))
   await prisma.$transaction(async (tx) => {
     const invite = await tx.connectionInvite.findUnique({
       where: { token: c.req.param('token') },
@@ -201,7 +226,10 @@ connectionsRoutes.post('/invites/:token/accept', async (c) => {
     })
     if (!claimed.count)
       throw new HTTPException(409, { message: 'Invitation already accepted' })
-    await acceptConnection(tx, invite.inviterUserId, userId)
+    await acceptConnection(tx, invite.inviterUserId, userId, {
+      notifyInviteeOnTripStart: invite.notifyInviteeOnTripStart,
+      notifyOnInviterTripStart: notifyOnInviterTripStart ?? true,
+    })
     await acceptEconomyInvite(tx, invite, userId)
   })
   return c.json({ ok: true })

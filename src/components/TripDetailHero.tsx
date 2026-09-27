@@ -145,6 +145,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
     const mapRef = useRef<TripMapHandle>(null)
     const fullscreenMapRef = useRef<TripMapHandle>(null)
     const [mapFullscreenOpen, setMapFullscreenOpen] = useState(false)
+    const [locatePending, setLocatePending] = useState(false)
     const [plannedRoutePickerOpen, setPlannedRoutePickerOpen] = useState(false)
     const [overlayRouteId, setOverlayRouteId] = useState<string | null>(null)
     const routes = useRoutesStore((state) => state.routes)
@@ -341,6 +342,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
               plannedRouteWaypoints={plannedRouteWaypoints}
               waypointPick={waypointPick}
               onInitialViewportSettled={onInitialMapViewportSettled}
+              onLocatePendingChange={setLocatePending}
             />
           </div>
         ) : showPhoto ? (
@@ -368,6 +370,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
             onZoomIn={() => mapRef.current?.zoomIn()}
             onZoomOut={() => mapRef.current?.zoomOut()}
             onLocate={() => mapRef.current?.locate()}
+            locatePending={locatePending}
             locateMode={isPlayback ? 'boat' : 'you'}
             layers={
               showMapDataLayers ? (
@@ -420,6 +423,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
                 onZoomIn={() => fullscreenMapRef.current?.zoomIn()}
                 onZoomOut={() => fullscreenMapRef.current?.zoomOut()}
                 onLocate={() => fullscreenMapRef.current?.locate()}
+                locatePending={locatePending}
                 locateMode={isPlayback ? 'boat' : 'you'}
                 layers={
                   showMapDataLayers ? (

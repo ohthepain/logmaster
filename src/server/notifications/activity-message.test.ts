@@ -33,6 +33,20 @@ describe('renderActivityNotification', () => {
     expect(da.title).toContain('dokumenter')
   })
 
+  it('localizes trip started notifications', () => {
+    const sv = renderActivityNotification(
+      {
+        kind: 'tripStarted',
+        boatName: 'Cannoli',
+        tripTitle: 'Solent',
+        actorName: 'Paul',
+      },
+      'sv',
+    )
+    expect(sv.title).toBe('Paul startade en tur')
+    expect(sv.body).toBe('Solent på Cannoli.')
+  })
+
   it('localizes trip completed notifications', () => {
     const de = renderActivityNotification(
       {

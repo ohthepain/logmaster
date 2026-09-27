@@ -40,6 +40,12 @@ export type ActivityNotificationLocalization =
       action: NotificationAction
     }
   | {
+      kind: 'tripStarted'
+      boatName: string
+      tripTitle: string
+      actorName: string
+    }
+  | {
       kind: 'tripCompleted'
       boatName: string
       tripTitle: string
@@ -74,6 +80,16 @@ export function renderActivityNotification(
       summary: localization.summary,
     })
     return { title, body }
+  }
+
+  if (localization.kind === 'tripStarted') {
+    return {
+      title: fill(strings.tripStartedTitle, { actor: localization.actorName }),
+      body: fill(strings.tripStartedBody, {
+        tripTitle: localization.tripTitle,
+        boatName: localization.boatName,
+      }),
+    }
   }
 
   if (localization.kind === 'tripCompleted') {

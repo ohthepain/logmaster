@@ -11,6 +11,7 @@ export type NotificationTopic =
   | 'ORG_CONTACTS'
   | 'ORG_BOATS'
   | 'ADMIN_JOBS'
+  | 'CONNECTION_TRIP_STARTED'
 
 export type PushDevicePlatform = 'web' | 'ios' | 'android'
 
@@ -66,6 +67,7 @@ export const NOTIFICATION_TOPIC_LABELS: Record<NotificationTopic, string> = {
   ORG_CONTACTS: 'Contacts',
   ORG_BOATS: 'Boats',
   ADMIN_JOBS: 'Admin jobs',
+  CONNECTION_TRIP_STARTED: 'Trip starts',
 }
 
 export const BOAT_NOTIFICATION_TOPICS: NotificationTopic[] = [

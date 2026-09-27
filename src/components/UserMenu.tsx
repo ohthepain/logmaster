@@ -249,7 +249,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     id={`${menuId}-title`}
                     className="m-0 text-[2rem] font-extrabold tracking-[-0.035em] text-[var(--sea-ink)]"
                   >
-                    Menu
+                    {t('menu')}
                   </h2>
                   <div className="flex items-center gap-2">
                     {user && (
@@ -315,7 +315,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     <MenuCard
                       className="col-span-2 min-h-20"
                       wide
-                      ariaLabel={user ? 'Account' : t('signIn')}
+                      ariaLabel={user ? t('account') : t('signIn')}
                       onClick={() => {
                         if (user) {
                           setOpen(false)
@@ -325,15 +325,17 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                     >
                       <div className="flex h-full items-center gap-4 px-4 py-3 sm:px-6">
                         <p className="m-0 flex-1 text-lg font-extrabold tracking-[-0.02em] text-[var(--sea-ink)]">
-                          Account
+                          {t('account')}
                         </p>
                         {user ? (
                           <span
                             className="inline-flex items-center gap-2 text-xl font-extrabold text-amber-700"
                             aria-label={
                               balance === null
-                                ? 'Loading doubloons'
-                                : `${balance} doubloons`
+                                ? t('loadingDoubloons')
+                                : t('doubloonCount', {
+                                    count: balance.toLocaleString(),
+                                  })
                             }
                           >
                             <img
@@ -467,7 +469,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
 
                     <MenuCard
                       className="max-sm:!aspect-auto max-sm:h-[14rem]"
-                      ariaLabel="Connections"
+                      ariaLabel={t('connections')}
                       onClick={() =>
                         navigateFromMenu(() => {
                           void navigate({ to: '/connections' })
@@ -475,8 +477,8 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                       }
                     >
                       <CollectionCardContent
-                        title="Connections"
-                        detail="Connect and keep in touch"
+                        title={t('connections')}
+                        detail={t('connectionsDetail')}
                         loading={loadingCollections}
                         empty={!connections.length}
                       >

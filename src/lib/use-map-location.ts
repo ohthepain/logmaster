@@ -18,6 +18,21 @@ export type MapLocationState =
   | 'browsing'
   | LocationFailure
 
+/** Camera keeps sailing the Mediterranean except while the system permission sheet is open. */
+export function mediterraneanJourneyMoving(state: MapLocationState) {
+  return state === 'permission' || state === 'checking' || state === 'locating'
+}
+
+/** Let the map show through while asking for permission or waiting for a fix. */
+export function locationOverlayShowsMap(state: MapLocationState) {
+  return mediterraneanJourneyMoving(state) || state === 'requesting'
+}
+
+/** Waiting for a fresh fix, when a saved position can stand in for the popup. */
+export function isAwaitingDeviceFix(state: MapLocationState) {
+  return state === 'checking' || state === 'locating'
+}
+
 export function useMapLocation(enabled: boolean) {
   const [state, setState] = useState<MapLocationState>(
     enabled ? 'checking' : 'idle',

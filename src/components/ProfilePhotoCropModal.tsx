@@ -8,6 +8,7 @@ import {
 } from '../lib/profile-photo-crop'
 import type { ProfilePhotoCrop } from '../lib/profile-photo-crop'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
 import { Modal } from './Modal'
 
 type ProfilePhotoCropModalProps = {
@@ -74,6 +75,7 @@ export function ProfilePhotoCropModal({
   onAccept,
   onCancel,
 }: ProfilePhotoCropModalProps) {
+  const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const [layout, setLayout] = useState<ImageLayout | null>(null)
   const [crop, setCrop] = useState<ProfilePhotoCrop | null>(null)
@@ -191,7 +193,7 @@ export function ProfilePhotoCropModal({
 
   return (
     <Modal
-      title="Adjust profile photo"
+      title={t('adjustProfilePhoto')}
       onClose={busy ? () => {} : onCancel}
       closeOnOutside={!busy}
       layer="overlay"
@@ -200,8 +202,7 @@ export function ProfilePhotoCropModal({
     >
       <div className="space-y-4">
         <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">
-          Drag the square to choose the area. Pull the corner handle to zoom in
-          or out.
+          {t('profilePhotoCropHelp')}
         </p>
 
         <div
@@ -287,7 +288,7 @@ export function ProfilePhotoCropModal({
               >
                 <button
                   type="button"
-                  aria-label="Resize crop"
+                  aria-label={t('resizeCrop')}
                   disabled={busy}
                   className={cn(
                     'absolute -bottom-2 -right-2 size-5 rounded-full border-2 border-white bg-[var(--brand)] shadow-sm',
@@ -319,7 +320,7 @@ export function ProfilePhotoCropModal({
             onClick={handleAccept}
             className="inline-flex rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
           >
-            {busy ? 'Saving…' : 'Use photo'}
+            {busy ? t('saving') : t('usePhoto')}
           </button>
           <button
             type="button"
@@ -327,7 +328,7 @@ export function ProfilePhotoCropModal({
             onClick={onCancel}
             className="inline-flex rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] disabled:opacity-60"
           >
-            Cancel
+            {t('cancel')}
           </button>
         </div>
       </div>

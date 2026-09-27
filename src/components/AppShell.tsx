@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
+import { WifiOff } from 'lucide-react'
 import Header from './Header'
 import { BackgroundTripRecorder } from './BackgroundTripRecorder'
 import { LiveActivityController } from './LiveActivityController'
@@ -81,6 +82,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     isTripStoryRoute(pathname) ||
     (mobileViewport && pathname === '/messages')
   const mapOverlayHeader = isNativeAppleMapUnderlayRoute(pathname)
+  const online = useLogbookStore((state) => state.online)
 
   useEffect(() => {
     if (getNativePlatform() !== 'ios' || !mapOverlayHeader) return
@@ -139,6 +141,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </>
         )}
       </FtueGate>
+      {!online ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed left-1/2 top-[calc(var(--lm-safe-top)+4.5rem)] z-[60] flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-slate-950/85 px-3 py-1.5 text-xs font-medium text-white shadow-lg backdrop-blur"
+        >
+          <WifiOff className="size-3.5" aria-hidden="true" />
+          <span>You’re offline</span>
+        </div>
+      ) : null}
     </>
   )
 }

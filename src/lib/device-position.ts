@@ -12,6 +12,7 @@ export type PositionSnapshot = {
 type PositionListener = (position: PositionSnapshot) => void
 
 const CACHE_TTL_MS = 30_000
+const LAST_KNOWN_POSITION_KEY = 'logmaster.lastKnownPosition'
 const GEO_TIMEOUT_MS = 10_000
 /** Resolve native watch acquisition once horizontal accuracy is at or below this (meters). */
 const HIGH_QUALITY_ACCURACY_M = 65
@@ -70,13 +71,16 @@ export function setDevPositionOverride(
     : null
   if (!devPositionOverride) return
   const override = devPositionOverride
-  publish({
-    latitude: override.latitude,
-    longitude: override.longitude,
-    accuracy: override.accuracy,
-    heading: override.heading,
-    timestamp: freshTimestamp(),
-  })
+  publish(
+    {
+      latitude: override.latitude,
+      longitude: override.longitude,
+      accuracy: override.accuracy,
+      heading: override.heading,
+      timestamp: freshTimestamp(),
+    },
+    false,
+  )
 }
 
 export function clearDevPositionOverride() {
@@ -98,10 +102,67 @@ function devOverrideSnapshot(): PositionSnapshot | null {
   }
 }
 
-function publish(position: PositionSnapshot) {
+function publish(position: PositionSnapshot, persist = true) {
   cached = position
   cachedAt = Date.now()
+  if (persist) rememberLastKnown(position)
   for (const listener of listeners) listener(position)
+}
+
+function rememberLastKnown(position: PositionSnapshot) {
+  if (!isResolvedPosition(position) || typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(
+      LAST_KNOWN_POSITION_KEY,
+      JSON.stringify({
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracy: position.accuracy,
+        heading: position.heading,
+        timestamp: position.timestamp,
+      }),
+    )
+  } catch {
+    /* Private browsing can reject storage writes. */
+  }
+}
+
+function readStoredLastKnown(): PositionSnapshot | null {
+  if (typeof localStorage === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(LAST_KNOWN_POSITION_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<PositionSnapshot>
+    if (
+      typeof parsed.latitude !== 'number' ||
+      typeof parsed.longitude !== 'number' ||
+      !Number.isFinite(parsed.latitude) ||
+      !Number.isFinite(parsed.longitude)
+    ) {
+      return null
+    }
+    return {
+      latitude: parsed.latitude,
+      longitude: parsed.longitude,
+      accuracy: typeof parsed.accuracy === 'number' ? parsed.accuracy : null,
+      heading: typeof parsed.heading === 'number' ? parsed.heading : null,
+      timestamp:
+        typeof parsed.timestamp === 'string'
+          ? parsed.timestamp
+          : new Date(0).toISOString(),
+    }
+  } catch {
+    return null
+  }
+}
+
+function adoptStoredLastKnown() {
+  if (cached && isResolvedPosition(cached)) return
+  const stored = readStoredLastKnown()
+  if (!stored) return
+  cached = stored
+  const parsed = Date.parse(stored.timestamp)
+  cachedAt = Number.isFinite(parsed) ? parsed : 0
 }
 
 function logDevFallbackOnce(detail?: string) {
@@ -565,7 +626,7 @@ export async function readDevicePosition(options?: {
   inflight = resolveDevicePosition()
     .then((position) => {
       if (isResolvedPosition(position) && cached !== position) {
-        publish(position)
+        publish(position, false)
       }
       return position
     })
@@ -601,6 +662,18 @@ export function getCachedDevicePosition() {
   return cached
 }
 
+/** Last real fix, including one saved from an earlier visit. */
+export function getLastKnownDevicePosition() {
+  adoptStoredLastKnown()
+  if (!cached || !isResolvedPosition(cached)) return null
+  return {
+    latitude: cached.latitude as number,
+    longitude: cached.longitude as number,
+    accuracy: cached.accuracy,
+    heading: cached.heading,
+  }
+}
+
 /** Clears in-memory GPS state between unit tests. */
 export function resetDevicePositionForTests() {
   listeners.clear()
@@ -618,4 +691,9 @@ export function resetDevicePositionForTests() {
   }
   acquisitionWaiters.clear()
   backgroundRefinement = null
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem(LAST_KNOWN_POSITION_KEY)
+  }
 }
+
+adoptStoredLastKnown()

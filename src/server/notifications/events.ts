@@ -280,6 +280,7 @@ export async function notifyBoatSection(args: {
     | 'ORG_BOATS'
     | 'ADMIN_JOBS'
     | 'BOAT_TRIPS_COMPLETED'
+    | 'CONNECTION_TRIP_STARTED'
   >
   boatId: string
   boatName: string

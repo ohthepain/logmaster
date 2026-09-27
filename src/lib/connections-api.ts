@@ -23,6 +23,7 @@ export async function fetchTripPeople(
 export async function connectionAction(
   peerId: string,
   action: 'request' | 'accept' | 'decline' | 'remove' | 'cancel',
+  options?: { notifyOnInviterTripStart?: boolean },
 ) {
   return apiJson(
     action === 'request'
@@ -32,7 +33,14 @@ export async function connectionAction(
       method: 'POST',
       ...(action === 'request'
         ? { body: JSON.stringify({ userId: peerId }) }
-        : {}),
+        : action === 'accept'
+          ? {
+              body: JSON.stringify({
+                notifyOnInviterTripStart:
+                  options?.notifyOnInviterTripStart ?? true,
+              }),
+            }
+          : {}),
     },
   )
 }

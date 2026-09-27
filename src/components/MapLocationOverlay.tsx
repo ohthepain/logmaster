@@ -1,7 +1,10 @@
 import { Compass, LoaderCircle, MapPinOff } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
-import type { MapLocationState } from '../lib/use-map-location'
+import {
+  locationOverlayShowsMap,
+  type MapLocationState,
+} from '../lib/use-map-location'
 import { openBackgroundLocationSettings } from '../lib/native/background-tracker'
 import { requestIosMapTouchSync } from '../lib/native/ios-map-touch-suspend'
 
@@ -20,8 +23,9 @@ export function MapLocationOverlay({
   const [settingsError, setSettingsError] = useState(false)
   const visible = !['idle', 'ready', 'browsing'].includes(state)
   const permission = state === 'permission' || state === 'requesting'
-  const busy =
-    state === 'checking' || state === 'locating' || state === 'requesting'
+  const awaitingPosition = state === 'checking' || state === 'locating'
+  const busy = awaitingPosition || state === 'requesting'
+  const mapVisible = locationOverlayShowsMap(state)
   const denied = state === 'denied'
   useEffect(() => {
     requestIosMapTouchSync()
@@ -60,7 +64,7 @@ export function MapLocationOverlay({
   return (
     <div
       data-map-touch-zone
-      className={`ios-map-touch-target pointer-events-auto absolute inset-0 z-40 flex items-center justify-center overflow-auto p-5 ${permission ? 'bg-[#102f3c]/15' : 'bg-[#eaf3f2]'}`}
+      className={`ios-map-touch-target pointer-events-auto absolute inset-0 z-40 flex items-center justify-center overflow-auto p-5 ${mapVisible ? 'bg-[#102f3c]/15' : 'bg-[#eaf3f2]'}`}
     >
       <div
         ref={panelRef}
@@ -120,7 +124,16 @@ export function MapLocationOverlay({
             Open your device’s Settings and allow location access for Logmaster.
           </p>
         )}
-        {!permission && state !== 'checking' && (
+        {awaitingPosition && (
+          <button
+            type="button"
+            onClick={onBrowse}
+            className="mt-7 min-h-12 w-full rounded-full border border-[#c5d8d4] bg-white px-5 py-3 text-sm font-semibold text-[#174f54] transition hover:bg-[#f3f8f7] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#174f54]"
+          >
+            Skip
+          </button>
+        )}
+        {!permission && !awaitingPosition && (
           <button
             type="button"
             onClick={onBrowse}
