@@ -1,7 +1,3 @@
-import { Capacitor } from '@capacitor/core'
-import { Camera, CameraErrorCode } from '@capacitor/camera'
-import { fileFromCameraMediaResult } from '../lib/camera-media-file'
-import { supportsRecentPhotoPickerSheet } from '../lib/native/logmaster-recent-photos'
 import {
   ArrowLeft,
   ArrowRight,
@@ -558,47 +554,8 @@ export function AddAssetModal({
       if (!controller.signal.aborted && mounted.current) setBusy(null)
     }
   }
-  async function openNativePhotoGallery() {
-    setBusy('camera')
-    try {
-      const { results } = await Camera.chooseFromGallery({
-        quality: 100,
-        correctOrientation: true,
-        includeMetadata: true,
-      })
-      if (!mounted.current) return
-      const result = results[0]
-      if (!result?.webPath) {
-        setBusy(null)
-        return
-      }
-      const file = await fileFromCameraMediaResult(result)
-      if (!mounted.current) return
-      if (file) selectPhoto(file)
-      setBusy(null)
-    } catch (error) {
-      if (mounted.current) {
-        setBusy(null)
-        const code = (error as { code?: string }).code
-        if (
-          code === CameraErrorCode.ChooseMediaCancelled ||
-          /cancel/i.test(String(error))
-        )
-          return
-        setNotice(t('addAssetCameraUnavailable'))
-      }
-    }
-  }
   function openCamera() {
-    if (!Capacitor.isNativePlatform()) {
-      input.current?.click()
-      return
-    }
-    if (supportsRecentPhotoPickerSheet()) {
-      setPhotoPickerOpen(true)
-      return
-    }
-    void openNativePhotoGallery()
+    setPhotoPickerOpen(true)
   }
   function goToResults() {
     setStep('results')
@@ -1193,7 +1150,7 @@ export function AddAssetModal({
       ]}
       stepKey={step}
       closeLabel={t('close')}
-      suspended={!!viewer}
+      suspended={!!viewer || photoPickerOpen}
       onClose={close}
       footer={<div className="flex items-center gap-3">{footer}</div>}
     >
@@ -1912,7 +1869,6 @@ export function AddAssetModal({
         open={photoPickerOpen}
         onClose={() => setPhotoPickerOpen(false)}
         onPick={(file) => selectPhoto(file)}
-        onError={(message) => setNotice(message)}
       />
     </EquipmentFlowDialog>
   )

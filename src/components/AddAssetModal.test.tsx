@@ -69,8 +69,9 @@ vi.mock('../lib/native/logmaster-recent-photos', () => ({
   loadRecentPhotoFile: vi.fn(),
 }))
 vi.mock('@capacitor/camera', () => ({
-  Camera: { chooseFromGallery: mocks.camera },
-  CameraErrorCode: { ChooseMediaCancelled: 'OS-PLUG-CAMR-0020' },
+  Camera: { getPhoto: mocks.camera },
+  CameraSource: { Camera: 'CAMERA', Photos: 'PHOTOS' },
+  CameraResultType: { Base64: 'base64' },
 }))
 
 const photo = new File(['photo'], 'pump.jpg', { type: 'image/jpeg' })
@@ -326,34 +327,37 @@ it('keeps the photo attached and identifies when the user searches', async () =>
     ),
   )
 })
-it('opens the OS chooser for a camera or existing photo on native devices', async () => {
+it('offers the camera first and attaches an existing native photo without fetching a local URL', async () => {
   mocks.native.mockReturnValue(true)
   mocks.platform.mockReturnValue('android')
   mocks.camera.mockResolvedValue({
-    results: [
-      {
-        webPath: 'native-photo',
-        metadata: { format: 'jpeg' },
-      },
-    ],
+    base64String: btoa('photo'),
+    format: 'jpeg',
   })
-  vi.stubGlobal(
-    'fetch',
-    vi.fn().mockResolvedValue({
-      blob: async () => new Blob(['photo'], { type: 'image/jpeg' }),
-    }),
-  )
+  const fetchPhoto = vi.fn()
+  vi.stubGlobal('fetch', fetchPhoto)
   mount()
+  fetchPhoto.mockClear()
   click('Take or choose a photo')
-  await waitFor(() => expect(mocks.camera).toHaveBeenCalled())
+  expect(screen.getByRole('button', { name: 'Take photo' })).toBeTruthy()
+  expect(mocks.camera).not.toHaveBeenCalled()
+  click('Choose photo')
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: 'Take photo' })).toBeNull(),
+  )
   expect(mocks.identify).not.toHaveBeenCalled()
+  expect(
+    fetchPhoto.mock.calls.every(([url]) =>
+      String(url).includes('/api/translations/'),
+    ),
+  ).toBe(true)
   click('Search')
   await waitFor(() => expect(mocks.identify).toHaveBeenCalled())
   expect(mocks.camera).toHaveBeenCalledWith(
     expect.objectContaining({
+      source: 'PHOTOS',
+      resultType: 'base64',
       quality: 100,
-      correctOrientation: true,
-      includeMetadata: true,
     }),
   )
 })

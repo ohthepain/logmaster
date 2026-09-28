@@ -1,4 +1,5 @@
-import type { MediaResult } from '@capacitor/camera'
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera'
+import { Capacitor } from '@capacitor/core'
 
 export function fileFromBase64Image(
   base64: string,
@@ -21,15 +22,36 @@ export function fileFromBase64Image(
   return new File([bytes], `${fileName}.${ext}`, { type: mime })
 }
 
-export async function fileFromCameraMediaResult(
-  result: MediaResult,
-  fileName = 'equipment-photo',
-): Promise<File | null> {
-  if (!result.webPath) return null
-  const blob = await (await fetch(result.webPath)).blob()
-  const format = result.metadata?.format ?? 'jpeg'
-  const ext = format === 'jpeg' ? 'jpg' : format
-  return new File([blob], `${fileName}.${ext}`, {
-    type: blob.type || 'image/jpeg',
+// getPhoto is deliberately retained for installed native shells that predate
+// takePhoto/chooseFromGallery. Base64 crosses the bridge directly: fetching a
+// capacitor:// file URL from our remotely hosted HTTPS app can fail.
+export async function pickEquipmentPhoto(source: CameraSource): Promise<File> {
+  if (source === CameraSource.Camera && Capacitor.getPlatform() === 'ios') {
+    let { camera } = await Camera.checkPermissions()
+    if (camera === 'prompt' || camera === 'prompt-with-rationale') {
+      const requested = await Camera.requestPermissions({
+        permissions: ['camera'],
+      })
+      camera = requested.camera
+    }
+    if (camera !== 'granted') throw new Error('Camera permission denied')
+  }
+  const photo = await Camera.getPhoto({
+    source,
+    resultType: CameraResultType.Base64,
+    quality: 100,
+    correctOrientation: true,
+    webUseInput: true,
   })
+  if (!photo.base64String) throw new Error('No photo data returned')
+  return fileFromBase64Image(photo.base64String, photo.format)
+}
+
+export function isPhotoSelectionCancelled(error: unknown) {
+  const code = (error as { code?: string } | null)?.code
+  return (
+    code === 'OS-PLUG-CAMR-0006' ||
+    code === 'OS-PLUG-CAMR-0020' ||
+    /cancel/i.test(String(error))
+  )
 }

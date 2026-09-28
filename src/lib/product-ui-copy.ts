@@ -25,6 +25,12 @@ export const productUiCopy = {
   equipmentCameraHint: 'A clear model label works best',
   equipmentTakePhoto: 'Take photo',
   equipmentRecentPhotos: 'Recent photos',
+  equipmentPhotoLibraryUnavailable:
+    'Recent photos could not be loaded. You can still take a photo or choose one from your library.',
+  equipmentPhotoLoadFailed:
+    'Could not load this photo. Please choose another photo or try again.',
+  equipmentResizeGallery: 'Resize photo gallery',
+  equipmentRecentPhoto: 'Recent photo {number}',
   equipmentBrand: 'Brand',
   equipmentModel: 'Model',
   equipmentNoModel: 'No model number',

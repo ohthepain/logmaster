@@ -16,3 +16,7 @@ Reference IOS_RELEASES.md
 # Invites
 
 Reference INVITES.md
+
+# Photos
+
+Reference PHOTOS.md

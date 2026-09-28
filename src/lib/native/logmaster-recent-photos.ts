@@ -1,4 +1,4 @@
-import { registerPlugin } from '@capacitor/core'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import { getNativePlatform } from '../platform'
 
 export type RecentPhotoThumbnail = {
@@ -7,12 +7,12 @@ export type RecentPhotoThumbnail = {
 }
 
 type LogmasterRecentPhotosPlugin = {
-  listRecentPhotos(options?: { limit?: number }): Promise<{
+  listRecentPhotos: (options?: { limit?: number }) => Promise<{
     photos: RecentPhotoThumbnail[]
   }>
-  loadRecentPhoto(options: {
+  loadRecentPhoto: (options: {
     localIdentifier: string
-  }): Promise<{ base64: string; format: string }>
+  }) => Promise<{ base64: string; format: string }>
 }
 
 const NativeRecentPhotos = registerPlugin<LogmasterRecentPhotosPlugin>(
@@ -20,7 +20,10 @@ const NativeRecentPhotos = registerPlugin<LogmasterRecentPhotosPlugin>(
 )
 
 export function supportsRecentPhotoPickerSheet() {
-  return getNativePlatform() === 'ios'
+  return (
+    getNativePlatform() === 'ios' &&
+    Capacitor.isPluginAvailable('LogmasterRecentPhotos')
+  )
 }
 
 export async function listRecentPhotoThumbnails(limit = 60) {
