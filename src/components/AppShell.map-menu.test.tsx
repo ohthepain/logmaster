@@ -65,9 +65,13 @@ vi.mock('../lib/platform', () => ({ getNativePlatform: () => 'web' }))
 vi.mock('../lib/i18n', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
-vi.mock('../stores/logbook', () => ({
-  useLogbookStore: { getState: () => ({ setOnline: vi.fn() }) },
-}))
+vi.mock('../stores/logbook', () => {
+  const state = { online: true, setOnline: vi.fn() }
+  const useLogbookStore = (selector?: (value: typeof state) => unknown) =>
+    typeof selector === 'function' ? selector(state) : state
+  useLogbookStore.getState = () => state
+  return { useLogbookStore }
+})
 vi.mock('./MapDefaultView', () => ({
   MapDefaultView: ({ active }: { active: boolean }) => (
     <div data-testid="default-map" data-active={active} />
