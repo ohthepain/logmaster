@@ -51,11 +51,10 @@ import { addSailingMapAttributionControl } from '../lib/maplibre-attribution-con
 import {
   addOpenSeaMapSeamarkOverlay,
   addOpenSeaMapBathymetryOverlays,
-  bindSeamarkTileRefreshOnViewChange,
   finalizeSailingMapLayers,
   guardSailingMapAgainstTerrain,
   loadSailingMapStyle,
-  scheduleSeamarkTileRefresh,
+  SAILING_MAP_TILE_CACHE_ZOOM_LEVELS,
 } from '../lib/maplibre-sailing-map-setup'
 import { installMapDataLayers } from '../lib/maplibre-data-layers'
 import { installAisMapLayer } from '../lib/maplibre-ais-layer'
@@ -535,7 +534,6 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
 
       let cancelled = false
       let unbindTerrainGuard: (() => void) | undefined
-      let unbindSeamarkRefresh: (() => void) | undefined
       let map: maplibregl.Map | null = null
 
       void loadSailingMapStyle(defaultRasterMapId())
@@ -552,6 +550,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
             attributionControl: false,
             interactive,
             canvasContextAttributes: { preserveDrawingBuffer: true },
+            maxTileCacheZoomLevels: SAILING_MAP_TILE_CACHE_ZOOM_LEVELS,
             transformRequest: (url) => mapTilerTransformRequest(url),
           })
 
@@ -677,8 +676,6 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
             })
 
             finalizeSailingMapLayers(map)
-            scheduleSeamarkTileRefresh(map)
-            unbindSeamarkRefresh = bindSeamarkTileRefreshOnViewChange(map)
 
             setMapReady(true)
           })
@@ -703,7 +700,6 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
       return () => {
         cancelled = true
         unbindTerrainGuard?.()
-        unbindSeamarkRefresh?.()
         map?.remove()
         mapRef.current = null
         setMapReady(false)

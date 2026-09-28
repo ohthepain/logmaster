@@ -25,6 +25,43 @@ const { count, size, warnings } = await generateSW({
   maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
   runtimeCaching: [
     {
+      urlPattern: ({ url }) =>
+        url.pathname.startsWith('/api/map-tiles/') ||
+        url.pathname.startsWith('/api/maptiler-cdn') ||
+        url.pathname.startsWith('/api/openseamap-seamark/') ||
+        url.pathname.startsWith('/api/openseamap-bathymetry/relief/'),
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'logmaster-map-tiles',
+        expiration: {
+          maxEntries: 6000,
+          maxAgeSeconds: 30 * 24 * 60 * 60,
+          purgeOnQuotaError: true,
+        },
+        cacheableResponse: {
+          statuses: [200],
+        },
+      },
+    },
+    {
+      urlPattern: ({ url }) =>
+        url.pathname.startsWith('/api/marinas/') ||
+        url.pathname.startsWith('/api/osm-points/') ||
+        url.pathname.startsWith('/api/geo-features/'),
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'logmaster-degree-tiles',
+        expiration: {
+          maxEntries: 1500,
+          maxAgeSeconds: 7 * 24 * 60 * 60,
+          purgeOnQuotaError: true,
+        },
+        cacheableResponse: {
+          statuses: [200],
+        },
+      },
+    },
+    {
       urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
       handler: 'NetworkOnly',
     },

@@ -1,6 +1,12 @@
 import 'dotenv/config'
 import { Hono } from 'hono'
 import { getMapTilerApiKeyFromEnv } from '../../lib/server-maptiler-key'
+import {
+  mapTileByteCache,
+  mapTileResponse,
+  maptilerCdnCacheKey,
+  textTile,
+} from '../map-tile-cache'
 
 /**
  * Forwards a MapTiler URL (with key applied on the server). Used with MapLibre
@@ -30,24 +36,42 @@ maptileCdnRoutes.get('/', async (c) => {
   ) {
     return c.text('Invalid upstream host', 400)
   }
-  const u = new URL(target)
-  if (!u.searchParams.get('key')) u.searchParams.set('key', key)
-  const r = await fetch(u, {
-    headers: { Accept: '*/*' },
-  })
-  if (!r.ok) {
-    c.header('X-Upstream-Status', String(r.status))
-    if (r.status === 403) {
-      return c.text(
-        'MapTiler 403: key not allowed for this resource (check MapTiler Cloud keys).',
-        502,
-      )
+
+  const cacheKey = maptilerCdnCacheKey(target)
+  const load = async () => {
+    const u = new URL(target)
+    if (!u.searchParams.get('key')) u.searchParams.set('key', key)
+    let r: Response
+    try {
+      r = await fetch(u, {
+        headers: { Accept: '*/*' },
+      })
+    } catch {
+      return textTile(502, 'Upstream error')
     }
-    return c.text('Upstream error', 502)
+    if (!r.ok) {
+      if (r.status === 403) {
+        return textTile(
+          502,
+          'MapTiler 403: key not allowed for this resource (check MapTiler Cloud keys).',
+          { 'X-Upstream-Status': String(r.status) },
+        )
+      }
+      return textTile(502, 'Upstream error', {
+        'X-Upstream-Status': String(r.status),
+      })
+    }
+    const buf = new Uint8Array(await r.arrayBuffer())
+    return {
+      status: 200,
+      body: buf,
+      contentType: r.headers.get('content-type') ?? 'application/octet-stream',
+      store: cacheKey != null,
+    }
   }
-  const buf = await r.arrayBuffer()
-  const ct = r.headers.get('content-type') ?? 'application/octet-stream'
-  c.header('Cache-Control', 'public, max-age=86400, s-maxage=86400')
-  c.header('Content-Type', ct)
-  return c.body(buf)
+
+  if (!cacheKey) {
+    return mapTileResponse({ payload: await load(), cache: 'miss' })
+  }
+  return mapTileResponse(await mapTileByteCache.load(cacheKey, load))
 })

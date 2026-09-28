@@ -8,11 +8,10 @@ import { addSailingMapAttributionControl } from '../lib/maplibre-attribution-con
 import {
   addOpenSeaMapSeamarkOverlay,
   addOpenSeaMapBathymetryOverlays,
-  bindSeamarkTileRefreshOnViewChange,
   finalizeSailingMapLayers,
   guardSailingMapAgainstTerrain,
   loadSailingMapStyle,
-  scheduleSeamarkTileRefresh,
+  SAILING_MAP_TILE_CACHE_ZOOM_LEVELS,
 } from '../lib/maplibre-sailing-map-setup'
 import {
   applySailingLogMapTheme,
@@ -84,7 +83,6 @@ export function WaypointPositionEditor({
 
     let cancelled = false
     let unbindTerrainGuard: (() => void) | undefined
-    let unbindSeamarkRefresh: (() => void) | undefined
     let map: maplibregl.Map | null = null
 
     void loadSailingMapStyle(defaultRasterMapId())
@@ -102,6 +100,7 @@ export function WaypointPositionEditor({
           pitch: 0,
           maxPitch: 0,
           attributionControl: false,
+          maxTileCacheZoomLevels: SAILING_MAP_TILE_CACHE_ZOOM_LEVELS,
           transformRequest: (url) => mapTilerTransformRequest(url),
         })
 
@@ -149,8 +148,6 @@ export function WaypointPositionEditor({
           })
 
           finalizeSailingMapLayers(map)
-          scheduleSeamarkTileRefresh(map)
-          unbindSeamarkRefresh = bindSeamarkTileRefreshOnViewChange(map)
           setMapReady(true)
         })
 
@@ -165,7 +162,6 @@ export function WaypointPositionEditor({
       markerRef.current?.remove()
       markerRef.current = null
       unbindTerrainGuard?.()
-      unbindSeamarkRefresh?.()
       map?.remove()
       mapRef.current = null
       setMapReady(false)

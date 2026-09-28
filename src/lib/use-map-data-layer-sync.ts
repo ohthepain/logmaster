@@ -14,7 +14,6 @@ import {
   bindOpenSeaMapContoursImageRefresh,
   refreshOpenSeaMapContoursImage,
 } from './maplibre-openseamap-viewport-layers'
-import { reloadSeamarkTiles } from './maplibre-sailing-map-setup'
 import { syncAisMapLayerForViewport } from './use-ais-map-layer'
 
 export function effectiveMapDataLayerToggles(
@@ -35,9 +34,6 @@ export async function syncMapDataLayersForViewport(
   toggles: MapDataLayerToggles,
 ) {
   applyMapDataLayerToggles(map, toggles)
-  if (toggles['openseamap-raster']) {
-    reloadSeamarkTiles(map)
-  }
   refreshOpenSeaMapContoursImage(map, toggles['openseamap-bathymetry-contours'])
   await refreshMapDataLayersForViewport(map, toggles)
 }

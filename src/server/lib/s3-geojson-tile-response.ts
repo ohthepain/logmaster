@@ -1,6 +1,10 @@
 import type { S3Client } from '@aws-sdk/client-s3'
 import { GetObjectCommand, NoSuchKey } from '@aws-sdk/client-s3'
 import { gzipSync } from 'node:zlib'
+import {
+  MAP_DATA_TILE_CACHE_CONTROL,
+  MAP_DATA_TILE_EMPTY_CACHE_CONTROL,
+} from '../map-tile-cache'
 
 const EMPTY_GEOJSON_GZ = gzipSync(
   JSON.stringify({ type: 'FeatureCollection', features: [] }),
@@ -32,7 +36,7 @@ export async function serveS3GeoJsonTile(
 
     return new Response(new Uint8Array(bytes), {
       headers: {
-        'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+        'Cache-Control': MAP_DATA_TILE_CACHE_CONTROL,
         'Content-Type': response.ContentType ?? 'application/geo+json',
         'Content-Encoding': response.ContentEncoding ?? 'gzip',
       },
@@ -41,7 +45,7 @@ export async function serveS3GeoJsonTile(
     if (isNoSuchKey(error)) {
       return new Response(EMPTY_GEOJSON_GZ, {
         headers: {
-          'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+          'Cache-Control': MAP_DATA_TILE_EMPTY_CACHE_CONTROL,
           'Content-Type': 'application/geo+json',
           'Content-Encoding': 'gzip',
         },

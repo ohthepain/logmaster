@@ -26,6 +26,9 @@ import { ensureMapDataLayerStackOrder } from './maplibre-data-layers'
 
 const HILLSHADE_LAYER_ID = 'Hillshade'
 
+/** MapLibre keeps about this many viewports of tiles per source (library default is 5). */
+export const SAILING_MAP_TILE_CACHE_ZOOM_LEVELS = 10
+
 /** Fetch + sanitize style so MapLibre never enables 3D terrain (even from stale caches). */
 export async function loadSailingMapStyle(
   mapId: RasterMapId,
@@ -107,13 +110,6 @@ export function ensureSeamarkLayerOnTop(map: maplibregl.Map) {
   }
 }
 
-export function reloadSeamarkTiles(map: maplibregl.Map) {
-  const source = map.getSource(OPEN_SEAMAP_SEAMARK_SOURCE_ID)
-  if (source && 'reload' in source && typeof source.reload === 'function') {
-    source.reload()
-  }
-}
-
 export function addOpenSeaMapBathymetryOverlays(map: maplibregl.Map) {
   const insertBefore = sailingMapRasterInsertBeforeId(map)
 
@@ -182,29 +178,9 @@ export function addOpenSeaMapSeamarkOverlay(map: maplibregl.Map) {
 export function finalizeSailingMapLayers(map: maplibregl.Map) {
   prepareFlatSailingBasemap(map)
   ensureMapDataLayerStackOrder(map)
-  reloadSeamarkTiles(map)
   try {
     map.resize()
   } catch {
     /* ignore */
-  }
-}
-
-/** One-shot tile refresh after pan/zoom settles — avoids per-idle moveLayer thrashing. */
-export function scheduleSeamarkTileRefresh(map: maplibregl.Map) {
-  map.once('idle', () => {
-    ensureMapDataLayerStackOrder(map)
-    reloadSeamarkTiles(map)
-  })
-}
-
-/** Refresh seamark tiles after the view changes (fixes missing tile squares at some zooms). */
-export function bindSeamarkTileRefreshOnViewChange(map: maplibregl.Map) {
-  const refresh = () => scheduleSeamarkTileRefresh(map)
-  map.on('zoomend', refresh)
-  map.on('moveend', refresh)
-  return () => {
-    map.off('zoomend', refresh)
-    map.off('moveend', refresh)
   }
 }

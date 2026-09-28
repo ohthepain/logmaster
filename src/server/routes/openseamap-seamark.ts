@@ -1,5 +1,10 @@
 import { Hono } from 'hono'
 import sharp from 'sharp'
+import {
+  mapTileByteCache,
+  mapTileResponse,
+  TRANSPARENT_TILE_PNG,
+} from '../map-tile-cache'
 
 /** Light chart label color — matches `SailingMapColors.label`. */
 const LIGHT_LABEL = { r: 232, g: 238, b: 244 }
@@ -57,37 +62,72 @@ openseamapSeamarkRoutes.get('/:z/:x/:y', async (c) => {
   }
 
   const variant = c.req.query('variant') ?? 'dark'
-  const upstream = `${UPSTREAM}/${z}/${x}/${y}.png`
+  const result = await mapTileByteCache.load(
+    `seamark:${variant}:${z}/${x}/${y}`,
+    async () => {
+      const upstream = `${UPSTREAM}/${z}/${x}/${y}.png`
+      let response: Response
+      try {
+        response = await fetch(upstream, {
+          headers: { Accept: 'image/png,*/*' },
+        })
+      } catch {
+        return {
+          status: 200,
+          body: TRANSPARENT_TILE_PNG,
+          contentType: 'image/png',
+          store: false,
+        }
+      }
+      // Empty ocean tiles are 404. A transparent 200 caches; an error body is retried as a broken image.
+      if (response.status === 404) {
+        return {
+          status: 200,
+          body: TRANSPARENT_TILE_PNG,
+          contentType: 'image/png',
+          store: true,
+        }
+      }
+      if (!response.ok) {
+        return {
+          status: 200,
+          body: TRANSPARENT_TILE_PNG,
+          contentType: 'image/png',
+          store: false,
+        }
+      }
 
-  const response = await fetch(upstream, {
-    headers: { Accept: 'image/png,*/*' },
-  })
-  if (!response.ok) {
-    return c.text('Upstream error', 502)
-  }
+      const input = Buffer.from(await response.arrayBuffer())
+      if (variant === 'light') {
+        return {
+          status: 200,
+          body: new Uint8Array(input),
+          contentType: 'image/png',
+          store: true,
+        }
+      }
 
-  const input = Buffer.from(await response.arrayBuffer())
-  if (variant === 'light') {
-    c.header('Content-Type', 'image/png')
-    c.header('Cache-Control', 'public, max-age=86400, immutable')
-    return c.body(input)
-  }
+      const { data, info } = await sharp(input)
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true })
 
-  const { data, info } = await sharp(input)
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true })
+      const pixels = Buffer.from(data)
+      lightenDarkSeamarkLabels(pixels)
 
-  const pixels = Buffer.from(data)
-  lightenDarkSeamarkLabels(pixels)
+      const output = await sharp(pixels, {
+        raw: { width: info.width, height: info.height, channels: 4 },
+      })
+        .png()
+        .toBuffer()
 
-  const output = await sharp(pixels, {
-    raw: { width: info.width, height: info.height, channels: 4 },
-  })
-    .png()
-    .toBuffer()
-
-  c.header('Content-Type', 'image/png')
-  c.header('Cache-Control', 'public, max-age=86400, immutable')
-  return c.body(output)
+      return {
+        status: 200,
+        body: new Uint8Array(output),
+        contentType: 'image/png',
+        store: true,
+      }
+    },
+  )
+  return mapTileResponse(result)
 })

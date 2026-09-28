@@ -4,6 +4,11 @@ import {
   webMercatorBboxForTile,
   webMercatorBboxFromLngLatBounds,
 } from '../../lib/wms-tile-bbox'
+import {
+  mapTileByteCache,
+  mapTileResponse,
+  textTile,
+} from '../map-tile-cache'
 
 const RELIEF_CONFIG = {
   url: 'https://geoserver.openseamap.org/geoserver/gwc/service/wms',
@@ -60,23 +65,35 @@ openseamapBathymetryRoutes.get('/relief/:z/:x/:y', async (c) => {
     return c.text('Invalid tile', 400)
   }
 
-  const upstream = buildWmsGetMapUrl(RELIEF_CONFIG.url, {
-    layers: RELIEF_CONFIG.layers,
-    bbox: webMercatorBboxForTile(z, x, y),
-    version: RELIEF_CONFIG.version,
-  })
+  const result = await mapTileByteCache.load(`gebco:${z}/${x}/${y}`, async () => {
+    const upstream = buildWmsGetMapUrl(RELIEF_CONFIG.url, {
+      layers: RELIEF_CONFIG.layers,
+      bbox: webMercatorBboxForTile(z, x, y),
+      version: RELIEF_CONFIG.version,
+    })
 
-  const response = await fetch(upstream, {
-    headers: { Accept: 'image/png,*/*' },
-  })
-  if (!response.ok) {
-    return c.text('Upstream error', 502)
-  }
+    let response: Response
+    try {
+      response = await fetch(upstream, {
+        headers: { Accept: 'image/png,*/*' },
+      })
+    } catch {
+      return textTile(502, 'Upstream error')
+    }
+    if (!response.ok) {
+      return textTile(502, 'Upstream error', {
+        'X-Upstream-Status': String(response.status),
+      })
+    }
 
-  const input = Buffer.from(await response.arrayBuffer())
-  c.header('Content-Type', 'image/png')
-  c.header('Cache-Control', 'public, max-age=86400, immutable')
-  return c.body(input)
+    return {
+      status: 200,
+      body: new Uint8Array(await response.arrayBuffer()),
+      contentType: 'image/png',
+      store: true,
+    }
+  })
+  return mapTileResponse(result)
 })
 
 /** Viewport WMS — OpenSeaMap depth overlays are not published as XYZ tiles. */

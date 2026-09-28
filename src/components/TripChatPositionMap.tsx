@@ -7,6 +7,7 @@ import {
   finalizeSailingMapLayers,
   guardSailingMapAgainstTerrain,
   loadSailingMapStyle,
+  SAILING_MAP_TILE_CACHE_ZOOM_LEVELS,
 } from '../lib/maplibre-sailing-map-setup'
 import {
   applySailingLogMapTheme,
@@ -107,6 +108,7 @@ export function TripChatPositionMap({
           pitch: 0,
           maxPitch: 0,
           attributionControl: false,
+          maxTileCacheZoomLevels: SAILING_MAP_TILE_CACHE_ZOOM_LEVELS,
           transformRequest: (url) => mapTilerTransformRequest(url),
         })
 

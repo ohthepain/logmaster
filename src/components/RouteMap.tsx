@@ -30,11 +30,10 @@ import { addSailingMapAttributionControl } from '../lib/maplibre-attribution-con
 import {
   addOpenSeaMapSeamarkOverlay,
   addOpenSeaMapBathymetryOverlays,
-  bindSeamarkTileRefreshOnViewChange,
   finalizeSailingMapLayers,
   guardSailingMapAgainstTerrain,
   loadSailingMapStyle,
-  scheduleSeamarkTileRefresh,
+  SAILING_MAP_TILE_CACHE_ZOOM_LEVELS,
 } from '../lib/maplibre-sailing-map-setup'
 import { applySailingLogMapTheme } from '../lib/maplibre-sailing-theme'
 import { getGeoJsonSource } from '../lib/maplibre-source'
@@ -230,7 +229,6 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(
 
       let cancelled = false
       let unbindTerrainGuard: (() => void) | undefined
-      let unbindSeamarkRefresh: (() => void) | undefined
       let map: maplibregl.Map | null = null
 
       void loadSailingMapStyle(defaultRasterMapId())
@@ -250,6 +248,7 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(
             attributionControl: false,
             interactive: true,
             canvasContextAttributes: { preserveDrawingBuffer: true },
+            maxTileCacheZoomLevels: SAILING_MAP_TILE_CACHE_ZOOM_LEVELS,
             transformRequest: (url) => mapTilerTransformRequest(url),
           })
 
@@ -302,8 +301,6 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(
             })
 
             finalizeSailingMapLayers(map)
-            scheduleSeamarkTileRefresh(map)
-            unbindSeamarkRefresh = bindSeamarkTileRefreshOnViewChange(map)
 
             void syncMapDataLayersForViewport(
               map,
@@ -324,7 +321,6 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(
       return () => {
         cancelled = true
         unbindTerrainGuard?.()
-        unbindSeamarkRefresh?.()
         map?.remove()
         mapRef.current = null
         setMapReady(false)

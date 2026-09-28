@@ -42,6 +42,13 @@ import {
   OPEN_SEAMAP_SEAMARK_LAYER_ID,
   OPEN_SEAMAP_SEAMARK_SOURCE_ID,
 } from './maplibre-openseamap'
+import {
+  cachedDegreeTile,
+  degreeViewportAlreadyApplied,
+  degreeViewportSignature,
+  markDegreeViewportApplied,
+  storeDegreeTile,
+} from './degree-tile-session-cache'
 import { getGeoJsonSource } from './maplibre-source'
 
 type OsmPointFeatureCollection = FeatureCollection<Point, OsmPointProperties>
@@ -501,14 +508,20 @@ export function applyMapDataLayerToggles(
 }
 
 async function fetchJsonTile(url: string): Promise<unknown | null> {
+  const cached = cachedDegreeTile(url)
+  if (cached !== undefined) return cached
   try {
     const response = await fetch(url)
     if (!response.ok) return null
-    return await response.json()
+    const payload: unknown = await response.json()
+    storeDegreeTile(url, payload)
+    return payload
   } catch {
     return null
   }
 }
+
+let dataLayerRefreshGeneration = 0
 
 export async function refreshMapDataLayersForViewport(
   map: maplibregl.Map,
@@ -523,6 +536,10 @@ export async function refreshMapDataLayersForViewport(
     bounds.getNorth(),
   ])
 
+  const generation = ++dataLayerRefreshGeneration
+  const viewportSignature = degreeViewportSignature(
+    tiles.map((tile) => tile.tileId),
+  )
   const datasetsNeeded = new Set<OsmPointDatasetId>()
   let geoResolution: 'highres' | 'lowres' | null = null
 
@@ -532,32 +549,51 @@ export async function refreshMapDataLayersForViewport(
     if (layer.geoFeatureResolution) geoResolution = layer.geoFeatureResolution
   }
 
+  let updated = false
   await Promise.all(
     Array.from(datasetsNeeded).map(async (dataset) => {
+      if (degreeViewportAlreadyApplied(dataset, viewportSignature)) return
       const collections: OsmPointFeatureCollection[] = []
+      let complete = true
       for (const tile of tiles) {
         const payload = await fetchJsonTile(appOsmPointTileUrl(dataset, tile))
         if (isOsmPointCollection(payload)) collections.push(payload)
+        else complete = false
       }
+      if (generation !== dataLayerRefreshGeneration) return
       const source = getGeoJsonSource(map, datasetSourceId(dataset))
       source?.setData(mergeOsmCollections(collections))
+      updated = true
+      if (complete) markDegreeViewportApplied(dataset, viewportSignature)
     }),
   )
 
-  ensureMapDataLayerStackOrder(map)
-  applyMapDataLayerToggles(map, toggles)
+  if (generation !== dataLayerRefreshGeneration) return
 
   if (geoResolution && resolvedToggles['geonames-cities']) {
-    const collections: GeoFeatureCollection[] = []
-    for (const tile of tiles) {
-      const payload = await fetchJsonTile(
-        appGeoFeatureTileUrl(tile, geoResolution),
-      )
-      if (isGeoFeatureCollection(payload)) collections.push(payload)
+    const scope = `geonames:${geoResolution}`
+    if (!degreeViewportAlreadyApplied(scope, viewportSignature)) {
+      const collections: GeoFeatureCollection[] = []
+      let complete = true
+      for (const tile of tiles) {
+        const payload = await fetchJsonTile(
+          appGeoFeatureTileUrl(tile, geoResolution),
+        )
+        if (isGeoFeatureCollection(payload)) collections.push(payload)
+        else complete = false
+      }
+      if (generation !== dataLayerRefreshGeneration) return
+      const source = getGeoJsonSource(map, geoSourceId(geoResolution))
+      source?.setData(mergeGeoFeatureCollections(collections))
+      updated = true
+      if (complete) markDegreeViewportApplied(scope, viewportSignature)
     }
-    const source = getGeoJsonSource(map, geoSourceId(geoResolution))
-    source?.setData(mergeGeoFeatureCollections(collections))
   }
+
+  if (!updated) return
+
+  ensureMapDataLayerStackOrder(map)
+  applyMapDataLayerToggles(map, toggles)
 }
 
 export type MapDataFeaturePopup = {
