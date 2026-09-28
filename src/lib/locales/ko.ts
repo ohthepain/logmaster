@@ -115,7 +115,7 @@ const catalog: TranslationCatalog = {
   trackStories: '항적 이야기',
   addWaypoint: '경유지 추가',
   editWaypoints: '경유지 수정',
-  editTripCover: '항해 표지 수정',
+  editTripCover: '항해 수정',
   tracks: '항적',
   timelineTracks: '타임라인 항적',
   showOnTimeline: '타임라인에 표시',

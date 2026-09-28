@@ -5,6 +5,43 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return apiJson<T>(`/api/crew${path}`, init)
 }
 
+export type TripCrewInviteSummary = {
+  id: string
+  email: string
+  expiresAt: string
+}
+
+export type TripCrewInviteResult = {
+  user?: { id: string; name: string; imageUrl: string | null }
+  invite?: TripCrewInviteSummary
+}
+
+export async function fetchTripCrewInvites(
+  tripId: string,
+): Promise<TripCrewInviteSummary[]> {
+  const data = await api<{ invites: TripCrewInviteSummary[] }>(
+    `/trip-invites?tripId=${encodeURIComponent(tripId)}`,
+  )
+  return data.invites
+}
+
+export async function sendTripCrewInvite(args: {
+  tripId: string
+  email: string
+  inviteLocale?: string
+}): Promise<TripCrewInviteResult> {
+  return api<TripCrewInviteResult>('/trip-invites', {
+    method: 'POST',
+    body: JSON.stringify(args),
+  })
+}
+
+export async function cancelTripCrewInvite(inviteId: string): Promise<void> {
+  await api<{ ok: true }>(`/trip-invites/${encodeURIComponent(inviteId)}`, {
+    method: 'DELETE',
+  })
+}
+
 export async function fetchCrew(): Promise<CrewPayload> {
   return api<CrewPayload>('/')
 }

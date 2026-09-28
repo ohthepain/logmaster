@@ -1,9 +1,8 @@
 import {
   isAwaitingDeviceFix,
-  mediterraneanJourneyMoving
-  
+  mediterraneanJourneyMoving,
 } from '../lib/use-map-location'
-import type {MapLocationState} from '../lib/use-map-location';
+import type { MapLocationState } from '../lib/use-map-location'
 import type { GIBRALTAR } from '../lib/use-mediterranean-journey'
 import { useMediterraneanJourney } from '../lib/use-mediterranean-journey'
 import {

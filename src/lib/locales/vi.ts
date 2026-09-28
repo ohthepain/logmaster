@@ -115,7 +115,7 @@ const catalog: TranslationCatalog = {
   trackStories: 'Câu chuyện hành trình',
   addWaypoint: 'Thêm điểm',
   editWaypoints: 'Sửa các điểm',
-  editTripCover: 'Sửa ảnh bìa chuyến đi',
+  editTripCover: 'Sửa chuyến đi',
   tracks: 'Quỹ đạo',
   timelineTracks: 'Quỹ đạo dòng thời gian',
   showOnTimeline: 'Hiện trên dòng thời gian',

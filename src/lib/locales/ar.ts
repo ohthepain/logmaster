@@ -114,7 +114,7 @@ const catalog: TranslationCatalog = {
   trackStories: 'قصص المسار',
   addWaypoint: 'إضافة نقطة طريق',
   editWaypoints: 'تعديل نقاط الطريق',
-  editTripCover: 'تعديل غلاف الرحلة',
+  editTripCover: 'تعديل الرحلة',
   tracks: 'المسارات',
   timelineTracks: 'مسارات الخط الزمني',
   showOnTimeline: 'إظهار على الخط الزمني',

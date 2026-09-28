@@ -13,12 +13,14 @@ type ModalProps = {
   showKicker?: boolean
   /** Backdrop tap closes the modal. Default true; keep false for in-progress flows. */
   closeOnOutside?: boolean
+  /** Escape closes the modal. Default true. */
+  closeOnEscape?: boolean
   /** Center the dialog on all viewports. Default is bottom-sheet on small screens. */
   centered?: boolean
   /** Center the dialog horizontally on desktop while keeping the mobile sheet layout. */
   desktopCentered?: boolean
   wide?: boolean
-  layer?: 'base' | 'overlay'
+  layer?: 'base' | 'overlay' | 'top'
   devComponentName?: string
 }
 
@@ -30,6 +32,7 @@ export function Modal({
   headerBelow,
   showKicker = true,
   closeOnOutside = true,
+  closeOnEscape = true,
   centered = false,
   desktopCentered = false,
   wide = false,
@@ -37,7 +40,8 @@ export function Modal({
   devComponentName = 'Modal',
 }: ModalProps) {
   const titleId = useId()
-  const zClass = layer === 'overlay' ? 'z-[100]' : 'z-[90]'
+  const zClass =
+    layer === 'top' ? 'z-[110]' : layer === 'overlay' ? 'z-[100]' : 'z-[90]'
   const viewportFrame = useVisualViewportFrame()
   const overlayStyle: CSSProperties | undefined = viewportFrame
     ? {
@@ -49,12 +53,13 @@ export function Modal({
     : undefined
 
   useEffect(() => {
+    if (!closeOnEscape) return
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, closeOnEscape])
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow

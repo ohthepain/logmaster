@@ -115,7 +115,7 @@ const catalog: TranslationCatalog = {
   trackStories: 'Jälkitarinat',
   addWaypoint: 'Lisää reittipiste',
   editWaypoints: 'Muokkaa reittipisteitä',
-  editTripCover: 'Muokkaa matkan kantta',
+  editTripCover: 'Muokkaa matkaa',
   tracks: 'Jäljet',
   timelineTracks: 'Aikajanan jäljet',
   showOnTimeline: 'Näytä aikajanalla',

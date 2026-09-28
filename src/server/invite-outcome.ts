@@ -25,8 +25,21 @@ export function connectionLandingPath(inviterId: string, inviteeId: string) {
   return `/messages?thread=${directThreadId(inviterId, inviteeId)}`
 }
 
-/** Inviter, or their in-progress trip when this person can see it. */
-export async function crewLandingPath(inviterId: string, inviteeId: string) {
+/** The invited trip when this person can see it, otherwise the inviter or their in-progress trip. */
+export async function crewLandingPath(
+  inviterId: string,
+  inviteeId: string,
+  preferredTripId?: string | null,
+) {
+  if (
+    preferredTripId &&
+    (await canAccess(inviteeId, 'view', {
+      type: 'trip',
+      id: preferredTripId,
+    }))
+  ) {
+    return `/trips/${preferredTripId}`
+  }
   const trip = await prisma.trip.findFirst({
     where: { userId: inviterId, status: 'IN_PROGRESS' },
     orderBy: { updatedAt: 'desc' },

@@ -114,7 +114,7 @@ const catalog: TranslationCatalog = {
   trackStories: '軌跡故事',
   addWaypoint: '新增航點',
   editWaypoints: '編輯航點',
-  editTripCover: '編輯航程封面',
+  editTripCover: '編輯航程',
   tracks: '軌跡',
   timelineTracks: '時間軸軌跡',
   showOnTimeline: '喺時間軸顯示',

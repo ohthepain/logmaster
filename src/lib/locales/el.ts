@@ -115,7 +115,7 @@ const catalog: TranslationCatalog = {
   trackStories: 'Ιστορίες διαδρομής',
   addWaypoint: 'Προσθήκη σημείου',
   editWaypoints: 'Επεξεργασία σημείων',
-  editTripCover: 'Επεξεργασία εξωφύλλου ταξιδιού',
+  editTripCover: 'Επεξεργασία ταξιδιού',
   tracks: 'Ίχνη',
   timelineTracks: 'Ίχνη χρονολογίου',
   showOnTimeline: 'Εμφάνιση στο χρονολόγιο',

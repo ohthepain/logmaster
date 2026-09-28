@@ -116,7 +116,7 @@ const catalog: TranslationCatalog = {
   trackStories: 'Track-Geschichten',
   addWaypoint: 'Wegpunkt hinzufügen',
   editWaypoints: 'Wegpunkte bearbeiten',
-  editTripCover: 'Törn-Cover bearbeiten',
+  editTripCover: 'Törn bearbeiten',
   tracks: 'Tracks',
   timelineTracks: 'Zeitachsen-Tracks',
   showOnTimeline: 'Auf der Zeitachse anzeigen',

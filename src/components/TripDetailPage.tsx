@@ -1,59 +1,65 @@
-import { DoubloonAccountModal } from './DoubloonAccount'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Check, Sailboat, Trash2, User } from 'lucide-react'
-import { useEffect, useId, useMemo, useRef, useState, useCallback } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { DevComponentLabel } from './DevComponentLabel'
-import { DevTripReplayModal } from './DevTripReplayModal'
-import { LogEntryCreateModal } from './LogEntryCreateModal'
-import { LogEntryComposerModal } from './LogEntryComposerModal'
-import { Modal } from './Modal'
-import { TripCrewPickerModal } from './TripCrewPickerModal'
-import { TripCoverEditModal } from './TripCoverEditModal'
-import { TripDetailHero } from './TripDetailHero'
-import type { CompletedTripPanel } from './TripDetailHero'
-import type { MapWaypointPickConfig } from '../lib/map-waypoint-pick'
-import { isWaypointMapInteractionActive } from '../lib/map-waypoint-pick'
-import {
-  tripWaypointEntries,
-  tripWaypointNameFromEntry,
-  withTripWaypointName,
-} from '../lib/trip-waypoint-entry'
-import type { TripMapHandle } from '../lib/trip-map-handle'
-import { TripDetailBottomSheet } from './TripDetailBottomSheet'
-import { TripRecordButton } from './TripRecordButton'
-import { TripLegSection } from './TripLegSection'
-import { NativeRecordingSettings } from './NativeRecordingSettings'
-import type { Media } from '../domain/logbook'
 import type { TripCrewUser } from '../domain/connections'
+import type { Media } from '../domain/logbook'
 import { decodeTripTrack } from '../domain/trip-track'
 import { fetchTripPeople } from '../lib/connections-api'
-import { readImageFile } from '../lib/image-file'
+import type { TripCrewInviteSummary } from '../lib/crew-api'
 import {
-  tripMediaUploadToastMessage,
-  uploadTripMediaFiles,
-} from '../lib/trip-media-upload'
+  cancelTripCrewInvite,
+  fetchTripCrewInvites,
+  sendTripCrewInvite,
+} from '../lib/crew-api'
+import { isDevModeAvailable } from '../lib/dev-mode'
 import {
   DEV_TRIP_REPLAY_ENTRY_NOTE,
   DEV_TRIP_REPLAY_SOURCE,
   replayPositionAt,
   replaySourceEntries,
 } from '../lib/dev-trip-replay'
-import { isDevModeAvailable } from '../lib/dev-mode'
 import {
   clearDevPositionOverride,
   setDevPositionOverride,
 } from '../lib/device-position'
+import { useTranslation } from '../lib/i18n'
+import { readImageFile } from '../lib/image-file'
+import type { InviteLocale } from '../lib/invite-locale'
 import { formatDateTime, formatPosition } from '../lib/logbook-format'
+import type { MapWaypointPickConfig } from '../lib/map-waypoint-pick'
+import { isWaypointMapInteractionActive } from '../lib/map-waypoint-pick'
+import { getNativePlatform } from '../lib/platform'
 import {
-  tripDetailCoverDisplay,
   defaultTripTitle,
+  tripDetailCoverDisplay,
   tripDisplayName,
 } from '../lib/trip-display'
-import { getNativePlatform } from '../lib/platform'
+import type { TripMapHandle } from '../lib/trip-map-handle'
+import {
+  tripMediaUploadToastMessage,
+  uploadTripMediaFiles,
+} from '../lib/trip-media-upload'
+import {
+  tripWaypointEntries,
+  tripWaypointNameFromEntry,
+  withTripWaypointName,
+} from '../lib/trip-waypoint-entry'
 import { useAppOptionsStore } from '../stores/app-options'
-import { useLogbookStore, triggerLogbookSyncRetry } from '../stores/logbook'
-import { useTranslation } from '../lib/i18n'
+import { triggerLogbookSyncRetry, useLogbookStore } from '../stores/logbook'
+import { DevComponentLabel } from './DevComponentLabel'
+import { DevTripReplayModal } from './DevTripReplayModal'
+import { DoubloonAccountModal } from './DoubloonAccount'
+import { LogEntryComposerModal } from './LogEntryComposerModal'
+import { LogEntryCreateModal } from './LogEntryCreateModal'
+import { Modal } from './Modal'
+import { NativeRecordingSettings } from './NativeRecordingSettings'
+import { TripCoverEditModal } from './TripCoverEditModal'
+import { TripDetailBottomSheet } from './TripDetailBottomSheet'
+import type { CompletedTripPanel } from './TripDetailHero'
+import { TripDetailHero } from './TripDetailHero'
+import { TripLegSection } from './TripLegSection'
+import { TripRecordButton } from './TripRecordButton'
 
 type TripDetailPageProps = {
   tripId: string
@@ -78,7 +84,7 @@ export function TripDetailPage({
   const [busy, setBusy] = useState(false)
   const [uploadingMedia, setUploadingMedia] = useState(false)
   const [crewMembers, setCrewMembers] = useState<TripCrewUser[]>([])
-  const [crewPickerOpen, setCrewPickerOpen] = useState(false)
+  const [tripInvites, setTripInvites] = useState<TripCrewInviteSummary[]>([])
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null)
   const [createEntryOpen, setCreateEntryOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -157,6 +163,26 @@ export function TripDetailPage({
       })
       .catch(() => {})
   }, [tripId])
+
+  useEffect(() => {
+    if (!coverEditOpen) return
+    let cancelled = false
+    void fetchTripCrewInvites(tripId)
+      .then((invites) => {
+        if (!cancelled) setTripInvites(invites)
+      })
+      .catch(() => {
+        if (!cancelled) setTripInvites([])
+      })
+    void fetchTripPeople(tripId)
+      .then((payload) => {
+        if (!cancelled) setCrewMembers(payload)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [coverEditOpen, tripId])
 
   const tripLegs = useMemo(
     () => store.legs.filter((leg) => leg.tripId === tripId),
@@ -813,7 +839,70 @@ export function TripDetailPage({
 
   const handleCrewChange = async (ids: string[]) => {
     if (trip.status === 'COMPLETED') return
-    await store.updateTrip(trip.id, { crewUserIds: ids })
+    try {
+      await store.updateTrip(trip.id, { crewUserIds: ids })
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update crew',
+      )
+    }
+  }
+
+  const handleInviteCrewEmail = async (input: {
+    email: string
+    inviteLocale: InviteLocale
+  }) => {
+    const result = await sendTripCrewInvite({
+      tripId: trip.id,
+      email: input.email,
+      inviteLocale: input.inviteLocale,
+    })
+    if (result.user) {
+      const added = result.user
+      setCrewMembers((current) =>
+        current.some((person) => person.id === added.id)
+          ? current
+          : [
+              ...current,
+              {
+                id: added.id,
+                name: added.name,
+                imageUrl: added.imageUrl,
+              },
+            ],
+      )
+      if (!trip.crewUserIds?.includes(added.id)) {
+        await store.updateTrip(trip.id, {
+          crewUserIds: [...new Set([...(trip.crewUserIds ?? []), added.id])],
+        })
+      }
+      return {
+        message: trip.crewUserIds?.includes(added.id)
+          ? `${added.name} is already on this crew`
+          : `${added.name} added to the crew`,
+      }
+    }
+    if (result.invite) {
+      setTripInvites((current) => [
+        result.invite!,
+        ...current.filter((invite) => invite.id !== result.invite!.id),
+      ])
+    }
+    return { message: 'Crew invite sent' }
+  }
+
+  const handleCancelCrewInvite = async (inviteId: string) => {
+    try {
+      await cancelTripCrewInvite(inviteId)
+      setTripInvites((current) =>
+        current.filter((invite) => invite.id !== inviteId),
+      )
+      toast.success('Invite cancelled')
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to cancel invite',
+      )
+    }
   }
 
   return (
@@ -929,7 +1018,7 @@ export function TripDetailPage({
                   <h3 className="m-0 text-sm font-semibold">Crew</h3>
                   <button
                     className="text-sm font-semibold text-[var(--brand)]"
-                    onClick={() => setCrewPickerOpen(true)}
+                    onClick={() => setCoverEditOpen(true)}
                   >
                     Edit crew
                   </button>
@@ -1036,7 +1125,7 @@ export function TripDetailPage({
                   {trip.status !== 'COMPLETED' && (
                     <button
                       className="text-sm font-semibold text-[var(--brand)]"
-                      onClick={() => setCrewPickerOpen(true)}
+                      onClick={() => setCoverEditOpen(true)}
                     >
                       Edit crew
                     </button>
@@ -1110,15 +1199,6 @@ export function TripDetailPage({
         onClose={() => setSelectedEntryId(null)}
       />
 
-      <TripCrewPickerModal
-        open={crewPickerOpen && trip.status !== 'COMPLETED'}
-        crewMembers={crewMembers}
-        selectedIds={trip.crewUserIds ?? []}
-        requiredIds={trip.userId ? [trip.userId] : []}
-        onClose={() => setCrewPickerOpen(false)}
-        onChange={(ids) => void handleCrewChange(ids)}
-      />
-
       <TripCoverEditModal
         open={coverEditOpen}
         busy={busy}
@@ -1126,6 +1206,14 @@ export function TripDetailPage({
         title={trip.title ?? ''}
         subtitle={trip.subtitle ?? ''}
         titlePlaceholder={defaultTripTitle(trip.boatName)}
+        crewPeople={crewMembers}
+        selectedCrewIds={trip.crewUserIds ?? []}
+        requiredCrewIds={trip.userId ? [trip.userId] : []}
+        crewEditable={trip.status !== 'COMPLETED'}
+        pendingInvites={tripInvites}
+        onCrewChange={(ids) => void handleCrewChange(ids)}
+        onInviteByEmail={handleInviteCrewEmail}
+        onCancelInvite={handleCancelCrewInvite}
         onClose={() => setCoverEditOpen(false)}
         onSaveDetails={(input) => void handleSaveTripDetails(input)}
         onChoosePhoto={handleChoosePhotoCover}

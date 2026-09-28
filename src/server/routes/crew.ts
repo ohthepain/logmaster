@@ -1,18 +1,18 @@
+import { Hono } from 'hono'
+import { normalizeInviteLocale } from '../../lib/invite-locale'
+import { acceptConnection, availablePeople } from '../connections'
+import { prisma } from '../db'
 import { acceptEconomyInvite } from '../economy/wallet'
+import { sendCrewInviteEmail } from '../email/ses'
 import { loadInviteArtwork } from '../invite-face'
 import {
   crewLandingPath,
   postInviteChat,
   rememberInviteLanding,
 } from '../invite-outcome'
-import { logServerEvent } from '../lib/server-log'
-import { Hono } from 'hono'
-import { normalizeInviteLocale } from '../../lib/invite-locale'
-import { sendCrewInviteEmail } from '../email/ses'
 import { inviteeHasAccount } from '../invite-signup'
-import { prisma } from '../db'
-import { acceptConnection, availablePeople } from '../connections'
-import { getSessionUserId } from '../session'
+import { logServerEvent } from '../lib/server-log'
+import { canAccess } from '../permissions'
 import {
   parseProfilePhotoCrop,
   renderProfilePhotoBytes,
@@ -25,6 +25,7 @@ import {
   profilePhotoS3Key,
   uploadPhotoObject,
 } from '../s3-photos'
+import { getSessionUserId } from '../session'
 
 const db = prisma as any
 
@@ -248,6 +249,48 @@ async function validateInviteEmail(
   return null
 }
 
+function displayNameFromEmail(email: string): string {
+  const local =
+    email
+      .split('@')[0]
+      ?.replace(/[._+-]+/g, ' ')
+      .trim() ?? ''
+  if (!local) return 'Crew'
+  return local.slice(0, 80)
+}
+
+async function joinTripFromCrewInvite(
+  tx: typeof db,
+  invite: { tripId?: string | null },
+  invitee: { id: string; name: string },
+  inviterUserId: string,
+): Promise<boolean> {
+  const tripId = invite.tripId
+  if (!tripId) return false
+  const trip = await tx.trip.findUnique({
+    where: { id: tripId },
+    select: { id: true, status: true },
+  })
+  if (!trip || trip.status === 'COMPLETED') return false
+  if (
+    !(await canAccess(inviterUserId, 'edit', { type: 'trip', id: trip.id }))
+  ) {
+    return false
+  }
+  const already = await tx.tripParticipant.findUnique({
+    where: { tripId_userId: { tripId: trip.id, userId: invitee.id } },
+  })
+  if (already) return false
+  await tx.tripParticipant.create({
+    data: {
+      tripId: trip.id,
+      userId: invitee.id,
+      nameSnapshot: invitee.name || 'Crew',
+    },
+  })
+  return true
+}
+
 async function createInviteForMember(args: {
   memberId: string
   inviterUserId: string
@@ -255,6 +298,7 @@ async function createInviteForMember(args: {
   email: string
   inviteLocale?: string | null
   sendEmail?: boolean
+  tripId?: string | null
 }) {
   const email = normalizeEmail(args.email)
   const inviteLocale = normalizeInviteLocale(args.inviteLocale)
@@ -268,6 +312,7 @@ async function createInviteForMember(args: {
       inviteLocale,
       token,
       expiresAt,
+      ...(args.tripId ? { tripId: args.tripId } : {}),
     },
   })
   if (args.sendEmail !== false) {
@@ -302,6 +347,246 @@ crewRoutes.use('*', async (c, next) => {
       410,
     )
   await next()
+})
+
+crewRoutes.get('/trip-invites', async (c) => {
+  const user = await requireUser(c)
+  if (!user) return unauthorized()
+  const tripId = c.req.query('tripId')?.trim() ?? ''
+  if (!tripId) return c.json({ error: 'tripId is required' }, 400)
+  if (!(await canAccess(user.id, 'edit', { type: 'trip', id: tripId }))) {
+    return c.json({ error: 'Forbidden' }, 403)
+  }
+  const invites = await db.crewInvite.findMany({
+    where: {
+      tripId,
+      status: 'PENDING',
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, inviteeEmail: true, expiresAt: true },
+  })
+  return c.json({
+    invites: invites.map(
+      (invite: { id: string; inviteeEmail: string; expiresAt: Date }) => ({
+        id: invite.id,
+        email: invite.inviteeEmail,
+        expiresAt: invite.expiresAt.toISOString(),
+      }),
+    ),
+  })
+})
+
+crewRoutes.post('/trip-invites', async (c) => {
+  const user = await requireUser(c)
+  if (!user) return unauthorized()
+  const body = (await c.req.json().catch(() => null)) as {
+    tripId?: unknown
+    email?: unknown
+    inviteLocale?: unknown
+  } | null
+  const tripId = typeof body?.tripId === 'string' ? body.tripId.trim() : ''
+  const email =
+    typeof body?.email === 'string' ? normalizeEmail(body.email) : ''
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  if (!tripId || !validEmail) {
+    logServerEvent({
+      action: 'trip.crew_invite',
+      resourceType: 'trip',
+      resourceId: tripId || undefined,
+      userId: user.id,
+      outcome: 'validation_failed',
+    })
+    return c.json({ error: 'Enter a valid email address' }, 400)
+  }
+  if (!(await canAccess(user.id, 'edit', { type: 'trip', id: tripId }))) {
+    logServerEvent({
+      action: 'trip.crew_invite',
+      resourceType: 'trip',
+      resourceId: tripId,
+      userId: user.id,
+      outcome: 'forbidden',
+    })
+    return c.json({ error: 'Forbidden' }, 403)
+  }
+  const trip = await db.trip.findUnique({
+    where: { id: tripId },
+    select: { status: true },
+  })
+  if (!trip) return c.json({ error: 'Trip not found' }, 404)
+  if (trip.status === 'COMPLETED') {
+    logServerEvent({
+      action: 'trip.crew_invite',
+      resourceType: 'trip',
+      resourceId: tripId,
+      userId: user.id,
+      outcome: 'forbidden',
+    })
+    return c.json(
+      { error: 'The crew of a completed trip cannot be changed' },
+      409,
+    )
+  }
+  if (email === normalizeEmail(user.email)) {
+    return c.json({ error: 'You cannot invite yourself' }, 400)
+  }
+
+  const existingUser = await db.user.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' } },
+    select: { id: true, name: true, image: true },
+  })
+  if (existingUser) {
+    const candidates = await availablePeople(user.id)
+    const allowed = candidates.some(
+      (person) =>
+        person.id === existingUser.id &&
+        (person.connectionStatus === 'ACCEPTED' || person.contexts.length > 0),
+    )
+    if (!allowed) {
+      logServerEvent({
+        action: 'trip.crew_invite',
+        resourceType: 'trip',
+        resourceId: tripId,
+        userId: user.id,
+        outcome: 'forbidden',
+      })
+      return c.json(
+        {
+          error:
+            'That email already has an account. Add them from your contacts, or connect with them first.',
+        },
+        409,
+      )
+    }
+    return c.json({
+      user: {
+        id: existingUser.id,
+        name: existingUser.name,
+        imageUrl: linkedUserImageUrl(existingUser.id, existingUser.image),
+      },
+    })
+  }
+
+  const pendingOnTrip = await db.crewInvite.findFirst({
+    where: {
+      tripId,
+      inviteeEmail: email,
+      status: 'PENDING',
+      expiresAt: { gt: new Date() },
+    },
+  })
+  if (pendingOnTrip) {
+    logServerEvent({
+      action: 'trip.crew_invite',
+      resourceType: 'trip',
+      resourceId: tripId,
+      userId: user.id,
+      outcome: 'conflict',
+    })
+    return c.json({ error: 'An invite is already pending for that email' }, 409)
+  }
+  const inviteError = await validateInviteEmail(user.id, email)
+  if (inviteError) {
+    logServerEvent({
+      action: 'trip.crew_invite',
+      resourceType: 'trip',
+      resourceId: tripId,
+      userId: user.id,
+      outcome: 'conflict',
+    })
+    return c.json({ error: inviteError }, 409)
+  }
+
+  const recent = await db.crewInvite.count({
+    where: {
+      inviterUserId: user.id,
+      createdAt: { gt: new Date(Date.now() - 60 * 60 * 1000) },
+    },
+  })
+  if (recent >= 20) {
+    return c.json({ error: 'Please wait before sending more invitations' }, 429)
+  }
+
+  const member = await db.crewMember.create({
+    data: {
+      ownerUserId: user.id,
+      displayName: displayNameFromEmail(email),
+    },
+  })
+  const invite = await createInviteForMember({
+    memberId: member.id,
+    inviterUserId: user.id,
+    inviterName: user.name,
+    email,
+    inviteLocale:
+      typeof body?.inviteLocale === 'string' ? body.inviteLocale : null,
+    tripId,
+  })
+  logServerEvent({
+    action: 'trip.crew_invite',
+    resourceType: 'trip',
+    resourceId: tripId,
+    userId: user.id,
+    outcome: 'success',
+  })
+  return c.json(
+    {
+      invite: {
+        id: invite.id,
+        email: invite.inviteeEmail,
+        expiresAt: invite.expiresAt.toISOString(),
+      },
+    },
+    201,
+  )
+})
+
+crewRoutes.delete('/trip-invites/:inviteId', async (c) => {
+  const user = await requireUser(c)
+  if (!user) return unauthorized()
+  const invite = await db.crewInvite.findUnique({
+    where: { id: c.req.param('inviteId') },
+  })
+  if (!invite?.tripId || invite.status !== 'PENDING') {
+    return c.json({ error: 'Invite not found' }, 404)
+  }
+  if (
+    !(await canAccess(user.id, 'edit', { type: 'trip', id: invite.tripId }))
+  ) {
+    logServerEvent({
+      action: 'trip.crew_invite_cancel',
+      resourceType: 'crew_invite',
+      resourceId: invite.id,
+      userId: user.id,
+      outcome: 'forbidden',
+    })
+    return c.json({ error: 'Forbidden' }, 403)
+  }
+  const member = await db.crewMember.findUnique({
+    where: { id: invite.crewMemberId },
+    include: { invites: { where: { status: 'PENDING' } } },
+  })
+  if (
+    member &&
+    !member.linkedUserId &&
+    member.invites.length === 1 &&
+    member.invites[0]?.id === invite.id
+  ) {
+    await db.crewMember.delete({ where: { id: member.id } })
+  } else {
+    await db.crewInvite.update({
+      where: { id: invite.id },
+      data: { status: 'CANCELLED' },
+    })
+  }
+  logServerEvent({
+    action: 'trip.crew_invite_cancel',
+    resourceType: 'crew_invite',
+    resourceId: invite.id,
+    userId: user.id,
+    outcome: 'success',
+  })
+  return c.json({ ok: true })
 })
 
 crewRoutes.get('/', async (c) => {
@@ -761,7 +1046,11 @@ crewRoutes.post('/invites/accept', async (c) => {
   })
   if (!invite) return c.json({ error: 'Invite not found' }, 404)
   if (invite.status === 'ACCEPTED' && invite.acceptedByUserId === user.id) {
-    const landingPath = await crewLandingPath(invite.inviterUserId, user.id)
+    const landingPath = await crewLandingPath(
+      invite.inviterUserId,
+      user.id,
+      invite.tripId,
+    )
     await rememberInviteLanding(user.id, landingPath)
     return c.json({ ok: true, landingPath })
   }
@@ -793,6 +1082,7 @@ crewRoutes.post('/invites/accept', async (c) => {
       linkedUserId: user.id,
     },
   })
+  let joinedTrip = false
   if (existing) {
     await db.$transaction(async (tx: typeof db) => {
       const referralCreated = await acceptEconomyInvite(tx, invite, user.id)
@@ -809,8 +1099,18 @@ crewRoutes.post('/invites/accept', async (c) => {
         where: { id: invite.id },
         data: { status: 'ACCEPTED', acceptedByUserId: user.id },
       })
+      joinedTrip = await joinTripFromCrewInvite(
+        tx,
+        invite,
+        user,
+        invite.inviterUserId,
+      )
     })
-    const landingPath = await crewLandingPath(invite.inviterUserId, user.id)
+    const landingPath = await crewLandingPath(
+      invite.inviterUserId,
+      user.id,
+      invite.tripId,
+    )
     await rememberInviteLanding(user.id, landingPath)
     logServerEvent({
       action: 'invite.accept',
@@ -819,6 +1119,15 @@ crewRoutes.post('/invites/accept', async (c) => {
       userId: user.id,
       outcome: 'success',
     })
+    if (joinedTrip && invite.tripId) {
+      logServerEvent({
+        action: 'trip.participant.add',
+        resourceType: 'trip',
+        resourceId: invite.tripId,
+        userId: user.id,
+        outcome: 'success',
+      })
+    }
     return c.json({ ok: true, landingPath })
   }
 
@@ -859,9 +1168,19 @@ crewRoutes.post('/invites/accept', async (c) => {
       connected: false,
       referralCreated,
     })
+    joinedTrip = await joinTripFromCrewInvite(
+      tx,
+      invite,
+      user,
+      invite.inviterUserId,
+    )
   })
 
-  const landingPath = await crewLandingPath(invite.inviterUserId, user.id)
+  const landingPath = await crewLandingPath(
+    invite.inviterUserId,
+    user.id,
+    invite.tripId,
+  )
   await rememberInviteLanding(user.id, landingPath)
   logServerEvent({
     action: 'invite.accept',
@@ -870,6 +1189,15 @@ crewRoutes.post('/invites/accept', async (c) => {
     userId: user.id,
     outcome: 'success',
   })
+  if (joinedTrip && invite.tripId) {
+    logServerEvent({
+      action: 'trip.participant.add',
+      resourceType: 'trip',
+      resourceId: invite.tripId,
+      userId: user.id,
+      outcome: 'success',
+    })
+  }
   return c.json({ ok: true, landingPath })
 })
 

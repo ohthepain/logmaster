@@ -115,7 +115,7 @@ const catalog: TranslationCatalog = {
   trackStories: 'Spårberättelser',
   addWaypoint: 'Lägg till vägpunkt',
   editWaypoints: 'Redigera vägpunkter',
-  editTripCover: 'Redigera resomslag',
+  editTripCover: 'Redigera resa',
   tracks: 'Spår',
   timelineTracks: 'Tidslinjespår',
   showOnTimeline: 'Visa på tidslinjen',

@@ -425,6 +425,7 @@ model Trip {
   legs           Leg[]
   tripTracks     TripTrack[]
   storyMedia     TripStoryMedia[]
+  crewInvites    CrewInvite[]
 
   @@index([status, startedAt])
   @@index([userId])
@@ -856,6 +857,8 @@ model CrewInvite {
   status           CrewInviteStatus @default(PENDING)
   acceptedByUserId String?
   acceptedBy       User?            @relation("AcceptedCrewInvites", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+  tripId           String?
+  trip             Trip?            @relation(fields: [tripId], references: [id], onDelete: SetNull)
   expiresAt        DateTime
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
@@ -863,6 +866,7 @@ model CrewInvite {
 
   @@index([inviterUserId, status])
   @@index([inviteeEmail, status])
+  @@index([tripId, status])
   @@map("crew_invite")
 }
 

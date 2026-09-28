@@ -6,13 +6,13 @@ import {
   orgInviteMessage,
 } from '../domain/invite-face'
 import { prisma } from './db'
-import { getPhotoObject, profilePhotoS3Key } from './s3-photos'
 import {
   boatLandingPath,
   connectionLandingPath,
   crewLandingPath,
   orgLandingPath,
 } from './invite-outcome'
+import { getPhotoObject, profilePhotoS3Key } from './s3-photos'
 
 const PERSON = { id: true, name: true, image: true } as const
 
@@ -85,6 +85,7 @@ export async function loadInviteArtwork(
       inviteeEmail: true,
       inviterUserId: true,
       crewMemberId: true,
+      tripId: true,
       inviter: { select: PERSON },
     },
   })
@@ -217,12 +218,13 @@ async function crewArtwork(
     inviteeEmail: string
     inviterUserId: string
     crewMemberId: string
+    tripId: string | null
     inviter: Person
   },
 ): Promise<InviteArtwork> {
   const invitee = await inviteeId(invite.inviteeEmail)
   const landingPath = invitee
-    ? await crewLandingPath(invite.inviterUserId, invitee)
+    ? await crewLandingPath(invite.inviterUserId, invitee, invite.tripId)
     : null
   if (!isOpen(invite.status, invite.expiresAt)) {
     return { face: emptyFace('crew', invite.inviteeEmail), landingPath }

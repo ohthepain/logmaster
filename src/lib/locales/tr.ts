@@ -115,7 +115,7 @@ const catalog: TranslationCatalog = {
   trackStories: 'İz hikâyeleri',
   addWaypoint: 'Yol noktası ekle',
   editWaypoints: 'Yol noktalarını düzenle',
-  editTripCover: 'Sefer kapağını düzenle',
+  editTripCover: 'Seferi düzenle',
   tracks: 'İzler',
   timelineTracks: 'Zaman çizelgesi izleri',
   showOnTimeline: 'Zaman çizelgesinde göster',

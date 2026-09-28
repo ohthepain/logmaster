@@ -115,7 +115,7 @@ const catalog: TranslationCatalog = {
   trackStories: 'Historias de la derrota',
   addWaypoint: 'Añadir waypoint',
   editWaypoints: 'Editar waypoints',
-  editTripCover: 'Editar portada del viaje',
+  editTripCover: 'Editar viaje',
   tracks: 'Derrotas',
   timelineTracks: 'Derrotas de la línea de tiempo',
   showOnTimeline: 'Mostrar en la línea de tiempo',

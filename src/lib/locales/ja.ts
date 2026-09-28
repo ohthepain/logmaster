@@ -115,7 +115,7 @@ const catalog: TranslationCatalog = {
   trackStories: '航跡のストーリー',
   addWaypoint: 'ウェイポイントを追加',
   editWaypoints: 'ウェイポイントを編集',
-  editTripCover: '航海のカバーを編集',
+  editTripCover: '航海を編集',
   tracks: '航跡',
   timelineTracks: 'タイムラインの航跡',
   showOnTimeline: 'タイムラインに表示',
