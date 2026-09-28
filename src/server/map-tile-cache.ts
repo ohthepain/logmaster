@@ -181,7 +181,8 @@ export function mapTileResponse(result: {
     headers.set('Cache-Control', 'no-store')
   }
   headers.set('X-Map-Tile-Cache', result.cache)
-  return new Response(result.payload.body, {
+  // Copy into a Buffer so the cached bytes stay intact and satisfy BodyInit.
+  return new Response(Buffer.from(result.payload.body), {
     status: result.payload.status,
     headers,
   })

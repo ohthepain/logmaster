@@ -98,11 +98,11 @@ it('treats cancelling the camera as a no-op', async () => {
   mocks.pick.mockRejectedValue(new Error('User cancelled photos app'))
   mount()
   fireEvent.click(screen.getByRole('button', { name: 'Take photo' }))
-  await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Take photo' }).disabled).toBe(
-      false,
-    ),
-  )
+  await waitFor(() => {
+    const button = screen.getByRole('button', { name: 'Take photo' })
+    expect(button).toBeInstanceOf(HTMLButtonElement)
+    expect((button as HTMLButtonElement).disabled).toBe(false)
+  })
   expect(screen.queryByRole('alert')).toBeNull()
   expect(onClose).not.toHaveBeenCalled()
 })
