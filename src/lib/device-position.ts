@@ -110,7 +110,8 @@ function publish(position: PositionSnapshot, persist = true) {
 }
 
 function rememberLastKnown(position: PositionSnapshot) {
-  if (!isResolvedPosition(position) || typeof localStorage === 'undefined') return
+  if (!isResolvedPosition(position) || typeof localStorage === 'undefined')
+    return
   try {
     localStorage.setItem(
       LAST_KNOWN_POSITION_KEY,

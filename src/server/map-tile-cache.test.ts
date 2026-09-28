@@ -108,7 +108,9 @@ describe('maptilerCdnCacheKey', () => {
       ),
     ).toBe('maptiler:https://api.maptiler.com/tiles/v3/1/2/3.pbf')
     expect(
-      maptilerCdnCacheKey('https://api.maptiler.com/maps/ocean/style.json?key=secret'),
+      maptilerCdnCacheKey(
+        'https://api.maptiler.com/maps/ocean/style.json?key=secret',
+      ),
     ).toBeNull()
   })
 })

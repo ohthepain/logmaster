@@ -326,9 +326,7 @@ export function ProfileModal({ open, onClose, onUpdated }: ProfileModalProps) {
                   void enablePushOnDevice()
                     .catch((e) =>
                       toast.error(
-                        e instanceof Error
-                          ? e.message
-                          : t('enablePushFailed'),
+                        e instanceof Error ? e.message : t('enablePushFailed'),
                       ),
                     )
                     .finally(() => setEnablingPush(false))

@@ -1,8 +1,9 @@
 import {
   isAwaitingDeviceFix,
-  mediterraneanJourneyMoving,
-  type MapLocationState,
+  mediterraneanJourneyMoving
+  
 } from '../lib/use-map-location'
+import type {MapLocationState} from '../lib/use-map-location';
 import type { GIBRALTAR } from '../lib/use-mediterranean-journey'
 import { useMediterraneanJourney } from '../lib/use-mediterranean-journey'
 import {
@@ -257,8 +258,7 @@ export const TripAppleMapKit = forwardRef<
 
   const wasPreviewingFix = useRef(false)
   useEffect(() => {
-    const previewing =
-      showCurrentPosition && isAwaitingDeviceFix(locationState)
+    const previewing = showCurrentPosition && isAwaitingDeviceFix(locationState)
     if (previewing && !wasPreviewingFix.current) {
       wasPreviewingFix.current = true
       initialFitDoneRef.current = false

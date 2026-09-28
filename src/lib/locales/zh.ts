@@ -366,8 +366,7 @@ const catalog: TranslationCatalog = {
   profileUpdated: '个人资料已更新',
   profileUpdateFailed: '无法更新个人资料',
   profilePhoto: '个人头像',
-  profilePhotoHelp:
-    '为你的账户上传一张照片。它与船只照片保存在同一位置。',
+  profilePhotoHelp: '为你的账户上传一张照片。它与船只照片保存在同一位置。',
   uploadProfilePhoto: '上传个人头像',
   profilePhotoUpdated: '个人头像已更新',
   profilePhotoUploadFailed: '无法上传照片',

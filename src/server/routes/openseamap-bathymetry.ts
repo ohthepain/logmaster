@@ -4,11 +4,7 @@ import {
   webMercatorBboxForTile,
   webMercatorBboxFromLngLatBounds,
 } from '../../lib/wms-tile-bbox'
-import {
-  mapTileByteCache,
-  mapTileResponse,
-  textTile,
-} from '../map-tile-cache'
+import { mapTileByteCache, mapTileResponse, textTile } from '../map-tile-cache'
 
 const RELIEF_CONFIG = {
   url: 'https://geoserver.openseamap.org/geoserver/gwc/service/wms',
@@ -65,34 +61,37 @@ openseamapBathymetryRoutes.get('/relief/:z/:x/:y', async (c) => {
     return c.text('Invalid tile', 400)
   }
 
-  const result = await mapTileByteCache.load(`gebco:${z}/${x}/${y}`, async () => {
-    const upstream = buildWmsGetMapUrl(RELIEF_CONFIG.url, {
-      layers: RELIEF_CONFIG.layers,
-      bbox: webMercatorBboxForTile(z, x, y),
-      version: RELIEF_CONFIG.version,
-    })
-
-    let response: Response
-    try {
-      response = await fetch(upstream, {
-        headers: { Accept: 'image/png,*/*' },
+  const result = await mapTileByteCache.load(
+    `gebco:${z}/${x}/${y}`,
+    async () => {
+      const upstream = buildWmsGetMapUrl(RELIEF_CONFIG.url, {
+        layers: RELIEF_CONFIG.layers,
+        bbox: webMercatorBboxForTile(z, x, y),
+        version: RELIEF_CONFIG.version,
       })
-    } catch {
-      return textTile(502, 'Upstream error')
-    }
-    if (!response.ok) {
-      return textTile(502, 'Upstream error', {
-        'X-Upstream-Status': String(response.status),
-      })
-    }
 
-    return {
-      status: 200,
-      body: new Uint8Array(await response.arrayBuffer()),
-      contentType: 'image/png',
-      store: true,
-    }
-  })
+      let response: Response
+      try {
+        response = await fetch(upstream, {
+          headers: { Accept: 'image/png,*/*' },
+        })
+      } catch {
+        return textTile(502, 'Upstream error')
+      }
+      if (!response.ok) {
+        return textTile(502, 'Upstream error', {
+          'X-Upstream-Status': String(response.status),
+        })
+      }
+
+      return {
+        status: 200,
+        body: new Uint8Array(await response.arrayBuffer()),
+        contentType: 'image/png',
+        store: true,
+      }
+    },
+  )
   return mapTileResponse(result)
 })
 

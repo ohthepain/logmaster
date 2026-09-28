@@ -2,11 +2,7 @@ import 'dotenv/config'
 import { Hono } from 'hono'
 import { getMapTilerApiKeyFromEnv } from '../../lib/server-maptiler-key'
 import { mapTilerRasterUrl } from '../../lib/tiles'
-import {
-  mapTileByteCache,
-  mapTileResponse,
-  textTile,
-} from '../map-tile-cache'
+import { mapTileByteCache, mapTileResponse, textTile } from '../map-tile-cache'
 
 /**
  * Browser → same-origin → MapTiler, with the key on the server.

@@ -2,9 +2,10 @@ import { Compass, LoaderCircle, MapPinOff } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import {
-  locationOverlayShowsMap,
-  type MapLocationState,
+  locationOverlayShowsMap
+  
 } from '../lib/use-map-location'
+import type {MapLocationState} from '../lib/use-map-location';
 import { openBackgroundLocationSettings } from '../lib/native/background-tracker'
 import { requestIosMapTouchSync } from '../lib/native/ios-map-touch-suspend'
 
