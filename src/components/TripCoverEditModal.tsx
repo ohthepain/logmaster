@@ -1,4 +1,4 @@
-import { Camera, Image, Mail, Map, Plus, Trash2, X } from 'lucide-react'
+import { Camera, Check, Image, Mail, Map, Plus, Trash2, X } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -316,9 +316,13 @@ export function TripCoverEditModal({
           (person) => !selectedCrewIds.includes(person.id),
         )}
         onClose={() => setAddOpen(false)}
-        onAddContact={(memberId) => {
-          if (selectedCrewIds.includes(memberId)) return
-          onCrewChange([...selectedCrewIds, memberId])
+        onAddContacts={(memberIds) => {
+          const next = [...selectedCrewIds]
+          for (const memberId of memberIds) {
+            if (!next.includes(memberId)) next.push(memberId)
+          }
+          if (next.length === selectedCrewIds.length) return
+          onCrewChange(next)
         }}
         onInviteByEmail={onInviteByEmail}
       />
@@ -330,28 +334,44 @@ function AddTripCrewModal({
   open,
   contacts,
   onClose,
-  onAddContact,
+  onAddContacts,
   onInviteByEmail,
 }: {
   open: boolean
   contacts: TripCrewUser[]
   onClose: () => void
-  onAddContact: (memberId: string) => void
+  onAddContacts: (memberIds: string[]) => void
   onInviteByEmail: TripCoverEditModalProps['onInviteByEmail']
 }) {
   const { language } = useTranslation()
+  const [pickedIds, setPickedIds] = useState<string[]>([])
   const [email, setEmail] = useState('')
   const [inviteLocale, setInviteLocale] = useState<InviteLocale>(language)
   const [sending, setSending] = useState(false)
 
   useEffect(() => {
     if (!open) return
+    setPickedIds([])
     setEmail('')
     setInviteLocale(language)
     setSending(false)
   }, [open, language])
 
   if (!open) return null
+
+  const toggleContact = (memberId: string) => {
+    setPickedIds((current) =>
+      current.includes(memberId)
+        ? current.filter((id) => id !== memberId)
+        : [...current, memberId],
+    )
+  }
+
+  const handleAdd = () => {
+    if (!pickedIds.length || sending) return
+    onAddContacts(pickedIds)
+    onClose()
+  }
 
   const handleInvite = async (event: FormEvent) => {
     event.preventDefault()
@@ -389,32 +409,44 @@ function AddTripCrewModal({
       devComponentName="AddTripCrewModal"
     >
       <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">
-        Add a contact, or invite someone by email if they do not have an account
-        yet.
+        Select contacts, then add them to this crew.
       </p>
 
       {contacts.length ? (
         <ul className="mt-4 space-y-2">
-          {contacts.map((member) => (
-            <li key={member.id}>
-              <button
-                type="button"
-                onClick={() => onAddContact(member.id)}
-                className="flex w-full items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-left transition hover:bg-[var(--chip-bg)]"
-              >
-                <CrewAvatar
-                  name={member.name}
-                  imageUrl={member.imageUrl}
-                  userId={member.id}
-                  className="size-11"
-                />
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--sea-ink)]">
-                  {member.name}
-                </span>
-                <Plus className="size-4 shrink-0 text-[var(--brand)]" />
-              </button>
-            </li>
-          ))}
+          {contacts.map((member) => {
+            const picked = pickedIds.includes(member.id)
+            return (
+              <li key={member.id}>
+                <button
+                  type="button"
+                  aria-pressed={picked}
+                  onClick={() => toggleContact(member.id)}
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition',
+                    picked
+                      ? 'border-green-600/25 bg-green-50 dark:border-green-500/30 dark:bg-green-950/35'
+                      : 'border-[var(--line)] bg-[var(--panel)] hover:bg-[var(--chip-bg)]',
+                  )}
+                >
+                  <CrewAvatar
+                    name={member.name}
+                    imageUrl={member.imageUrl}
+                    userId={member.id}
+                    className="size-11"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--sea-ink)]">
+                    {member.name}
+                  </span>
+                  {picked ? (
+                    <span className="inline-flex size-8 items-center justify-center rounded-full bg-green-600 text-white dark:bg-green-500">
+                      <Check className="size-4" strokeWidth={2.5} />
+                    </span>
+                  ) : null}
+                </button>
+              </li>
+            )
+          })}
         </ul>
       ) : (
         <p className="mb-0 mt-4 text-sm text-[var(--sea-ink-soft)]">
@@ -422,13 +454,24 @@ function AddTripCrewModal({
         </p>
       )}
 
+      {contacts.length ? (
+        <button
+          type="button"
+          disabled={!pickedIds.length || sending}
+          onClick={handleAdd}
+          className="mt-4 inline-flex rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
+        >
+          Add
+        </button>
+      ) : null}
+
       <form
         onSubmit={(event) => void handleInvite(event)}
-        className="mt-5 grid gap-3"
+        className="mt-6 grid gap-3 border-t border-[var(--line)] pt-5"
       >
         <label className="grid gap-1.5">
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--sea-ink-soft)]">
-            Invite by email
+          <span className="text-sm font-semibold text-[var(--sea-ink)]">
+            Or invite by email
           </span>
           <input
             type="email"
@@ -453,7 +496,7 @@ function AddTripCrewModal({
         <button
           type="submit"
           disabled={sending || !email.trim()}
-          className="justify-self-start rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
+          className="justify-self-start rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] disabled:opacity-60"
         >
           {sending ? 'Sending…' : 'Send crew invite'}
         </button>
