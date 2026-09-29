@@ -83,17 +83,20 @@ allows messages from the configured sender.
 
 1. Run **Android test build** on the desired branch or tag. Checkout pins the run's
    commit; the artifact metadata records the full SHA and bundle checksum.
-2. Enter a display version such as `1.0`. The workflow bumps the stored build number
-   in DynamoDB and uses that integer as the Play `versionCode` (must stay monotonic;
-   do not reuse codes).
+2. Enter a display version such as `1.0`. Leave **Play version code** as `auto`.
+   The workflow bumps the stored build number in DynamoDB and uses that integer as
+   the Play `versionCode` (must stay monotonic; do not reuse codes).
 3. Download the signed `.aab` and JSON metadata from the run's artifact (retained 30 days).
    The artifact name includes the allocated version code.
 4. Upload the AAB in Play Console's internal testing release flow and roll out there.
    A successful build does not upload, publish, or establish tester availability.
 
-If Play ever rejects a code because the store is ahead of DynamoDB (manual upload,
-failed build after increment, etc.), raise the stored `VERSION` in DynamoDB to match
-the highest accepted Play code before the next CI build.
+If Play rejects a code because the store is ahead of DynamoDB (manual upload, failed
+build after increment, etc.), run **Android test build** again and set **Play version
+code** to the next code Play will accept. That integer is written to DynamoDB as the
+last used code and stamped on this bundle. The following `auto` build increments from
+it. Example: Play already has 6, so enter `7`. Do not enter a code Play has already
+accepted.
 
 The build uses Java 21, API 36, Build Tools 35 and the production web app. Native
 assets contain a placeholder: the shell loads `https://logmaster.live`, so building

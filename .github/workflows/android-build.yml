@@ -8,6 +8,11 @@ on:
         required: true
         default: '1.0'
         type: string
+      version_code:
+        description: 'Play version code. auto increments DynamoDB. Any other integer is used for this bundle and stored as the last used code.'
+        required: true
+        default: auto
+        type: string
 
 permissions:
   contents: read
@@ -32,14 +37,55 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_BUILD_NUMBERS }}
           aws-region: eu-central-1
           audience: sts.amazonaws.com
-      - name: Allocate version code
-        id: version
+      - name: Allocate next version code
+        id: version_increment
+        if: inputs.version_code == 'auto'
         uses: ohthepain/global-build-numbers@main
         with:
           OPERATION: increment
           DYNAMO_TABLE_NAME: global-build-numbers
           DYNAMO_PARTITION_KEY: project-name
           PRODUCT_ID: logmaster-android
+      - name: Check version code override
+        id: version_override
+        if: inputs.version_code != 'auto'
+        env:
+          VERSION_CODE: ${{ inputs.version_code }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$VERSION_CODE" =~ ^[1-9][0-9]{0,9}$ ]] || (( VERSION_CODE > 2100000000 )); then
+            echo 'Play version code must be an integer from 1 through 2100000000, or auto.'
+            exit 1
+          fi
+          echo "code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+      - name: Store version code override
+        id: version_set
+        if: inputs.version_code != 'auto'
+        uses: ohthepain/global-build-numbers@main
+        with:
+          OPERATION: set
+          VALUE: ${{ steps.version_override.outputs.code }}
+          DYNAMO_TABLE_NAME: global-build-numbers
+          DYNAMO_PARTITION_KEY: project-name
+          PRODUCT_ID: logmaster-android
+      - name: Resolve version code
+        id: version
+        env:
+          AUTO: ${{ steps.version_increment.outputs.result }}
+          OVERRIDE: ${{ steps.version_set.outputs.result }}
+        run: |
+          set -euo pipefail
+          if [[ -n "${OVERRIDE:-}" ]]; then
+            CODE="$OVERRIDE"
+          else
+            CODE="${AUTO:-}"
+          fi
+          if [[ -z "$CODE" ]]; then
+            echo 'Could not resolve a Play version code.'
+            exit 1
+          fi
+          echo "result=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Using Play version code $CODE"
       - uses: pnpm/action-setup@v5
         with:
           version: 9.15.4
