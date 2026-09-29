@@ -13,6 +13,10 @@ type LogmasterRecentPhotosPlugin = {
   loadRecentPhoto: (options: {
     localIdentifier: string
   }) => Promise<{ base64: string; format: string }>
+  saveToPhotoLibrary: (options: {
+    path: string
+    contentType: string
+  }) => Promise<void>
 }
 
 const NativeRecentPhotos = registerPlugin<LogmasterRecentPhotosPlugin>(
@@ -36,4 +40,11 @@ export async function listRecentPhotoThumbnails(limit = 60) {
 
 export async function loadRecentPhotoFile(localIdentifier: string) {
   return NativeRecentPhotos.loadRecentPhoto({ localIdentifier })
+}
+
+export async function saveToPhotoLibrary(options: {
+  path: string
+  contentType: string
+}) {
+  await NativeRecentPhotos.saveToPhotoLibrary(options)
 }

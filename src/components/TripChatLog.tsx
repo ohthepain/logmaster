@@ -1,14 +1,17 @@
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import type { ChatMessage, TripChatLog } from '../domain/messaging'
-import type { LogEntry } from '../domain/logbook'
 import { AUTO_GENERATED_ENTRY_NOTE } from '../domain/instrument-data'
-import { useTranslation } from '../lib/i18n'
+import type { LogEntry } from '../domain/logbook'
+import type { ChatMessage, TripChatLog } from '../domain/messaging'
 import { apiUrl } from '../lib/app-origin'
-import { formatPosition } from '../lib/logbook-format'
-import { formatLogEntryPlace, lookupLogEntryPlace } from '../lib/logbook-place'
-import { generateLegColor } from '../lib/leg-colors'
 import { cn } from '../lib/cn'
+import { useTranslation } from '../lib/i18n'
+import { generateLegColor } from '../lib/leg-colors'
+import { formatPosition } from '../lib/logbook-format'
+import {
+  formatLogEntryPlace,
+  lookupActivityLocationName,
+} from '../lib/logbook-place'
 import { MessageMedia } from './MessageMedia'
 import { PlaybackTimelineLogEntryMarker } from './PlaybackTimelineLogEntryMarker'
 import { TripChatPositionMap } from './TripChatPositionMap'
@@ -45,6 +48,9 @@ function TripHourlyLogContent({
   const [placeLabel, setPlaceLabel] = useState<string | null>(() =>
     entry.place ? formatLogEntryPlace(entry.place) : null,
   )
+  const [lookupDone, setLookupDone] = useState(
+    () => Boolean(entry.place) || !coordinates,
+  )
 
   const markerEntry = useMemo(
     (): LogEntry => ({
@@ -65,17 +71,21 @@ function TripHourlyLogContent({
   useEffect(() => {
     if (entry.place) {
       setPlaceLabel(formatLogEntryPlace(entry.place))
+      setLookupDone(true)
       return
     }
     if (!coordinates) {
       setPlaceLabel(null)
+      setLookupDone(true)
       return
     }
     let cancelled = false
-    void lookupLogEntryPlace(entry.latitude!, entry.longitude!).then(
-      (place) => {
+    setLookupDone(false)
+    void lookupActivityLocationName(entry.latitude!, entry.longitude!).then(
+      (name) => {
         if (cancelled) return
-        setPlaceLabel(place ? formatLogEntryPlace(place) : null)
+        setPlaceLabel(name)
+        setLookupDone(true)
       },
     )
     return () => {
@@ -95,6 +105,7 @@ function TripHourlyLogContent({
   const coordsLabel = coordinates
     ? formatPosition(entry.latitude, entry.longitude)
     : null
+  const locationLabel = placeLabel ?? (lookupDone ? coordsLabel : null)
   const mapLabel = mapOpen ? t('tripChat_hideMap') : t('tripChat_showMap')
 
   return (
@@ -107,7 +118,7 @@ function TripHourlyLogContent({
         aria-expanded={mapOpen}
         aria-label={
           coordinates
-            ? `${timeLabel}${placeLabel ? ` · ${placeLabel}` : ''}${coordsLabel ? ` · ${coordsLabel}` : ''} · ${mapLabel}`
+            ? `${timeLabel}${locationLabel ? ` · ${locationLabel}` : ''} · ${mapLabel}`
             : mapLabel
         }
         disabled={!coordinates}
@@ -130,12 +141,14 @@ function TripHourlyLogContent({
         >
           {timeLabel}
         </time>
-        {placeLabel ? (
-          <span className="min-w-0 truncate text-slate-800">{placeLabel}</span>
-        ) : null}
-        {coordsLabel ? (
-          <span className="shrink-0 tabular-nums text-slate-500">
-            {coordsLabel}
+        {locationLabel ? (
+          <span
+            className={cn(
+              'min-w-0 truncate',
+              placeLabel ? 'text-slate-800' : 'tabular-nums text-slate-500',
+            )}
+          >
+            {locationLabel}
           </span>
         ) : null}
         {coordinates ? (
@@ -222,6 +235,7 @@ export function TripLogContent({
             <img
               src={apiUrl(item.url)}
               alt={t('tripLog_PHOTO')}
+              draggable={false}
               loading="lazy"
               className="max-h-96 w-full object-contain"
             />

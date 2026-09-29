@@ -1,5 +1,8 @@
 import type { PlaceLookupResult } from './place-reverse-lookup'
-import { fetchReversePlaceLookup } from './place-reverse-lookup-api'
+import {
+  fetchReverseLocationName,
+  fetchReversePlaceLookup,
+} from './place-reverse-lookup-api'
 import { formatPosition } from './logbook-format'
 
 export type LogEntryPlace = {
@@ -62,6 +65,16 @@ export async function lookupLogEntryPlace(
 ): Promise<LogEntryPlace | null> {
   const result = await fetchReversePlaceLookup(latitude, longitude)
   return result ? logEntryPlaceFromLookup(result) : null
+}
+
+/** Nearby chart place, or a reverse-geocoded locality when none is close. */
+export async function lookupActivityLocationName(
+  latitude: number,
+  longitude: number,
+): Promise<string | null> {
+  const place = await lookupLogEntryPlace(latitude, longitude)
+  if (place) return formatLogEntryPlace(place)
+  return fetchReverseLocationName(latitude, longitude)
 }
 
 export async function attachPlaceToEntryData(

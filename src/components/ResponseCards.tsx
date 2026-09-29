@@ -16,6 +16,7 @@ export function CardImage({
     <img
       src={apiUrl(`/api/messaging/cards/${encodeURIComponent(card.id)}/image`)}
       alt={card.title}
+      draggable={false}
       className={`object-contain ${className}`}
       loading="lazy"
     />

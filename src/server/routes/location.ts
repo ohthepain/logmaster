@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import type { WeatherSnapshot } from '../../domain/logbook'
+import { formatReverseGeocodedLocationName } from '../../lib/reverse-location-name'
 import { reverseLookupPlaceFromTiles } from '../places/reverse-lookup'
 
 function parseCoordinate(
@@ -13,10 +14,26 @@ function parseCoordinate(
   return parsed
 }
 
-async function reverseGeocodeCountry(
+type ReverseGeocode = {
+  country: string | null
+  locationName: string | null
+}
+
+const geocodeCache = new Map<string, ReverseGeocode>()
+
+function geocodeCacheKey(latitude: number, longitude: number) {
+  return `${latitude.toFixed(2)},${longitude.toFixed(2)}`
+}
+
+async function reverseGeocode(
   latitude: number,
   longitude: number,
-): Promise<string | null> {
+): Promise<ReverseGeocode> {
+  const key = geocodeCacheKey(latitude, longitude)
+  const cached = geocodeCache.get(key)
+  if (cached) return cached
+
+  const empty: ReverseGeocode = { country: null, locationName: null }
   try {
     const url = new URL('https://nominatim.openstreetmap.org/reverse')
     url.searchParams.set('format', 'jsonv2')
@@ -28,13 +45,22 @@ async function reverseGeocodeCountry(
         'User-Agent': 'logmaster/1.0 (sailing logbook)',
       },
     })
-    if (!response.ok) return null
+    if (!response.ok) return empty
     const json = (await response.json()) as {
-      address?: { country?: string }
+      display_name?: string
+      address?: Record<string, string>
     }
-    return json.address?.country ?? null
+    const result: ReverseGeocode = {
+      country: json.address?.country?.trim() || null,
+      locationName: formatReverseGeocodedLocationName(
+        json.address,
+        json.display_name,
+      ),
+    }
+    geocodeCache.set(key, result)
+    return result
   } catch {
-    return null
+    return empty
   }
 }
 
@@ -87,15 +113,16 @@ locationRoutes.get('/context', async (c) => {
     return c.json({ error: 'latitude and longitude are required' }, 400)
   }
 
-  const [country, weather] = await Promise.all([
-    reverseGeocodeCountry(latitude, longitude),
+  const [geocode, weather] = await Promise.all([
+    reverseGeocode(latitude, longitude),
     getWeatherSnapshot(latitude, longitude),
   ])
 
   return c.json({
     latitude,
     longitude,
-    country,
+    country: geocode.country,
+    locationName: geocode.locationName,
     weather,
     timestamp: new Date().toISOString(),
   })

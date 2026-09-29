@@ -174,6 +174,8 @@ const APP_MAP_OVERLAY_LAYER_IDS = [
   'trip-log-entry-icons',
   'trip-current-position-halo',
   'trip-current-position-dot',
+  'trip-boat-course-line-casing',
+  'trip-boat-course-line',
   'compose-log-track-line',
   'compose-log-entry-circles',
   'compose-log-entry-icons',

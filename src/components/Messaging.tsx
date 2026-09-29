@@ -1,27 +1,4 @@
 import {
-  connectionFormedLabel,
-  referralIntroLabel,
-} from '../domain/invite-face'
-import {
-  groupResponseCardMessages,
-  isResponseCardMessage,
-} from '../domain/response-card-groups'
-import { boatActivitySummary } from '../lib/boat-activity-text'
-import { connectionAction } from '../lib/connections-api'
-import { BoatActivityContent } from './BoatChatActivity'
-import {
-  plainTripLog,
-  tripChatThreadTripId,
-  TripChatLogItem,
-  TripLogContent,
-} from './TripChatLog'
-import { useTranslation } from '../lib/i18n'
-import { MessageResponseCard, ResponseCardSuggestions } from './ResponseCards'
-import type { CardSummary } from '../domain/response-cards'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import type { CSSProperties, ReactNode } from 'react'
-import {
   ArrowUp,
   ChevronLeft,
   Heart,
@@ -29,14 +6,39 @@ import {
   MessageCircle,
   Search,
 } from 'lucide-react'
+import type { CSSProperties, ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import {
+  connectionFormedLabel,
+  referralIntroLabel,
+} from '../domain/invite-face'
 import type { ChatMessage, ChatObject, ChatThread } from '../domain/messaging'
 import { referenceObjects, threadTimeGroup } from '../domain/messaging'
-import { apiJson } from '../lib/api-client'
-import { cn } from '../lib/cn'
+import {
+  groupResponseCardMessages,
+  isResponseCardMessage,
+} from '../domain/response-card-groups'
+import type { CardSummary } from '../domain/response-cards'
 import { useChatActivity } from '../hooks/use-chat-activity'
 import { useMessageLikes } from '../hooks/use-message-likes'
-import { MessageMedia, MediaSelector } from './MessageMedia'
+import { apiJson } from '../lib/api-client'
+import { boatActivitySummary } from '../lib/boat-activity-text'
+import { cn } from '../lib/cn'
+import { connectionAction } from '../lib/connections-api'
+import { useTranslation } from '../lib/i18n'
 import { uploadMessageFiles } from '../lib/messaging/media'
+import { attachMessageThreadDragScroll } from '../lib/messaging/message-thread-scroll'
+import { hasSavableChatMedia } from '../lib/messaging/save-chat-media'
+import { BoatActivityContent } from './BoatChatActivity'
+import { MediaSelector, MessageMedia } from './MessageMedia'
+import { MessageResponseCard, ResponseCardSuggestions } from './ResponseCards'
+import {
+  plainTripLog,
+  TripChatLogItem,
+  TripLogContent,
+  tripChatThreadTripId,
+} from './TripChatLog'
 
 const mobileChatHeaderClassName =
   'bg-gradient-to-r from-[#0385ff] to-[#02adf5] text-white'
@@ -263,6 +265,32 @@ function MessageLikeButton({
   )
 }
 
+function MessageLikeControls({
+  like,
+  active,
+  likePending,
+  onToggleLike,
+}: {
+  like: { likeCount: number; myLikeCount: number } | undefined
+  active: boolean
+  likePending: boolean
+  onToggleLike: (origin: { x: number; y: number }) => void | Promise<void>
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      {like && like.likeCount > 0 ? (
+        <MessageLikeCountPill count={like.likeCount} />
+      ) : null}
+      <MessageLikeButton
+        like={like}
+        active={active}
+        likePending={likePending}
+        onToggleLike={onToggleLike}
+      />
+    </div>
+  )
+}
+
 function ReceivedMessageRow({
   userId,
   message,
@@ -284,6 +312,15 @@ function ReceivedMessageRow({
     message.senderId,
     objects,
     Boolean(message.boatActivity),
+  )
+  const savableMedia = hasSavableChatMedia(message.media)
+  const likeControls = (
+    <MessageLikeControls
+      like={like}
+      active={active}
+      likePending={likePending}
+      onToggleLike={onToggleLike}
+    />
   )
   return (
     <div className={cn('flex items-start gap-2', messageRowSpacingClassName)}>
@@ -308,6 +345,7 @@ function ReceivedMessageRow({
             userId={userId}
             threadId={message.threadId}
             media={message.media}
+            likeControl={savableMedia ? likeControls : undefined}
           />
           {hasPhoto === false && !message.boatActivity ? (
             <p className="mb-1 mt-0 text-xs font-semibold text-[var(--sea-ink-soft)]">
@@ -324,17 +362,11 @@ function ReceivedMessageRow({
             {timeLabel(message.createdAt)}
           </time>
         </div>
-        <div className="absolute bottom-0 right-0 flex translate-x-1 translate-y-1/2 items-center gap-1">
-          {like && like.likeCount > 0 ? (
-            <MessageLikeCountPill count={like.likeCount} />
-          ) : null}
-          <MessageLikeButton
-            like={like}
-            active={active}
-            likePending={likePending}
-            onToggleLike={onToggleLike}
-          />
-        </div>
+        {savableMedia ? null : (
+          <div className="absolute bottom-0 right-0 flex translate-x-1 translate-y-1/2 items-center gap-1">
+            {likeControls}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -592,6 +624,11 @@ export function Messaging({
     if (messageList.current)
       messageList.current.scrollTop = messageList.current.scrollHeight
   }, [lastId, selectedId])
+  useEffect(() => {
+    const scroller = messageList.current
+    if (!scroller) return
+    return attachMessageThreadDragScroll(scroller)
+  }, [selectedId])
 
   async function connectPeer() {
     if (!selected || selected.object.kind !== 'user') return
@@ -929,7 +966,7 @@ export function Messaging({
                 role="log"
                 aria-label="Messages"
                 aria-live="polite"
-                className="min-h-0 flex-1 space-y-1 overflow-y-auto bg-[#eef2f6] p-4 sm:p-6"
+                className="message-thread min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain bg-[#eef2f6] p-4 sm:p-6"
               >
                 {cursor && (
                   <div className="text-center">
@@ -974,6 +1011,10 @@ export function Messaging({
                           >
                             {group.map((cardMessage) => {
                               const like = messageLikes.likes[cardMessage.id]
+                              const savableMedia = hasSavableChatMedia(
+                                cardMessage.media,
+                              )
+                              const likeOnMedia = savableMedia && !own
                               return (
                                 <div
                                   key={cardMessage.id}
@@ -987,6 +1028,25 @@ export function Messaging({
                                     userId={userId}
                                     threadId={cardMessage.threadId}
                                     media={cardMessage.media}
+                                    likeControl={
+                                      likeOnMedia ? (
+                                        <MessageLikeControls
+                                          like={like}
+                                          active={
+                                            active && selected.canSend !== false
+                                          }
+                                          likePending={messageLikes.isPending(
+                                            cardMessage.id,
+                                          )}
+                                          onToggleLike={(origin) =>
+                                            messageLikes.like(
+                                              cardMessage.id,
+                                              () => floatHeart(origin),
+                                            )
+                                          }
+                                        />
+                                      ) : undefined
+                                    }
                                   />
                                   <time
                                     dateTime={cardMessage.createdAt}
@@ -994,30 +1054,32 @@ export function Messaging({
                                   >
                                     {timeLabel(cardMessage.createdAt)}
                                   </time>
-                                  <div className="absolute bottom-0 right-0 flex translate-y-1/2 items-center gap-1">
-                                    {!!like?.likeCount && (
-                                      <MessageLikeCountPill
-                                        count={like.likeCount}
-                                      />
-                                    )}
-                                    {!own && (
-                                      <MessageLikeButton
-                                        like={like}
-                                        active={
-                                          active && selected.canSend !== false
-                                        }
-                                        likePending={messageLikes.isPending(
-                                          cardMessage.id,
-                                        )}
-                                        onToggleLike={(origin) =>
-                                          messageLikes.like(
+                                  {likeOnMedia ? null : (
+                                    <div className="absolute bottom-0 right-0 flex translate-y-1/2 items-center gap-1">
+                                      {!!like?.likeCount && (
+                                        <MessageLikeCountPill
+                                          count={like.likeCount}
+                                        />
+                                      )}
+                                      {!own && (
+                                        <MessageLikeButton
+                                          like={like}
+                                          active={
+                                            active && selected.canSend !== false
+                                          }
+                                          likePending={messageLikes.isPending(
                                             cardMessage.id,
-                                            () => floatHeart(origin),
-                                          )
-                                        }
-                                      />
-                                    )}
-                                  </div>
+                                          )}
+                                          onToggleLike={(origin) =>
+                                            messageLikes.like(
+                                              cardMessage.id,
+                                              () => floatHeart(origin),
+                                            )
+                                          }
+                                        />
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               )
                             })}

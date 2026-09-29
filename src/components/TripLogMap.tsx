@@ -26,6 +26,12 @@ import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
 import type { RouteWaypoint } from '../domain/route'
 import type { TripTrack } from '../domain/trip-track'
 import { boatIconSrc } from '../lib/boat-icons'
+import {
+  BOAT_COURSE_LINE_COLOR,
+  courseLineEnd,
+  courseLineLengthMeters,
+  useBoatMotionReading,
+} from '../lib/boat-motion'
 import { cn } from '../lib/cn'
 import { isDevModeAvailable } from '../lib/dev-mode'
 import {
@@ -82,6 +88,7 @@ import {
   sailingMapLegTrackPaint,
 } from '../lib/maplibre-sailing-theme'
 import { getGeoJsonSource } from '../lib/maplibre-source'
+import { haversineMeters } from '../lib/place-reverse-lookup'
 import {
   fetchReversePlaceLookup,
   formatReversePlaceLabel,
@@ -170,6 +177,7 @@ type LngLat = { longitude: number; latitude: number; heading?: number | null }
 
 const ENTRY_SOURCE = 'trip-log-entries'
 const TRACK_SOURCE = 'trip-log-track'
+const COURSE_SOURCE = 'trip-boat-course'
 const CURRENT_SOURCE = 'trip-current-position'
 
 export const TripLogMap = forwardRef<TripMapHandle, TripLogMapProps>(
@@ -339,6 +347,9 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
     )
     const [mapError, setMapError] = useState<string | null>(null)
     const [currentPosition, setCurrentPosition] = useState<LngLat | null>(null)
+    const boatMotion = useBoatMotionReading(
+      showCurrentPosition && !playbackPosition ? trip.id : null,
+    )
     const [fullscreenOpen, setFullscreenOpen] = useState(false)
     const [hoveredEntry, setHoveredEntry] =
       useState<MapEntryPreviewState | null>(null)
@@ -594,6 +605,32 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
               source: TRACK_SOURCE,
               paint: sailingMapLegTrackPaint,
             })
+            map.addSource(COURSE_SOURCE, {
+              type: 'geojson',
+              data: { type: 'FeatureCollection', features: [] },
+            })
+            map.addLayer({
+              id: 'trip-boat-course-line-casing',
+              type: 'line',
+              source: COURSE_SOURCE,
+              layout: { 'line-cap': 'round', 'line-join': 'round' },
+              paint: {
+                'line-color': '#ffffff',
+                'line-width': 6,
+                'line-opacity': 0.9,
+              },
+            })
+            map.addLayer({
+              id: 'trip-boat-course-line',
+              type: 'line',
+              source: COURSE_SOURCE,
+              layout: { 'line-cap': 'round', 'line-join': 'round' },
+              paint: {
+                'line-color': BOAT_COURSE_LINE_COLOR,
+                'line-width': 3,
+                'line-opacity': 0.95,
+              },
+            })
 
             map.addSource(ENTRY_SOURCE, {
               type: 'geojson',
@@ -758,11 +795,73 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
 
       trackSource.setData(displayedTrackGeoJson)
 
+      const courseSource = getGeoJsonSource(map, COURSE_SOURCE)
+      if (courseSource) {
+        if (
+          !showCurrentPosition ||
+          playbackPosition ||
+          !boatMotion ||
+          !currentPosition
+        ) {
+          courseSource.setData({ type: 'FeatureCollection', features: [] })
+        } else {
+          const originPx = map.project([
+            currentPosition.longitude,
+            currentPosition.latitude,
+          ])
+          const ahead = map.unproject([originPx.x + 88, originPx.y])
+          const lengthMeters = courseLineLengthMeters(
+            boatMotion.lineLengthMeters,
+            haversineMeters(
+              currentPosition.latitude,
+              currentPosition.longitude,
+              ahead.lat,
+              ahead.lng,
+            ),
+          )
+          const end = courseLineEnd(
+            currentPosition.latitude,
+            currentPosition.longitude,
+            boatMotion,
+            lengthMeters,
+          )
+          courseSource.setData({
+            type: 'FeatureCollection',
+            features: [
+              {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: [
+                    [currentPosition.longitude, currentPosition.latitude],
+                    [end.longitude, end.latitude],
+                  ],
+                },
+              },
+            ],
+          })
+          if (map.getLayer('trip-boat-course-line-casing')) {
+            map.moveLayer('trip-boat-course-line-casing')
+          }
+          if (map.getLayer('trip-boat-course-line')) {
+            map.moveLayer('trip-boat-course-line')
+          }
+        }
+      }
+
       currentSource.setData({
         type: 'FeatureCollection',
         features: [],
       })
-    }, [mapReady, displayedTrackGeoJson])
+    }, [
+      boatMotion,
+      currentPosition,
+      displayedTrackGeoJson,
+      mapReady,
+      playbackPosition,
+      showCurrentPosition,
+    ])
 
     useEffect(() => {
       const map = mapRef.current

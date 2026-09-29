@@ -268,6 +268,7 @@ struct PlaybackMarker {
     let coordinate: CLLocationCoordinate2D
     let heading: Double
     let image: UIImage?
+    let courseEnd: CLLocationCoordinate2D?
 }
 
 final class LogEntryMarkerAnnotation: NSObject, MKAnnotation {
@@ -296,15 +297,41 @@ final class PlaybackBoatAnnotation: NSObject, MKAnnotation {
     }
 }
 
+private func boatMarkerBounds(for image: UIImage) -> CGRect {
+    let maxWidth: CGFloat = 32
+    let maxHeight: CGFloat = 40
+    let size = image.size
+    guard size.width > 0, size.height > 0 else {
+        return CGRect(x: 0, y: 0, width: maxWidth, height: maxHeight)
+    }
+    let scale = min(maxWidth / size.width, maxHeight / size.height)
+    return CGRect(
+        x: 0,
+        y: 0,
+        width: size.width * scale,
+        height: size.height * scale
+    )
+}
+
 final class AppleMapViewDelegate: NSObject, MKMapViewDelegate {
     var selectedEntryId: String?
     var entryMarkerScale: (LogEntryMarkerAnnotation) -> CGFloat = { _ in 1 }
+    var courseOverlay: MKPolyline?
+    var courseCasingOverlay: MKPolyline?
 
     func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
         if let polyline = overlay as? MKPolyline {
             let renderer = MKPolylineRenderer(polyline: polyline)
-            renderer.strokeColor = UIColor(red: 235 / 255, green: 69 / 255, blue: 57 / 255, alpha: 0.95)
-            renderer.lineWidth = 3
+            if polyline === courseOverlay {
+                renderer.strokeColor = UIColor(red: 225 / 255, green: 29 / 255, blue: 72 / 255, alpha: 0.95)
+                renderer.lineWidth = 3
+            } else if polyline === courseCasingOverlay {
+                renderer.strokeColor = UIColor.white
+                renderer.lineWidth = 6
+            } else {
+                renderer.strokeColor = UIColor(red: 235 / 255, green: 69 / 255, blue: 57 / 255, alpha: 0.95)
+                renderer.lineWidth = 3
+            }
             renderer.lineCap = .round
             renderer.lineJoin = .round
             return renderer
@@ -336,7 +363,7 @@ final class AppleMapViewDelegate: NSObject, MKMapViewDelegate {
                 view.backgroundColor = .clear
                 view.layer.cornerRadius = 0
                 view.layer.borderWidth = 0
-                view.bounds = CGRect(x: 0, y: 0, width: 32, height: 40)
+                view.bounds = boatMarkerBounds(for: image)
             } else {
                 view.image = UIImage(systemName: "sailboat.fill")?
                     .withTintColor(UIColor(red: 235 / 255, green: 69 / 255, blue: 57 / 255, alpha: 1), renderingMode: .alwaysOriginal)
@@ -375,6 +402,8 @@ final class AppleMapInstance {
     var entryCircleMarkers: [EntryCircleMarker] = []
     var entryAnnotations: [LogEntryMarkerAnnotation] = []
     var playbackAnnotation: PlaybackBoatAnnotation?
+    var courseOverlay: MKPolyline?
+    var courseCasingOverlay: MKPolyline?
     var selectedEntryId: String?
     var onEntrySelected: ((String) -> Void)?
     var onEntryPreview: ((String, CGPoint) -> Void)?
@@ -536,6 +565,7 @@ final class AppleMapInstance {
         let polyline = MKPolyline(coordinates: &mutable, count: mutable.count)
         trackOverlay = polyline
         mapView.addOverlay(polyline)
+        liftCourseLine()
     }
 
     func setSelectedEntryId(_ entryId: String?) {
@@ -616,6 +646,7 @@ final class AppleMapInstance {
                 mapView.removeAnnotation(playbackAnnotation)
                 self.playbackAnnotation = nil
             }
+            replaceCourseLine(from: nil, to: nil)
             return
         }
 
@@ -629,19 +660,55 @@ final class AppleMapInstance {
                     view.backgroundColor = .clear
                     view.layer.cornerRadius = 0
                     view.layer.borderWidth = 0
-                    view.bounds = CGRect(x: 0, y: 0, width: 32, height: 40)
+                    view.bounds = boatMarkerBounds(for: image)
                 }
                 view.transform = CGAffineTransform(rotationAngle: CGFloat(marker.heading * .pi / 180))
             }
-            return
+        } else {
+            let annotation = PlaybackBoatAnnotation(
+                coordinate: marker.coordinate,
+                heading: marker.heading,
+                image: marker.image
+            )
+            playbackAnnotation = annotation
+            mapView.addAnnotation(annotation)
         }
+        replaceCourseLine(from: marker.coordinate, to: marker.courseEnd)
+    }
 
-        let annotation = PlaybackBoatAnnotation(
-            coordinate: marker.coordinate,
-            heading: marker.heading,
-            image: marker.image
-        )
-        playbackAnnotation = annotation
-        mapView.addAnnotation(annotation)
+    private func replaceCourseLine(
+        from start: CLLocationCoordinate2D?,
+        to end: CLLocationCoordinate2D?
+    ) {
+        if let courseOverlay {
+            mapView.removeOverlay(courseOverlay)
+            self.courseOverlay = nil
+        }
+        if let courseCasingOverlay {
+            mapView.removeOverlay(courseCasingOverlay)
+            self.courseCasingOverlay = nil
+        }
+        delegate.courseOverlay = nil
+        delegate.courseCasingOverlay = nil
+        guard let start, let end else { return }
+
+        var casingCoords = [start, end]
+        let casing = MKPolyline(coordinates: &casingCoords, count: 2)
+        var lineCoords = [start, end]
+        let line = MKPolyline(coordinates: &lineCoords, count: 2)
+        courseCasingOverlay = casing
+        courseOverlay = line
+        delegate.courseCasingOverlay = casing
+        delegate.courseOverlay = line
+        mapView.addOverlay(casing)
+        mapView.addOverlay(line)
+    }
+
+    private func liftCourseLine() {
+        guard let courseCasingOverlay, let courseOverlay else { return }
+        mapView.removeOverlay(courseCasingOverlay)
+        mapView.removeOverlay(courseOverlay)
+        mapView.addOverlay(courseCasingOverlay)
+        mapView.addOverlay(courseOverlay)
     }
 }

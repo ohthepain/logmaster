@@ -8,14 +8,19 @@ import {
 } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { ChatMessage, ChatObject, ChatThread } from '../domain/messaging'
-import { Messaging, MessageText } from './Messaging'
+import type * as SaveChatMedia from '../lib/messaging/save-chat-media'
+import { MessageText, Messaging } from './Messaging'
 
 vi.mock('./TripChatPositionMap', () => ({ TripChatPositionMap: () => null }))
 vi.mock('../lib/i18n', () => ({ useTranslation: () => ({ language: 'en' }) }))
 vi.mock('./TripChatPositionMap', () => ({
   TripChatPositionMap: () => <div data-testid="trip-chat-hourly-map" />,
 }))
-const mocks = vi.hoisted(() => ({ api: vi.fn(), upload: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  api: vi.fn(),
+  upload: vi.fn(),
+  saveMedia: vi.fn(async () => 'downloaded' as const),
+}))
 vi.mock('../lib/messaging/media', () => ({
   uploadMessageFiles: mocks.upload,
   loadMessageMedia: vi.fn(
@@ -24,6 +29,12 @@ vi.mock('../lib/messaging/media', () => ({
   messageMediaUrl: () => '/test-media',
 }))
 vi.mock('../lib/api-client', () => ({ apiJson: mocks.api }))
+vi.mock('../lib/messaging/save-chat-media', async () => {
+  const actual = await vi.importActual<typeof SaveChatMedia>(
+    '../lib/messaging/save-chat-media',
+  )
+  return { ...actual, saveChatMedia: mocks.saveMedia }
+})
 vi.mock('../hooks/use-chat-activity', () => ({
   useChatActivity: () => ({ active: true, live: true }),
 }))
@@ -184,6 +195,48 @@ it('restores the previous count and empty heart if saving fails', async () => {
       .getByRole('button', { name: 'Like message' })
       .getAttribute('aria-pressed'),
   ).toBe('false')
+})
+it('likes a received photo and saves it without a second heart', async () => {
+  const photo = {
+    id: 'media-id',
+    checksum: 'a'.repeat(64),
+    contentType: 'image/jpeg',
+    size: 5,
+    fileName: 'sunset.jpg',
+  }
+  mockLikes()
+  mocks.api.mockImplementation(async (url: string) => {
+    if (url === '/api/messaging/threads')
+      return { threads: [thread], objects: [object] }
+    if (url.endsWith('/messages'))
+      return {
+        messages: [
+          { ...message, text: 'Look', references: [], media: [photo] },
+        ],
+        nextCursor: null,
+      }
+    if (url.endsWith('/likes/query'))
+      return {
+        likes: [{ messageId: message.id, likeCount: 2, myLikeCount: 0 }],
+      }
+    if (url.endsWith('/like'))
+      return { messageId: message.id, likeCount: 3, myLikeCount: 1 }
+    if (url.includes('/media/')) return { media: photo }
+    return { ok: true }
+  })
+  render(<Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />)
+  const save = await screen.findByRole('button', { name: 'Save photo' })
+  expect(screen.getAllByRole('button', { name: 'Like message' })).toHaveLength(
+    1,
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Like message' }))
+  await screen.findByLabelText('3 likes')
+  fireEvent.click(save)
+  await waitFor(() => expect(mocks.saveMedia).toHaveBeenCalled())
+  await screen.findByRole('button', { name: 'Save photo' })
+  expect(
+    screen.getByRole('button', { name: 'Save photo' }).textContent,
+  ).toMatch(/Saved/)
 })
 it('shows likes to the sender without a self-like button', async () => {
   mockLikes({ own: true })

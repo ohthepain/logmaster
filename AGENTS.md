@@ -5,6 +5,10 @@
 - All menus should be centered
 - Prefer horizontal toggle switchs for on/off options
 
+# Map UI
+
+- buttons should prefer white background in light mode, dark backgrounds in dark mode
+
 # Breaking changes for mobile apps
 
 - Confirm with the user before making a change that will require an app update

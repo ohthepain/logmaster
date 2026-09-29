@@ -39,13 +39,16 @@ export function registerLmmapProtocol(): Promise<void> {
   if (registering) return registering
   registering = import('maplibre-gl')
     .then((maplibregl) => {
-      maplibregl.default.addProtocol('lmmap', async (params, abortController) => {
-        const data = await loadLmmapResource(params.url, {
-          readTile: getTripMapTile,
-          signal: abortController.signal,
-        })
-        return { data }
-      })
+      maplibregl.default.addProtocol(
+        'lmmap',
+        async (params, abortController) => {
+          const data = await loadLmmapResource(params.url, {
+            readTile: getTripMapTile,
+            signal: abortController.signal,
+          })
+          return { data }
+        },
+      )
     })
     .catch((error: unknown) => {
       registering = null

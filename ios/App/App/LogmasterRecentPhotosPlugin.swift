@@ -9,6 +9,7 @@ final class LogmasterRecentPhotosPlugin: CAPPlugin, CAPBridgedPlugin {
     let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "listRecentPhotos", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadRecentPhoto", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "saveToPhotoLibrary", returnType: CAPPluginReturnPromise),
     ]
 
     @objc func listRecentPhotos(_ call: CAPPluginCall) {
@@ -108,6 +109,62 @@ final class LogmasterRecentPhotosPlugin: CAPPlugin, CAPBridgedPlugin {
                     "format": format,
                 ])
             }
+        }
+    }
+
+    @objc func saveToPhotoLibrary(_ call: CAPPluginCall) {
+        guard let path = call.getString("path"), !path.isEmpty else {
+            call.reject("path is required")
+            return
+        }
+        let contentType = call.getString("contentType") ?? ""
+        let url: URL
+        if path.hasPrefix("file:") {
+            guard let parsed = URL(string: path) else {
+                call.reject("Could not read the file")
+                return
+            }
+            url = parsed
+        } else {
+            url = URL(fileURLWithPath: path)
+        }
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            call.reject("Could not read the file")
+            return
+        }
+
+        requestAddPhotoAccess { granted in
+            guard granted else {
+                call.reject("Photo library access denied")
+                return
+            }
+            PHPhotoLibrary.shared().performChanges({
+                if contentType.hasPrefix("video/") {
+                    _ = PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
+                } else {
+                    _ = PHAssetChangeRequest.creationRequestForAssetFromImage(atFileURL: url)
+                }
+            }) { success, error in
+                if success {
+                    call.resolve()
+                } else {
+                    call.reject(error?.localizedDescription ?? "Could not save this file")
+                }
+            }
+        }
+    }
+
+    private func requestAddPhotoAccess(_ handler: @escaping (Bool) -> Void) {
+        let status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+        switch status {
+        case .authorized, .limited:
+            handler(true)
+        case .notDetermined:
+            PHPhotoLibrary.requestAuthorization(for: .addOnly) { newStatus in
+                handler(newStatus == .authorized || newStatus == .limited)
+            }
+        default:
+            handler(false)
         }
     }
 

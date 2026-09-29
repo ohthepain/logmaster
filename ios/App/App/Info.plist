@@ -9,7 +9,7 @@
   <key>NSPhotoLibraryUsageDescription</key>
   <string>Choose photos and videos to share in messages or attach to your boat records.</string>
   <key>NSPhotoLibraryAddUsageDescription</key>
-  <string>Save photos of your boat assets to your photo library.</string>
+  <string>Save photos and videos from your conversations to your photo library.</string>
 	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>

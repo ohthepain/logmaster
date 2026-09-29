@@ -43,6 +43,8 @@ export type MapCamera = {
 export type MapPlaybackPosition = MapCoordinate & {
   heading: number
   imageDataUrl?: string
+  /** Forward end of the course line. Omitted when the boat is not underway. */
+  courseEnd?: MapCoordinate
 }
 
 export type FitCoordinatesOptions = {

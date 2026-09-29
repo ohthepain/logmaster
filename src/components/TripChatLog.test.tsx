@@ -19,6 +19,7 @@ vi.mock('../lib/logbook-place', async (importOriginal) => {
   return {
     ...actual,
     lookupLogEntryPlace: vi.fn(async () => null),
+    lookupActivityLocationName: vi.fn(async () => 'Stockholm archipelago'),
   }
 })
 afterEach(() => {
@@ -110,19 +111,41 @@ it('renders hourly logs on one row and expands the interactive map', () => {
   expect(screen.getByTestId('hourly-log-icon')).toBeTruthy()
   expect(screen.queryByText('Hourly log')).toBeNull()
   expect(screen.getByText('Stockholm')).toBeTruthy()
-  expect(screen.getByText('59.3000, 18.1000')).toBeTruthy()
+  expect(screen.queryByText('59.3000, 18.1000')).toBeNull()
   expect(screen.queryByTestId('trip-chat-hourly-map')).toBeNull()
   expect(screen.queryByText('Auto-tracked position')).toBeNull()
   fireEvent.click(
     screen.getByRole('button', {
-      name: /Stockholm.*59\.3000, 18\.1000.*Show map/,
+      name: /Stockholm.*Show map/,
     }),
   )
   expect(screen.getByTestId('trip-chat-hourly-map')).toBeTruthy()
   fireEvent.click(
     screen.getByRole('button', {
-      name: /Stockholm.*59\.3000, 18\.1000.*Hide map/,
+      name: /Stockholm.*Hide map/,
     }),
   )
   expect(screen.queryByTestId('trip-chat-hourly-map')).toBeNull()
+})
+it('shows a reverse-geocoded name instead of raw coordinates', async () => {
+  render(
+    <I18nProvider>
+      <TripLogContent
+        tripId="trip"
+        entry={{
+          id: 'hourly-open',
+          type: 'HOURLY_LOG',
+          timestamp: '2026-09-21T15:00:00.000Z',
+          latitude: 59.3,
+          longitude: 18.1,
+          place: null,
+          notes: null,
+          legacyMedia: [],
+        }}
+      />
+    </I18nProvider>,
+  )
+  expect(screen.queryByText('59.3000, 18.1000')).toBeNull()
+  await screen.findByText('Stockholm archipelago')
+  expect(screen.queryByText('59.3000, 18.1000')).toBeNull()
 })

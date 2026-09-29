@@ -1,9 +1,9 @@
 import { FileText } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { BoatChatActivity } from '../domain/boat-activity'
-import { useTranslation } from '../lib/i18n'
 import { apiUrl } from '../lib/app-origin'
 import { boatActivityTextParts } from '../lib/boat-activity-text'
+import { useTranslation } from '../lib/i18n'
 import { PdfDocumentPages } from './PdfDocumentPages'
 
 export function BoatActivityContent({
@@ -62,6 +62,7 @@ export function BoatActivityContent({
                   <img
                     src={url}
                     alt={preview.title}
+                    draggable={false}
                     loading="lazy"
                     onError={() => setFailed(true)}
                     className="max-h-96 w-full object-contain"

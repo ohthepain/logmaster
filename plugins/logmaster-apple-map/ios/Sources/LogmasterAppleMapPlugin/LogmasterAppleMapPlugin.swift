@@ -281,10 +281,17 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
         if let position = call.getObject("position"),
            let latitude = position["latitude"] as? Double,
            let longitude = position["longitude"] as? Double {
+            var courseEnd: CLLocationCoordinate2D?
+            if let end = position["courseEnd"] as? [String: Any],
+               let endLatitude = end["latitude"] as? Double,
+               let endLongitude = end["longitude"] as? Double {
+                courseEnd = CLLocationCoordinate2D(latitude: endLatitude, longitude: endLongitude)
+            }
             marker = PlaybackMarker(
                 coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude),
                 heading: position["heading"] as? Double ?? 0,
-                image: Self.image(fromDataUrl: position["imageDataUrl"] as? String)
+                image: Self.image(fromDataUrl: position["imageDataUrl"] as? String),
+                courseEnd: courseEnd
             )
         }
 

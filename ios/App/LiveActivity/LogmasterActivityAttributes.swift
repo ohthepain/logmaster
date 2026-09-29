@@ -23,6 +23,8 @@ struct LogmasterActivityAttributes: ActivityAttributes {
         let latestEntryId: String?
         let recentEntries: [EntrySummary]
         let deepLinkURL: String
+        let speedKnots: Double?
+        let cogDegrees: Double?
     }
 
     let tripId: String

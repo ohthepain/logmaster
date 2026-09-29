@@ -23,9 +23,12 @@ struct LogmasterLiveActivityWidget: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.center) {
-                    Text(context.state.locationName)
-                        .font(.headline)
-                        .lineLimit(1)
+                    VStack(spacing: 1) {
+                        Text(context.state.locationName)
+                            .font(.headline)
+                            .lineLimit(1)
+                        SpeedOverGroundReadout(state: context.state)
+                    }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     if context.state.mode == "stationary" {
@@ -118,7 +121,8 @@ private struct MediumActivityContent: View {
                 Text(state.locationName)
                     .font(.headline)
                     .lineLimit(1)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                SpeedOverGroundReadout(state: state)
                 CompassCountdown(state: state)
             }
         } else {
@@ -180,9 +184,13 @@ private struct SmallActivityContent: View {
                 EntryRow(entries: state.recentEntries, compact: true)
                 StationaryDuration(state: state, compact: true)
             } else {
-                Text(state.locationName)
-                    .font(.headline)
-                    .lineLimit(1)
+                HStack(alignment: .center, spacing: 8) {
+                    Text(state.locationName)
+                        .font(.headline)
+                        .lineLimit(1)
+                    Spacer(minLength: 6)
+                    SpeedOverGroundReadout(state: state)
+                }
                 switch state.mode {
                 case "moving":
                     HStack {
@@ -199,6 +207,43 @@ private struct SmallActivityContent: View {
         .padding(12)
         .foregroundStyle(.white)
     }
+}
+
+private struct SpeedOverGroundReadout: View {
+    let state: LogmasterActivityAttributes.ContentState
+
+    var body: some View {
+        if state.mode == "moving", let knots = state.speedKnots {
+            VStack(spacing: 0) {
+                Text(formatKnots(knots))
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                if let cog = state.cogDegrees {
+                    Text(formatDegrees(cog))
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Speed over ground \(formatKnots(knots))")
+        }
+    }
+}
+
+private func formatKnots(_ knots: Double) -> String {
+    if knots < 10 {
+        return String(format: "%.1f kn", knots)
+    }
+    return String(format: "%.0f kn", knots.rounded())
+}
+
+private func formatDegrees(_ degrees: Double) -> String {
+    let rounded = Int(degrees.rounded())
+    let wrapped = ((rounded % 360) + 360) % 360
+    return "\(wrapped)°"
 }
 
 private struct VesselIcon: View {

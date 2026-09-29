@@ -61,6 +61,7 @@ import {
 } from '../lib/trip-waypoint-entry'
 import { useAppOptionsStore } from '../stores/app-options'
 import { triggerLogbookSyncRetry, useLogbookStore } from '../stores/logbook'
+import { BoatMotionReadout } from './BoatMotionReadout'
 import { DevComponentLabel } from './DevComponentLabel'
 import { DevTripReplayModal } from './DevTripReplayModal'
 import { DoubloonAccountModal } from './DoubloonAccount'
@@ -1104,6 +1105,7 @@ export function TripDetailPage({
               />
             }
           >
+            <BoatMotionReadout tripId={trip.id} />
             <TripLegSection
               tripId={trip.id}
               tripStatus={trip.status}

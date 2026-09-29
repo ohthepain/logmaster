@@ -132,7 +132,7 @@ export function TripActiveMenu({
           POPUP_MENU_Z_CLASS,
         )}
         style={{
-          top: `calc(${APP_HEADER_TOP_OFFSET} + 3.25rem)`,
+          top: `calc(${APP_HEADER_TOP_OFFSET} + 0.5rem)`,
           maxHeight: 'min(32rem, calc(100dvh - 8rem))',
         }}
         onPointerDown={(event) => event.stopPropagation()}

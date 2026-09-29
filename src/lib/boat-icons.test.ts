@@ -3,6 +3,7 @@ import {
   BOAT_ICON_IDS,
   boatIconSrc,
   DEFAULT_BOAT_ICON_ID,
+  fittedBoatIconSize,
   isBoatIconId,
 } from './boat-icons'
 import { boatMapMarkerRotation } from './map-boat-marker'
@@ -32,5 +33,21 @@ describe('map-boat-marker', () => {
   it('rotates to the heading when moving off north', () => {
     expect(boatMapMarkerRotation(90)).toBe(90)
     expect(boatMapMarkerRotation(225)).toBe(225)
+  })
+})
+
+describe('fittedBoatIconSize', () => {
+  it('keeps the sailboat artwork taller than it is wide', () => {
+    const fitted = fittedBoatIconSize(47, 128)
+    expect(fitted.height).toBeCloseTo(40)
+    expect(fitted.width).toBeCloseTo(14.6875)
+    expect(fitted.width / fitted.height).toBeCloseTo(47 / 128)
+  })
+
+  it('fits a wider icon inside the marker box', () => {
+    const fitted = fittedBoatIconSize(100, 128)
+    expect(fitted.height).toBeCloseTo(40)
+    expect(fitted.width).toBeCloseTo(31.25)
+    expect(fitted.width / fitted.height).toBeCloseTo(100 / 128)
   })
 })

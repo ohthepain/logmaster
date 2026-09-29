@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { loadBoatIconDataUrl } from '../lib/boat-icons'
+import { courseLineEnd, useBoatMotionReading } from '../lib/boat-motion'
 import { cn } from '../lib/cn'
 import {
   getCachedDevicePosition,
@@ -187,6 +188,9 @@ export const TripAppleMapKit = forwardRef<
   const previousLivePositionRef = useRef<MapCoordinate | null>(null)
   const [boatIconDataUrl, setBoatIconDataUrl] = useState<string | null>(null)
   const [mapReady, setMapReady] = useState(false)
+  const boatMotion = useBoatMotionReading(
+    showCurrentPosition && !playbackPosition ? trip.id : null,
+  )
   const moveJourney = useCallback(
     async (point: typeof GIBRALTAR) => {
       await LogmasterAppleMap.setCamera({
@@ -307,6 +311,10 @@ export const TripAppleMapKit = forwardRef<
       return
     }
 
+    const courseEnd =
+      boatMotion && !playbackPosition
+        ? courseLineEnd(position.latitude, position.longitude, boatMotion)
+        : undefined
     await LogmasterAppleMap.setPlaybackPosition({
       mapId,
       position: {
@@ -314,9 +322,17 @@ export const TripAppleMapKit = forwardRef<
         longitude: position.longitude,
         heading: 'heading' in position ? (position.heading ?? 0) : 0,
         imageDataUrl: boatIconDataUrl ?? undefined,
+        courseEnd,
       },
     })
-  }, [boatIconDataUrl, mapId, mapReady, playbackPosition, showCurrentPosition])
+  }, [
+    boatIconDataUrl,
+    boatMotion,
+    mapId,
+    mapReady,
+    playbackPosition,
+    showCurrentPosition,
+  ])
 
   const syncInteractionChrome = useCallback(async () => {
     if (!mapReady || !embedded || getNativePlatform() !== 'ios') return
@@ -642,20 +658,30 @@ export const TripAppleMapKit = forwardRef<
     }
 
     const observer = new ResizeObserver(syncChrome)
-    observer.observe(document.documentElement)
-    const sheet = document.querySelector('[data-trip-bottom-sheet]')
-    const header = document.querySelector('header')
-    if (sheet) observer.observe(sheet)
-    if (header) observer.observe(header)
-    for (const node of document.querySelectorAll(
-      '[data-map-touch-zone], [data-trip-operational-controls]',
-    )) {
+    const observed = new WeakSet<Element>()
+    const observe = (node: Element | null) => {
+      if (!node || observed.has(node)) return
+      observed.add(node)
       observer.observe(node)
+    }
+    const scanTouchZones = () => {
+      observe(document.documentElement)
+      observe(document.querySelector('[data-trip-bottom-sheet]'))
+      observe(document.querySelector('header'))
+      for (const node of document.querySelectorAll(
+        '[data-map-touch-zone], [data-trip-operational-controls]',
+      )) {
+        observe(node)
+      }
     }
     window.addEventListener('resize', syncChrome, { passive: true })
     window.addEventListener(IOS_MAP_TOUCH_SYNC_EVENT, syncChrome)
-    const mutationObserver = new MutationObserver(syncChrome)
+    const mutationObserver = new MutationObserver(() => {
+      scanTouchZones()
+      syncChrome()
+    })
     mutationObserver.observe(document.body, { childList: true, subtree: true })
+    scanTouchZones()
     syncChrome()
 
     return () => {

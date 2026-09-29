@@ -79,7 +79,13 @@ export default function Header({ mapOverlay = false, onClose }: HeaderProps) {
           hideBrand ? 'justify-end' : 'justify-between',
         )}
       >
-        {hideBrand ? null : (
+        {mapOverlay ? (
+          <div
+            data-map-header-leading
+            data-map-touch-zone
+            className="ios-map-touch-target pointer-events-auto mr-auto flex shrink-0 items-center gap-2"
+          />
+        ) : hideBrand ? null : (
           <div className="pointer-events-auto">
             {isBoatMenu ? (
               <Link

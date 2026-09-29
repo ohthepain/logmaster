@@ -85,8 +85,16 @@ final class LogmasterLiveActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             stationaryKind: raw["stationaryKind"] as? String,
             latestEntryId: raw["latestEntryId"] as? String,
             recentEntries: entries,
-            deepLinkURL: deepLinkURL
+            deepLinkURL: deepLinkURL,
+            speedKnots: double(raw["speedKnots"]),
+            cogDegrees: double(raw["cogDegrees"])
         )
+    }
+
+    private static func double(_ value: Any?) -> Double? {
+        if let number = value as? Double { return number }
+        if let number = value as? NSNumber { return number.doubleValue }
+        return nil
     }
 
     private static func bool(_ value: Any?) -> Bool {

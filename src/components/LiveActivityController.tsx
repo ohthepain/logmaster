@@ -1,10 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
+import { resolveTripOperationalState } from '../domain/trip-state'
 import { getAppOrigin } from '../lib/app-origin'
 import {
+  isUnderwayForBoatMotion,
+  observeBoatMotionFix,
+  setBoatMotionTrip,
+  useBoatMotionReading,
+} from '../lib/boat-motion'
+import { subscribeToDevicePosition } from '../lib/device-position'
+import {
   buildLiveActivitySnapshot,
+  latestActivityCoordinates,
   selectLiveActivityTrip,
 } from '../lib/live-activity'
-import { lookupPositionLabel } from '../lib/logbook-place'
+import { lookupActivityLocationName } from '../lib/logbook-place'
 import { syncLiveActivity } from '../lib/native/live-activity'
 import { getNativePlatform } from '../lib/platform'
 import { useLogbookStore } from '../stores/logbook'
@@ -17,21 +26,61 @@ export function LiveActivityController() {
   const [fallbackLocationName, setFallbackLocationName] = useState('Locating…')
   const trip = useMemo(() => selectLiveActivityTrip(trips), [trips])
 
+  const position = useMemo(
+    () => (trip ? latestActivityCoordinates(trip, entries) : null),
+    [entries, trip],
+  )
+  const tripEntries = useMemo(
+    () =>
+      trip
+        ? entries.filter((entry) => entry.tripId === trip.id && !entry.deleted)
+        : [],
+    [entries, trip],
+  )
+  const underway = Boolean(
+    trip &&
+      trip.status === 'IN_PROGRESS' &&
+      isUnderwayForBoatMotion(resolveTripOperationalState(trip, tripEntries)),
+  )
+  const motionTripId = underway && trip ? trip.id : null
+  const motion = useBoatMotionReading(motionTripId)
+
   useEffect(() => {
-    if (!trip || trip.startLatitude == null || trip.startLongitude == null) {
+    setBoatMotionTrip(motionTripId)
+    return () => setBoatMotionTrip(null)
+  }, [motionTripId])
+
+  useEffect(() => {
+    if (!underway) return
+    return subscribeToDevicePosition(
+      (fix) => {
+        if (fix.latitude == null || fix.longitude == null) return
+        const timeMs = Date.parse(fix.timestamp)
+        observeBoatMotionFix({
+          latitude: fix.latitude,
+          longitude: fix.longitude,
+          timeMs: Number.isFinite(timeMs) ? timeMs : Date.now(),
+        })
+      },
+      { passive: true },
+    )
+  }, [underway])
+
+  useEffect(() => {
+    if (!position) {
       setFallbackLocationName('Location unavailable')
       return
     }
     let cancelled = false
-    void lookupPositionLabel(trip.startLatitude, trip.startLongitude).then(
-      (label) => {
-        if (!cancelled) setFallbackLocationName(label.split(' · ')[0] ?? label)
+    void lookupActivityLocationName(position.latitude, position.longitude).then(
+      (name) => {
+        if (!cancelled) setFallbackLocationName(name ?? 'Location unavailable')
       },
     )
     return () => {
       cancelled = true
     }
-  }, [trip?.id, trip?.startLatitude, trip?.startLongitude])
+  }, [position?.latitude, position?.longitude, trip?.id])
 
   const snapshot = useMemo(
     () =>
@@ -42,9 +91,11 @@ export function LiveActivityController() {
             legs,
             fallbackLocationName,
             appOrigin: getAppOrigin(),
+            speedKnots: motion?.sogKnots ?? null,
+            cogDegrees: motion?.cogDegrees ?? null,
           })
         : null,
-    [entries, fallbackLocationName, legs, trip],
+    [entries, fallbackLocationName, legs, motion, trip],
   )
 
   useEffect(() => {

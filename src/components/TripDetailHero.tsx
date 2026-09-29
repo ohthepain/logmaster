@@ -5,10 +5,12 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from 'react'
+import { createPortal } from 'react-dom'
 import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
 import { cn } from '../lib/cn'
@@ -160,6 +162,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
     const [locatePending, setLocatePending] = useState(false)
     const [plannedRoutePickerOpen, setPlannedRoutePickerOpen] = useState(false)
     const [overlayRouteId, setOverlayRouteId] = useState<string | null>(null)
+    const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null)
     const routes = useRoutesStore((state) => state.routes)
     const routeWaypoints = useRoutesStore((state) => state.waypoints)
     const plannedRouteWaypoints = useMemo(
@@ -176,6 +179,11 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
 
     useEffect(() => {
       void useRoutesStore.getState().load()
+    }, [])
+    useLayoutEffect(() => {
+      setHeaderSlot(
+        document.querySelector<HTMLElement>('[data-map-header-leading]'),
+      )
     }, [])
     const [playbackTimeMs, setPlaybackTimeMs] = useState(playbackRange.startMs)
     const [playbackPlaying, setPlaybackPlaying] = useState(false)
@@ -316,6 +324,11 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
       }),
       [],
     )
+
+    const actionsInHeader =
+      trip.status === 'IN_PROGRESS' &&
+      !waypointMapInteractionActive &&
+      headerSlot != null
 
     return (
       <section
@@ -513,7 +526,54 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
           className="pointer-events-none absolute inset-x-0 z-40 flex flex-col items-start gap-2 px-3 sm:px-4"
           style={{ top: APP_HEADER_TOP_OFFSET }}
         >
-          {!waypointMapInteractionActive ? (
+          {actionsInHeader && headerSlot
+            ? createPortal(
+                <>
+                  <button
+                    type="button"
+                    data-map-touch-zone
+                    aria-expanded={tripMenuOpen}
+                    aria-haspopup="dialog"
+                    aria-label={t('trip')}
+                    disabled={busy}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onTripMenuToggle?.()
+                    }}
+                    className={cn(
+                      'map-chrome-surface ios-map-touch-target pointer-events-auto inline-flex h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold transition hover:bg-[var(--map-chrome-hover)] disabled:opacity-60',
+                      tripMenuOpen && 'map-chrome-active',
+                    )}
+                  >
+                    {t('trip')}
+                  </button>
+                  <TripMapDownloadButton
+                    label={t('downloadThisMap')}
+                    disabled={busy}
+                    progress={downloadingMap ? mapDownloadProgress : null}
+                    onClick={() => onDownloadMap?.()}
+                  />
+                  {showInteractiveMap ? (
+                    <TripMapChromeButton
+                      label={
+                        overlayRouteId
+                          ? t('changePlannedRouteOverlay')
+                          : t('showPlannedRoute')
+                      }
+                      onClick={() => setPlannedRoutePickerOpen(true)}
+                      disabled={busy}
+                      active={overlayRouteId != null}
+                      tooltipSide="bottom"
+                    >
+                      <RouteIcon className="size-4" />
+                    </TripMapChromeButton>
+                  ) : null}
+                </>,
+                headerSlot,
+              )
+            : null}
+          {!waypointMapInteractionActive && !actionsInHeader ? (
             <div
               className="ios-map-touch-target pointer-events-auto flex justify-start gap-2"
               data-map-touch-zone

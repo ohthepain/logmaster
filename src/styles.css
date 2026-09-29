@@ -902,6 +902,32 @@ a {
 .message-floating-heart {
   animation: message-heart-float 2.4s ease-out both;
 }
+
+/* A finger drag that starts on a photo, link, or log-entry button must pan the
+   thread. overflow:hidden on those frames is its own scrollport on iOS, so the
+   ancestor never sees the gesture. clip still rounds the corners. */
+.message-thread {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+.message-thread :where(a, button, img, video, label) {
+  touch-action: pan-y;
+}
+.message-thread img,
+.message-thread video {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.message-thread .overflow-hidden {
+  overflow: clip;
+}
+.message-thread .maplibregl-map,
+.message-thread .maplibregl-map * {
+  touch-action: none;
+  -webkit-user-drag: auto;
+  user-select: auto;
+}
 @media (prefers-reduced-motion: reduce) {
   .message-floating-heart {
     display: none;

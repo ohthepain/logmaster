@@ -28,6 +28,8 @@ export type LiveActivitySnapshot = {
   latestEntryId: string | null
   recentEntries: LiveActivityEntry[]
   deepLinkURL: string
+  speedKnots: number | null
+  cogDegrees: number | null
 }
 
 const ENTRY_SYMBOLS: Record<LogEntryType, string> = {
@@ -78,12 +80,50 @@ function firstExpectedLogWindow(trip: Trip, entries: LogEntry[]) {
 }
 
 function currentLocationName(entries: LogEntry[], fallback: string) {
-  for (const entry of [...entries].sort(byTimestampAscending).reverse()) {
-    if (entry.deleted) continue
-    const place = entryPlaceFromData(entry.data)
-    if (place) return place.name
+  const latest = [...entries]
+    .filter((entry) => !entry.deleted)
+    .sort(byTimestampAscending)
+    .reverse()
+    .find(
+      (entry) =>
+        entryPlaceFromData(entry.data) != null ||
+        (entry.latitude != null && entry.longitude != null),
+    )
+  const place = latest ? entryPlaceFromData(latest.data) : null
+  return place?.name ?? fallback
+}
+
+export function latestActivityCoordinates(
+  trip: Trip,
+  entries: LogEntry[],
+): { latitude: number; longitude: number } | null {
+  const positioned = entries
+    .filter(
+      (entry) =>
+        entry.tripId === trip.id &&
+        !entry.deleted &&
+        entry.latitude != null &&
+        entry.longitude != null &&
+        Number.isFinite(entry.latitude) &&
+        Number.isFinite(entry.longitude),
+    )
+    .sort(byTimestampAscending)
+  const latest = positioned.at(-1)
+  if (latest?.latitude != null && latest.longitude != null) {
+    return { latitude: latest.latitude, longitude: latest.longitude }
   }
-  return fallback
+  if (
+    trip.startLatitude != null &&
+    trip.startLongitude != null &&
+    Number.isFinite(trip.startLatitude) &&
+    Number.isFinite(trip.startLongitude)
+  ) {
+    return {
+      latitude: trip.startLatitude,
+      longitude: trip.startLongitude,
+    }
+  }
+  return null
 }
 
 function stationaryStart(
@@ -118,6 +158,8 @@ export function buildLiveActivitySnapshot(args: {
   legs?: Leg[]
   fallbackLocationName?: string
   appOrigin: string
+  speedKnots?: number | null
+  cogDegrees?: number | null
 }): LiveActivitySnapshot {
   const { trip, appOrigin } = args
   const entries = args.entries.filter(
@@ -178,5 +220,7 @@ export function buildLiveActivitySnapshot(args: {
       }
     }),
     deepLinkURL: `${appOrigin.replace(/\/$/, '')}/trips/${encodeURIComponent(trip.id)}?liveActivity=start`,
+    speedKnots: mode === 'moving' ? (args.speedKnots ?? null) : null,
+    cogDegrees: mode === 'moving' ? (args.cogDegrees ?? null) : null,
   }
 }

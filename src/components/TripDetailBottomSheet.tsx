@@ -1,18 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { cn } from '../lib/cn'
+import { requestIosMapTouchSync } from '../lib/native/ios-map-touch-passthrough'
 import {
   APP_HEADER_INNER_HEIGHT_PX,
+  BOTTOM_SHEET_DRAG_ZONE_PX,
+  BOTTOM_SHEET_MIN_INSET_PX,
   bottomSheetDragChromeHeight,
   bottomSheetFullHeight,
   bottomSheetPeekHeight,
-  BOTTOM_SHEET_DRAG_ZONE_PX,
-  BOTTOM_SHEET_MIN_INSET_PX,
   measureAppHeaderHeight,
   measureSafeAreaInsetBottom,
 } from '../lib/safe-area'
-import { cn } from '../lib/cn'
 import { TRIP_MAP_OVERLAY_SURFACE_CLASS } from '../lib/trip-map-overlay'
 import { DevComponentLabel } from './DevComponentLabel'
+
+const SCROLL_DRAG_THRESHOLD_PX = 8
 
 const SNAP_RATIOS = {
   half: 0.48,
@@ -44,6 +47,7 @@ export function TripDetailBottomSheet({
   leadingAction,
 }: TripDetailBottomSheetProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const scrollerRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null)
   const heightRef = useRef(0)
   const [containerHeight, setContainerHeight] = useState(0)
@@ -67,7 +71,86 @@ export function TripDetailBottomSheet({
 
   useEffect(() => {
     heightRef.current = sheetHeight
+    requestIosMapTouchSync()
   }, [sheetHeight])
+
+  useEffect(() => {
+    const scroller = scrollerRef.current
+    if (!scroller) return
+
+    let pointerId: number | null = null
+    let startY = 0
+    let startX = 0
+    let lastY = 0
+    let scrolling = false
+    let suppressClick = false
+
+    const endDrag = (event: PointerEvent) => {
+      if (pointerId !== event.pointerId) return
+      if (scrolling) suppressClick = true
+      pointerId = null
+      scrolling = false
+      if (scroller.hasPointerCapture(event.pointerId)) {
+        scroller.releasePointerCapture(event.pointerId)
+      }
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return
+      suppressClick = false
+      pointerId = event.pointerId
+      startY = lastY = event.clientY
+      startX = event.clientX
+      scrolling = false
+    }
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (pointerId !== event.pointerId) return
+      const totalY = Math.abs(event.clientY - startY)
+      const totalX = Math.abs(event.clientX - startX)
+      if (!scrolling) {
+        if (totalY < SCROLL_DRAG_THRESHOLD_PX || totalY <= totalX) return
+        scrolling = true
+        try {
+          scroller.setPointerCapture(event.pointerId)
+        } catch {
+          // Pointer capture is unavailable for this event; keep scrolling anyway.
+        }
+      }
+      const dy = event.clientY - lastY
+      lastY = event.clientY
+      scroller.scrollTop -= dy
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
+    const onClick = (event: MouseEvent) => {
+      if (!suppressClick) return
+      suppressClick = false
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (!scrolling) return
+      event.preventDefault()
+    }
+
+    scroller.addEventListener('pointerdown', onPointerDown)
+    scroller.addEventListener('pointermove', onPointerMove)
+    scroller.addEventListener('pointerup', endDrag)
+    scroller.addEventListener('pointercancel', endDrag)
+    scroller.addEventListener('click', onClick, true)
+    scroller.addEventListener('touchmove', onTouchMove, { passive: false })
+    return () => {
+      scroller.removeEventListener('pointerdown', onPointerDown)
+      scroller.removeEventListener('pointermove', onPointerMove)
+      scroller.removeEventListener('pointerup', endDrag)
+      scroller.removeEventListener('pointercancel', endDrag)
+      scroller.removeEventListener('click', onClick, true)
+      scroller.removeEventListener('touchmove', onTouchMove)
+    }
+  }, [])
 
   useEffect(() => {
     const readSafeArea = () => setSafeAreaBottom(measureSafeAreaInsetBottom())
@@ -134,6 +217,7 @@ export function TripDetailBottomSheet({
       snapHeights.full,
       Math.max(snapHeights.peek, dragRef.current.startHeight + delta),
     )
+    heightRef.current = next
     setSheetHeight(next)
   }
 
@@ -155,7 +239,6 @@ export function TripDetailBottomSheet({
         data-map-touch-zone
         className={cn(
           'ios-map-touch-target pointer-events-auto absolute inset-x-0 bottom-0 z-30 flex flex-col overflow-hidden rounded-t-2xl border-t border-white/25',
-          TRIP_MAP_OVERLAY_SURFACE_CLASS,
           !dragging && 'transition-[height] duration-200 ease-out',
           className,
         )}
@@ -167,7 +250,10 @@ export function TripDetailBottomSheet({
         />
         <div
           data-map-touch-zone
-          className="ios-map-touch-target flex shrink-0 cursor-grab touch-none flex-col active:cursor-grabbing"
+          className={cn(
+            'ios-map-touch-target flex shrink-0 cursor-grab touch-none flex-col active:cursor-grabbing',
+            TRIP_MAP_OVERLAY_SURFACE_CLASS,
+          )}
           role="slider"
           aria-orientation="vertical"
           aria-valuemin={snapHeights?.peek ?? 0}
@@ -219,8 +305,13 @@ export function TripDetailBottomSheet({
         </div>
 
         <div
+          ref={scrollerRef}
           data-map-touch-zone
-          className="ios-map-touch-target pointer-events-auto min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-3 pb-8 [-webkit-overflow-scrolling:touch] sm:px-4"
+          className={cn(
+            'ios-map-touch-target pointer-events-auto min-h-0 flex-1 touch-none overflow-y-auto overscroll-contain px-3 pb-8 [-webkit-overflow-scrolling:touch] sm:px-4',
+            TRIP_MAP_OVERLAY_SURFACE_CLASS,
+          )}
+          onWheel={(event) => event.stopPropagation()}
         >
           <div className="mx-auto max-w-3xl space-y-5 pb-[var(--lm-safe-bottom)]">
             {children}

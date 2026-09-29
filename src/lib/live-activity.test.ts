@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Leg, LogEntry, Trip } from '../domain/logbook'
 import {
   buildLiveActivitySnapshot,
+  latestActivityCoordinates,
   selectLiveActivityTrip,
 } from './live-activity'
 
@@ -45,6 +46,29 @@ function entry(patch: Partial<LogEntry>): LogEntry {
 }
 
 describe('live activity snapshot', () => {
+  it('keeps speed and course off the activity unless the boat is moving', () => {
+    const moving = buildLiveActivitySnapshot({
+      trip,
+      entries: [],
+      appOrigin: 'https://logmaster.live',
+      speedKnots: 4.2,
+      cogDegrees: 127,
+    })
+    expect(moving.speedKnots).toBe(4.2)
+    expect(moving.cogDegrees).toBe(127)
+
+    const anchored = buildLiveActivitySnapshot({
+      trip: { ...trip, anchorDown: true, moored: false },
+      entries: [],
+      appOrigin: 'https://logmaster.live',
+      speedKnots: 4.2,
+      cogDegrees: 127,
+    })
+    expect(anchored.mode).toBe('stationary')
+    expect(anchored.speedKnots).toBeNull()
+    expect(anchored.cogDegrees).toBeNull()
+  })
+
   it('builds the moving hourly progress window and current place', () => {
     const snapshot = buildLiveActivitySnapshot({
       trip,
@@ -66,6 +90,11 @@ describe('live activity snapshot', () => {
 
     expect(snapshot.mode).toBe('moving')
     expect(snapshot.locationName).toBe('Cowes')
+    expect(
+      latestActivityCoordinates(trip, [
+        entry({ latitude: 50.76, longitude: -1.3 }),
+      ]),
+    ).toEqual({ latitude: 50.76, longitude: -1.3 })
     expect(snapshot.previousLogAt).toBe('2026-08-27T09:00:00.000Z')
     expect(snapshot.nextLogAt).toBe('2026-08-27T10:00:00.000Z')
   })
@@ -120,6 +149,37 @@ describe('live activity snapshot', () => {
       'entry-5',
     ])
     expect(snapshot.recentEntries.at(-1)?.autoCreatedUnedited).toBe(false)
+  })
+
+  it('uses the reverse-geocoded fallback when the latest fix has no place', () => {
+    const snapshot = buildLiveActivitySnapshot({
+      trip,
+      entries: [
+        entry({
+          id: 'older',
+          timestamp: '2026-08-27T08:00:00.000Z',
+          data: {
+            place: {
+              name: 'Cowes',
+              detail: null,
+              kind: 'town',
+              source: 'geonames',
+              distanceM: 20,
+            },
+          },
+        }),
+        entry({
+          id: 'latest',
+          timestamp: '2026-08-27T11:00:00.000Z',
+          latitude: 59.3,
+          longitude: 18.1,
+        }),
+      ],
+      fallbackLocationName: 'Stockholm, Sweden',
+      appOrigin: 'https://logmaster.live',
+    })
+
+    expect(snapshot.locationName).toBe('Stockholm, Sweden')
   })
 
   it('selects an in-progress trip before the newest planned trip', () => {
