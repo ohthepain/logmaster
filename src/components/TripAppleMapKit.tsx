@@ -1,15 +1,4 @@
 import {
-  isAwaitingDeviceFix,
-  mediterraneanJourneyMoving,
-} from '../lib/use-map-location'
-import type { MapLocationState } from '../lib/use-map-location'
-import type { GIBRALTAR } from '../lib/use-mediterranean-journey'
-import { useMediterraneanJourney } from '../lib/use-mediterranean-journey'
-import {
-  getCachedDevicePosition,
-  getLastKnownDevicePosition,
-} from '../lib/device-position'
-import {
   forwardRef,
   useCallback,
   useEffect,
@@ -22,14 +11,17 @@ import {
 import { toast } from 'sonner'
 import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
+import { loadBoatIconDataUrl } from '../lib/boat-icons'
+import { cn } from '../lib/cn'
+import {
+  getCachedDevicePosition,
+  getLastKnownDevicePosition,
+} from '../lib/device-position'
 import type {
-  MapCoordinate,
-  MapEntryPoint,
-} from '../lib/native/logmaster-apple-map'
-import { LogmasterAppleMap } from '../lib/native/logmaster-apple-map'
-import { readMapPassThroughZones } from '../lib/native/apple-map-layout'
-import { IOS_MAP_TOUCH_SYNC_EVENT } from '../lib/native/ios-map-touch-suspend'
-import { getNativePlatform } from '../lib/platform'
+  LogEntryMapIconKind,
+  LogEntryMapOutline,
+} from '../lib/log-entry-map-marker'
+import { logEntryMapThumbnailUrl } from '../lib/log-entry-map-marker'
 import {
   DEV_FALLBACK_POSITION,
   getCurrentPosition,
@@ -40,30 +32,37 @@ import {
   buildLegTrackGeoJson,
   resolveTripLogMapViewport,
 } from '../lib/logbook-map-geo'
-import { renderLogEntryMapMarkerDataUrl } from '../lib/map-log-entry-icons'
-import { loadBoatIconDataUrl } from '../lib/boat-icons'
 import { resolveBoatMapHeading } from '../lib/map-boat-marker'
-import type {
-  LogEntryMapIconKind,
-  LogEntryMapOutline,
-} from '../lib/log-entry-map-marker'
-import { logEntryMapThumbnailUrl } from '../lib/log-entry-map-marker'
-import type { TripPlaybackPosition } from '../lib/trip-playback'
-import {
-  TRIP_TRACK_FIT_MARGIN_FRACTION,
-  SAILING_MAP_EASE_MS,
-} from '../lib/sailing-map-viewport'
 import {
   downscaleJpegDataUrl,
   withCaptureTimeout,
 } from '../lib/map-cover-capture'
-import { cn } from '../lib/cn'
+import { renderLogEntryMapMarkerDataUrl } from '../lib/map-log-entry-icons'
+import { readMapPassThroughZones } from '../lib/native/apple-map-layout'
+import { IOS_MAP_TOUCH_SYNC_EVENT } from '../lib/native/ios-map-touch-suspend'
+import type {
+  MapCoordinate,
+  MapEntryPoint,
+} from '../lib/native/logmaster-apple-map'
+import { LogmasterAppleMap } from '../lib/native/logmaster-apple-map'
+import { getNativePlatform } from '../lib/platform'
+import {
+  SAILING_MAP_EASE_MS,
+  TRIP_TRACK_FIT_MARGIN_FRACTION,
+} from '../lib/sailing-map-viewport'
+import type { TripMapHandle } from '../lib/trip-map-handle'
+import type { TripPlaybackPosition } from '../lib/trip-playback'
+import type { MapLocationState } from '../lib/use-map-location'
+import {
+  isAwaitingDeviceFix,
+  mediterraneanJourneyMoving,
+} from '../lib/use-map-location'
+import type { GIBRALTAR } from '../lib/use-mediterranean-journey'
+import { useMediterraneanJourney } from '../lib/use-mediterranean-journey'
 import { useAppOptionsStore } from '../stores/app-options'
 import { DevComponentLabel } from './DevComponentLabel'
-import { LogEntryMapMarkerHoverTarget } from './LogEntryMapMarkerHoverTarget'
 import type { MapEntryPreviewState } from './LogEntryMapMarkerHoverTarget'
-
-import type { TripMapHandle } from '../lib/trip-map-handle'
+import { LogEntryMapMarkerHoverTarget } from './LogEntryMapMarkerHoverTarget'
 
 export type TripAppleMapKitHandle = TripMapHandle
 
@@ -753,6 +752,7 @@ export const TripAppleMapKit = forwardRef<
       zoomOut: handleZoomOut,
       locate: handleLocate,
       captureMapSnapshot,
+      getMapView: () => null,
     }),
     [captureMapSnapshot, handleZoomIn, handleZoomOut, handleLocate],
   )

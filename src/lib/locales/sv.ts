@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -116,6 +116,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: 'Lägg till vägpunkt',
   editWaypoints: 'Redigera vägpunkter',
   editTripCover: 'Redigera resa',
+  trip: 'Resa',
+  elapsed: 'Förfluten tid',
+  downloadedMaps: 'Nedladdade kartor',
+  noDownloadedMaps: 'Inga kartor har laddats ner för den här resan.',
+  downloadThisMap: 'Ladda ner den här kartan',
+  downloadMapConfirm:
+    'Spara den aktuella vyn på den här enheten för användning utan täckning. Ungefär {tiles} rutor ({size}).',
+  downloadMap: 'Ladda ner',
+  downloadingMap: 'Laddar ner karta',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: 'Ladda ner i bakgrunden',
+  editTripName: 'Redigera resans namn',
+  mapSavedOffline: 'Kartan sparades för den här resan',
+  mapDownloadFailed: 'Det gick inte att ladda ner kartan',
+  deleteDownloadedMap: 'Ta bort karta',
+  mapPackRemoved: 'Nedladdad karta togs bort',
+  mapPackZoom: 'Zoom {min}–{max}',
+  mapNotReady: 'Sjökortet är inte redo att laddas ner ännu.',
   tracks: 'Spår',
   timelineTracks: 'Tidslinjespår',
   showOnTimeline: 'Visa på tidslinjen',

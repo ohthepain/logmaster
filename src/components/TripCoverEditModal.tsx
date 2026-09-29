@@ -330,7 +330,7 @@ export function TripCoverEditModal({
   )
 }
 
-function AddTripCrewModal({
+export function AddTripCrewModal({
   open,
   contacts,
   onClose,

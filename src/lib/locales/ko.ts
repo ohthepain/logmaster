@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -116,6 +116,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: '경유지 추가',
   editWaypoints: '경유지 수정',
   editTripCover: '항해 수정',
+  trip: '항해',
+  elapsed: '경과 시간',
+  downloadedMaps: '받은 해도',
+  noDownloadedMaps: '이 항해에 받은 해도가 없습니다.',
+  downloadThisMap: '이 해도 받기',
+  downloadMapConfirm:
+    '현재 화면을 이 기기에 저장해 오프라인에서 사용합니다. 약 {tiles}개 타일({size}).',
+  downloadMap: '받기',
+  downloadingMap: '해도를 받는 중',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: '백그라운드에서 받기',
+  editTripName: '항해 이름 편집',
+  mapSavedOffline: '이 항해의 해도를 저장했습니다',
+  mapDownloadFailed: '해도를 받지 못했습니다',
+  deleteDownloadedMap: '해도 삭제',
+  mapPackRemoved: '받은 해도를 삭제했습니다',
+  mapPackZoom: '줌 {min}–{max}',
+  mapNotReady: '해도를 받을 준비가 되지 않았습니다.',
   tracks: '항적',
   timelineTracks: '타임라인 항적',
   showOnTimeline: '타임라인에 표시',

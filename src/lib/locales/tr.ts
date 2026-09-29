@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -116,6 +116,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: 'Yol noktası ekle',
   editWaypoints: 'Yol noktalarını düzenle',
   editTripCover: 'Seferi düzenle',
+  trip: 'Sefer',
+  elapsed: 'Geçen süre',
+  downloadedMaps: 'İndirilen haritalar',
+  noDownloadedMaps: 'Bu sefer için indirilmiş harita yok.',
+  downloadThisMap: 'Bu haritayı indir',
+  downloadMapConfirm:
+    'Çevrimdışı kullanım için geçerli görünümü bu cihaza kaydet. Yaklaşık {tiles} karo ({size}).',
+  downloadMap: 'İndir',
+  downloadingMap: 'Harita indiriliyor',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: 'Arka planda indir',
+  editTripName: 'Seyir adını düzenle',
+  mapSavedOffline: 'Harita bu sefer için kaydedildi',
+  mapDownloadFailed: 'Harita indirilemedi',
+  deleteDownloadedMap: 'Haritayı sil',
+  mapPackRemoved: 'İndirilen harita silindi',
+  mapPackZoom: 'Zoom {min}–{max}',
+  mapNotReady: 'Harita henüz indirmeye hazır değil.',
   tracks: 'İzler',
   timelineTracks: 'Zaman çizelgesi izleri',
   showOnTimeline: 'Zaman çizelgesinde göster',

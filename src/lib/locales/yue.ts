@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -115,6 +115,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: '新增航點',
   editWaypoints: '編輯航點',
   editTripCover: '編輯航程',
+  trip: '航程',
+  elapsed: '已用時間',
+  downloadedMaps: '已下載海圖',
+  noDownloadedMaps: '呢個航程未有下載海圖。',
+  downloadThisMap: '下載呢幅海圖',
+  downloadMapConfirm:
+    '將而家嘅畫面儲存喺呢部裝置，離線都用到。大約 {tiles} 塊圖（{size}）。',
+  downloadMap: '下載',
+  downloadingMap: '下載緊海圖',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: '喺背景下載',
+  editTripName: '編輯航程名稱',
+  mapSavedOffline: '已為呢個航程儲存海圖',
+  mapDownloadFailed: '下載唔到海圖',
+  deleteDownloadedMap: '刪除海圖',
+  mapPackRemoved: '已刪除下載嘅海圖',
+  mapPackZoom: '縮放 {min}–{max}',
+  mapNotReady: '海圖未準備好下載。',
   tracks: '軌跡',
   timelineTracks: '時間軸軌跡',
   showOnTimeline: '喺時間軸顯示',

@@ -1,6 +1,6 @@
-import { isUnpaidAt } from '../domain/doubloons'
-import { durableMediaUrl } from '../lib/log-media-sync'
 import { create } from 'zustand'
+import { isUnpaidAt } from '../domain/doubloons'
+import { withHumanEditedFlag } from '../domain/instrument-data'
 import type {
   Leg,
   LogEntry,
@@ -9,63 +9,29 @@ import type {
   Trip,
   TripStatus,
 } from '../domain/logbook'
+import { syncTripOperationalFields } from '../domain/trip-state'
 import type { TripTrack } from '../domain/trip-track'
 import { normalizeTripTrack } from '../domain/trip-track'
-import {
-  getTripTrackRecorder,
-  isOpenPositionTrack,
-  openPositionTrackId,
-} from '../lib/trip-track-recorder'
-import {
-  hydrateTripTrackPayload,
-  fetchTripTrackManifests,
-  mergeTrackManifests,
-} from '../lib/trip-track-sync'
-import {
-  captureLogbookContext,
-  fetchLogbookLocationContext,
-  awaitFreshDevicePosition,
-} from '../lib/logbook-context'
-import { attachPlaceToEntryData } from '../lib/logbook-place'
-import { defaultTripTitle } from '../lib/trip-display'
-import {
-  bootstrapLogbook,
-  hasPendingSync,
-  syncLogbook,
-} from '../lib/logbook-sync'
-import type { SyncLogbookOptions, LogbookSnapshot } from '../lib/logbook-sync'
-import { mergeLegs, rebuildLegsForTrip, sortLegs } from '../lib/trip-legs'
-import { withHumanEditedFlag } from '../domain/instrument-data'
-import { syncTripOperationalFields } from '../domain/trip-state'
+import { isDevModeAvailable } from '../lib/dev-mode'
+import { advanceIso, effectiveTimeTravelIso } from '../lib/dev-time-travel'
+import type { GpxImportFile } from '../lib/gpx-import'
+import { GpxImportError, partitionGpxImportFiles } from '../lib/gpx-import'
+import { buildTripFromGpxFiles } from '../lib/gpx-trip-import'
 import {
   nextContentOrder,
   readNoteOrder,
   readVoiceOrder,
 } from '../lib/log-entry-content-order'
-import { advanceIso, effectiveTimeTravelIso } from '../lib/dev-time-travel'
-import { isDevModeAvailable } from '../lib/dev-mode'
+import { durableMediaUrl } from '../lib/log-media-sync'
+import {
+  awaitFreshDevicePosition,
+  captureLogbookContext,
+  fetchLogbookLocationContext,
+} from '../lib/logbook-context'
 import { sortLogEntriesChronologically } from '../lib/logbook-entry-order'
 import {
-  appendNote,
-  buildPromotedMediaEntryInput,
-  isPromotableMedia,
-  resolvePhotoVideoSave,
-} from '../lib/media-entry'
-import { buildTripFromGpxFiles } from '../lib/gpx-trip-import'
-import { buildTripFromSignalK } from '../lib/signalk-trip-import'
-import { GpxImportError, partitionGpxImportFiles } from '../lib/gpx-import'
-import type { GpxImportFile } from '../lib/gpx-import'
-import { SignalKImportError } from '../lib/signalk-import'
-import {
-  buildTripWaypointEntryInput,
-  isTripWaypointEntry,
-} from '../lib/trip-waypoint-entry'
-import type { TripWaypointInput } from '../lib/trip-waypoint-entry'
-import { routeWaypointsToTripEntries } from '../lib/route-waypoint-ops'
-import { routeWaypointsForRoute, useRoutesStore } from './routes'
-import {
-  addPendingDeletedTripId,
   addPendingDeletedMediaId,
+  addPendingDeletedTripId,
   addPendingTripId,
   deleteLeg,
   deleteLogEntry,
@@ -80,7 +46,41 @@ import {
   putTripTrack,
   removePendingTripIds,
 } from '../lib/logbook-idb'
+import { attachPlaceToEntryData } from '../lib/logbook-place'
+import type { LogbookSnapshot, SyncLogbookOptions } from '../lib/logbook-sync'
+import {
+  bootstrapLogbook,
+  hasPendingSync,
+  syncLogbook,
+} from '../lib/logbook-sync'
+import {
+  appendNote,
+  buildPromotedMediaEntryInput,
+  isPromotableMedia,
+  resolvePhotoVideoSave,
+} from '../lib/media-entry'
+import { routeWaypointsToTripEntries } from '../lib/route-waypoint-ops'
+import { SignalKImportError } from '../lib/signalk-import'
+import { buildTripFromSignalK } from '../lib/signalk-trip-import'
+import { defaultTripTitle } from '../lib/trip-display'
+import { mergeLegs, rebuildLegsForTrip, sortLegs } from '../lib/trip-legs'
+import {
+  getTripTrackRecorder,
+  isOpenPositionTrack,
+  openPositionTrackId,
+} from '../lib/trip-track-recorder'
+import {
+  fetchTripTrackManifests,
+  hydrateTripTrackPayload,
+  mergeTrackManifests,
+} from '../lib/trip-track-sync'
+import type { TripWaypointInput } from '../lib/trip-waypoint-entry'
+import {
+  buildTripWaypointEntryInput,
+  isTripWaypointEntry,
+} from '../lib/trip-waypoint-entry'
 import { useAppOptionsStore } from './app-options'
+import { routeWaypointsForRoute, useRoutesStore } from './routes'
 
 const lastPositionSyncAt = new Map<string, number>()
 
@@ -514,6 +514,10 @@ async function applyTripOperationalSync(
       ? 'Syncing…'
       : 'Offline — will sync when back online',
   }))
+  if (nextTrip.status === 'COMPLETED' && trip.status !== 'COMPLETED') {
+    const { releaseTripMapPacks } = await import('../lib/trip-map-pack')
+    void releaseTripMapPacks(tripId).catch(() => undefined)
+  }
 }
 
 export const useLogbookStore = create<LogbookState>((set, get) => ({
@@ -644,6 +648,8 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
   },
 
   deleteTrip: async (tripId) => {
+    const { releaseTripMapPacks } = await import('../lib/trip-map-pack')
+    void releaseTripMapPacks(tripId).catch(() => undefined)
     const entries = get().entries.filter((entry) => entry.tripId === tripId)
     const tripTracks = get().tracks.filter((track) => track.tripId === tripId)
     const tripLegs = get().legs.filter((leg) => leg.tripId === tripId)

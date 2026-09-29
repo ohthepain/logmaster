@@ -1,16 +1,14 @@
-import type { StyleSpecification } from 'maplibre-gl'
 import type maplibregl from 'maplibre-gl'
+import type { StyleSpecification } from 'maplibre-gl'
+import { registerLmmapProtocol } from './lmmap-protocol'
+import { lmmapXyzTemplate, rewriteStyleToLmmap } from './lmmap-url'
 import type { RasterMapId } from './map-styles'
+import { ensureMapDataLayerStackOrder } from './maplibre-data-layers'
 import {
-  ensureVectorStyleGlyphsForMapLibre,
-  styleJsonForSailingMap,
-} from './maptiler-style-urls'
-import { appMapVectorStyleUrl } from './tiles'
-import {
+  OPEN_SEAMAP_DARK_PAINT,
   OPEN_SEAMAP_SEAMARK_LAYER_ID,
   OPEN_SEAMAP_SEAMARK_SOURCE_ID,
   openSeaMapSeamarkTileUrl,
-  OPEN_SEAMAP_DARK_PAINT,
 } from './maplibre-openseamap'
 import {
   OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID,
@@ -22,7 +20,12 @@ import {
   ensureOpenSeaMapViewportImageLayers,
   sailingMapRasterInsertBeforeId,
 } from './maplibre-openseamap-viewport-layers'
-import { ensureMapDataLayerStackOrder } from './maplibre-data-layers'
+import {
+  ensureVectorStyleGlyphsForMapLibre,
+  styleJsonForSailingMap,
+} from './maptiler-style-urls'
+import { appMapVectorStyleUrl } from './tiles'
+import { readSavedSailingStyle } from './trip-map-pack'
 
 const HILLSHADE_LAYER_ID = 'Hillshade'
 
@@ -33,14 +36,21 @@ export const SAILING_MAP_TILE_CACHE_ZOOM_LEVELS = 10
 export async function loadSailingMapStyle(
   mapId: RasterMapId,
 ): Promise<StyleSpecification> {
-  const res = await fetch(appMapVectorStyleUrl(mapId), { cache: 'no-store' })
-  if (!res.ok) {
-    throw new Error(`Map style failed (${res.status})`)
+  registerLmmapProtocol()
+  try {
+    const res = await fetch(appMapVectorStyleUrl(mapId), { cache: 'no-store' })
+    if (!res.ok) {
+      throw new Error(`Map style failed (${res.status})`)
+    }
+    const json: unknown = await res.json()
+    const style = styleJsonForSailingMap(json) as StyleSpecification
+    ensureVectorStyleGlyphsForMapLibre(style)
+    return await rewriteStyleToLmmap(style)
+  } catch (error) {
+    const saved = await readSavedSailingStyle(mapId)
+    if (saved) return saved
+    throw error
   }
-  const json: unknown = await res.json()
-  const style = styleJsonForSailingMap(json) as StyleSpecification
-  ensureVectorStyleGlyphsForMapLibre(style)
-  return style
 }
 
 /** Block terrain re-enable after style loads; terrain draping clips raster tiles (MapLibre #1559). */
@@ -116,7 +126,7 @@ export function addOpenSeaMapBathymetryOverlays(map: maplibregl.Map) {
   if (!map.getSource(OPEN_SEAMAP_BATHYMETRY_RELIEF_SOURCE_ID)) {
     map.addSource(OPEN_SEAMAP_BATHYMETRY_RELIEF_SOURCE_ID, {
       type: 'raster',
-      tiles: [openSeaMapBathymetryReliefTileUrl()],
+      tiles: [lmmapXyzTemplate(openSeaMapBathymetryReliefTileUrl())],
       tileSize: 256,
       minzoom: 0,
       maxzoom: 11,
@@ -150,7 +160,7 @@ export function addOpenSeaMapSeamarkOverlay(map: maplibregl.Map) {
   if (!map.getSource(OPEN_SEAMAP_SEAMARK_SOURCE_ID)) {
     map.addSource(OPEN_SEAMAP_SEAMARK_SOURCE_ID, {
       type: 'raster',
-      tiles: [openSeaMapSeamarkTileUrl('dark')],
+      tiles: [lmmapXyzTemplate(openSeaMapSeamarkTileUrl('dark'))],
       tileSize: 256,
       minzoom: 0,
       maxzoom: 18,

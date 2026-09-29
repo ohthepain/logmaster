@@ -24,7 +24,7 @@ export function MessagesButton({
       className={cn(
         'ios-map-touch-target inline-flex size-10 items-center justify-center rounded-full border no-underline transition',
         mapOverlay
-          ? 'border-white/20 bg-black/30 text-white hover:bg-black/45'
+          ? 'map-chrome-surface hover:bg-[var(--map-chrome-hover)]'
           : 'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] hover:bg-[var(--link-bg-hover)]',
         className,
       )}

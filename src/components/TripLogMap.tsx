@@ -1,16 +1,17 @@
-import { MapLocationOverlay } from './MapLocationOverlay'
+import type { StyleSpecification } from 'maplibre-gl'
+import maplibregl from 'maplibre-gl'
+import { getLastKnownDevicePosition } from '../lib/device-position'
+import type { MapLocationState } from '../lib/use-map-location'
 import {
   isAwaitingDeviceFix,
   mediterraneanJourneyMoving,
   useMapLocation,
 } from '../lib/use-map-location'
-import { getLastKnownDevicePosition } from '../lib/device-position'
-import type { MapLocationState } from '../lib/use-map-location'
 import {
   GIBRALTAR,
   useMediterraneanJourney,
 } from '../lib/use-mediterranean-journey'
-import maplibregl from 'maplibre-gl'
+import { MapLocationOverlay } from './MapLocationOverlay'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {
   forwardRef,
@@ -21,15 +22,17 @@ import {
   useRef,
   useState,
 } from 'react'
-import type { LogEntry, Leg, Trip, Media } from '../domain/logbook'
+import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
 import type { RouteWaypoint } from '../domain/route'
 import type { TripTrack } from '../domain/trip-track'
+import { boatIconSrc } from '../lib/boat-icons'
+import { cn } from '../lib/cn'
+import { isDevModeAvailable } from '../lib/dev-mode'
 import {
   DEV_FALLBACK_POSITION,
   setDevPositionOverride,
   subscribeToDevicePosition,
 } from '../lib/logbook-context'
-import { isDevModeAvailable } from '../lib/dev-mode'
 import {
   buildLegEntryPointsGeoJson,
   buildLegTrackGeoJson,
@@ -40,84 +43,50 @@ import {
   tripStartMapPoint,
   withEntryMapPositionOverride,
 } from '../lib/logbook-map-geo'
-import { createCurrentPositionMarkerElement } from '../lib/map-current-position-marker'
 import {
   createBoatMapMarkerElementForIconId,
   resolveBoatMapHeading,
   updateBoatMapMarkerElement,
 } from '../lib/map-boat-marker'
-import { boatIconSrc } from '../lib/boat-icons'
-import { addSailingMapAttributionControl } from '../lib/maplibre-attribution-control'
-import {
-  addOpenSeaMapSeamarkOverlay,
-  addOpenSeaMapBathymetryOverlays,
-  finalizeSailingMapLayers,
-  guardSailingMapAgainstTerrain,
-  loadSailingMapStyle,
-  SAILING_MAP_TILE_CACHE_ZOOM_LEVELS,
-} from '../lib/maplibre-sailing-map-setup'
-import { installMapDataLayers } from '../lib/maplibre-data-layers'
-import { installAisMapLayer } from '../lib/maplibre-ais-layer'
-import { useMapDataLayerSync } from '../lib/use-map-data-layer-sync'
-import { useAisMapLayer } from '../lib/use-ais-map-layer'
-import {
-  applySailingLogMapTheme,
-  sailingMapLegTrackPaint,
-  SailingMapColors,
-} from '../lib/maplibre-sailing-theme'
-import {
-  addLogEntrySymbolLayer,
-  syncLogEntryMapMarkerImages,
-  syncLogEntryMapIconSelection,
-} from '../lib/map-log-entry-icons'
-import { getGeoJsonSource } from '../lib/maplibre-source'
-import { defaultRasterMapId } from '../lib/map-styles'
-import {
-  centerMapOnCurrentLocation,
-  centerMapOnPoint,
-  fitMapToTripTrack,
-  juiceMapFocus,
-  SAILING_MAP_INITIAL_ZOOM,
-  SAILING_MAP_LOCATE_ZOOM,
-  SAILING_MAP_FOCUS_ZOOM,
-} from '../lib/sailing-map-viewport'
 import {
   captureMaplibreSnapshot,
   withCaptureTimeout,
 } from '../lib/map-cover-capture'
-import type { TripMapHandle } from '../lib/trip-map-handle'
+import { createCurrentPositionMarkerElement } from '../lib/map-current-position-marker'
 import {
-  fetchReversePlaceLookup,
-  formatReversePlaceLabel,
-} from '../lib/place-reverse-lookup-api'
-import { mapTilerTransformRequest } from '../lib/tiles'
-import { cn } from '../lib/cn'
-import { getNativePlatform } from '../lib/platform'
+  addLogEntrySymbolLayer,
+  syncLogEntryMapIconSelection,
+  syncLogEntryMapMarkerImages,
+} from '../lib/map-log-entry-icons'
+import { defaultRasterMapId } from '../lib/map-styles'
 import type { MapWaypointPickConfig } from '../lib/map-waypoint-pick'
 import {
   isWaypointCenterPickActive,
   isWaypointEditSelectActive,
   isWaypointMapInteractionActive,
 } from '../lib/map-waypoint-pick'
+import { installAisMapLayer } from '../lib/maplibre-ais-layer'
+import { addSailingMapAttributionControl } from '../lib/maplibre-attribution-control'
+import { installMapDataLayers } from '../lib/maplibre-data-layers'
 import {
-  isTripWaypointEntry,
-  tripWaypointEntries,
-} from '../lib/trip-waypoint-entry'
-import { useMapCenterPosition } from '../lib/use-map-center-position'
-import { useMapCenterAnchoredZoom } from '../lib/use-map-center-anchored-zoom'
-import { useAppOptionsStore } from '../stores/app-options'
-import { useLogbookStore } from '../stores/logbook'
-import { DevComponentLabel } from './DevComponentLabel'
-import { WaypointCenterPickOverlay } from './WaypointCenterPickOverlay'
-import { WaypointEditSelectOverlay } from './WaypointEditSelectOverlay'
-import { WaypointNameEditor } from './WaypointNameEditor'
-import { TripAppleMapKit } from './TripAppleMapKit'
-import { SailingMapControlStack } from './SailingMapControlStack'
-import { SailingMapFullscreenModal } from './SailingMapFullscreenModal'
-import { SailingMapLayerPanel } from './SailingMapLayerPanel'
-import type { TripPlaybackPosition } from '../lib/trip-playback'
-import { LogEntryMapMarkerHoverTarget } from './LogEntryMapMarkerHoverTarget'
-import type { MapEntryPreviewState } from './LogEntryMapMarkerHoverTarget'
+  addOpenSeaMapBathymetryOverlays,
+  addOpenSeaMapSeamarkOverlay,
+  finalizeSailingMapLayers,
+  guardSailingMapAgainstTerrain,
+  loadSailingMapStyle,
+  SAILING_MAP_TILE_CACHE_ZOOM_LEVELS,
+} from '../lib/maplibre-sailing-map-setup'
+import {
+  applySailingLogMapTheme,
+  SailingMapColors,
+  sailingMapLegTrackPaint,
+} from '../lib/maplibre-sailing-theme'
+import { getGeoJsonSource } from '../lib/maplibre-source'
+import {
+  fetchReversePlaceLookup,
+  formatReversePlaceLabel,
+} from '../lib/place-reverse-lookup-api'
+import { getNativePlatform } from '../lib/platform'
 import {
   buildRouteLineGeoJson,
   buildRouteWaypointPointsGeoJson,
@@ -127,6 +96,38 @@ import {
   routeLinePaint,
   syncRouteMapMarkerImages,
 } from '../lib/route-map-icons'
+import {
+  centerMapOnCurrentLocation,
+  centerMapOnPoint,
+  fitMapToTripTrack,
+  juiceMapFocus,
+  SAILING_MAP_FOCUS_ZOOM,
+  SAILING_MAP_INITIAL_ZOOM,
+  SAILING_MAP_LOCATE_ZOOM,
+} from '../lib/sailing-map-viewport'
+import { mapTilerTransformRequest } from '../lib/tiles'
+import type { TripMapHandle } from '../lib/trip-map-handle'
+import type { TripPlaybackPosition } from '../lib/trip-playback'
+import {
+  isTripWaypointEntry,
+  tripWaypointEntries,
+} from '../lib/trip-waypoint-entry'
+import { useAisMapLayer } from '../lib/use-ais-map-layer'
+import { useMapCenterAnchoredZoom } from '../lib/use-map-center-anchored-zoom'
+import { useMapCenterPosition } from '../lib/use-map-center-position'
+import { useMapDataLayerSync } from '../lib/use-map-data-layer-sync'
+import { useAppOptionsStore } from '../stores/app-options'
+import { useLogbookStore } from '../stores/logbook'
+import { DevComponentLabel } from './DevComponentLabel'
+import type { MapEntryPreviewState } from './LogEntryMapMarkerHoverTarget'
+import { LogEntryMapMarkerHoverTarget } from './LogEntryMapMarkerHoverTarget'
+import { SailingMapControlStack } from './SailingMapControlStack'
+import { SailingMapFullscreenModal } from './SailingMapFullscreenModal'
+import { SailingMapLayerPanel } from './SailingMapLayerPanel'
+import { TripAppleMapKit } from './TripAppleMapKit'
+import { WaypointCenterPickOverlay } from './WaypointCenterPickOverlay'
+import { WaypointEditSelectOverlay } from './WaypointEditSelectOverlay'
+import { WaypointNameEditor } from './WaypointNameEditor'
 
 const ENTRY_LAYER = 'trip-log-entry-icons'
 const PLANNED_LINE_SOURCE = 'trip-planned-route-line'
@@ -220,6 +221,7 @@ export const TripLogMap = forwardRef<TripMapHandle, TripLogMapProps>(
       locate,
       captureMapSnapshot: () =>
         rendererRef.current?.captureMapSnapshot() ?? Promise.resolve(null),
+      getMapView: () => rendererRef.current?.getMapView() ?? null,
     }))
     const mapProps = {
       ...props,
@@ -291,6 +293,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
   ) {
     const containerRef = useRef<HTMLDivElement>(null)
     const mapRef = useRef<maplibregl.Map | null>(null)
+    const sailingStyleRef = useRef<StyleSpecification | null>(null)
     const onEntrySelectRef = useRef(onEntrySelect)
     const waypointPickRef = useRef(waypointPick)
     const entriesRef = useRef(entries)
@@ -482,6 +485,20 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
         zoomOut: () => mapRef.current?.zoomOut({ duration: 200 }),
         locate: handleLocate,
         captureMapSnapshot,
+        getMapView: () => {
+          const map = mapRef.current
+          const style = sailingStyleRef.current
+          if (!map || !style) return null
+          const bounds = map.getBounds()
+          return {
+            west: bounds.getWest(),
+            south: bounds.getSouth(),
+            east: bounds.getEast(),
+            north: bounds.getNorth(),
+            zoom: map.getZoom(),
+            style,
+          }
+        },
       }),
       [captureMapSnapshot, handleLocate],
     )
@@ -539,6 +556,7 @@ const TripLogMapMapLibre = forwardRef<TripMapHandle, TripLogMapProps>(
       void loadSailingMapStyle(defaultRasterMapId())
         .then((style) => {
           if (cancelled || mapRef.current) return
+          sailingStyleRef.current = style
 
           map = new maplibregl.Map({
             container,

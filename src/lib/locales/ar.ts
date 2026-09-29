@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -115,6 +115,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: 'إضافة نقطة طريق',
   editWaypoints: 'تعديل نقاط الطريق',
   editTripCover: 'تعديل الرحلة',
+  trip: 'الرحلة',
+  elapsed: 'الوقت المنقضي',
+  downloadedMaps: 'الخرائط المنزّلة',
+  noDownloadedMaps: 'لا توجد خرائط منزّلة لهذه الرحلة.',
+  downloadThisMap: 'تنزيل هذه الخريطة',
+  downloadMapConfirm:
+    'احفظ العرض الحالي على هذا الجهاز للاستخدام دون اتصال. حوالي {tiles} مربعاً ({size}).',
+  downloadMap: 'تنزيل',
+  downloadingMap: 'جارٍ تنزيل الخريطة',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: 'التنزيل في الخلفية',
+  editTripName: 'تعديل اسم الرحلة',
+  mapSavedOffline: 'تم حفظ الخريطة لهذه الرحلة',
+  mapDownloadFailed: 'تعذر تنزيل الخريطة',
+  deleteDownloadedMap: 'حذف الخريطة',
+  mapPackRemoved: 'تم حذف الخريطة المنزّلة',
+  mapPackZoom: 'التكبير {min}–{max}',
+  mapNotReady: 'الخريطة ليست جاهزة للتنزيل بعد.',
   tracks: 'المسارات',
   timelineTracks: 'مسارات الخط الزمني',
   showOnTimeline: 'إظهار على الخط الزمني',

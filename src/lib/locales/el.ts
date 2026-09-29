@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -116,6 +116,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: 'Προσθήκη σημείου',
   editWaypoints: 'Επεξεργασία σημείων',
   editTripCover: 'Επεξεργασία ταξιδιού',
+  trip: 'Ταξίδι',
+  elapsed: 'Διάρκεια',
+  downloadedMaps: 'Ληφθέντες χάρτες',
+  noDownloadedMaps: 'Δεν έχουν ληφθεί χάρτες για αυτό το ταξίδι.',
+  downloadThisMap: 'Λήψη αυτού του χάρτη',
+  downloadMapConfirm:
+    'Αποθήκευση της τρέχουσας προβολής σε αυτή τη συσκευή για χρήση εκτός σύνδεσης. Περίπου {tiles} πλακίδια ({size}).',
+  downloadMap: 'Λήψη',
+  downloadingMap: 'Λήψη χάρτη',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: 'Λήψη στο παρασκήνιο',
+  editTripName: 'Επεξεργασία ονόματος ταξιδιού',
+  mapSavedOffline: 'Ο χάρτης αποθηκεύτηκε για αυτό το ταξίδι',
+  mapDownloadFailed: 'Δεν ήταν δυνατή η λήψη του χάρτη',
+  deleteDownloadedMap: 'Διαγραφή χάρτη',
+  mapPackRemoved: 'Ο ληφθείς χάρτης διαγράφηκε',
+  mapPackZoom: 'Zoom {min}–{max}',
+  mapNotReady: 'Ο χάρτης δεν είναι ακόμα έτοιμος για λήψη.',
   tracks: 'Ίχνη',
   timelineTracks: 'Ίχνη χρονολογίου',
   showOnTimeline: 'Εμφάνιση στο χρονολόγιο',

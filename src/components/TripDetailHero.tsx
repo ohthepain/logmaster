@@ -1,5 +1,5 @@
-import { Map, Route as RouteIcon, RotateCw, Sailboat, X } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
+import { Map, RotateCw, Route as RouteIcon, Sailboat, X } from 'lucide-react'
 import {
   forwardRef,
   useCallback,
@@ -11,33 +11,35 @@ import {
 } from 'react'
 import type { Leg, LogEntry, Media, Trip } from '../domain/logbook'
 import type { TripTrack } from '../domain/trip-track'
-import type { TripDetailCoverDisplay } from '../lib/trip-display'
-import type { TripMapHandle } from '../lib/trip-map-handle'
+import { cn } from '../lib/cn'
+import {
+  retripSourceTimeMs as mapRetripSourceTimeMs,
+  retripSourceElapsedMs,
+} from '../lib/dev-trip-retrip'
+import { useTranslation } from '../lib/i18n'
 import type { MapWaypointPickConfig } from '../lib/map-waypoint-pick'
 import { isWaypointMapInteractionActive } from '../lib/map-waypoint-pick'
-import {
-  retripSourceElapsedMs,
-  retripSourceTimeMs as mapRetripSourceTimeMs,
-} from '../lib/dev-trip-retrip'
 import { getNativePlatform } from '../lib/platform'
+import { APP_HEADER_TOP_OFFSET } from '../lib/safe-area'
+import type { TripDetailCoverDisplay } from '../lib/trip-display'
+import type { TripMapHandle } from '../lib/trip-map-handle'
+import { tripPlaybackPositionAt, tripPlaybackRange } from '../lib/trip-playback'
 import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore } from '../stores/logbook'
 import { routeWaypointsForRoute, useRoutesStore } from '../stores/routes'
 import { DevComponentLabel } from './DevComponentLabel'
+import { PlannedRoutePickerModal } from './RouteCopyModals'
 import { SailingMapControlStack } from './SailingMapControlStack'
 import { SailingMapFullscreenModal } from './SailingMapFullscreenModal'
 import { SailingMapLayerPanel } from './SailingMapLayerPanel'
+import { TripMapDownloadButton } from './TripActiveMenu'
+import type { MapDownloadProgress } from './TripActiveMenu'
 import { TripLogMap } from './TripLogMap'
+import { TripMapChromeButton } from './TripMapChromeButton'
+import { TripMapEditMenu } from './TripMapEditMenu'
 import { TripOperationalStatus } from './TripOperationalStatus'
 import { TripPlaybackInfoPanel } from './TripPlaybackInfoPanel'
 import { TripPlaybackOverlay } from './TripPlaybackOverlay'
-import { TripMapChromeButton } from './TripMapChromeButton'
-import { TripMapEditMenu } from './TripMapEditMenu'
-import { PlannedRoutePickerModal } from './RouteCopyModals'
-import { cn } from '../lib/cn'
-import { useTranslation } from '../lib/i18n'
-import { APP_HEADER_TOP_OFFSET } from '../lib/safe-area'
-import { tripPlaybackPositionAt, tripPlaybackRange } from '../lib/trip-playback'
 
 export type CompletedTripPanel = 'map' | 'log'
 
@@ -63,6 +65,11 @@ type TripDetailHeroProps = {
   onReplayTestClick?: () => void
   onCloseReplay?: () => void | Promise<void>
   onInitialMapViewportSettled?: () => void
+  tripMenuOpen?: boolean
+  onTripMenuToggle?: () => void
+  onDownloadMap?: () => void
+  downloadingMap?: boolean
+  mapDownloadProgress?: MapDownloadProgress | null
 }
 
 export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
@@ -89,6 +96,11 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
       onReplayTestClick,
       onCloseReplay,
       onInitialMapViewportSettled,
+      tripMenuOpen = false,
+      onTripMenuToggle,
+      onDownloadMap,
+      downloadingMap = false,
+      mapDownloadProgress = null,
     }: TripDetailHeroProps,
     ref,
   ) {
@@ -300,6 +312,7 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
         locate: () => mapRef.current?.locate(),
         captureMapSnapshot: async () =>
           (await mapRef.current?.captureMapSnapshot()) ?? null,
+        getMapView: () => mapRef.current?.getMapView() ?? null,
       }),
       [],
     )
@@ -521,15 +534,45 @@ export const TripDetailHero = forwardRef<TripMapHandle, TripDetailHeroProps>(
                   <X className="size-4" strokeWidth={2.25} />
                 </TripMapChromeButton>
               ) : null}
-              <TripMapEditMenu
-                tripId={trip.id}
-                disabled={busy}
-                uploading={uploadingMedia}
-                onEditCover={onEditCoverClick}
-                onAddWaypoint={onAddWaypointClick}
-                onEditWaypoints={onEditWaypointsClick}
-                uploadInputId={uploadMediaInputId}
-              />
+              {trip.status === 'IN_PROGRESS' ? (
+                <>
+                  <button
+                    type="button"
+                    data-map-touch-zone
+                    aria-expanded={tripMenuOpen}
+                    aria-haspopup="dialog"
+                    aria-label={t('trip')}
+                    disabled={busy}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onTripMenuToggle?.()
+                    }}
+                    className={cn(
+                      'map-chrome-surface ios-map-touch-target pointer-events-auto inline-flex h-10 items-center rounded-full px-4 text-sm font-semibold transition hover:bg-[var(--map-chrome-hover)] disabled:opacity-60',
+                      tripMenuOpen && 'map-chrome-active',
+                    )}
+                  >
+                    {t('trip')}
+                  </button>
+                  <TripMapDownloadButton
+                    label={t('downloadThisMap')}
+                    disabled={busy}
+                    progress={downloadingMap ? mapDownloadProgress : null}
+                    onClick={() => onDownloadMap?.()}
+                  />
+                </>
+              ) : (
+                <TripMapEditMenu
+                  tripId={trip.id}
+                  disabled={busy}
+                  uploading={uploadingMedia}
+                  onEditCover={onEditCoverClick}
+                  onAddWaypoint={onAddWaypointClick}
+                  onEditWaypoints={onEditWaypointsClick}
+                  uploadInputId={uploadMediaInputId}
+                />
+              )}
               {showInteractiveMap ? (
                 <TripMapChromeButton
                   label={

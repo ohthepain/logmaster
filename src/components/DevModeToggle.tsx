@@ -108,14 +108,14 @@ export default function DevModeToggle({
           'outline-none',
           mapOverlay
             ? cn(
-                'focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+                'focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
                 devMode
                   ? 'border-[var(--brand)] bg-[var(--brand)] text-white shadow-sm'
                   : cn(
                       TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS,
-                      'text-white/80 hover:border-white/50 hover:text-white',
+                      'hover:bg-[var(--map-chrome-hover)]',
                     ),
-                open && 'ring-2 ring-white/30',
+                open && 'ring-2 ring-[var(--line)]',
               )
             : cn(
                 'focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--header-bg)]',

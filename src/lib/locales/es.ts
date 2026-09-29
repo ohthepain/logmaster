@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -116,6 +116,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: 'Añadir waypoint',
   editWaypoints: 'Editar waypoints',
   editTripCover: 'Editar viaje',
+  trip: 'Viaje',
+  elapsed: 'Tiempo',
+  downloadedMaps: 'Mapas descargados',
+  noDownloadedMaps: 'No hay mapas descargados para este viaje.',
+  downloadThisMap: 'Descargar este mapa',
+  downloadMapConfirm:
+    'Guarda la vista actual en este dispositivo para usarla sin cobertura. Unas {tiles} teselas ({size}).',
+  downloadMap: 'Descargar',
+  downloadingMap: 'Descargando mapa',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: 'Descargar en segundo plano',
+  editTripName: 'Editar nombre del viaje',
+  mapSavedOffline: 'Mapa guardado para este viaje',
+  mapDownloadFailed: 'No se pudo descargar el mapa',
+  deleteDownloadedMap: 'Eliminar mapa',
+  mapPackRemoved: 'Mapa descargado eliminado',
+  mapPackZoom: 'Zoom {min}–{max}',
+  mapNotReady: 'La carta aún no está lista para descargar.',
   tracks: 'Derrotas',
   timelineTracks: 'Derrotas de la línea de tiempo',
   showOnTimeline: 'Mostrar en la línea de tiempo',

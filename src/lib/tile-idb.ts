@@ -1,18 +1,19 @@
 import type { DBSchema, IDBPDatabase } from 'idb'
 import { openDB } from 'idb'
-import {
-  degreeTileForLonLat,
-  isGeoFeatureCollection,
-  mergeGeoFeatureCollections,
-} from './geo-feature-tiles'
 import type {
   DegreeTile,
   GeoFeatureCollection,
   GeoFeatureResolution,
 } from './geo-feature-tiles'
+import {
+  degreeTileForLonLat,
+  isGeoFeatureCollection,
+  mergeGeoFeatureCollections,
+} from './geo-feature-tiles'
+import { packIdsAfterAttach, packIdsAfterDetach } from './trip-map-pack-refs'
 
 const DB = 'travelmode-tiles'
-const VER = 4
+const VER = 5
 const TILE_STORE = 'tiles'
 const GEO_FEATURE_STORE = 'geoFeatureTiles'
 /** MVT tiles for offline vector basemap (protomaps MapTiler-compatible). */
@@ -23,6 +24,10 @@ const OFFLINE_DEM_TILES = 'offlineDemTiles'
 const OFFLINE_GLYPHS = 'offlineGlyphs'
 /** sprite.json + PNG (+ @2x) */
 const OFFLINE_SPRITES = 'offlineSprites'
+/** Downloaded chart areas for an in-progress trip. */
+const TRIP_MAP_PACKS = 'tripMapPacks'
+/** Tile bytes shared by trip map packs, keyed by canonical URL. */
+const TRIP_MAP_TILES = 'tripMapTiles'
 
 type TileKey = { z: number; x: number; y: number }
 
@@ -75,6 +80,27 @@ type OfflineSpriteRec = {
   storedAt: number
 }
 
+export type TripMapPackRecord = {
+  id: string
+  tripId: string
+  west: number
+  south: number
+  east: number
+  north: number
+  zMin: number
+  zMax: number
+  byteSize: number
+  createdAt: number
+  tileKeys: string[]
+}
+
+type TripMapTileRec = {
+  id: string
+  data: ArrayBuffer
+  packIds: string[]
+  storedAt: number
+}
+
 type GeoFeatureTileRec = {
   id: string
   resolution: GeoFeatureResolution
@@ -93,6 +119,12 @@ interface TravelmodeDB extends DBSchema {
   [OFFLINE_DEM_TILES]: { key: string; value: OfflineDemTileRec }
   [OFFLINE_GLYPHS]: { key: string; value: OfflineGlyphRec }
   [OFFLINE_SPRITES]: { key: string; value: OfflineSpriteRec }
+  [TRIP_MAP_PACKS]: {
+    key: string
+    value: TripMapPackRecord
+    indexes: { tripId: string }
+  }
+  [TRIP_MAP_TILES]: { key: string; value: TripMapTileRec }
 }
 
 function rasterKeyPart(mapId: string) {
@@ -169,6 +201,15 @@ function getDb() {
         }
         if (!db.objectStoreNames.contains(OFFLINE_SPRITES)) {
           db.createObjectStore(OFFLINE_SPRITES, { keyPath: 'id' })
+        }
+      }
+      if (oldVersion < 5) {
+        if (!db.objectStoreNames.contains(TRIP_MAP_PACKS)) {
+          const packs = db.createObjectStore(TRIP_MAP_PACKS, { keyPath: 'id' })
+          packs.createIndex('tripId', 'tripId')
+        }
+        if (!db.objectStoreNames.contains(TRIP_MAP_TILES)) {
+          db.createObjectStore(TRIP_MAP_TILES, { keyPath: 'id' })
         }
       }
     },
@@ -355,4 +396,98 @@ export async function getGeoFeaturesForTiles(
   }
 
   return mergeGeoFeatureCollections(collections)
+}
+
+export async function getTripMapTile(
+  key: string,
+): Promise<ArrayBuffer | undefined> {
+  try {
+    const db = await getDb()
+    const rec = await db.get(TRIP_MAP_TILES, key)
+    return rec?.data
+  } catch {
+    return undefined
+  }
+}
+
+/** Store tile bytes for a pack. An existing tile only gains the pack id. Returns the stored byte length. */
+export async function attachTripMapTile(
+  key: string,
+  packId: string,
+  data: ArrayBuffer | null,
+): Promise<number> {
+  const db = await getDb()
+  const existing = await db.get(TRIP_MAP_TILES, key)
+  if (existing) {
+    const packIds = packIdsAfterAttach(existing.packIds, packId)
+    if (packIds.length !== existing.packIds.length) {
+      await db.put(TRIP_MAP_TILES, { ...existing, packIds })
+    }
+    return existing.data.byteLength
+  }
+  if (!data) return 0
+  await db.put(TRIP_MAP_TILES, {
+    id: key,
+    data,
+    packIds: [packId],
+    storedAt: Date.now(),
+  })
+  return data.byteLength
+}
+
+export async function putTripMapPack(pack: TripMapPackRecord) {
+  const db = await getDb()
+  await db.put(TRIP_MAP_PACKS, pack)
+}
+
+export async function listTripMapPacks(
+  tripId: string,
+): Promise<TripMapPackRecord[]> {
+  await sweepUnreferencedTripMapTiles()
+  const db = await getDb()
+  const packs = await db.getAllFromIndex(TRIP_MAP_PACKS, 'tripId', tripId)
+  return packs.sort((a, b) => b.createdAt - a.createdAt)
+}
+
+export async function deleteTripMapPack(packId: string) {
+  const db = await getDb()
+  const tx = db.transaction([TRIP_MAP_PACKS, TRIP_MAP_TILES], 'readwrite')
+  const tiles = tx.objectStore(TRIP_MAP_TILES)
+  let cursor = await tiles.openCursor()
+  while (cursor) {
+    if (cursor.value.packIds.includes(packId)) {
+      const packIds = packIdsAfterDetach(cursor.value.packIds, packId)
+      if (packIds.length === 0) await cursor.delete()
+      else await cursor.update({ ...cursor.value, packIds })
+    }
+    cursor = await cursor.continue()
+  }
+  await tx.objectStore(TRIP_MAP_PACKS).delete(packId)
+  await tx.done
+}
+
+/** Drop tiles left behind when a download stops before its pack record is saved. */
+export async function sweepUnreferencedTripMapTiles() {
+  const db = await getDb()
+  const tx = db.transaction([TRIP_MAP_PACKS, TRIP_MAP_TILES], 'readwrite')
+  const packs = await tx.objectStore(TRIP_MAP_PACKS).getAll()
+  const live = new Set(packs.map((pack) => pack.id))
+  let cursor = await tx.objectStore(TRIP_MAP_TILES).openCursor()
+  while (cursor) {
+    const current = cursor.value.packIds
+    const packIds = current.filter((id) => live.has(id))
+    if (packIds.length === 0) await cursor.delete()
+    else if (packIds.length !== current.length) {
+      await cursor.update({ ...cursor.value, packIds })
+    }
+    cursor = await cursor.continue()
+  }
+  await tx.done
+}
+
+export async function releaseTripMapPacks(tripId: string) {
+  const packs = await listTripMapPacks(tripId)
+  for (const pack of packs) {
+    await deleteTripMapPack(pack.id)
+  }
 }

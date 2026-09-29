@@ -1,22 +1,19 @@
 import type { FeatureCollection, Point } from 'geojson'
 import type maplibregl from 'maplibre-gl'
 import {
-  degreeTilesForBbox,
+  cachedDegreeTile,
+  degreeViewportAlreadyApplied,
+  degreeViewportSignature,
+  markDegreeViewportApplied,
+  storeDegreeTile,
+} from './degree-tile-session-cache'
+import type { GeoFeatureCollection } from './geo-feature-tiles'
+import {
   appGeoFeatureTileUrl,
+  degreeTilesForBbox,
   isGeoFeatureCollection,
   mergeGeoFeatureCollections,
 } from './geo-feature-tiles'
-import type { GeoFeatureCollection } from './geo-feature-tiles'
-import {
-  MAP_DATA_LAYERS,
-  isRasterMapDataLayerId,
-  mapDataLayerAuxiliaryLayerId,
-  mapDataLayerCircleLayerId,
-  mapDataLayerRenderLayerId,
-  mapDataLayerSymbolLayerId,
-  resolveMapDataLayerToggle,
-  resolveMapDataLayerToggles,
-} from './map-data-layers'
 import type {
   MapDataLayerDefinition,
   MapDataLayerId,
@@ -24,32 +21,36 @@ import type {
   OsmPointDatasetId,
 } from './map-data-layers'
 import {
+  isRasterMapDataLayerId,
+  MAP_DATA_LAYERS,
+  mapDataLayerAuxiliaryLayerId,
+  mapDataLayerCircleLayerId,
+  mapDataLayerRenderLayerId,
+  mapDataLayerSymbolLayerId,
+  resolveMapDataLayerToggle,
+  resolveMapDataLayerToggles,
+} from './map-data-layers'
+import {
   hazardIconImageExpression,
   hazardIconSizeExpression,
   installMapHazardIcons,
 } from './map-hazard-icons'
 import {
-  enrichOsmPointProperties,
-  parseOsmFeatureTags,
-} from './osm-feature-display'
-import { appOsmPointTileUrl } from './osm-point-tiles'
-import type { OsmPointProperties } from './osm-point-tiles'
-import {
-  OPEN_SEAMAP_BATHYMETRY_CONTOURS_LAYER_ID,
-  OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID,
-} from './maplibre-openseamap-bathymetry'
-import {
   OPEN_SEAMAP_SEAMARK_LAYER_ID,
   OPEN_SEAMAP_SEAMARK_SOURCE_ID,
 } from './maplibre-openseamap'
 import {
-  cachedDegreeTile,
-  degreeViewportAlreadyApplied,
-  degreeViewportSignature,
-  markDegreeViewportApplied,
-  storeDegreeTile,
-} from './degree-tile-session-cache'
+  OPEN_SEAMAP_BATHYMETRY_CONTOURS_LAYER_ID,
+  OPEN_SEAMAP_BATHYMETRY_RELIEF_LAYER_ID,
+} from './maplibre-openseamap-bathymetry'
 import { getGeoJsonSource } from './maplibre-source'
+import {
+  enrichOsmPointProperties,
+  parseOsmFeatureTags,
+} from './osm-feature-display'
+import type { OsmPointProperties } from './osm-point-tiles'
+import { appOsmPointTileUrl } from './osm-point-tiles'
+import { readOfflineJsonTile } from './trip-map-pack'
 
 type OsmPointFeatureCollection = FeatureCollection<Point, OsmPointProperties>
 
@@ -510,13 +511,24 @@ export function applyMapDataLayerToggles(
 async function fetchJsonTile(url: string): Promise<unknown | null> {
   const cached = cachedDegreeTile(url)
   if (cached !== undefined) return cached
+  const offline = await readOfflineJsonTile(url)
   try {
     const response = await fetch(url)
-    if (!response.ok) return null
+    if (!response.ok) {
+      if (offline !== null) {
+        storeDegreeTile(url, offline)
+        return offline
+      }
+      return null
+    }
     const payload: unknown = await response.json()
     storeDegreeTile(url, payload)
     return payload
   } catch {
+    if (offline !== null) {
+      storeDegreeTile(url, offline)
+      return offline
+    }
     return null
   }
 }

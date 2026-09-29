@@ -193,9 +193,9 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
             mapOverlay
               ? cn(
                   TRIP_MAP_OVERLAY_CONTROL_SURFACE_CLASS,
-                  'text-white hover:bg-white/10',
-                  'focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
-                  open && 'ring-2 ring-white/30',
+                  'hover:bg-[var(--map-chrome-hover)]',
+                  'focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+                  open && 'ring-2 ring-[var(--line)]',
                 )
               : cn(
                   'border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink)] hover:bg-[var(--link-bg-hover)]',

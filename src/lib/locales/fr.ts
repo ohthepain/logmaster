@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -116,6 +116,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: 'Ajouter un waypoint',
   editWaypoints: 'Modifier les waypoints',
   editTripCover: 'Modifier la sortie',
+  trip: 'Sortie',
+  elapsed: 'Temps écoulé',
+  downloadedMaps: 'Cartes téléchargées',
+  noDownloadedMaps: 'Aucune carte téléchargée pour cette sortie.',
+  downloadThisMap: 'Télécharger cette carte',
+  downloadMapConfirm:
+    'Enregistrer la vue actuelle sur cet appareil pour l’utiliser hors ligne. Environ {tiles} tuiles ({size}).',
+  downloadMap: 'Télécharger',
+  downloadingMap: 'Téléchargement de la carte',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: 'Télécharger en arrière-plan',
+  editTripName: 'Modifier le nom de la sortie',
+  mapSavedOffline: 'Carte enregistrée pour cette sortie',
+  mapDownloadFailed: 'Impossible de télécharger la carte',
+  deleteDownloadedMap: 'Supprimer la carte',
+  mapPackRemoved: 'Carte téléchargée supprimée',
+  mapPackZoom: 'Zoom {min}–{max}',
+  mapNotReady: 'La carte n’est pas encore prête à être téléchargée.',
   tracks: 'Traces',
   timelineTracks: 'Traces de la chronologie',
   showOnTimeline: 'Afficher sur la chronologie',

@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -116,6 +116,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: 'Thêm điểm',
   editWaypoints: 'Sửa các điểm',
   editTripCover: 'Sửa chuyến đi',
+  trip: 'Chuyến đi',
+  elapsed: 'Thời gian',
+  downloadedMaps: 'Hải đồ đã tải',
+  noDownloadedMaps: 'Chưa có hải đồ nào cho chuyến đi này.',
+  downloadThisMap: 'Tải hải đồ này',
+  downloadMapConfirm:
+    'Lưu vùng đang xem trên thiết bị này để dùng khi mất sóng. Khoảng {tiles} ô ({size}).',
+  downloadMap: 'Tải xuống',
+  downloadingMap: 'Đang tải hải đồ',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: 'Tải trong nền',
+  editTripName: 'Sửa tên chuyến đi',
+  mapSavedOffline: 'Đã lưu hải đồ cho chuyến đi này',
+  mapDownloadFailed: 'Không tải được hải đồ',
+  deleteDownloadedMap: 'Xóa hải đồ',
+  mapPackRemoved: 'Đã xóa hải đồ đã tải',
+  mapPackZoom: 'Thu phóng {min}–{max}',
+  mapNotReady: 'Hải đồ chưa sẵn sàng để tải.',
   tracks: 'Quỹ đạo',
   timelineTracks: 'Quỹ đạo dòng thời gian',
   showOnTimeline: 'Hiện trên dòng thời gian',

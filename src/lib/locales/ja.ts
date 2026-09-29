@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -116,6 +116,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: 'ウェイポイントを追加',
   editWaypoints: 'ウェイポイントを編集',
   editTripCover: '航海を編集',
+  trip: '航海',
+  elapsed: '経過時間',
+  downloadedMaps: 'ダウンロードした地図',
+  noDownloadedMaps: 'この航海用の地図はまだありません。',
+  downloadThisMap: 'この地図をダウンロード',
+  downloadMapConfirm:
+    '現在の表示範囲をこの端末に保存し、圏外でも使います。約{tiles}タイル（{size}）。',
+  downloadMap: 'ダウンロード',
+  downloadingMap: '地図をダウンロード中',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: 'バックグラウンドでダウンロード',
+  editTripName: '航海名を編集',
+  mapSavedOffline: 'この航海用に地図を保存しました',
+  mapDownloadFailed: '地図をダウンロードできませんでした',
+  deleteDownloadedMap: '地図を削除',
+  mapPackRemoved: 'ダウンロードした地図を削除しました',
+  mapPackZoom: 'ズーム {min}–{max}',
+  mapNotReady: '海図の準備ができていません。',
   tracks: '航跡',
   timelineTracks: 'タイムラインの航跡',
   showOnTimeline: 'タイムラインに表示',

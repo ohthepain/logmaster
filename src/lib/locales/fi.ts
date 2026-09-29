@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -116,6 +116,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: 'Lisää reittipiste',
   editWaypoints: 'Muokkaa reittipisteitä',
   editTripCover: 'Muokkaa matkaa',
+  trip: 'Matka',
+  elapsed: 'Kulunut',
+  downloadedMaps: 'Ladatut kartat',
+  noDownloadedMaps: 'Tälle matkalle ei ole ladattu karttoja.',
+  downloadThisMap: 'Lataa tämä kartta',
+  downloadMapConfirm:
+    'Tallenna nykyinen näkymä tälle laitteelle offline-käyttöä varten. Noin {tiles} ruutua ({size}).',
+  downloadMap: 'Lataa',
+  downloadingMap: 'Ladataan karttaa',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: 'Lataa taustalla',
+  editTripName: 'Muokkaa matkan nimeä',
+  mapSavedOffline: 'Kartta tallennettu tälle matkalle',
+  mapDownloadFailed: 'Kartan lataus epäonnistui',
+  deleteDownloadedMap: 'Poista kartta',
+  mapPackRemoved: 'Ladattu kartta poistettu',
+  mapPackZoom: 'Zoom {min}–{max}',
+  mapNotReady: 'Kartta ei ole vielä valmis ladattavaksi.',
   tracks: 'Jäljet',
   timelineTracks: 'Aikajanan jäljet',
   showOnTimeline: 'Näytä aikajanalla',

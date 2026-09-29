@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -116,6 +116,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: 'Tilføj vejpunkt',
   editWaypoints: 'Rediger vejpunkter',
   editTripCover: 'Rediger tur',
+  trip: 'Tur',
+  elapsed: 'Forløbet',
+  downloadedMaps: 'Downloadede kort',
+  noDownloadedMaps: 'Ingen kort er downloadet til denne tur.',
+  downloadThisMap: 'Download dette kort',
+  downloadMapConfirm:
+    'Gem den aktuelle visning på denne enhed til brug uden dækning. Omkring {tiles} fliser ({size}).',
+  downloadMap: 'Download',
+  downloadingMap: 'Downloader kort',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: 'Download i baggrunden',
+  editTripName: 'Rediger turens navn',
+  mapSavedOffline: 'Kort gemt til denne tur',
+  mapDownloadFailed: 'Kunne ikke downloade kortet',
+  deleteDownloadedMap: 'Slet kort',
+  mapPackRemoved: 'Downloadet kort fjernet',
+  mapPackZoom: 'Zoom {min}–{max}',
+  mapNotReady: 'Kortet er ikke klar til download endnu.',
   tracks: 'Spor',
   timelineTracks: 'Tidslinjespor',
   showOnTimeline: 'Vis på tidslinjen',

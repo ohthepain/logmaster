@@ -36,6 +36,20 @@ import {
   tripDisplayName,
 } from '../lib/trip-display'
 import type { TripMapHandle } from '../lib/trip-map-handle'
+import type {
+  PackPlan,
+  TripMapPackRecord,
+  TripMapView,
+} from '../lib/trip-map-pack'
+import {
+  deleteTripMapPack,
+  downloadTripMapPack,
+  estimatePackBytes,
+  formatByteSize,
+  formatPackArea,
+  listTripMapPacks,
+  planTripMapPack,
+} from '../lib/trip-map-pack'
 import {
   tripMediaUploadToastMessage,
   uploadTripMediaFiles,
@@ -54,7 +68,8 @@ import { LogEntryComposerModal } from './LogEntryComposerModal'
 import { LogEntryCreateModal } from './LogEntryCreateModal'
 import { Modal } from './Modal'
 import { NativeRecordingSettings } from './NativeRecordingSettings'
-import { TripCoverEditModal } from './TripCoverEditModal'
+import { MapPackDownloadProgress, TripActiveMenu } from './TripActiveMenu'
+import { AddTripCrewModal, TripCoverEditModal } from './TripCoverEditModal'
 import { TripDetailBottomSheet } from './TripDetailBottomSheet'
 import type { CompletedTripPanel } from './TripDetailHero'
 import { TripDetailHero } from './TripDetailHero'
@@ -89,6 +104,17 @@ export function TripDetailPage({
   const [createEntryOpen, setCreateEntryOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [coverEditOpen, setCoverEditOpen] = useState(false)
+  const [tripMenuOpen, setTripMenuOpen] = useState(false)
+  const [addCrewOpen, setAddCrewOpen] = useState(false)
+  const [mapPacks, setMapPacks] = useState<TripMapPackRecord[]>([])
+  const [downloadPlan, setDownloadPlan] = useState<PackPlan | null>(null)
+  const [pendingMapView, setPendingMapView] = useState<TripMapView | null>(null)
+  const [downloadingMap, setDownloadingMap] = useState(false)
+  const [downloadInBackground, setDownloadInBackground] = useState(false)
+  const [downloadProgress, setDownloadProgress] = useState<{
+    done: number
+    total: number
+  } | null>(null)
   const [replayOpen, setReplayOpen] = useState(false)
   const [waypointMapPhase, setWaypointMapPhase] = useState<
     'idle' | 'add' | 'edit-select' | 'edit-center' | 'edit-pick'
@@ -165,7 +191,25 @@ export function TripDetailPage({
   }, [tripId])
 
   useEffect(() => {
-    if (!coverEditOpen) return
+    if (trip?.status !== 'IN_PROGRESS') setTripMenuOpen(false)
+  }, [trip?.status])
+
+  useEffect(() => {
+    let cancelled = false
+    void listTripMapPacks(tripId)
+      .then((packs) => {
+        if (!cancelled) setMapPacks(packs)
+      })
+      .catch(() => {
+        if (!cancelled) setMapPacks([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [tripId, trip?.status])
+
+  useEffect(() => {
+    if (!coverEditOpen && !tripMenuOpen) return
     let cancelled = false
     void fetchTripCrewInvites(tripId)
       .then((invites) => {
@@ -182,7 +226,7 @@ export function TripDetailPage({
     return () => {
       cancelled = true
     }
-  }, [coverEditOpen, tripId])
+  }, [coverEditOpen, tripMenuOpen, tripId])
 
   const tripLegs = useMemo(
     () => store.legs.filter((leg) => leg.tripId === tripId),
@@ -905,6 +949,89 @@ export function TripDetailPage({
     }
   }
 
+  const refreshMapPacks = async () => {
+    try {
+      setMapPacks(await listTripMapPacks(trip.id))
+    } catch {
+      setMapPacks([])
+    }
+  }
+
+  const requestMapDownload = async () => {
+    if (downloadingMap) {
+      setDownloadInBackground(false)
+      return
+    }
+    const view = heroMapRef.current?.getMapView()
+    if (!view?.style) {
+      toast.error(t('mapNotReady'))
+      return
+    }
+    const mapView = view as TripMapView
+    try {
+      const plan = await planTripMapPack(mapView)
+      if (!plan || plan.urls.length === 0) {
+        toast.error(t('mapDownloadFailed'))
+        return
+      }
+      setPendingMapView(mapView)
+      setDownloadInBackground(false)
+      setDownloadPlan(plan)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t('mapDownloadFailed'),
+      )
+    }
+  }
+
+  const dismissDownloadDialog = () => {
+    if (downloadingMap) {
+      setDownloadInBackground(true)
+      return
+    }
+    setDownloadPlan(null)
+    setPendingMapView(null)
+  }
+
+  const confirmMapDownload = async () => {
+    if (!pendingMapView || !downloadPlan || downloadingMap) return
+    const total = downloadPlan.urls.length
+    setDownloadingMap(true)
+    setDownloadProgress({ done: 0, total })
+    try {
+      await downloadTripMapPack({
+        tripId: trip.id,
+        view: pendingMapView,
+        onProgress: (done, nextTotal) =>
+          setDownloadProgress({ done, total: nextTotal }),
+      })
+      await refreshMapPacks()
+      toast.success(t('mapSavedOffline'))
+      setDownloadPlan(null)
+      setPendingMapView(null)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t('mapDownloadFailed'),
+      )
+    } finally {
+      setDownloadingMap(false)
+      setDownloadProgress(null)
+      setDownloadInBackground(false)
+    }
+  }
+
+  const handleDeleteMapPack = async (packId: string) => {
+    try {
+      await deleteTripMapPack(packId)
+      await refreshMapPacks()
+      toast.success(t('mapPackRemoved'))
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : t('mapDownloadFailed'),
+      )
+    }
+  }
+
   return (
     <>
       <div
@@ -953,6 +1080,11 @@ export function TripDetailPage({
           }
           onAddWaypointClick={() => startWaypointPick()}
           onEditWaypointsClick={() => startWaypointEdit()}
+          tripMenuOpen={tripMenuOpen}
+          onTripMenuToggle={() => setTripMenuOpen((open) => !open)}
+          onDownloadMap={() => void requestMapDownload()}
+          downloadingMap={downloadingMap}
+          mapDownloadProgress={downloadProgress}
           waypointPick={waypointPick ?? undefined}
           onReplayTestClick={
             trip.status === 'COMPLETED' && devMode && isDevModeAvailable()
@@ -1198,6 +1330,116 @@ export function TripDetailPage({
         entryId={selectedEntryId}
         onClose={() => setSelectedEntryId(null)}
       />
+
+      {trip.status === 'IN_PROGRESS' ? (
+        <TripActiveMenu
+          open={tripMenuOpen}
+          trip={trip}
+          tracks={tripTracks}
+          crewPeople={crewMembers}
+          pendingInvites={tripInvites}
+          packs={mapPacks}
+          busy={busy}
+          uploading={uploadingMedia}
+          downloading={downloadingMap}
+          downloadProgress={downloadProgress}
+          dismissDisabled={
+            addCrewOpen ||
+            (downloadPlan != null && !downloadInBackground) ||
+            coverEditOpen
+          }
+          uploadInputId={mediaFileInputId}
+          onClose={() => setTripMenuOpen(false)}
+          onRename={(title) =>
+            void handleSaveTripDetails({
+              title,
+              subtitle: trip.subtitle ?? '',
+            })
+          }
+          onAddCrew={() => setAddCrewOpen(true)}
+          onCancelInvite={(inviteId) => void handleCancelCrewInvite(inviteId)}
+          onDownload={() => void requestMapDownload()}
+          onDeletePack={(packId) => void handleDeleteMapPack(packId)}
+          onEditTrip={() => setCoverEditOpen(true)}
+          onAddWaypoint={() => startWaypointPick()}
+          onEditWaypoints={() => startWaypointEdit()}
+        />
+      ) : null}
+
+      <AddTripCrewModal
+        open={addCrewOpen}
+        contacts={crewMembers.filter(
+          (person) => !trip.crewUserIds?.includes(person.id),
+        )}
+        onClose={() => setAddCrewOpen(false)}
+        onAddContacts={(memberIds) => {
+          const next = [...(trip.crewUserIds ?? [])]
+          for (const memberId of memberIds) {
+            if (!next.includes(memberId)) next.push(memberId)
+          }
+          if (next.length === (trip.crewUserIds ?? []).length) return
+          void handleCrewChange(next)
+        }}
+        onInviteByEmail={handleInviteCrewEmail}
+      />
+
+      {downloadPlan && !downloadInBackground ? (
+        <Modal
+          title={t('downloadThisMap')}
+          centered
+          layer="top"
+          devComponentName="DownloadMapConfirm"
+          onClose={dismissDownloadDialog}
+        >
+          <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">
+            {t('downloadMapConfirm', {
+              tiles: String(downloadPlan.urls.length),
+              size: formatByteSize(estimatePackBytes(downloadPlan.urls.length)),
+            })}
+          </p>
+          <p className="mb-0 mt-2 text-sm text-[var(--sea-ink)]">
+            {formatPackArea(downloadPlan)}
+          </p>
+          {downloadProgress ? (
+            <MapPackDownloadProgress
+              done={downloadProgress.done}
+              total={downloadProgress.total}
+              label={t('downloadProgress', {
+                done: String(downloadProgress.done),
+                total: String(downloadProgress.total),
+              })}
+            />
+          ) : null}
+          <div className="mt-5 flex justify-end gap-2">
+            {downloadingMap ? (
+              <button
+                type="button"
+                onClick={dismissDownloadDialog}
+                className="rounded-full bg-[var(--sea-ink)] px-4 py-2 text-sm font-semibold text-[var(--bg-base)]"
+              >
+                {t('downloadInBackground')}
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={dismissDownloadDialog}
+                  className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2 text-sm font-semibold text-[var(--sea-ink)]"
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void confirmMapDownload()}
+                  className="rounded-full bg-[var(--sea-ink)] px-4 py-2 text-sm font-semibold text-[var(--bg-base)]"
+                >
+                  {t('downloadMap')}
+                </button>
+              </>
+            )}
+          </div>
+        </Modal>
+      ) : null}
 
       <TripCoverEditModal
         open={coverEditOpen}

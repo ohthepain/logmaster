@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -116,6 +116,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: 'Waypoint toevoegen',
   editWaypoints: 'Waypoints bewerken',
   editTripCover: 'Tocht bewerken',
+  trip: 'Tocht',
+  elapsed: 'Verstreken',
+  downloadedMaps: 'Gedownloade kaarten',
+  noDownloadedMaps: 'Geen kaarten gedownload voor deze tocht.',
+  downloadThisMap: 'Deze kaart downloaden',
+  downloadMapConfirm:
+    'Sla de huidige weergave op dit apparaat op voor offline gebruik. Ongeveer {tiles} tegels ({size}).',
+  downloadMap: 'Downloaden',
+  downloadingMap: 'Kaart downloaden',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: 'Op de achtergrond downloaden',
+  editTripName: 'Naam van de tocht bewerken',
+  mapSavedOffline: 'Kaart opgeslagen voor deze tocht',
+  mapDownloadFailed: 'Kaart downloaden mislukt',
+  deleteDownloadedMap: 'Kaart verwijderen',
+  mapPackRemoved: 'Gedownloade kaart verwijderd',
+  mapPackZoom: 'Zoom {min}–{max}',
+  mapNotReady: 'De kaart is nog niet klaar om te downloaden.',
   tracks: 'Tracks',
   timelineTracks: 'Tijdlijntracks',
   showOnTimeline: 'Op de tijdlijn tonen',

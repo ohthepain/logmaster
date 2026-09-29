@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -116,6 +116,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: 'Add waypoint',
   editWaypoints: 'Edit waypoints',
   editTripCover: 'Edit trip',
+  trip: 'Trip',
+  elapsed: 'Elapsed',
+  downloadedMaps: 'Downloaded maps',
+  noDownloadedMaps: 'No maps downloaded for this trip.',
+  downloadThisMap: 'Download this map',
+  downloadMapConfirm:
+    'Save the current view on this device for offline use. About {tiles} tiles ({size}).',
+  downloadMap: 'Download',
+  downloadingMap: 'Downloading map',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: 'Download in background',
+  editTripName: 'Edit trip name',
+  mapSavedOffline: 'Map saved for this trip',
+  mapDownloadFailed: 'Could not download this map',
+  deleteDownloadedMap: 'Delete map',
+  mapPackRemoved: 'Downloaded map removed',
+  mapPackZoom: 'Zoom {min}–{max}',
+  mapNotReady: 'The chart is not ready to download yet.',
   tracks: 'Tracks',
   timelineTracks: 'Timeline tracks',
   showOnTimeline: 'Show on timeline',

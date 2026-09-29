@@ -1,6 +1,4 @@
-import type { BoatActivityTranslationKey } from './boat-activity-copy'
-import type { TripLogTranslationKey } from './trip-log-copy'
-import type { productUiCopy } from './product-ui-copy'
+import type { ReactNode } from 'react'
 import {
   createContext,
   useCallback,
@@ -10,11 +8,13 @@ import {
   useRef,
   useState,
 } from 'react'
-import type { ReactNode } from 'react'
-import englishCatalog from './locales/en'
-import { useSession } from './auth-client'
 import { apiUrl } from './app-origin'
+import { useSession } from './auth-client'
+import type { BoatActivityTranslationKey } from './boat-activity-copy'
+import englishCatalog from './locales/en'
+import type { productUiCopy } from './product-ui-copy'
 import { fetchProfile, updateProfilePreferredLanguage } from './profile-api'
+import type { TripLogTranslationKey } from './trip-log-copy'
 
 export type TranslationKey =
   | BoatActivityTranslationKey
@@ -127,6 +127,23 @@ export type TranslationKey =
   | 'addWaypoint'
   | 'editWaypoints'
   | 'editTripCover'
+  | 'trip'
+  | 'elapsed'
+  | 'downloadedMaps'
+  | 'noDownloadedMaps'
+  | 'downloadThisMap'
+  | 'downloadMapConfirm'
+  | 'downloadMap'
+  | 'downloadingMap'
+  | 'downloadProgress'
+  | 'downloadInBackground'
+  | 'editTripName'
+  | 'mapSavedOffline'
+  | 'mapDownloadFailed'
+  | 'deleteDownloadedMap'
+  | 'mapPackRemoved'
+  | 'mapPackZoom'
+  | 'mapNotReady'
   | 'tracks'
   | 'timelineTracks'
   | 'showOnTimeline'

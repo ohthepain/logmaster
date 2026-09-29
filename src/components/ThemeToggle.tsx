@@ -101,10 +101,10 @@ export default function ThemeToggle({
               'transition-[color,background-color,box-shadow] duration-150',
               mapOverlay
                 ? cn(
-                    'text-white/70 hover:bg-white/10 hover:text-white',
-                    'focus-visible:ring-2 focus-visible:ring-white/25 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
+                    'hover:bg-[var(--map-chrome-hover)]',
+                    'focus-visible:ring-2 focus-visible:ring-[var(--sea-ink)]/20 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
                     selected &&
-                      'bg-white/20 text-white shadow-sm ring-1 ring-white/30',
+                      'bg-[var(--map-chrome-hover)] shadow-sm ring-1 ring-[var(--map-chrome-border)]',
                   )
                 : cn(
                     'text-[var(--sea-ink-soft)]',

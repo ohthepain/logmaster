@@ -1,7 +1,7 @@
 import { boatActivityCopy } from '../boat-activity-copy'
-import { tripLogCopy } from '../trip-log-copy'
-import { productUiCopy } from '../product-ui-copy'
 import type { TranslationCatalog } from '../i18n'
+import { productUiCopy } from '../product-ui-copy'
+import { tripLogCopy } from '../trip-log-copy'
 
 const catalog: TranslationCatalog = {
   ...productUiCopy,
@@ -117,6 +117,24 @@ const catalog: TranslationCatalog = {
   addWaypoint: 'Wegpunkt hinzufügen',
   editWaypoints: 'Wegpunkte bearbeiten',
   editTripCover: 'Törn bearbeiten',
+  trip: 'Törn',
+  elapsed: 'Verstrichen',
+  downloadedMaps: 'Heruntergeladene Karten',
+  noDownloadedMaps: 'Für diesen Törn sind keine Karten gespeichert.',
+  downloadThisMap: 'Diese Karte laden',
+  downloadMapConfirm:
+    'Aktuelle Ansicht auf diesem Gerät für die Offline-Nutzung speichern. Etwa {tiles} Kacheln ({size}).',
+  downloadMap: 'Herunterladen',
+  downloadingMap: 'Karte wird geladen',
+  downloadProgress: '{done} / {total}',
+  downloadInBackground: 'Im Hintergrund laden',
+  editTripName: 'Törnname bearbeiten',
+  mapSavedOffline: 'Karte für diesen Törn gespeichert',
+  mapDownloadFailed: 'Karte konnte nicht geladen werden',
+  deleteDownloadedMap: 'Karte löschen',
+  mapPackRemoved: 'Heruntergeladene Karte entfernt',
+  mapPackZoom: 'Zoom {min}–{max}',
+  mapNotReady: 'Die Karte ist noch nicht bereit zum Laden.',
   tracks: 'Tracks',
   timelineTracks: 'Zeitachsen-Tracks',
   showOnTimeline: 'Auf der Zeitachse anzeigen',

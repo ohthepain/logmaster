@@ -10,11 +10,33 @@ import {
   useState,
 } from 'react'
 import type { Route, RouteWaypoint } from '../domain/route'
+import { cn } from '../lib/cn'
 import { DEV_FALLBACK_POSITION } from '../lib/logbook-context'
 import {
   captureMaplibreSnapshot,
   withCaptureTimeout,
 } from '../lib/map-cover-capture'
+import { resolveMapDataLayerToggle } from '../lib/map-data-layers'
+import { defaultRasterMapId } from '../lib/map-styles'
+import type { MapWaypointPickConfig } from '../lib/map-waypoint-pick'
+import {
+  isWaypointCenterPickActive,
+  isWaypointMapInteractionActive,
+} from '../lib/map-waypoint-pick'
+import { installAisMapLayer } from '../lib/maplibre-ais-layer'
+import { addSailingMapAttributionControl } from '../lib/maplibre-attribution-control'
+import { installMapDataLayers } from '../lib/maplibre-data-layers'
+import {
+  addOpenSeaMapBathymetryOverlays,
+  addOpenSeaMapSeamarkOverlay,
+  finalizeSailingMapLayers,
+  guardSailingMapAgainstTerrain,
+  loadSailingMapStyle,
+  SAILING_MAP_TILE_CACHE_ZOOM_LEVELS,
+} from '../lib/maplibre-sailing-map-setup'
+import { applySailingLogMapTheme } from '../lib/maplibre-sailing-theme'
+import { getGeoJsonSource } from '../lib/maplibre-source'
+import { getNativePlatform } from '../lib/platform'
 import {
   buildRouteLineGeoJson,
   buildRouteWaypointPointsGeoJson,
@@ -26,47 +48,25 @@ import {
   routeLinePaint,
   syncRouteMapMarkerImages,
 } from '../lib/route-map-icons'
-import { addSailingMapAttributionControl } from '../lib/maplibre-attribution-control'
-import {
-  addOpenSeaMapSeamarkOverlay,
-  addOpenSeaMapBathymetryOverlays,
-  finalizeSailingMapLayers,
-  guardSailingMapAgainstTerrain,
-  loadSailingMapStyle,
-  SAILING_MAP_TILE_CACHE_ZOOM_LEVELS,
-} from '../lib/maplibre-sailing-map-setup'
-import { applySailingLogMapTheme } from '../lib/maplibre-sailing-theme'
-import { getGeoJsonSource } from '../lib/maplibre-source'
-import { defaultRasterMapId } from '../lib/map-styles'
-import { installMapDataLayers } from '../lib/maplibre-data-layers'
-import { installAisMapLayer } from '../lib/maplibre-ais-layer'
 import {
   centerMapOnPoint,
   fitMapToTripTrack,
   SAILING_MAP_FOCUS_ZOOM,
   SAILING_MAP_INITIAL_ZOOM,
 } from '../lib/sailing-map-viewport'
-import type { MapWaypointPickConfig } from '../lib/map-waypoint-pick'
-import {
-  isWaypointCenterPickActive,
-  isWaypointMapInteractionActive,
-} from '../lib/map-waypoint-pick'
-import { useMapCenterPosition } from '../lib/use-map-center-position'
-import { useMapCenterAnchoredZoom } from '../lib/use-map-center-anchored-zoom'
 import { mapTilerTransformRequest } from '../lib/tiles'
 import type { TripMapHandle } from '../lib/trip-map-handle'
-import { getNativePlatform } from '../lib/platform'
-import { resolveMapDataLayerToggle } from '../lib/map-data-layers'
 import { useAisMapLayer } from '../lib/use-ais-map-layer'
+import { useMapCenterAnchoredZoom } from '../lib/use-map-center-anchored-zoom'
+import { useMapCenterPosition } from '../lib/use-map-center-position'
 import {
+  effectiveMapDataLayerToggles,
   scheduleMapDataLayerViewportSync,
   syncMapDataLayersForViewport,
-  effectiveMapDataLayerToggles,
   useMapDataLayerSync,
 } from '../lib/use-map-data-layer-sync'
 import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore } from '../stores/logbook'
-import { cn } from '../lib/cn'
 import { SailingMapControlStack } from './SailingMapControlStack'
 import { SailingMapFullscreenModal } from './SailingMapFullscreenModal'
 import { SailingMapLayerPanel } from './SailingMapLayerPanel'
@@ -214,6 +214,7 @@ export const RouteMap = forwardRef<TripMapHandle, RouteMapProps>(
         zoomOut: () => mapRef.current?.zoomOut({ duration: 200 }),
         locate: fitRouteBounds,
         captureMapSnapshot,
+        getMapView: () => null,
       }),
       [captureMapSnapshot, fitRouteBounds],
     )
