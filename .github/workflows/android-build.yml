@@ -13,6 +13,19 @@ on:
         required: true
         default: auto
         type: string
+      upload_to_play:
+        description: 'Upload the signed bundle to Google Play internal testing'
+        required: true
+        default: true
+        type: boolean
+      play_release_status:
+        description: 'draft saves in Play Console; completed releases to internal testers'
+        required: true
+        default: draft
+        type: choice
+        options:
+          - draft
+          - completed
 
 permissions:
   contents: read
@@ -31,6 +44,16 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+      - name: Check Google Play credentials
+        if: inputs.upload_to_play
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [[ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]]; then
+            echo 'Missing GOOGLE_PLAY_SERVICE_ACCOUNT_JSON in the android-release environment.'
+            echo 'See docs/android-releases-with-github.md, or disable Upload to Play for a build-only run.'
+            exit 1
+          fi
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -134,6 +157,32 @@ jobs:
           path: android/build/release-artifacts/
           if-no-files-found: error
           retention-days: 30
+      - name: Upload to Google Play internal testing
+        if: inputs.upload_to_play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: live.logmaster.app
+          releaseFiles: android/build/release-artifacts/*.aab
+          track: internal
+          status: ${{ inputs.play_release_status }}
+          releaseName: ${{ inputs.version_name }} (build ${{ steps.version.outputs.result }})
+      - name: Summarize release destination
+        env:
+          UPLOAD_TO_PLAY: ${{ inputs.upload_to_play }}
+          RELEASE_STATUS: ${{ inputs.play_release_status }}
+          VERSION_CODE: ${{ steps.version.outputs.result }}
+        run: |
+          if [[ "$UPLOAD_TO_PLAY" == 'true' ]]; then
+            echo "Google Play internal testing: build $VERSION_CODE uploaded with status $RELEASE_STATUS." >> "$GITHUB_STEP_SUMMARY"
+            if [[ "$RELEASE_STATUS" == 'draft' ]]; then
+              echo 'Open Logbook2.0 → Test and release → Testing → Internal testing → Edit release to review and roll out.' >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo 'Check tester availability in Play Console before running Notify Sailors Android testers.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "Build $VERSION_CODE saved to GitHub artifacts only; not uploaded to Google Play." >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Remove signing material
         if: always()
         run: rm -f "$RUNNER_TEMP/logmaster-upload.p12"

@@ -14,6 +14,7 @@ Add these environment secrets:
 | --- | --- |
 | `ANDROID_UPLOAD_KEYSTORE_BASE64` | Base64 of the existing `secrets/android-upload/upload.p12` |
 | `ANDROID_UPLOAD_STORE_PASSWORD` | Contents of `secrets/android-upload/store-password.txt` |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Full JSON key for the Google service account authorized to upload Logbook2.0 to Play (setup below) |
 | `ANDROID_TESTER_EMAILS` | Sailors tester addresses copied from Play Console, separated by commas or newlines |
 | `AWS_ROLE_ARN_NOTIFY` | An AWS role trusted for this repository's `android-release` environment, with permission to send via SES |
 | `AWS_ROLE_ARN_BUILD_NUMBERS` | IAM role (same OIDC trust as notify) with `dynamodb:UpdateItem`, `dynamodb:GetItem`, and `dynamodb:PutItem` on the `global-build-numbers` table |
@@ -41,6 +42,23 @@ Add environment variables:
 
 The tracked Android `google-services.json` supplies client Firebase configuration.
 No Firebase service-account private key is needed in the Android build.
+
+### Google Play upload access
+
+1. In Google Cloud, enable the **Google Play Android Developer API** and create a
+   dedicated service account for CI uploads.
+2. In **Play Console → Users and permissions → Invite new users**, enter that
+   service account's email. Limit app access to **Logbook2.0** (`live.logmaster.app`)
+   and grant **View app information (read-only)** and **Release apps to testing tracks**.
+3. Create a JSON key for that service account. Store its complete contents in the
+   GitHub `android-release` environment secret `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`.
+   Do not commit the key. This is separate from the Android signing keystore and
+   the client `google-services.json` file.
+4. Run the workflow with **Upload to Play** enabled and status **draft** to verify
+   access. The uploaded release appears in **Test and release → Testing → Internal testing**.
+
+Google's [API setup guide](https://developers.google.com/android-publisher/getting_started)
+describes the service account setup. No production-release permission is needed.
 
 For AWS OIDC, use the existing GitHub OIDC provider in your AWS account and a dedicated
 notification role. Its trust conditions must match audience `sts.amazonaws.com` and
@@ -86,10 +104,26 @@ allows messages from the configured sender.
 2. Enter a display version such as `1.0`. Leave **Play version code** as `auto`.
    The workflow bumps the stored build number in DynamoDB and uses that integer as
    the Play `versionCode` (must stay monotonic; do not reuse codes).
-3. Download the signed `.aab` and JSON metadata from the run's artifact (retained 30 days).
-   The artifact name includes the allocated version code.
-4. Upload the AAB in Play Console's internal testing release flow and roll out there.
-   A successful build does not upload, publish, or establish tester availability.
+3. Leave **Upload to Play** enabled. Choose **draft** (default) to upload and save an
+   internal-testing draft, or **completed** to release directly to internal testers.
+4. For a draft, open **Play Console → Logbook2.0 → Test and release → Testing →
+   Internal testing**, edit the release, review it, and roll it out. An uploaded
+   draft is not yet available to testers. Check availability before sending announcements.
+
+The signed `.aab` and JSON metadata are also saved as a GitHub artifact for 30 days,
+including when a subsequent Play upload fails. Disable **Upload to Play** for a
+build-only run; download/unzip that artifact and upload its AAB manually if needed.
+The artifact name includes the allocated version code. Missing Google credentials
+fail an upload-enabled run before allocating a build number or building.
+
+Automatic upload does not resolve a version-code collision: the counter must be
+ahead of previously uploaded Play builds. For a duplicate-code error, check **Add
+from library** in the Play release editor first. If that is the intended bundle,
+reuse it there. Otherwise follow the override instructions below. If an upload
+fails after Play has accepted the bundle, check the library/draft before retrying.
+Do not rerun an old workflow with a fixed version-code override after that code
+has been accepted. Google may also require outstanding drafts or app setup tasks
+to be resolved in Play Console; a draft app may require status **draft**.
 
 If Play rejects a code because the store is ahead of DynamoDB (manual upload, failed
 build after increment, etc.), run **Android test build** again and set **Play version
