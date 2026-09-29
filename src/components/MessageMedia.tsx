@@ -276,17 +276,20 @@ function MediaItem({
     attempt,
   ])
 
+  async function loadedBlob(): Promise<Blob> {
+    const cached = blobRef.current
+    if (cached) return cached
+    const loaded = await loadMessageMedia(userId, threadId, media)
+    blobRef.current = loaded
+    return loaded
+  }
+
   async function save() {
     if (saveState === 'saving') return
     setSaveState('saving')
     setSaveError('')
     try {
-      const blob =
-        blobRef.current ??
-        (await loadMessageMedia(userId, threadId, media).then((loaded) => {
-          blobRef.current = loaded
-          return loaded
-        }))
+      const blob = await loadedBlob()
       const result = await saveChatMedia(
         blob,
         media.fileName,
@@ -402,17 +405,7 @@ function MediaItem({
           {canSetCover && tripId ? (
             <SetTripCoverButton
               tripId={tripId}
-              source={async () => {
-                const blob =
-                  blobRef.current ??
-                  (await loadMessageMedia(userId, threadId, media).then(
-                    (loaded) => {
-                      blobRef.current = loaded
-                      return loaded
-                    },
-                  ))
-                return blob
-              }}
+              source={() => loadedBlob()}
             />
           ) : null}
           {savable ? (
