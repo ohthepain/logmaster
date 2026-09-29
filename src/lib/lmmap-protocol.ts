@@ -1,4 +1,3 @@
-import maplibregl from 'maplibre-gl'
 import { resolveLmmapRequest } from './lmmap-url'
 import { getTripMapTile } from './tile-idb'
 
@@ -8,7 +7,7 @@ type LoadLmmapDeps = {
   signal?: AbortSignal
 }
 
-let registered = false
+let registering: Promise<void> | null = null
 
 /** IndexedDB first, then the network. Misses are not written back into the pack store. */
 export async function loadLmmapResource(
@@ -34,14 +33,23 @@ export async function loadLmmapResource(
   return response.arrayBuffer()
 }
 
-export function registerLmmapProtocol() {
-  if (registered || typeof window === 'undefined') return
-  registered = true
-  maplibregl.addProtocol('lmmap', async (params, abortController) => {
-    const data = await loadLmmapResource(params.url, {
-      readTile: getTripMapTile,
-      signal: abortController.signal,
+/** Load MapLibre only when a chart is opened. Importing this module must not. */
+export function registerLmmapProtocol(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve()
+  if (registering) return registering
+  registering = import('maplibre-gl')
+    .then((maplibregl) => {
+      maplibregl.default.addProtocol('lmmap', async (params, abortController) => {
+        const data = await loadLmmapResource(params.url, {
+          readTile: getTripMapTile,
+          signal: abortController.signal,
+        })
+        return { data }
+      })
     })
-    return { data }
-  })
+    .catch((error: unknown) => {
+      registering = null
+      throw error
+    })
+  return registering
 }

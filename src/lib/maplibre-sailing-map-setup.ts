@@ -36,7 +36,7 @@ export const SAILING_MAP_TILE_CACHE_ZOOM_LEVELS = 10
 export async function loadSailingMapStyle(
   mapId: RasterMapId,
 ): Promise<StyleSpecification> {
-  registerLmmapProtocol()
+  await registerLmmapProtocol()
   try {
     const res = await fetch(appMapVectorStyleUrl(mapId), { cache: 'no-store' })
     if (!res.ok) {
