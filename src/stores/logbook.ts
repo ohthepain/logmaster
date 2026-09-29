@@ -47,6 +47,7 @@ import {
   removePendingTripIds,
 } from '../lib/logbook-idb'
 import { attachPlaceToEntryData } from '../lib/logbook-place'
+import { browserIsOnline } from '../lib/browser-online'
 import type { LogbookSnapshot, SyncLogbookOptions } from '../lib/logbook-sync'
 import {
   bootstrapLogbook,
@@ -531,7 +532,7 @@ export const useLogbookStore = create<LogbookState>((set, get) => ({
   booted: false,
   syncing: false,
   syncQueued: false,
-  online: typeof navigator === 'undefined' ? true : navigator.onLine,
+  online: browserIsOnline(),
   syncMessage: null,
   autoMapCoverTripIds: [],
 

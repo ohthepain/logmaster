@@ -15,6 +15,7 @@ import {
   isMapPageRoute,
   isTripStoryRoute,
 } from '../lib/trip-map-overlay'
+import { browserIsOnline } from '../lib/browser-online'
 import { useLogbookStore } from '../stores/logbook'
 import { getNativePlatform } from '../lib/platform'
 import { useIosNativeMapTouchPassthrough } from '../lib/native/ios-map-touch-passthrough'
@@ -92,7 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const setOnline = useLogbookStore.getState().setOnline
-    setOnline(navigator.onLine)
+    setOnline(browserIsOnline())
     const handleOnline = () => setOnline(true)
     const handleOffline = () => setOnline(false)
     window.addEventListener('online', handleOnline)

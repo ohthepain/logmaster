@@ -5,6 +5,7 @@ import type { TripTrack } from '../domain/trip-track'
 import { syncTripLifecycleFromEntries } from '../domain/trip-state'
 import { rebuildAllLegs } from './trip-legs'
 import { apiUrl } from './app-origin'
+import { browserIsOnline } from './browser-online'
 import { normalizeTripTrack } from '../domain/trip-track'
 import { syncPendingTripTracks } from './trip-track-sync'
 import {
@@ -33,7 +34,7 @@ type SyncPayload = LogbookSnapshot & {
 }
 
 function isOnline() {
-  return typeof navigator === 'undefined' || navigator.onLine
+  return browserIsOnline()
 }
 
 function mergeCoverPhotos(
