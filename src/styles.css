@@ -148,6 +148,23 @@
   }
 }
 
+.trip-logbook-sheet {
+  --sea-ink: #102b49;
+  --sea-ink-soft: #60738a;
+}
+
+:root[data-theme="dark"] .trip-logbook-sheet {
+  --sea-ink: #e6eef7;
+  --sea-ink-soft: #a0b2c7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .trip-logbook-sheet {
+    --sea-ink: #e6eef7;
+    --sea-ink-soft: #a0b2c7;
+  }
+}
+
 /* Map button artwork is drawn in light lines. Recolor it for the theme. */
 .map-chrome-surface {
   color: var(--map-chrome-fg);
@@ -901,6 +918,21 @@ a {
 }
 .message-floating-heart {
   animation: message-heart-float 2.4s ease-out both;
+}
+
+/* Trip cards are one control. Clamped title lines use overflow:hidden, which
+   on iOS becomes a scrollport and swallows the tap, so only the photo opens
+   the trip. clip keeps the clamp without a scrollport. */
+.trip-list-card > button {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  touch-action: manipulation;
+}
+.trip-list-card .line-clamp-2,
+.trip-list-card .line-clamp-3 {
+  overflow: clip;
 }
 
 /* A finger drag that starts on a photo, link, or log-entry button must pan the

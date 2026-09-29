@@ -1096,22 +1096,16 @@ export function TripDetailPage({
         />
 
         {trip.status === 'IN_PROGRESS' && !waypointMapInteractionActive ? (
-          <TripDetailBottomSheet
-            leadingAction={
-              <TripRecordButton
-                tripId={trip.id}
-                logEntryDisabled={busy}
-                onLogEntryClick={() => setCreateEntryOpen(true)}
-              />
-            }
-          >
-            <BoatMotionReadout tripId={trip.id} />
+          <TripDetailBottomSheet>
             <TripLegSection
+              headerAction={<TripRecordButton tripId={trip.id} />}
               tripId={trip.id}
               tripStatus={trip.status}
               onOpenEntry={openEntry}
               mediaByEntry={mediaByEntry}
             />
+
+            <BoatMotionReadout tripId={trip.id} />
 
             <NativeRecordingSettings
               tripInProgress={trip.status === 'IN_PROGRESS'}

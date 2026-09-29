@@ -14,6 +14,7 @@ import {
 } from '../lib/logbook-place'
 import { MessageMedia } from './MessageMedia'
 import { PlaybackTimelineLogEntryMarker } from './PlaybackTimelineLogEntryMarker'
+import { SetTripCoverButton } from './SetTripCoverButton'
 import { TripChatPositionMap } from './TripChatPositionMap'
 
 export function plainTripLog(entry: TripChatLog) {
@@ -210,36 +211,43 @@ export function TripLogContent({
         </p>
       )}
       {entry.legacyMedia.map((item) => (
-        <div
-          key={item.id}
-          className="w-72 max-w-full overflow-hidden rounded-xl"
-        >
-          {item.kind === 'voice' ? (
-            <audio
-              aria-label={t('tripLog_VOICE_NOTE')}
-              src={apiUrl(item.url)}
-              controls
-              preload="none"
-              className="w-full"
-            />
-          ) : item.kind === 'video' ? (
-            <video
-              aria-label={t('tripLog_MEDIA')}
-              src={apiUrl(item.url)}
-              controls
-              playsInline
-              preload="none"
-              className="max-h-96 w-full"
-            />
-          ) : (
-            <img
-              src={apiUrl(item.url)}
-              alt={t('tripLog_PHOTO')}
-              draggable={false}
-              loading="lazy"
-              className="max-h-96 w-full object-contain"
-            />
-          )}
+        <div key={item.id} className="w-72 max-w-full">
+          <div className="overflow-hidden rounded-xl">
+            {item.kind === 'voice' ? (
+              <audio
+                aria-label={t('tripLog_VOICE_NOTE')}
+                src={apiUrl(item.url)}
+                controls
+                preload="none"
+                className="w-full"
+              />
+            ) : item.kind === 'video' ? (
+              <video
+                aria-label={t('tripLog_MEDIA')}
+                src={apiUrl(item.url)}
+                controls
+                playsInline
+                preload="none"
+                className="max-h-96 w-full"
+              />
+            ) : (
+              <img
+                src={apiUrl(item.url)}
+                alt={t('tripLog_PHOTO')}
+                draggable={false}
+                loading="lazy"
+                className="max-h-96 w-full object-contain"
+              />
+            )}
+          </div>
+          {item.kind !== 'voice' && item.kind !== 'video' && tripId ? (
+            <div className="mt-1 flex justify-end">
+              <SetTripCoverButton
+                tripId={tripId}
+                source={async () => apiUrl(item.url)}
+              />
+            </div>
+          ) : null}
         </div>
       ))}
     </div>

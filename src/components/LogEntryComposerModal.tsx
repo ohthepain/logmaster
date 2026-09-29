@@ -1,14 +1,10 @@
 import { Camera, LocateFixed, Mic, PenLine, Trash2 } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { LogEntryContentStack } from './LogEntryContentStack'
-import type { EntryContentBlock } from './LogEntryContentStack'
-import { LogEntryPositionMap } from './LogEntryPositionMap'
-import { Modal } from './Modal'
 import { entryTitle } from '../domain/logbook'
-import { getCurrentPosition } from '../lib/logbook-context'
-import type { MapLngLat } from '../lib/logbook-map-geo'
 import { cn } from '../lib/cn'
+import { isDevModeAvailable } from '../lib/dev-mode'
+import { readImageFile } from '../lib/image-file'
 import {
   nextContentOrder,
   readNoteOrder,
@@ -16,20 +12,28 @@ import {
   withNoteOrder,
   withVoiceOrder,
 } from '../lib/log-entry-content-order'
-import { readImageFile } from '../lib/image-file'
-import { isDevModeAvailable } from '../lib/dev-mode'
+import { getCurrentPosition } from '../lib/logbook-context'
+import type { MapLngLat } from '../lib/logbook-map-geo'
 import { isVideoMediaFileName } from '../lib/media-entry'
 import { photoMetadataFromLogEntry } from '../lib/photo-exif-stamp'
 import {
-  stampAndExportPhotoMetadata,
   photoMetadataExportToastMessage,
+  stampAndExportPhotoMetadata,
 } from '../lib/photo-metadata-export'
+import {
+  canUseImageAsTripCover,
+  setEntryPhotoAsCover,
+} from '../lib/trip-cover-photo'
 import {
   seedPlaceFromEntryData,
   usePositionPlaceLabel,
 } from '../lib/use-position-place-label'
 import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore } from '../stores/logbook'
+import type { EntryContentBlock } from './LogEntryContentStack'
+import { LogEntryContentStack } from './LogEntryContentStack'
+import { LogEntryPositionMap } from './LogEntryPositionMap'
+import { Modal } from './Modal'
 
 type LogEntryComposerModalProps = {
   open: boolean
@@ -445,6 +449,9 @@ export function LogEntryComposerModal({
       order: item.order,
       src,
       onDelete: () => void handleRemoveMedia(item.id),
+      onSetCover: canUseImageAsTripCover(src)
+        ? () => setEntryPhotoAsCover(tripId, src)
+        : undefined,
       onSetMetadata: showPhotoMetadataAction
         ? () =>
             void handleSetPhotoMetadata(
@@ -467,6 +474,11 @@ export function LogEntryComposerModal({
       order: draftPhotoOrder ?? 0,
       src: photoPreview,
       onDelete: clearPhoto,
+      onSetCover:
+        !photoFile?.type.startsWith('video/') &&
+        canUseImageAsTripCover(photoPreview)
+          ? () => setEntryPhotoAsCover(tripId, photoPreview)
+          : undefined,
       onSetMetadata: showPhotoMetadataAction
         ? () =>
             void handleSetPhotoMetadata(

@@ -4,15 +4,11 @@ import { cn } from '../lib/cn'
 import { requestIosMapTouchSync } from '../lib/native/ios-map-touch-passthrough'
 import {
   APP_HEADER_INNER_HEIGHT_PX,
-  BOTTOM_SHEET_DRAG_ZONE_PX,
-  BOTTOM_SHEET_MIN_INSET_PX,
-  bottomSheetDragChromeHeight,
   bottomSheetFullHeight,
   bottomSheetPeekHeight,
   measureAppHeaderHeight,
   measureSafeAreaInsetBottom,
 } from '../lib/safe-area'
-import { TRIP_MAP_OVERLAY_SURFACE_CLASS } from '../lib/trip-map-overlay'
 import { DevComponentLabel } from './DevComponentLabel'
 
 const SCROLL_DRAG_THRESHOLD_PX = 8
@@ -22,6 +18,13 @@ const SNAP_RATIOS = {
 } as const
 
 type SnapName = 'peek' | 'half' | 'full'
+
+function logbookPeekHeight(containerHeight: number, safeAreaBottom: number) {
+  return Math.max(
+    bottomSheetPeekHeight(containerHeight, safeAreaBottom),
+    Math.min(240 + safeAreaBottom, Math.round(containerHeight * 0.4)),
+  )
+}
 
 function nearestSnap(
   heightPx: number,
@@ -38,13 +41,11 @@ function nearestSnap(
 type TripDetailBottomSheetProps = {
   children: ReactNode
   className?: string
-  leadingAction?: ReactNode
 }
 
 export function TripDetailBottomSheet({
   children,
   className,
-  leadingAction,
 }: TripDetailBottomSheetProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollerRef = useRef<HTMLDivElement>(null)
@@ -56,11 +57,11 @@ export function TripDetailBottomSheet({
   const [sheetHeight, setSheetHeight] = useState(0)
   const [dragging, setDragging] = useState(false)
 
-  const dragChromeHeight = bottomSheetDragChromeHeight(safeAreaBottom)
+  const dragChromeHeight = 32
 
   const snapHeights = useMemo(() => {
     if (containerHeight <= 0) return null
-    const peek = bottomSheetPeekHeight(containerHeight, safeAreaBottom)
+    const peek = logbookPeekHeight(containerHeight, safeAreaBottom)
     const full = bottomSheetFullHeight(containerHeight, headerHeight, peek)
     return {
       peek,
@@ -180,7 +181,7 @@ export function TripDetailBottomSheet({
 
     const updateSize = () => {
       const nextHeight = node.clientHeight
-      const peek = bottomSheetPeekHeight(nextHeight, safeAreaBottom)
+      const peek = logbookPeekHeight(nextHeight, safeAreaBottom)
       const max = bottomSheetFullHeight(nextHeight, headerHeight, peek)
       setContainerHeight(nextHeight)
       setSheetHeight((previous) => {
@@ -238,7 +239,7 @@ export function TripDetailBottomSheet({
         data-trip-bottom-sheet
         data-map-touch-zone
         className={cn(
-          'ios-map-touch-target pointer-events-auto absolute inset-x-0 bottom-0 z-30 flex flex-col overflow-hidden rounded-t-2xl border-t border-white/25',
+          'trip-logbook-sheet ios-map-touch-target pointer-events-auto absolute inset-x-0 bottom-0 z-30 flex flex-col overflow-hidden rounded-t-[28px] border-t border-[var(--line)] bg-[var(--surface-strong)] shadow-[0_-8px_32px_rgba(15,35,55,0.12)]',
           !dragging && 'transition-[height] duration-200 ease-out',
           className,
         )}
@@ -252,8 +253,25 @@ export function TripDetailBottomSheet({
           data-map-touch-zone
           className={cn(
             'ios-map-touch-target flex shrink-0 cursor-grab touch-none flex-col active:cursor-grabbing',
-            TRIP_MAP_OVERLAY_SURFACE_CLASS,
           )}
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (!snapHeights) return
+            const direction =
+              event.key === 'ArrowUp' ? 1 : event.key === 'ArrowDown' ? -1 : 0
+            if (!direction) return
+            event.preventDefault()
+            const heights = Object.values(snapHeights).sort((a, b) => a - b)
+            setSheetHeight(
+              direction > 0
+                ? (heights.find((height) => height > sheetHeight + 1) ??
+                    snapHeights.full)
+                : ([...heights]
+                    .reverse()
+                    .find((height) => height < sheetHeight - 1) ??
+                    snapHeights.peek),
+            )
+          }}
           role="slider"
           aria-orientation="vertical"
           aria-valuemin={snapHeights?.peek ?? 0}
@@ -279,37 +297,19 @@ export function TripDetailBottomSheet({
           }}
           aria-label="Drag log panel up or down"
         >
-          <div
-            className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center px-3"
-            style={{ height: `${BOTTOM_SHEET_DRAG_ZONE_PX}px` }}
-          >
+          <div className="flex h-8 items-center justify-center">
             <div
-              className="flex items-center justify-start gap-2"
-              onPointerDown={(event) => event.stopPropagation()}
-            >
-              {leadingAction}
-            </div>
-            <div
-              className="h-1.5 w-11 rounded-full bg-white/85 shadow-[0_1px_4px_rgba(0,0,0,0.45)]"
+              className="h-1 w-10 rounded-full bg-[var(--sea-ink-soft)]/30"
               aria-hidden
             />
-            <div />
           </div>
-          <div
-            className="shrink-0"
-            style={{
-              height: `${Math.max(safeAreaBottom, BOTTOM_SHEET_MIN_INSET_PX)}px`,
-            }}
-            aria-hidden
-          />
         </div>
 
         <div
           ref={scrollerRef}
           data-map-touch-zone
           className={cn(
-            'ios-map-touch-target pointer-events-auto min-h-0 flex-1 touch-none overflow-y-auto overscroll-contain px-3 pb-8 [-webkit-overflow-scrolling:touch] sm:px-4',
-            TRIP_MAP_OVERLAY_SURFACE_CLASS,
+            'ios-map-touch-target pointer-events-auto min-h-0 flex-1 touch-none overflow-y-auto overscroll-contain px-4 pb-8 [-webkit-overflow-scrolling:touch] sm:px-6',
           )}
           onWheel={(event) => event.stopPropagation()}
         >

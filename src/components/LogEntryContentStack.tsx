@@ -1,8 +1,8 @@
 import { Mic } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { sortContentBlocksByOrderDesc } from '../lib/log-entry-content-order'
 import { LogEntryPhotoMenu } from './LogEntryPhotoMenu'
 import { VoiceNotePlayback } from './VoiceNotePlayback'
-import { sortContentBlocksByOrderDesc } from '../lib/log-entry-content-order'
 
 export type EntryContentBlock =
   | {
@@ -11,6 +11,7 @@ export type EntryContentBlock =
       order: number
       src: string
       onDelete: () => void
+      onSetCover?: () => void | Promise<void>
       onSetMetadata?: () => void | Promise<void>
       metadataBusy?: boolean
     }
@@ -71,6 +72,7 @@ function EntryContentBlockView({ block }: { block: EntryContentBlock }) {
           />
           <LogEntryPhotoMenu
             onDelete={block.onDelete}
+            onSetCover={block.onSetCover}
             onSetMetadata={block.onSetMetadata}
             metadataBusy={block.metadataBusy}
           />

@@ -1,5 +1,6 @@
 import { ChevronDown, Merge, Pencil } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
 import { toast } from 'sonner'
 import type { Leg, LogEntry, Media } from '../domain/logbook'
 import { formatLegDateTimeRange } from '../lib/logbook-format'
@@ -12,13 +13,15 @@ import {
 import { cn } from '../lib/cn'
 import { useLogbookStore } from '../stores/logbook'
 import { DevComponentLabel } from './DevComponentLabel'
-import { LogEntryCard } from './LogEntryCard'
+import { LogEntryTimeline } from './LogEntryTimeline'
+import { LastLogEntryTimer } from './LastLogEntryTimer'
 import { Modal } from './Modal'
 
 const UNASSIGNED_SECTION_ID = '__unassigned__'
 
 type TripLegSectionProps = {
   tripId: string
+  headerAction?: ReactNode
   onOpenEntry: (entryId: string) => void
   mediaByEntry: Map<string, Media[]>
   tripStatus: 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED'
@@ -35,6 +38,7 @@ export function TripLegSection({
   onOpenEntry,
   mediaByEntry,
   tripStatus,
+  headerAction,
 }: TripLegSectionProps) {
   const legs = useLogbookStore((state) => state.legs)
   const entries = useLogbookStore((state) => state.entries)
@@ -78,7 +82,8 @@ export function TripLegSection({
     const newestLegId = tripLegsNewestFirst[0]?.id
     if (newestLegId) {
       next.add(newestLegId)
-    } else if (unassignedEntries.length > 0) {
+    }
+    if (unassignedEntries.length > 0) {
       next.add(UNASSIGNED_SECTION_ID)
     }
     setExpandedSectionIds(next)
@@ -111,130 +116,140 @@ export function TripLegSection({
     toast.success('Legs merged')
   }
 
-  if (tripEntries.length === 0) {
-    return (
-      <div className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] px-5 py-10 text-center">
-        <DevComponentLabel name="TripLegSection" />
-        <p className="m-0 text-sm text-[var(--sea-ink-soft)]">
-          {tripStatus === 'PLANNED'
-            ? 'Start the trip or log your first entry.'
-            : 'No log entries yet. Add the first note or event.'}
-        </p>
-      </div>
-    )
-  }
+  const latestTimestamp = sortEntriesNewestFirst(tripEntries).find((entry) =>
+    Number.isFinite(Date.parse(entry.timestamp)),
+  )?.timestamp
 
-  if (tripLegs.length === 0) {
-    return (
-      <div className="space-y-3">
-        <DevComponentLabel name="TripLegSection" />
-        {sortEntriesNewestFirst(tripEntries).map((entry) => (
-          <LogEntryCard
-            key={entry.id}
-            entry={entry}
-            media={mediaByEntry.get(entry.id) ?? []}
-            onOpen={() => onOpenEntry(entry.id)}
-          />
-        ))}
-      </div>
-    )
-  }
+  const renderTimeline = (sectionEntries: LogEntry[]) => (
+    <LogEntryTimeline
+      entries={sectionEntries}
+      mediaByEntry={mediaByEntry}
+      onOpenEntry={onOpenEntry}
+    />
+  )
 
   return (
     <>
       <DevComponentLabel name="TripLegSection" />
-      <div className="space-y-3">
-        {unassignedEntries.length > 0 ? (
-          <LegEntryGroup
-            title="Between legs"
-            subtitle={`${unassignedEntries.length} entr${unassignedEntries.length === 1 ? 'y' : 'ies'}`}
-            expanded={expandedSectionIds.has(UNASSIGNED_SECTION_ID)}
-            onToggle={() => toggleSection(UNASSIGNED_SECTION_ID)}
-            entries={unassignedEntries}
-            mediaByEntry={mediaByEntry}
-            onOpenEntry={onOpenEntry}
-          />
-        ) : null}
-
-        {tripLegsNewestFirst.map((leg) => {
-          const legEntries = entriesByLegId.get(leg.id) ?? []
-          const { from, to } = legEndpointPlaceLabels(leg, tripEntries)
-          const route = formatLegRouteLabel(from, to)
-          const timeRange = formatLegDateTimeRange(leg.startedAt, leg.endedAt)
-          const title = legDisplayTitle(leg)
-
-          return (
-            <div key={leg.id} className="space-y-2">
-              <div className="flex items-start gap-1">
-                <button
-                  type="button"
-                  onClick={() => toggleSection(leg.id)}
-                  aria-expanded={expandedSectionIds.has(leg.id)}
-                  className="ios-map-touch-target min-w-0 flex-1 touch-manipulation rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-left transition hover:bg-[var(--surface-strong)]"
-                >
-                  <span className="flex items-start gap-2">
-                    <ChevronDown
-                      className={cn(
-                        'mt-0.5 size-4 shrink-0 text-[var(--sea-ink-soft)] transition-transform',
-                        !expandedSectionIds.has(leg.id) && '-rotate-90',
-                      )}
-                      aria-hidden
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold leading-5 text-[var(--sea-ink)]">
-                        {title}
-                        {route ? ` · ${route}` : ''}
-                      </span>
-                      <span className="mt-0.5 block text-xs leading-5 text-[var(--sea-ink-soft)]">
-                        {timeRange}
-                        {legEntries.length > 0
-                          ? ` · ${legEntries.length} entr${legEntries.length === 1 ? 'y' : 'ies'}`
-                          : ''}
-                      </span>
-                    </span>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Edit ${title}`}
-                  onClick={() => openEdit(leg)}
-                  className="ios-map-touch-target inline-flex size-8 shrink-0 touch-manipulation items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]"
-                >
-                  <Pencil className="size-3.5" />
-                </button>
-                {leg.sequence > 0 ? (
+      <div className="space-y-5">
+        {tripLegs.length === 0 ? (
+          <section>
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] pb-4">
+              <div className="min-w-0">
+                <h2 className="m-0 text-lg font-bold tracking-tight text-[var(--sea-ink)]">
+                  Current trip
+                </h2>
+                <div className="mt-1 text-xs text-[var(--sea-ink-soft)]">
+                  <LastLogEntryTimer timestamp={latestTimestamp} />
+                </div>
+              </div>
+              {headerAction}
+            </div>
+            {tripEntries.length ? (
+              renderTimeline(sortEntriesNewestFirst(tripEntries))
+            ) : (
+              <p className="my-5 text-sm text-[var(--sea-ink-soft)]">
+                {tripStatus === 'PLANNED'
+                  ? 'Start the trip or log your first entry.'
+                  : 'No log entries yet. Add the first note or event.'}
+              </p>
+            )}
+          </section>
+        ) : (
+          tripLegsNewestFirst.map((leg, index) => {
+            const legEntries = entriesByLegId.get(leg.id) ?? []
+            const { from, to } = legEndpointPlaceLabels(leg, tripEntries)
+            const route = formatLegRouteLabel(from, to)
+            const title = legDisplayTitle(leg)
+            const expanded = expandedSectionIds.has(leg.id)
+            return (
+              <section key={leg.id}>
+                <div className="flex items-center gap-2 border-b border-[var(--line)] pb-3">
                   <button
                     type="button"
-                    aria-label={`Merge ${title} with previous leg`}
-                    onClick={() => void handleMerge(leg)}
-                    className="ios-map-touch-target inline-flex size-8 shrink-0 touch-manipulation items-center justify-center rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)]"
+                    onClick={() => toggleSection(leg.id)}
+                    aria-expanded={expanded}
+                    className="ios-map-touch-target min-w-0 flex-1 touch-manipulation py-1 text-left"
                   >
-                    <Merge className="size-3.5" />
-                  </button>
-                ) : null}
-              </div>
-
-              {expandedSectionIds.has(leg.id) ? (
-                <div className="space-y-3 pl-1">
-                  {legEntries.length === 0 ? (
-                    <p className="m-0 px-3 text-sm text-[var(--sea-ink-soft)]">
-                      No entries on this leg.
-                    </p>
-                  ) : (
-                    legEntries.map((entry) => (
-                      <LogEntryCard
-                        key={entry.id}
-                        entry={entry}
-                        media={mediaByEntry.get(entry.id) ?? []}
-                        onOpen={() => onOpenEntry(entry.id)}
+                    <span className="flex items-center gap-2">
+                      <span className="min-w-0 text-lg font-bold leading-snug tracking-tight text-[var(--sea-ink)] sm:text-xl">
+                        {route || title}
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          'size-4 shrink-0 text-[var(--sea-ink-soft)] transition-transform',
+                          !expanded && '-rotate-90',
+                        )}
+                        aria-hidden
                       />
-                    ))
+                    </span>
+                    <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-[var(--sea-ink-soft)]">
+                      {route && <span>{title}</span>}
+                      {index === 0 && tripStatus === 'IN_PROGRESS' ? (
+                        <LastLogEntryTimer timestamp={latestTimestamp} />
+                      ) : (
+                        <span>
+                          {formatLegDateTimeRange(leg.startedAt, leg.endedAt)}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                  {index === 0 ? headerAction : null}
+                  <button
+                    type="button"
+                    aria-label={`Edit ${title}`}
+                    onClick={() => openEdit(leg)}
+                    className="ios-map-touch-target inline-flex size-11 shrink-0 touch-manipulation items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface-strong)] text-[var(--sea-ink)] shadow-sm transition hover:bg-[var(--panel)]"
+                  >
+                    <Pencil className="size-[18px]" aria-hidden />
+                  </button>
+                  {leg.sequence > 0 && (
+                    <button
+                      type="button"
+                      aria-label={`Merge ${title} with previous leg`}
+                      onClick={() => void handleMerge(leg)}
+                      className="ios-map-touch-target inline-flex size-11 shrink-0 touch-manipulation items-center justify-center rounded-full border border-[var(--line)] text-[var(--sea-ink-soft)]"
+                    >
+                      <Merge className="size-4" aria-hidden />
+                    </button>
                   )}
                 </div>
-              ) : null}
-            </div>
-          )
-        })}
+                {index === 0 && unassignedEntries.length > 0 && (
+                  <div className="pt-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(UNASSIGNED_SECTION_ID)}
+                      aria-expanded={expandedSectionIds.has(
+                        UNASSIGNED_SECTION_ID,
+                      )}
+                      className="ios-map-touch-target flex min-h-11 w-full items-center gap-2 text-left text-xs font-semibold text-[var(--sea-ink-soft)]"
+                    >
+                      Between legs
+                      <ChevronDown
+                        className={cn(
+                          'size-3.5 transition-transform',
+                          !expandedSectionIds.has(UNASSIGNED_SECTION_ID) &&
+                            '-rotate-90',
+                        )}
+                        aria-hidden
+                      />
+                    </button>
+                    {expandedSectionIds.has(UNASSIGNED_SECTION_ID) &&
+                      renderTimeline(unassignedEntries)}
+                  </div>
+                )}
+                {expanded &&
+                  (legEntries.length ? (
+                    renderTimeline(legEntries)
+                  ) : (
+                    <p className="my-5 text-sm text-[var(--sea-ink-soft)]">
+                      No entries on this leg.
+                    </p>
+                  ))}
+              </section>
+            )
+          })
+        )}
       </div>
 
       {editLeg ? (
@@ -276,67 +291,5 @@ export function TripLegSection({
         </Modal>
       ) : null}
     </>
-  )
-}
-
-type LegEntryGroupProps = {
-  title: string
-  subtitle: string
-  expanded: boolean
-  onToggle: () => void
-  entries: LogEntry[]
-  mediaByEntry: Map<string, Media[]>
-  onOpenEntry: (entryId: string) => void
-}
-
-function LegEntryGroup({
-  title,
-  subtitle,
-  expanded,
-  onToggle,
-  entries,
-  mediaByEntry,
-  onOpenEntry,
-}: LegEntryGroupProps) {
-  return (
-    <div className="space-y-2">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        className="ios-map-touch-target w-full touch-manipulation rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-2 text-left transition hover:bg-[var(--surface-strong)]"
-      >
-        <span className="flex items-start gap-2">
-          <ChevronDown
-            className={cn(
-              'mt-0.5 size-4 shrink-0 text-[var(--sea-ink-soft)] transition-transform',
-              !expanded && '-rotate-90',
-            )}
-            aria-hidden
-          />
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold leading-5 text-[var(--sea-ink)]">
-              {title}
-            </span>
-            <span className="mt-0.5 block text-xs leading-5 text-[var(--sea-ink-soft)]">
-              {subtitle}
-            </span>
-          </span>
-        </span>
-      </button>
-
-      {expanded ? (
-        <div className="space-y-3 pl-1">
-          {entries.map((entry) => (
-            <LogEntryCard
-              key={entry.id}
-              entry={entry}
-              media={mediaByEntry.get(entry.id) ?? []}
-              onOpen={() => onOpenEntry(entry.id)}
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
   )
 }

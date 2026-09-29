@@ -10,35 +10,39 @@ import {
 } from 'lucide-react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { LogEntryContentStack } from './LogEntryContentStack'
-import type { EntryContentBlock } from './LogEntryContentStack'
-import { LogEntryPositionMap } from './LogEntryPositionMap'
-import { Modal } from './Modal'
-import { entryIcon, entryTitle, visibleLogEntryTypes } from '../domain/logbook'
 import type { LogEntryType } from '../domain/logbook'
-import {
-  getCurrentPosition,
-  subscribeToDevicePosition,
-} from '../lib/logbook-context'
-import { advanceIso, realNowIso } from '../lib/dev-time-travel'
-import { isDevModeAvailable } from '../lib/dev-mode'
-import { formatDateTime } from '../lib/logbook-format'
-import { readImageFile } from '../lib/image-file'
-import { photoMetadataFromLogEntry } from '../lib/photo-exif-stamp'
-import {
-  stampAndExportPhotoMetadata,
-  photoMetadataExportToastMessage,
-} from '../lib/photo-metadata-export'
-import type { MapLngLat } from '../lib/logbook-map-geo'
+import { entryIcon, entryTitle, visibleLogEntryTypes } from '../domain/logbook'
 import { cn } from '../lib/cn'
+import { isDevModeAvailable } from '../lib/dev-mode'
+import { advanceIso, realNowIso } from '../lib/dev-time-travel'
+import { readImageFile } from '../lib/image-file'
 import {
   nextContentOrder,
   withNoteOrder,
   withVoiceOrder,
 } from '../lib/log-entry-content-order'
+import {
+  getCurrentPosition,
+  subscribeToDevicePosition,
+} from '../lib/logbook-context'
+import { formatDateTime } from '../lib/logbook-format'
+import type { MapLngLat } from '../lib/logbook-map-geo'
+import { photoMetadataFromLogEntry } from '../lib/photo-exif-stamp'
+import {
+  photoMetadataExportToastMessage,
+  stampAndExportPhotoMetadata,
+} from '../lib/photo-metadata-export'
+import {
+  canUseImageAsTripCover,
+  setEntryPhotoAsCover,
+} from '../lib/trip-cover-photo'
 import { usePositionPlaceLabel } from '../lib/use-position-place-label'
 import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore } from '../stores/logbook'
+import type { EntryContentBlock } from './LogEntryContentStack'
+import { LogEntryContentStack } from './LogEntryContentStack'
+import { LogEntryPositionMap } from './LogEntryPositionMap'
+import { Modal } from './Modal'
 
 type LogEntryCreateModalProps = {
   open: boolean
@@ -538,6 +542,11 @@ export function LogEntryCreateModal({
       order: draftPhotoOrder ?? 0,
       src: photoPreview,
       onDelete: clearPhoto,
+      onSetCover:
+        !photoFile?.type.startsWith('video/') &&
+        canUseImageAsTripCover(photoPreview)
+          ? () => setEntryPhotoAsCover(tripId, photoPreview)
+          : undefined,
       onSetMetadata: showPhotoMetadataAction
         ? () => void handleSetDraftPhotoMetadata()
         : undefined,

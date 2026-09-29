@@ -5,7 +5,7 @@ import { useTranslation } from '../lib/i18n'
 import { DevComponentLabel } from './DevComponentLabel'
 
 const SHEET_CHROME_BUTTON_CLASS =
-  'ios-map-touch-target flex size-9 items-center justify-center rounded-full border backdrop-blur-sm transition'
+  'ios-map-touch-target flex size-11 shrink-0 items-center justify-center rounded-full border shadow-sm transition'
 
 type TripRecordButtonProps = {
   tripId: string
@@ -45,8 +45,8 @@ export function TripRecordButton({
         className={cn(
           SHEET_CHROME_BUTTON_CLASS,
           recording
-            ? 'border-red-300/80 bg-red-600/90 text-white'
-            : 'border-white/25 bg-black/30 text-white',
+            ? 'border-transparent bg-[#ff686b] text-white'
+            : 'border-[var(--line)] bg-[var(--surface-strong)] text-[var(--sea-ink)]',
         )}
       >
         {recording ? (
@@ -68,7 +68,7 @@ export function TripRecordButton({
           }}
           className={cn(
             SHEET_CHROME_BUTTON_CLASS,
-            'border-white/25 bg-black/30 text-white disabled:opacity-60',
+            'border-[var(--line)] bg-[var(--surface-strong)] text-[var(--sea-ink)] disabled:opacity-60',
           )}
         >
           <FileText className="size-4" strokeWidth={2.25} aria-hidden />

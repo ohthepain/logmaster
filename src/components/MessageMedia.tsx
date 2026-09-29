@@ -18,6 +18,7 @@ import {
   isSavableChatMedia,
   saveChatMedia,
 } from '../lib/messaging/save-chat-media'
+import { SetTripCoverButton } from './SetTripCoverButton'
 
 export function FilePreview({ file }: { file: File }) {
   const [url, setUrl] = useState('')
@@ -220,6 +221,10 @@ function MediaItem({
   const blobRef = useRef<Blob | null>(null)
   const savedTimer = useRef(0)
   const savable = isSavableChatMedia(media.contentType)
+  const tripId = threadId.startsWith('trip:')
+    ? threadId.slice('trip:'.length)
+    : null
+  const canSetCover = Boolean(tripId) && !video && !audio
   useEffect(() => () => window.clearTimeout(savedTimer.current), [])
   useEffect(() => {
     if (video || audio) return
@@ -392,18 +397,36 @@ function MediaItem({
           </div>
         )}
       </div>
-      {savable ? (
-        <div className="mt-1 flex justify-end">
-          <button
-            type="button"
-            aria-label={video ? 'Save video' : 'Save photo'}
-            disabled={saveState === 'saving'}
-            onClick={() => void save()}
-            className="inline-flex items-center gap-1 rounded-full border border-black/[0.08] bg-white px-2.5 py-1 text-xs font-semibold text-[var(--sea-ink)] shadow-sm disabled:opacity-60"
-          >
-            <Download size={14} aria-hidden />
-            {saveLabel}
-          </button>
+      {canSetCover || savable ? (
+        <div className="mt-1 flex justify-end gap-2">
+          {canSetCover && tripId ? (
+            <SetTripCoverButton
+              tripId={tripId}
+              source={async () => {
+                const blob =
+                  blobRef.current ??
+                  (await loadMessageMedia(userId, threadId, media).then(
+                    (loaded) => {
+                      blobRef.current = loaded
+                      return loaded
+                    },
+                  ))
+                return blob
+              }}
+            />
+          ) : null}
+          {savable ? (
+            <button
+              type="button"
+              aria-label={video ? 'Save video' : 'Save photo'}
+              disabled={saveState === 'saving'}
+              onClick={() => void save()}
+              className="inline-flex items-center gap-1 rounded-full border border-black/[0.08] bg-white px-2.5 py-1 text-xs font-semibold text-[var(--sea-ink)] shadow-sm disabled:opacity-60"
+            >
+              <Download size={14} aria-hidden />
+              {saveLabel}
+            </button>
+          ) : null}
         </div>
       ) : null}
       {saveError ? (

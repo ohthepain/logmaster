@@ -7,14 +7,16 @@ import {
 import { Map as MapIcon, MapPin, Sailboat } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AddButton } from '../../../components/AddButton'
-import { TripImportButton } from '../../../components/TripImportButton'
-import type { TripImportButtonHandle } from '../../../components/TripImportButton'
 import { GpxUrlImportButton } from '../../../components/GpxUrlImportButton'
 import { StartTripLauncher } from '../../../components/StartTripLauncher'
 import { TripActionsMenu } from '../../../components/TripActionsMenu'
+import type { TripImportButtonHandle } from '../../../components/TripImportButton'
+import { TripImportButton } from '../../../components/TripImportButton'
 import type { Trip } from '../../../domain/logbook'
 import type { TripTrack } from '../../../domain/trip-track'
+import { useSession } from '../../../lib/auth-client'
 import { cn } from '../../../lib/cn'
+import { useTranslation } from '../../../lib/i18n'
 import {
   resolveTripCoverKind,
   tripCoverPhotoUrl,
@@ -29,8 +31,6 @@ import {
   tripListLocationKicker,
   tripTrackDistanceMeters,
 } from '../../../lib/trip-list-stats'
-import { useSession } from '../../../lib/auth-client'
-import { useTranslation } from '../../../lib/i18n'
 import { useLogbookStore } from '../../../stores/logbook'
 
 type TripsSearch = { startTrip?: boolean }
@@ -196,7 +196,7 @@ function TripCard({
   return (
     <article
       className={cn(
-        'group relative overflow-hidden rounded-[1.4rem] border transition hover:-translate-y-[1px]',
+        'trip-list-card group relative overflow-hidden rounded-[1.4rem] border transition hover:-translate-y-[1px]',
         menuOpen && 'z-30',
         active
           ? 'border-[var(--active-border)] bg-[var(--active-panel)] shadow-sm'

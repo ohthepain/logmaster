@@ -5,6 +5,7 @@ import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 
 type LogEntryPhotoMenuProps = {
   onDelete: () => void
+  onSetCover?: () => void | Promise<void>
   onSetMetadata?: () => void | Promise<void>
   metadataBusy?: boolean
   className?: string
@@ -12,6 +13,7 @@ type LogEntryPhotoMenuProps = {
 
 export function LogEntryPhotoMenu({
   onDelete,
+  onSetCover,
   onSetMetadata,
   metadataBusy = false,
   className,
@@ -59,6 +61,17 @@ export function LogEntryPhotoMenu({
             POPUP_MENU_Z_CLASS,
           )}
         >
+          {onSetCover ? (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={disabled}
+              onClick={() => void runAction(onSetCover)}
+              className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-[var(--sea-ink)] outline-none hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
+            >
+              Set as trip cover
+            </button>
+          ) : null}
           {onSetMetadata ? (
             <button
               type="button"
