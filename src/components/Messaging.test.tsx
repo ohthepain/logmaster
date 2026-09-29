@@ -204,7 +204,12 @@ it('likes a received photo and saves it without a second heart', async () => {
     size: 5,
     fileName: 'sunset.jpg',
   }
-  mockLikes()
+  let myLikeCount = 0
+  const likeValue = () => ({
+    messageId: message.id,
+    likeCount: 2 + myLikeCount,
+    myLikeCount,
+  })
   mocks.api.mockImplementation(async (url: string) => {
     if (url === '/api/messaging/threads')
       return { threads: [thread], objects: [object] }
@@ -215,17 +220,17 @@ it('likes a received photo and saves it without a second heart', async () => {
         ],
         nextCursor: null,
       }
-    if (url.endsWith('/likes/query'))
-      return {
-        likes: [{ messageId: message.id, likeCount: 2, myLikeCount: 0 }],
-      }
-    if (url.endsWith('/like'))
-      return { messageId: message.id, likeCount: 3, myLikeCount: 1 }
+    if (url.endsWith('/likes/query')) return { likes: [likeValue()] }
+    if (url.endsWith('/like')) {
+      myLikeCount += 1
+      return likeValue()
+    }
     if (url.includes('/media/')) return { media: photo }
     return { ok: true }
   })
   render(<Messaging userId="user" selectedId="boat:boat" onSelect={vi.fn()} />)
   const save = await screen.findByRole('button', { name: 'Save photo' })
+  await screen.findByLabelText('2 likes')
   expect(screen.getAllByRole('button', { name: 'Like message' })).toHaveLength(
     1,
   )

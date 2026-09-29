@@ -4,9 +4,6 @@
 - UI works on browser, iOS, Android, and desktop/mobile browser
 - All menus should be centered
 - Prefer horizontal toggle switchs for on/off options
-
-# Map UI
-
 - buttons should prefer white background in light mode, dark backgrounds in dark mode
 
 # Breaking changes for mobile apps
