@@ -25,6 +25,7 @@ import { toast } from 'sonner'
 import { defaultBoatPhoto } from '../domain/boat'
 import type { Boat } from '../domain/boat'
 import type { ConnectionPerson } from '../domain/connections'
+import type { Trip } from '../domain/logbook'
 import { signOutToSignIn, useSession } from '../lib/auth-client'
 import { currentReturnPath, signInSearch } from '../lib/sign-in-redirect'
 import {
@@ -402,7 +403,7 @@ export function UserMenu({ mapOverlay = false }: { mapOverlay?: boolean }) {
                         empty={trips.length === 0}
                       >
                         <PhotoMontage
-                          items={trips.slice(0, 3).map((trip) => ({
+                          items={tripsForMenuFan(trips).map((trip) => ({
                             id: trip.id,
                             src: tripCoverPhotoUrl(trip),
                             label: trip.boatName,
@@ -710,6 +711,17 @@ function profileBoatMontageItems(boats: Boat[]): MontageItem[] {
   }))
 }
 
+/** Newest trip last, so it sits on the right of the fan and paints in front. */
+export function tripsForMenuFan(trips: Trip[]): Trip[] {
+  return [...trips]
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    )
+    .slice(0, 3)
+    .reverse()
+}
+
 function PhotoMontage({ items }: { items: MontageItem[] }) {
   return (
     <div
@@ -738,6 +750,7 @@ function PhotoMontage({ items }: { items: MontageItem[] }) {
               'absolute flex size-20 items-center justify-center overflow-hidden rounded-2xl border-2 border-[var(--surface-strong)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)] shadow-md sm:size-[7rem] sm:rounded-2xl sm:border-[3px]',
               transforms[index],
             )}
+            style={{ zIndex: index + 1 }}
             title={item.label}
           >
             {item.src ? (

@@ -1,13 +1,12 @@
 import type { ReactNode } from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '../lib/cn'
 import { requestIosMapTouchSync } from '../lib/native/ios-map-touch-passthrough'
 import {
   APP_HEADER_INNER_HEIGHT_PX,
   bottomSheetFullHeight,
-  bottomSheetPeekHeight,
+  logbookSheetPeekHeight,
   measureAppHeaderHeight,
-  measureSafeAreaInsetBottom,
 } from '../lib/safe-area'
 import { DevComponentLabel } from './DevComponentLabel'
 
@@ -19,11 +18,15 @@ const SNAP_RATIOS = {
 
 type SnapName = 'peek' | 'half' | 'full'
 
-function logbookPeekHeight(containerHeight: number, safeAreaBottom: number) {
-  return Math.max(
-    bottomSheetPeekHeight(containerHeight, safeAreaBottom),
-    Math.min(240 + safeAreaBottom, Math.round(containerHeight * 0.4)),
-  )
+function readHeaderBottomOffset(container: HTMLElement): number | null {
+  const sheet = container.querySelector('[data-trip-bottom-sheet]')
+  const header = sheet?.querySelector('[data-logbook-sheet-header]')
+  if (!(sheet instanceof HTMLElement) || !(header instanceof HTMLElement)) {
+    return null
+  }
+  const offset =
+    header.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top
+  return offset > 0 ? offset : null
 }
 
 function nearestSnap(
@@ -51,24 +54,26 @@ export function TripDetailBottomSheet({
   const scrollerRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ startY: number; startHeight: number } | null>(null)
   const heightRef = useRef(0)
+  const restingAtPeekRef = useRef(true)
+  const lastContainerHeightRef = useRef(0)
   const [containerHeight, setContainerHeight] = useState(0)
   const [headerHeight, setHeaderHeight] = useState(APP_HEADER_INNER_HEIGHT_PX)
-  const [safeAreaBottom, setSafeAreaBottom] = useState(0)
+  const [headerOffset, setHeaderOffset] = useState<number | null>(null)
   const [sheetHeight, setSheetHeight] = useState(0)
   const [dragging, setDragging] = useState(false)
 
   const dragChromeHeight = 32
+  const peek = logbookSheetPeekHeight(headerOffset, dragChromeHeight)
 
   const snapHeights = useMemo(() => {
     if (containerHeight <= 0) return null
-    const peek = logbookPeekHeight(containerHeight, safeAreaBottom)
     const full = bottomSheetFullHeight(containerHeight, headerHeight, peek)
     return {
       peek,
       half: Math.min(full, Math.round(containerHeight * SNAP_RATIOS.half)),
       full,
     }
-  }, [containerHeight, headerHeight, safeAreaBottom])
+  }, [containerHeight, headerHeight, peek])
 
   useEffect(() => {
     heightRef.current = sheetHeight
@@ -154,13 +159,6 @@ export function TripDetailBottomSheet({
   }, [])
 
   useEffect(() => {
-    const readSafeArea = () => setSafeAreaBottom(measureSafeAreaInsetBottom())
-    readSafeArea()
-    window.addEventListener('resize', readSafeArea)
-    return () => window.removeEventListener('resize', readSafeArea)
-  }, [])
-
-  useEffect(() => {
     const readHeader = () => setHeaderHeight(measureAppHeaderHeight())
     readHeader()
     const header = document.querySelector('[data-app-header]')
@@ -173,40 +171,48 @@ export function TripDetailBottomSheet({
     }
   }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = containerRef.current
     if (!node) return
 
-    let lastContainerHeight = 0
-
     const updateSize = () => {
       const nextHeight = node.clientHeight
-      const peek = logbookPeekHeight(nextHeight, safeAreaBottom)
-      const max = bottomSheetFullHeight(nextHeight, headerHeight, peek)
+      const offset = readHeaderBottomOffset(node)
+      const nextPeek = logbookSheetPeekHeight(offset, dragChromeHeight)
+      const max = bottomSheetFullHeight(nextHeight, headerHeight, nextPeek)
+      setHeaderOffset((current) =>
+        current != null && offset != null && Math.ceil(current) === Math.ceil(offset)
+          ? current
+          : offset,
+      )
       setContainerHeight(nextHeight)
       setSheetHeight((previous) => {
-        if (previous <= 0) return peek
-        if (lastContainerHeight <= 0)
-          return Math.min(max, Math.max(peek, previous))
-        const ratio = previous / lastContainerHeight
-        const scaled = Math.round(ratio * nextHeight)
-        return Math.min(max, Math.max(peek, scaled))
+        if (previous <= 0 || restingAtPeekRef.current) return nextPeek
+        const lastContainerHeight = lastContainerHeightRef.current
+        if (lastContainerHeight <= 0) {
+          return Math.min(max, Math.max(nextPeek, previous))
+        }
+        const scaled = Math.round((previous / lastContainerHeight) * nextHeight)
+        return Math.min(max, Math.max(nextPeek, scaled))
       })
-      lastContainerHeight = nextHeight
+      lastContainerHeightRef.current = nextHeight
     }
 
     updateSize()
     const observer = new ResizeObserver(updateSize)
     observer.observe(node)
+    const sheetHeader = node.querySelector('[data-logbook-sheet-header]')
+    if (sheetHeader instanceof HTMLElement) observer.observe(sheetHeader)
     window.addEventListener('resize', updateSize)
     return () => {
       observer.disconnect()
       window.removeEventListener('resize', updateSize)
     }
-  }, [headerHeight, safeAreaBottom])
+  }, [children, headerHeight])
 
   const beginDrag = (clientY: number) => {
     if (!snapHeights) return
+    restingAtPeekRef.current = false
     dragRef.current = { startY: clientY, startHeight: heightRef.current }
     setDragging(true)
   }
@@ -228,7 +234,9 @@ export function TripDetailBottomSheet({
       setDragging(false)
       return
     }
-    setSheetHeight(nearestSnap(heightRef.current, snapHeights))
+    const next = nearestSnap(heightRef.current, snapHeights)
+    restingAtPeekRef.current = Math.abs(next - snapHeights.peek) < 1
+    setSheetHeight(next)
     dragRef.current = null
     setDragging(false)
   }
@@ -262,15 +270,16 @@ export function TripDetailBottomSheet({
             if (!direction) return
             event.preventDefault()
             const heights = Object.values(snapHeights).sort((a, b) => a - b)
-            setSheetHeight(
+            const next =
               direction > 0
                 ? (heights.find((height) => height > sheetHeight + 1) ??
                     snapHeights.full)
                 : ([...heights]
                     .reverse()
                     .find((height) => height < sheetHeight - 1) ??
-                    snapHeights.peek),
-            )
+                    snapHeights.peek)
+            restingAtPeekRef.current = Math.abs(next - snapHeights.peek) < 1
+            setSheetHeight(next)
           }}
           role="slider"
           aria-orientation="vertical"

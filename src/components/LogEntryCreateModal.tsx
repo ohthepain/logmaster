@@ -15,6 +15,7 @@ import { entryIcon, entryTitle, visibleLogEntryTypes } from '../domain/logbook'
 import { cn } from '../lib/cn'
 import { isDevModeAvailable } from '../lib/dev-mode'
 import { advanceIso, realNowIso } from '../lib/dev-time-travel'
+import { cropImageFile } from '../lib/crop-image-file'
 import { readImageFile } from '../lib/image-file'
 import {
   nextContentOrder,
@@ -36,6 +37,7 @@ import {
   canUseImageAsTripCover,
   setEntryPhotoAsCover,
 } from '../lib/trip-cover-photo'
+import type { ProfilePhotoCrop } from '../lib/profile-photo-crop'
 import { usePositionPlaceLabel } from '../lib/use-position-place-label'
 import { useAppOptionsStore } from '../stores/app-options'
 import { useLogbookStore } from '../stores/logbook'
@@ -43,6 +45,7 @@ import type { EntryContentBlock } from './LogEntryContentStack'
 import { LogEntryContentStack } from './LogEntryContentStack'
 import { LogEntryPositionMap } from './LogEntryPositionMap'
 import { Modal } from './Modal'
+import { PhotoRegionEditor } from './PhotoRegionEditor'
 
 type LogEntryCreateModalProps = {
   open: boolean
@@ -80,6 +83,7 @@ export function LogEntryCreateModal({
   )
   const fileInputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const photoEntryInputRef = useRef<HTMLInputElement>(null)
   const positionEditedRef = useRef(false)
   const [step, setStep] = useState<Step>('pick-type')
   const [selectedType, setSelectedType] = useState<LogEntryType | null>(null)
@@ -90,6 +94,7 @@ export function LogEntryCreateModal({
   const [draftPhotoOrder, setDraftPhotoOrder] = useState<number | null>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [photoCrop, setPhotoCrop] = useState<ProfilePhotoCrop | null>(null)
   const [voiceRecordingUrl, setVoiceRecordingUrl] = useState<string | null>(
     null,
   )
@@ -170,6 +175,7 @@ export function LogEntryCreateModal({
     setVoiceOrder(null)
     setDraftPhotoOrder(null)
     setPhotoFile(null)
+    setPhotoCrop(null)
     if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
     setPhotoPreview(null)
     clearVoiceRecording()
@@ -180,6 +186,7 @@ export function LogEntryCreateModal({
     setSaving(false)
     setMetadataBusyKey(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
+    if (photoEntryInputRef.current) photoEntryInputRef.current.value = ''
   }
 
   useEffect(() => {
@@ -237,19 +244,38 @@ export function LogEntryCreateModal({
       !file ||
       (!file.type.startsWith('image/') && !file.type.startsWith('video/'))
     ) {
-      return
+      return false
     }
     if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
+    setPhotoCrop(null)
     setPhotoFile(file)
     setPhotoPreview(URL.createObjectURL(file))
     setDraftPhotoOrder(allocateContentOrder())
     if (fileInputRef.current) fileInputRef.current.value = ''
+    return true
+  }
+
+  const openPhotoPicker = () => {
+    photoEntryInputRef.current?.click()
+  }
+
+  const handlePhotoEntryPick = (file: File | undefined) => {
+    if (photoEntryInputRef.current) photoEntryInputRef.current.value = ''
+    if (!file || (file.type !== '' && !file.type.startsWith('image/'))) return
+    const imageFile =
+      file.type === ''
+        ? new File([file], file.name || 'photo.jpg', { type: 'image/jpeg' })
+        : file
+    if (!handlePhotoPick(imageFile)) return
+    setSelectedType('PHOTO')
+    setStep('compose')
   }
 
   const clearPhoto = () => {
     if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview)
     setPhotoFile(null)
     setPhotoPreview(null)
+    setPhotoCrop(null)
     setDraftPhotoOrder(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
@@ -325,13 +351,20 @@ export function LogEntryCreateModal({
       ) => {
         if (!photoFile || !photoPreview) return
         const isVideo = photoFile.type.startsWith('video/')
+        if (selectedType === 'PHOTO' && !isVideo && !photoCrop) {
+          throw new Error('Still preparing the photo')
+        }
+        const uploadFile =
+          selectedType === 'PHOTO' && !isVideo && photoCrop
+            ? await cropImageFile(photoPreview, photoCrop, photoFile.name)
+            : photoFile
         await store.savePhotoVideo(
           {
             tripId,
-            fileName: photoFile.name,
-            mimeType: photoFile.type,
-            size: photoFile.size,
-            thumbnailUrl: isVideo ? null : await readImageFile(photoFile),
+            fileName: uploadFile.name,
+            mimeType: uploadFile.type,
+            size: uploadFile.size,
+            thumbnailUrl: isVideo ? null : await readImageFile(uploadFile),
             remoteUrl: isVideo ? photoPreview : null,
             capturePosition,
             timestamp: showTimeTravel ? entryTimestampIso : undefined,
@@ -460,7 +493,13 @@ export function LogEntryCreateModal({
                 <button
                   key={type}
                   type="button"
-                  onClick={() => pickType(type)}
+                  onClick={() => {
+                    if (type === 'PHOTO') {
+                      openPhotoPicker()
+                      return
+                    }
+                    pickType(type)
+                  }}
                   className="rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-3 text-left text-sm font-semibold text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]"
                 >
                   <span className="block text-lg">{entryIcon(type)}</span>
@@ -469,6 +508,16 @@ export function LogEntryCreateModal({
               ))}
             </div>
           )}
+          <input
+            ref={photoEntryInputRef}
+            data-photo-entry-input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(event) =>
+              handlePhotoEntryPick(event.target.files?.[0])
+            }
+          />
         </div>
       </Modal>
     )
@@ -535,7 +584,9 @@ export function LogEntryCreateModal({
 
   const contentBlocks: EntryContentBlock[] = []
 
-  if (photoPreview) {
+  const photoEntry = selectedType === 'PHOTO'
+
+  if (photoPreview && !photoEntry) {
     contentBlocks.push({
       key: 'draft-photo',
       kind: 'photo',
@@ -595,49 +646,67 @@ export function LogEntryCreateModal({
       showKicker={false}
       devComponentName="LogEntryCreateModal"
       headerBelow={
-        <div className="flex items-center gap-2">
-          <AttachmentIconButton
-            icon={Camera}
-            label="Add photo"
-            active={!!photoPreview}
-            onClick={() => fileInputRef.current?.click()}
-          />
-          <AttachmentIconButton
-            icon={PenLine}
-            label="Add note"
-            active={noteEditing || draftNote.trim().length > 0}
-            onClick={openNoteEditor}
-          />
-          <AttachmentIconButton
-            icon={Mic}
-            label={isRecordingVoice ? 'Stop recording' : 'Record voice note'}
-            active={isRecordingVoice || !!voiceRecordingUrl}
-            recording={isRecordingVoice}
-            onClick={() => void handleVoiceToggle()}
-          />
-          <input
-            ref={fileInputRef}
-            id={fileInputId}
-            type="file"
-            accept="image/*,video/*"
-            capture="environment"
-            className="sr-only"
-            onChange={(e) => handlePhotoPick(e.target.files?.[0])}
-          />
-        </div>
+        photoEntry ? undefined : (
+          <div className="flex items-center gap-2">
+            <AttachmentIconButton
+              icon={Camera}
+              label="Add photo"
+              active={!!photoPreview}
+              onClick={() => fileInputRef.current?.click()}
+            />
+            <AttachmentIconButton
+              icon={PenLine}
+              label="Add note"
+              active={noteEditing || draftNote.trim().length > 0}
+              onClick={openNoteEditor}
+            />
+            <AttachmentIconButton
+              icon={Mic}
+              label={isRecordingVoice ? 'Stop recording' : 'Record voice note'}
+              active={isRecordingVoice || !!voiceRecordingUrl}
+              recording={isRecordingVoice}
+              onClick={() => void handleVoiceToggle()}
+            />
+            <input
+              ref={fileInputRef}
+              id={fileInputId}
+              type="file"
+              accept="image/*,video/*"
+              capture="environment"
+              className="sr-only"
+              onChange={(e) => handlePhotoPick(e.target.files?.[0])}
+            />
+          </div>
+        )
       }
     >
       <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => setStep('pick-type')}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand)]"
-        >
-          <ArrowLeft className="size-4" />
-          Change type
-        </button>
+        {photoEntry ? null : (
+          <button
+            type="button"
+            onClick={() => setStep('pick-type')}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand)]"
+          >
+            <ArrowLeft className="size-4" />
+            Change type
+          </button>
+        )}
 
         {timeTravelNotice}
+
+        {photoEntry && photoPreview ? (
+          <div className="space-y-3">
+            <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">
+              Drag the square to choose the area. Pull the corner handle to
+              zoom in or out.
+            </p>
+            <PhotoRegionEditor
+              imageUrl={photoPreview}
+              busy={saving}
+              onCropChange={setPhotoCrop}
+            />
+          </div>
+        ) : null}
 
         <LogEntryContentStack
           blocks={contentBlocks}
@@ -693,7 +762,7 @@ export function LogEntryCreateModal({
 
         <button
           type="button"
-          disabled={saving}
+          disabled={saving || (photoEntry && !photoCrop)}
           onClick={() => void handleSave()}
           className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--btn-bg)] px-4 py-3 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
         >

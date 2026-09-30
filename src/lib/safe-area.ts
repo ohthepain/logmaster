@@ -79,6 +79,20 @@ export function bottomSheetPeekHeight(
   )
 }
 
+/**
+ * Collapsed log sheet height: the drag handle and the section header.
+ * Log rows sit below that header, so they stay out of the default peek.
+ */
+export function logbookSheetPeekHeight(
+  headerBottomOffset: number | null,
+  dragChromeHeight: number,
+): number {
+  if (headerBottomOffset == null || !Number.isFinite(headerBottomOffset)) {
+    return dragChromeHeight
+  }
+  return Math.max(dragChromeHeight, Math.ceil(headerBottomOffset))
+}
+
 export function bottomSheetDragChromeHeight(safeAreaBottom: number): number {
   return (
     BOTTOM_SHEET_DRAG_ZONE_PX +

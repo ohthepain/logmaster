@@ -376,8 +376,8 @@ export function AddTripCrewModal({
   const handleInvite = async (event: FormEvent) => {
     event.preventDefault()
     const trimmed = email.trim()
-    if (!trimmed) {
-      toast.error('Enter an email address')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      toast.error('Enter a valid email address')
       return
     }
     setSending(true)
@@ -466,6 +466,7 @@ export function AddTripCrewModal({
       ) : null}
 
       <form
+        noValidate
         onSubmit={(event) => void handleInvite(event)}
         className="mt-6 grid gap-3 border-t border-[var(--line)] pt-5"
       >
@@ -475,12 +476,13 @@ export function AddTripCrewModal({
           </span>
           <input
             type="email"
+            inputMode="email"
             value={email}
             disabled={sending}
             placeholder="alex@example.com"
             autoComplete="email"
             onChange={(event) => setEmail(event.target.value)}
-            className="w-full rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-3 text-sm text-[var(--sea-ink)] outline-none transition focus:border-[var(--brand)] disabled:opacity-60"
+            className="ios-map-touch-target w-full rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-3 text-sm text-[var(--sea-ink)] outline-none transition focus:border-[var(--brand)] disabled:opacity-60"
           />
           <span className="text-xs leading-5 text-[var(--sea-ink-soft)]">
             Sends a crew invite. When they accept, they join this trip.
@@ -495,8 +497,8 @@ export function AddTripCrewModal({
         ) : null}
         <button
           type="submit"
-          disabled={sending || !email.trim()}
-          className="justify-self-start rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--sea-ink)] disabled:opacity-60"
+          disabled={sending}
+          className="ios-map-touch-target justify-self-start rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
         >
           {sending ? 'Sending…' : 'Send crew invite'}
         </button>

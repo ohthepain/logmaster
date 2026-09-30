@@ -134,7 +134,10 @@ export function TripLegSection({
       <div className="space-y-5">
         {tripLegs.length === 0 ? (
           <section>
-            <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] pb-4">
+            <div
+              data-logbook-sheet-header
+              className="flex items-center justify-between gap-3 border-b border-[var(--line)] pb-4"
+            >
               <div className="min-w-0">
                 <h2 className="m-0 text-lg font-bold tracking-tight text-[var(--sea-ink)]">
                   Current trip
@@ -164,7 +167,10 @@ export function TripLegSection({
             const expanded = expandedSectionIds.has(leg.id)
             return (
               <section key={leg.id}>
-                <div className="flex items-center gap-2 border-b border-[var(--line)] pb-3">
+                <div
+                  data-logbook-sheet-header={index === 0 ? '' : undefined}
+                  className="flex items-center gap-2 border-b border-[var(--line)] pb-3"
+                >
                   <button
                     type="button"
                     onClick={() => toggleSection(leg.id)}
