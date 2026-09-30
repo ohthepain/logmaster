@@ -514,9 +514,7 @@ export function LogEntryCreateModal({
             type="file"
             accept="image/*"
             className="sr-only"
-            onChange={(event) =>
-              handlePhotoEntryPick(event.target.files?.[0])
-            }
+            onChange={(event) => handlePhotoEntryPick(event.target.files?.[0])}
           />
         </div>
       </Modal>
@@ -697,8 +695,8 @@ export function LogEntryCreateModal({
         {photoEntry && photoPreview ? (
           <div className="space-y-3">
             <p className="m-0 text-sm leading-6 text-[var(--sea-ink-soft)]">
-              Drag the square to choose the area. Pull the corner handle to
-              zoom in or out.
+              Drag the square to choose the area. Pull the corner handle to zoom
+              in or out.
             </p>
             <PhotoRegionEditor
               imageUrl={photoPreview}

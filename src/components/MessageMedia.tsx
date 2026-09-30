@@ -403,10 +403,7 @@ function MediaItem({
       {canSetCover || savable ? (
         <div className="mt-1 flex justify-end gap-2">
           {canSetCover && tripId ? (
-            <SetTripCoverButton
-              tripId={tripId}
-              source={() => loadedBlob()}
-            />
+            <SetTripCoverButton tripId={tripId} source={() => loadedBlob()} />
           ) : null}
           {savable ? (
             <button

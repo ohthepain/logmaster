@@ -181,7 +181,9 @@ export function TripDetailBottomSheet({
       const nextPeek = logbookSheetPeekHeight(offset, dragChromeHeight)
       const max = bottomSheetFullHeight(nextHeight, headerHeight, nextPeek)
       setHeaderOffset((current) =>
-        current != null && offset != null && Math.ceil(current) === Math.ceil(offset)
+        current != null &&
+        offset != null &&
+        Math.ceil(current) === Math.ceil(offset)
           ? current
           : offset,
       )
@@ -273,11 +275,11 @@ export function TripDetailBottomSheet({
             const next =
               direction > 0
                 ? (heights.find((height) => height > sheetHeight + 1) ??
-                    snapHeights.full)
+                  snapHeights.full)
                 : ([...heights]
                     .reverse()
                     .find((height) => height < sheetHeight - 1) ??
-                    snapHeights.peek)
+                  snapHeights.peek)
             restingAtPeekRef.current = Math.abs(next - snapHeights.peek) < 1
             setSheetHeight(next)
           }}
