@@ -397,7 +397,7 @@ final class AppleMapInstance {
     let mapView: MKMapView
     let delegate: AppleMapViewDelegate
     let touchForwarder: MapTouchForwarderView
-    var trackOverlay: MKPolyline?
+    var trackOverlays: [MKPolyline] = []
     var entryOverlays: [MKCircle] = []
     var entryCircleMarkers: [EntryCircleMarker] = []
     var entryAnnotations: [LogEntryMarkerAnnotation] = []
@@ -555,16 +555,14 @@ final class AppleMapInstance {
         touchForwarder.passThroughRects = rects
     }
 
-    func setTrack(_ coordinates: [CLLocationCoordinate2D]) {
-        if let trackOverlay {
-            mapView.removeOverlay(trackOverlay)
-            self.trackOverlay = nil
+    func setTrackSegments(_ segments: [[CLLocationCoordinate2D]]) {
+        mapView.removeOverlays(trackOverlays)
+        trackOverlays = segments.compactMap { coordinates in
+            guard coordinates.count >= 2 else { return nil }
+            var mutable = coordinates
+            return MKPolyline(coordinates: &mutable, count: mutable.count)
         }
-        guard coordinates.count >= 2 else { return }
-        var mutable = coordinates
-        let polyline = MKPolyline(coordinates: &mutable, count: mutable.count)
-        trackOverlay = polyline
-        mapView.addOverlay(polyline)
+        mapView.addOverlays(trackOverlays)
         liftCourseLine()
     }
 

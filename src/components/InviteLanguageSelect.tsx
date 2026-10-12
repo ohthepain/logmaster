@@ -29,7 +29,7 @@ export function InviteLanguageSelect({
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value as InviteLocale)}
-        className="w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20 disabled:opacity-60"
+        className="pointer-events-auto w-full rounded-2xl border border-[var(--line)] bg-[var(--chip-bg)] px-4 py-3 text-[var(--sea-ink)] outline-none focus:ring-2 focus:ring-[var(--sea-ink)]/20 disabled:opacity-60"
       >
         {options.map((item) => (
           <option key={item.code} value={item.code}>

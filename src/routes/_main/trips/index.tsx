@@ -196,7 +196,7 @@ function TripCard({
   return (
     <article
       className={cn(
-        'trip-list-card group relative overflow-hidden rounded-[1.4rem] border transition hover:-translate-y-[1px]',
+        'trip-list-card group relative overflow-clip rounded-[1.4rem] border transition hover:-translate-y-[1px]',
         menuOpen && 'z-30',
         active
           ? 'border-[var(--active-border)] bg-[var(--active-panel)] shadow-sm'

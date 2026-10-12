@@ -40,6 +40,7 @@ import {
 } from '../lib/map-cover-capture'
 import { renderLogEntryMapMarkerDataUrl } from '../lib/map-log-entry-icons'
 import { readMapPassThroughZones } from '../lib/native/apple-map-layout'
+import { appleMapTrackOverlays } from '../lib/native/apple-map-track'
 import { IOS_MAP_TOUCH_SYNC_EVENT } from '../lib/native/ios-map-touch-suspend'
 import type {
   MapCoordinate,
@@ -137,19 +138,6 @@ function fallbackMapCoordinate(trip: Trip): MapCoordinate {
     latitude: DEV_FALLBACK_POSITION.latitude,
     longitude: DEV_FALLBACK_POSITION.longitude,
   }
-}
-
-function trackCoordinatesFromGeoJson(
-  collection: GeoJSON.FeatureCollection,
-): MapCoordinate[] {
-  return collection.features.flatMap((feature) => {
-    if (feature.geometry?.type !== 'LineString') return []
-    return feature.geometry.coordinates.flatMap(([longitude, latitude]) => {
-      if (typeof latitude !== 'number' || typeof longitude !== 'number')
-        return []
-      return [{ latitude, longitude }]
-    })
-  })
 }
 
 export const TripAppleMapKit = forwardRef<
@@ -346,7 +334,7 @@ export const TripAppleMapKit = forwardRef<
     if (!mapReady) return
     await LogmasterAppleMap.setOverlays({
       mapId,
-      track: trackCoordinatesFromGeoJson(legTrackGeoJson),
+      ...appleMapTrackOverlays(legTrackGeoJson),
       entryPoints: await entryMarkersFromGeoJson(legEntryGeoJson, mediaByEntry),
     })
   }, [mapId, mapReady, legTrackGeoJson, legEntryGeoJson, mediaByEntry])

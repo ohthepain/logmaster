@@ -221,7 +221,14 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        let track = Self.parseCoordinates(call.getArray("track") as? [[String: Any]] ?? [])
+        // Preserve gaps between track chunks and legs. Older web clients send
+        // only the legacy single-path field.
+        let trackSegments: [[CLLocationCoordinate2D]]
+        if let segments = call.getArray("trackSegments") as? [[[String: Any]]] {
+            trackSegments = segments.map { Self.parseCoordinates($0) }
+        } else {
+            trackSegments = [Self.parseCoordinates(call.getArray("track") as? [[String: Any]] ?? [])]
+        }
         let entryPoints = Self.parseEntryMarkers(call.getArray("entryPoints") as? [[String: Any]] ?? [])
 
         DispatchQueue.main.async {
@@ -229,7 +236,7 @@ public class LogmasterAppleMapPlugin: CAPPlugin, CAPBridgedPlugin {
                 call.reject("Map not found")
                 return
             }
-            instance.setTrack(track)
+            instance.setTrackSegments(trackSegments)
             instance.setEntryPoints(entryPoints)
             call.resolve()
         }

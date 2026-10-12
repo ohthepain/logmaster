@@ -1,5 +1,5 @@
 import { Camera, Check, Image, Mail, Map, Plus, Trash2, X } from 'lucide-react'
-import type { FormEvent } from 'react'
+import type { KeyboardEvent } from 'react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import type { TripCrewUser } from '../domain/connections'
@@ -373,8 +373,8 @@ export function AddTripCrewModal({
     onClose()
   }
 
-  const handleInvite = async (event: FormEvent) => {
-    event.preventDefault()
+  const handleInvite = async () => {
+    if (sending) return
     const trimmed = email.trim()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
       toast.error('Enter a valid email address')
@@ -423,7 +423,7 @@ export function AddTripCrewModal({
                   aria-pressed={picked}
                   onClick={() => toggleContact(member.id)}
                   className={cn(
-                    'flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition',
+                    'pointer-events-auto flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition',
                     picked
                       ? 'border-green-600/25 bg-green-50 dark:border-green-500/30 dark:bg-green-950/35'
                       : 'border-[var(--line)] bg-[var(--panel)] hover:bg-[var(--chip-bg)]',
@@ -459,17 +459,13 @@ export function AddTripCrewModal({
           type="button"
           disabled={!pickedIds.length || sending}
           onClick={handleAdd}
-          className="mt-4 inline-flex rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
+          className="pointer-events-auto mt-4 inline-flex rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
         >
           Add
         </button>
       ) : null}
 
-      <form
-        noValidate
-        onSubmit={(event) => void handleInvite(event)}
-        className="mt-6 grid gap-3 border-t border-[var(--line)] pt-5"
-      >
+      <div className="mt-6 grid gap-3 border-t border-[var(--line)] pt-5">
         <label className="grid gap-1.5">
           <span className="text-sm font-semibold text-[var(--sea-ink)]">
             Or invite by email
@@ -477,32 +473,38 @@ export function AddTripCrewModal({
           <input
             type="email"
             inputMode="email"
+            enterKeyHint="done"
             value={email}
             disabled={sending}
             placeholder="alex@example.com"
             autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             onChange={(event) => setEmail(event.target.value)}
-            className="ios-map-touch-target w-full rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-3 text-sm text-[var(--sea-ink)] outline-none transition focus:border-[var(--brand)] disabled:opacity-60"
+            onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
+              if (event.key === 'Enter') event.preventDefault()
+            }}
+            className="ios-map-touch-target pointer-events-auto w-full rounded-2xl border border-[var(--chip-line)] bg-[var(--chip-bg)] px-4 py-3 text-sm text-[var(--sea-ink)] outline-none transition focus:border-[var(--brand)] disabled:opacity-60"
           />
           <span className="text-xs leading-5 text-[var(--sea-ink-soft)]">
             Sends a crew invite. When they accept, they join this trip.
           </span>
         </label>
-        {email.trim() ? (
-          <InviteLanguageSelect
-            value={inviteLocale}
-            onChange={setInviteLocale}
-            disabled={sending}
-          />
-        ) : null}
-        <button
-          type="submit"
+        <InviteLanguageSelect
+          value={inviteLocale}
+          onChange={setInviteLocale}
           disabled={sending}
-          className="ios-map-touch-target justify-self-start rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
+        />
+        <button
+          type="button"
+          disabled={sending}
+          onClick={() => void handleInvite()}
+          className="ios-map-touch-target pointer-events-auto justify-self-start rounded-full bg-[var(--btn-bg)] px-4 py-2.5 text-sm font-semibold text-[var(--btn-text)] disabled:opacity-60"
         >
           {sending ? 'Sending…' : 'Send crew invite'}
         </button>
-      </form>
+      </div>
     </Modal>
   )
 }

@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { MoreHorizontal } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import type { Trip } from '../domain/logbook'
 import { cn } from '../lib/cn'
@@ -15,6 +16,24 @@ import { Modal } from './Modal'
 import { POPUP_MENU_Z_CLASS, PopupOutsideDismiss } from './PopupOutsideDismiss'
 import { useTranslation } from '../lib/i18n'
 import { AppIconButtonTooltip } from './AppIconButtonTooltip'
+
+type MenuPosition = {
+  top?: number
+  bottom?: number
+  right: number
+}
+
+function placeTripActionsMenu(anchor: DOMRect): MenuPosition {
+  const gap = 4
+  const estimatedHeight = 220
+  const spaceBelow = window.innerHeight - anchor.bottom - gap
+  const spaceAbove = anchor.top - gap
+  const right = Math.max(8, window.innerWidth - anchor.right)
+  if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
+    return { bottom: window.innerHeight - anchor.top + gap, right }
+  }
+  return { top: anchor.bottom + gap, right }
+}
 
 type TripActionsMenuProps = {
   trip: Trip
@@ -36,8 +55,11 @@ export function TripActionsMenu({
   const { t } = useTranslation()
   const resolvedTooltip = tooltip ?? t('tripOptions')
   const [open, setOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null)
   const [busy, setBusy] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  // The same iOS tap that opens this dialog can land on the new backdrop.
+  const [deleteDismissArmed, setDeleteDismissArmed] = useState(false)
   const [retripOpen, setRetripOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
@@ -56,6 +78,36 @@ export function TripActionsMenu({
   useEffect(() => {
     onOpenChange?.(open)
   }, [open, onOpenChange])
+
+  useEffect(() => {
+    if (!deleteConfirmOpen) {
+      setDeleteDismissArmed(false)
+      return
+    }
+    const id = window.setTimeout(() => setDeleteDismissArmed(true), 400)
+    return () => window.clearTimeout(id)
+  }, [deleteConfirmOpen])
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuPosition(null)
+      return
+    }
+
+    const update = () => {
+      const rect = rootRef.current?.getBoundingClientRect()
+      if (!rect) return
+      setMenuPosition(placeTripActionsMenu(rect))
+    }
+
+    update()
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
+    }
+  }, [open])
 
   const runAction = async (action: () => Promise<void>) => {
     setBusy(true)
@@ -107,6 +159,11 @@ export function TripActionsMenu({
     }
   }
 
+  const openDeleteConfirm = () => {
+    setOpen(false)
+    setDeleteConfirmOpen(true)
+  }
+
   const handleStartRetrip = (timescale: number) => {
     void runAction(async () => {
       setDevTripRetrip(createDevTripRetrip(trip.id, timescale))
@@ -115,10 +172,104 @@ export function TripActionsMenu({
     })
   }
 
+  const menuItemClass =
+    'ios-map-touch-target pointer-events-auto w-full touch-manipulation rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60'
+
+  const menu =
+    open && menuPosition && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            id={menuId}
+            role="menu"
+            aria-label="Trip actions"
+            data-map-touch-zone
+            style={{
+              top: menuPosition.top,
+              bottom: menuPosition.bottom,
+              right: menuPosition.right,
+            }}
+            className={cn(
+              'ios-map-touch-target pointer-events-auto fixed min-w-[11rem] rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-lg',
+              POPUP_MENU_Z_CLASS,
+              'ring-1 ring-[var(--line)]/60',
+            )}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              onClick={handleExportGpx}
+              className={menuItemClass}
+            >
+              Export as GPX
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              onClick={handleExportSignalK}
+              className={menuItemClass}
+            >
+              Export as Signal K
+            </button>
+            <Link
+              to="/trips/$tripId/story/edit"
+              params={{ tripId: trip.id }}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className={cn(menuItemClass, 'block')}
+            >
+              Track stories
+            </Link>
+            {trip.storyHtml?.trim() ? (
+              <Link
+                to="/trips/$tripId/story"
+                params={{ tripId: trip.id }}
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className={cn(menuItemClass, 'block')}
+              >
+                View track stories
+              </Link>
+            ) : null}
+            {showRetripAction ? (
+              <button
+                type="button"
+                role="menuitem"
+                disabled={busy}
+                onClick={() => {
+                  setOpen(false)
+                  setRetripOpen(true)
+                }}
+                className={menuItemClass}
+              >
+                Re-trip (spoof)
+              </button>
+            ) : null}
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              onClick={openDeleteConfirm}
+              className={cn(
+                menuItemClass,
+                'text-red-700 hover:bg-red-500/10 dark:text-red-300',
+              )}
+            >
+              Delete trip
+            </button>
+          </div>,
+          document.body,
+        )
+      : null
+
   return (
     <>
       <div className={cn('relative', className)} ref={rootRef}>
         {open ? <PopupOutsideDismiss onDismiss={() => setOpen(false)} /> : null}
+        {menu}
         <AppIconButtonTooltip label={resolvedTooltip} side="bottom">
           <button
             type="button"
@@ -133,92 +284,13 @@ export function TripActionsMenu({
               setOpen((current) => !current)
             }}
             className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--chip-line)] bg-[var(--surface)] text-[var(--sea-ink)]',
+              'ios-map-touch-target pointer-events-auto flex h-8 w-8 touch-manipulation items-center justify-center rounded-xl border border-[var(--chip-line)] bg-[var(--surface)] text-[var(--sea-ink)]',
               'transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60',
             )}
           >
             <MoreHorizontal className="h-4 w-4" strokeWidth={2} aria-hidden />
           </button>
         </AppIconButtonTooltip>
-
-        {open ? (
-          <div
-            id={menuId}
-            role="menu"
-            aria-label="Trip actions"
-            className={cn(
-              'absolute right-0 top-full mt-1 min-w-[11rem] rounded-xl border border-[var(--line)] bg-[var(--header-bg)] p-1 shadow-lg',
-              POPUP_MENU_Z_CLASS,
-              'ring-1 ring-[var(--line)]/60',
-            )}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              role="menuitem"
-              disabled={busy}
-              onClick={handleExportGpx}
-              className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
-            >
-              Export as GPX
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              disabled={busy}
-              onClick={handleExportSignalK}
-              className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
-            >
-              Export as Signal K
-            </button>
-            <Link
-              to="/trips/$tripId/story/edit"
-              params={{ tripId: trip.id }}
-              role="menuitem"
-              onClick={() => setOpen(false)}
-              className="block w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]"
-            >
-              Track stories
-            </Link>
-            {trip.storyHtml?.trim() ? (
-              <Link
-                to="/trips/$tripId/story"
-                params={{ tripId: trip.id }}
-                role="menuitem"
-                onClick={() => setOpen(false)}
-                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]"
-              >
-                View track stories
-              </Link>
-            ) : null}
-            {showRetripAction ? (
-              <button
-                type="button"
-                role="menuitem"
-                disabled={busy}
-                onClick={() => {
-                  setOpen(false)
-                  setRetripOpen(true)
-                }}
-                className="w-full rounded-lg px-3 py-2 text-left text-sm text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-60"
-              >
-                Re-trip (spoof)
-              </button>
-            ) : null}
-            <button
-              type="button"
-              role="menuitem"
-              disabled={busy}
-              onClick={() => {
-                setOpen(false)
-                setDeleteConfirmOpen(true)
-              }}
-              className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-700 transition hover:bg-red-500/10 disabled:opacity-60 dark:text-red-300"
-            >
-              Delete
-            </button>
-          </div>
-        ) : null}
       </div>
 
       {deleteConfirmOpen ? (
@@ -227,6 +299,7 @@ export function TripActionsMenu({
           onClose={() => {
             if (!busy) setDeleteConfirmOpen(false)
           }}
+          closeOnOutside={deleteDismissArmed}
           layer="overlay"
           devComponentName="TripActionsMenuDeleteModal"
         >
@@ -246,7 +319,7 @@ export function TripActionsMenu({
                 type="button"
                 disabled={busy}
                 onClick={() => void handleDelete()}
-                className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                className="ios-map-touch-target pointer-events-auto inline-flex touch-manipulation items-center gap-2 rounded-full bg-red-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {busy ? 'Deleting…' : 'Delete trip'}
               </button>

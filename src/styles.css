@@ -247,7 +247,9 @@ body.ios-native-map-touch-root .ios-map-touch-target,
 html.ios-native-map-touch-root [data-map-touch-zone],
 body.ios-native-map-touch-root [data-map-touch-zone],
 html.ios-native-map-touch-root [data-blocking-overlay],
-body.ios-native-map-touch-root [data-blocking-overlay] {
+body.ios-native-map-touch-root [data-blocking-overlay],
+html.ios-native-map-touch-root [data-blocking-overlay] :is(button, input, select, textarea, a, label),
+body.ios-native-map-touch-root [data-blocking-overlay] :is(button, input, select, textarea, a, label) {
   pointer-events: auto;
 }
 
@@ -920,9 +922,9 @@ a {
   animation: message-heart-float 2.4s ease-out both;
 }
 
-/* Trip cards are one control. Clamped title lines use overflow:hidden, which
-   on iOS becomes a scrollport and swallows the tap, so only the photo opens
-   the trip. clip keeps the clamp without a scrollport. */
+/* Trip cards are one control. overflow:hidden becomes a scrollport on iOS and
+   swallows the tap, so a clamped title or the card itself would ignore the
+   … menu. clip keeps the rounded corners without a scrollport. */
 .trip-list-card > button {
   display: flex;
   flex-direction: column;

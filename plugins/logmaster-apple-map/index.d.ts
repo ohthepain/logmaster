@@ -25,6 +25,8 @@ export type MapEntryPoint = MapCoordinate & {
 export type MapOverlays = {
   mapId: string
   track?: MapCoordinate[]
+  /** Independent paths; takes precedence over the legacy continuous track. */
+  trackSegments?: MapCoordinate[][]
   entryPoints?: MapEntryPoint[]
 }
 
