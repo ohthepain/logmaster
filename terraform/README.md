@@ -218,6 +218,18 @@ GitHub Actions:
 - **Staging down** — manual + scheduled (cron `0 19,22 * * *` UTC), concurrency group `staging-ops`.
 - **Staging up** — manual only.
 
+Production uses the same ECS scale, and is manual only (not scheduled). Shared RDS stays running because other tenants may depend on it.
+
+```bash
+./scripts/production-down.sh   # ECS desired count 0
+./scripts/production-up.sh     # scale ECS to 1, force-new-deploy
+```
+
+GitHub Actions:
+
+- **Production down** — manual only, concurrency group `production-ops`.
+- **Production up** — manual only.
+
 ### RDS stop/start limits (AWS)
 
 - Stopped instances auto-start after **7 days** if not manually started.
